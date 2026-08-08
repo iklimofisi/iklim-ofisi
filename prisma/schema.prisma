@@ -1,0 +1,64 @@
+// Bu şema henüz aktif kullanılmıyor.
+// README'deki adımları izleyip DATABASE_URL tanımladıktan sonra:
+//   npx prisma migrate dev --name init
+// çalıştırınca bu tablolar veritabanında oluşur.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Musteri {
+  id        String   @id @default(cuid())
+  ad        String
+  telefon   String?
+  vergiNo   String?
+  adres     String?
+  createdAt DateTime @default(now())
+
+  teklifler      Teklif[]
+  cariHareketler CariHareket[]
+}
+
+model Teklif {
+  id        String       @id @default(cuid())
+  musteri   Musteri      @relation(fields: [musteriId], references: [id])
+  musteriId String
+  tarih     DateTime     @default(now())
+  durum     TeklifDurum  @default(BEKLEMEDE)
+  kalemler  TeklifKalem[]
+}
+
+model TeklifKalem {
+  id          String @id @default(cuid())
+  teklif      Teklif @relation(fields: [teklifId], references: [id], onDelete: Cascade)
+  teklifId    String
+  aciklama    String
+  adet        Int
+  birimFiyat  Decimal @db.Decimal(10, 2)
+}
+
+model CariHareket {
+  id        String   @id @default(cuid())
+  musteri   Musteri  @relation(fields: [musteriId], references: [id])
+  musteriId String
+  tarih     DateTime @default(now())
+  aciklama  String
+  tur       CariTur
+  tutar     Decimal  @db.Decimal(10, 2)
+}
+
+enum TeklifDurum {
+  BEKLEMEDE
+  ONAYLANDI
+  REDDEDILDI
+}
+
+enum CariTur {
+  BORC
+  ALACAK
+}
