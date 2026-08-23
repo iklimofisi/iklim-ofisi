@@ -1237,3 +1237,32 @@ export async function profilGuncelle(formData: FormData) {
   revalidatePath("/panel/profil");
   redirect("/panel/profil?basarili=true");
 }
+
+// SİPARİŞE DÖNÜŞTÜR BUTONU İÇİN EKSİK OLAN FONKSİYON EKLENDİ
+export async function siparisOlustur(teklifId: string) {
+  const kullanici = await suankiKullanici();
+  if (!teklifId) return;
+
+  const teklif = await prisma.teklif.findUnique({ where: { id: teklifId } });
+  if (!teklif) return;
+
+  // Zaten oluşturulmuş bir siparişi varsa ona yönlendir
+  const mevcutSiparis = await prisma.siparis.findUnique({ where: { teklifId } });
+  if (mevcutSiparis) {
+    redirect(`/panel/siparisler/${mevcutSiparis.id}`);
+  }
+
+  const siparis = await prisma.siparis.create({
+    data: {
+      teklifId,
+      musteriId: teklif.musteriId,
+      kur: 1,
+      olusturanKullaniciId: kullanici?.id || null,
+      olusturanAdi: kullanici?.ad ?? "",
+    },
+  });
+
+  revalidatePath("/panel/siparisler");
+  revalidatePath(`/panel/teklifler/${teklifId}`);
+  redirect(`/panel/siparisler/${siparis.id}`);
+}
