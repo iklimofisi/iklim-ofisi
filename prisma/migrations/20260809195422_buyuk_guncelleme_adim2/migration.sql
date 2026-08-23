@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Siparis" ALTER COLUMN "durum" SET DEFAULT 'ONAY_BEKLIYOR';

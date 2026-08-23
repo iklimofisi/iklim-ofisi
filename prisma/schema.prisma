@@ -1,55 +1,405 @@
-// Bu şema henüz aktif kullanılmıyor.
-// README'deki adımları izleyip DATABASE_URL tanımladıktan sonra:
-//   npx prisma migrate dev --name init
-// çalıştırınca bu tablolar veritabanında oluşur.
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Kullanici {
+  id        String       @id @default(cuid())
+  ad        String
+  email     String       @unique
+  telefon   String?      // Hazırlayan telefon numarası
+  sifreHash String
+  rol       KullaniciRol @default(SATIS)
+  createdAt DateTime     @default(now())
+  oturumlar Session[]
+  teklifler Teklif[]
+  siparisler Siparis[]   // Karşıt ilişki
+}
+
+model Session {
+  token       String    @id @default(cuid())
+  kullanici   Kullanici @relation(fields: [kullaniciId], references: [id], onDelete: Cascade)
+  kullaniciId String
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
 }
 
 model Musteri {
+  id            String   @id @default(cuid())
+  ad            String   // Müşteri / Firma Unvanı
+  yetkiliAdi    String?  // Müşteri Yetkilisi Adı Soyadı
+  yetkiliTelefon String? // Müşteri Yetkilisi Telefonu
+  yetkiliEmail  String?  // Müşteri Yetkilisi E-postası
+  telefon       String?  // Şirket Santral Telefonu
+  email         String?
+  muhasebeEmail String?
+  vergiNo       String?
+  faturaAdresi  String?
+  sevkAdresi    String?
+  createdAt     DateTime @default(now())
+
+  teklifler      Teklif[]
+  cariHareketler CariHareket[]
+  siparisler     Siparis[]
+  projeler       Proje[]
+  ziyaretler     Ziyaret[]
+}
+
+model Teklif {
+  id                       String            @id @default(cuid())
+  teklifNo                 Int               @unique @default(autoincrement())
+  baslik                   String            @default("")
+  musteri                  Musteri           @relation(fields: [musteriId], references: [id])
+  musteriId                String
+  projeId                  String?
+  proje                    Proje?            @relation(fields: [projeId], references: [id])
+  tarih                    DateTime          @default(now())
+  durum                    TeklifDurum       @default(BEKLEMEDE)
+  paraBirimi               String            @default("TRY")
+  kdvOrani                 Float             @default(20)
+  kdvDahil                 Boolean           @default(false)
+  gecerlilikGunu           Int               @default(15)
+  birimFiyatGoster         Boolean           @default(true)
+  revizyonNo               Int               @default(1)
+  olusturanKullaniciId     String?           // Hazırlayan Kullanıcı Bağlantısı
+  olusturanKullanici       Kullanici?        @relation(fields: [olusturanKullaniciId], references: [id])
+  olusturanAdi             String            @default("")
+  kaynakSatinalmaTeklifiId String?
+  kaynakSatinalmaTeklifi   SatinalmaTeklifi? @relation(fields: [kaynakSatinalmaTeklifiId], references: [id])
+  kalemler                 TeklifKalem[]
+  sablonlar                TeklifSablon[]    @relation("TeklifSablonSecimi")
+  revizyonlar              TeklifRevizyon[]
+  siparis                  Siparis?
+  kesifler                 KesifFormu[]
+}
+
+model TeklifKalem {
+  id           String          @id @default(cuid())
+  teklif       Teklif          @relation(fields: [teklifId], references: [id], onDelete: Cascade)
+  teklifId     String
+  bolum        String?         @default("Genel Kalemler")
+  aciklama     String
+  adet         Float           @default(1)
+  birimFiyat   Float           @default(0)
+  iskontoYuzde Float           @default(0)
+  markaId      String?
+  marka        Marka?          @relation(fields: [markaId], references: [id])
+  sevkiyatlar  SevkiyatKaydi[]
+  teslimler    TeslimKaydi[]
+}
+
+model Marka {
+  id       String        @id @default(cuid())
+  ad       String        @unique
+  logoAdi  String?
+  logoTipi String?
+  logo     Bytes?
+  kalemler TeklifKalem[]
+  urunler  Urun[]
+}
+
+model Urun {
+  id                  String        @id @default(cuid())
+  kod                 String?
+  ad                  String
+  markaId             String?
+  marka               Marka?        @relation(fields: [markaId], references: [id])
+  birim               String        @default("Adet")
+  
+  // MANUEL STOK VE MALİYET / GİDER ALANLARI
+  stokMiktari         Float         @default(0)
+  maliyetFiyati       Float         @default(0)
+  ekGiderler          Float         @default(0)  // Nakliye / Gümrük ek gideri
+  maliyetParaBirimi   String        @default("TRY")
+  listeFiyati         Float         @default(0)
+  paraBirimi          String        @default("TRY")
+  hedefKarMarjiYuzde  Float         @default(20)
+  depoKonumu          String?
+  
+  aciklama            String?
+  createdAt           DateTime      @default(now())
+
+  // STOK İLİŞKİLERİ
+  stokHareketleri     StokHareket[]
+  depoStoklar         DepoStok[]
+  seriNolar           UrunSeriNo[]
+
+  @@unique([kod])
+}
+
+model TeklifRevizyon {
+  id         String   @id @default(cuid())
+  teklif     Teklif   @relation(fields: [teklifId], references: [id], onDelete: Cascade)
+  teklifId   String
+  revizyonNo Int
+  veriJson   String
+  tarih      DateTime @default(now())
+}
+
+model CariHareket {
+  id            String    @id @default(cuid())
+  musteri       Musteri   @relation(fields: [musteriId], references: [id])
+  musteriId     String
+  tarih         DateTime  @default(now())
+  aciklama      String
+  tur           CariTur
+  tutar         Float
+  odemeYontemi  String?
+  odemeDetay    String?
+  vadeTarihi    DateTime? // Çek / Senet Vade Tarihi
+  cekNo         String?   // Çek No
+  banka         String?   // Banka Adı
+  evrakDosya    Bytes?    // Fatura / Dekont / Çek Görseli veya PDF
+  evrakDosyaAdi String?
+  evrakDosyaTipi String?
+}
+
+model TeklifSablon {
   id        String   @id @default(cuid())
+  baslik    String
+  icerik    String
+  sira      Int      @default(0)
+  teklifler Teklif[] @relation("TeklifSablonSecimi")
+}
+
+model Siparis {
+  id                String          @id @default(cuid())
+  teklif            Teklif          @relation(fields: [teklifId], references: [id])
+  teklifId          String          @unique
+  musteri           Musteri         @relation(fields: [musteriId], references: [id])
+  musteriId         String
+  durum             SiparisDurum    @default(ONAY_BEKLIYOR)
+  kur               Float           @default(1)
+  ekNot             String          @default("")
+  sevkAdresi        String?
+  sozlesmeDosyaAdi  String?
+  sozlesmeDosyaTipi String?
+  sozlesmeDosya     Bytes?
+  
+  olusturanKullaniciId String?
+  olusturanKullanici   Kullanici?   @relation(fields: [olusturanKullaniciId], references: [id])
+  olusturanAdi         String       @default("")
+
+  onaylayanAdi      String?
+  onayTarihi        DateTime?
+  redSebebi         String?
+  faturaNo          String?
+  faturaTarihi      DateTime?
+  olusturmaTarihi   DateTime        @default(now())
+  sevkiyatlar       SevkiyatKaydi[]
+  teslimler         TeslimKaydi[]
+}
+
+model SevkiyatKaydi {
+  id            String      @id @default(cuid())
+  siparis       Siparis     @relation(fields: [siparisId], references: [id], onDelete: Cascade)
+  siparisId     String
+  teklifKalem   TeklifKalem @relation(fields: [teklifKalemId], references: [id])
+  teklifKalemId String
+  adet          Float       @default(1)
+  not           String?
+  tarih         DateTime    @default(now())
+}
+
+model TeslimKaydi {
+  id            String      @id @default(cuid())
+  siparis       Siparis     @relation(fields: [siparisId], references: [id], onDelete: Cascade)
+  siparisId     String
+  teklifKalem   TeklifKalem @relation(fields: [teklifKalemId], references: [id])
+  teklifKalemId String
+  adet          Float       @default(1)
+  not           String?
+  evrakAdi      String?
+  evrakTipi     String?
+  evrak         Bytes?
+  tarih         DateTime    @default(now())
+}
+
+model Tedarikci {
+  id        String             @id @default(cuid())
   ad        String
   telefon   String?
   vergiNo   String?
   adres     String?
-  createdAt DateTime @default(now())
-
-  teklifler      Teklif[]
-  cariHareketler CariHareket[]
+  createdAt DateTime           @default(now())
+  hareketler TedarikciHareket[]
+  teklifler  SatinalmaTeklifi[]
 }
 
-model Teklif {
-  id        String       @id @default(cuid())
-  musteri   Musteri      @relation(fields: [musteriId], references: [id])
-  musteriId String
-  tarih     DateTime     @default(now())
-  durum     TeklifDurum  @default(BEKLEMEDE)
-  kalemler  TeklifKalem[]
+model TedarikciHareket {
+  id            String               @id @default(cuid())
+  tedarikci     Tedarikci            @relation(fields: [tedarikciId], references: [id])
+  tedarikciId   String
+  tarih         DateTime             @default(now())
+  aciklama      String
+  tur           TedarikciHareketTuru
+  tutar         Float
+  vadeTarihi    DateTime? // Çek / Senet Vade Tarihi
+  cekNo         String?   // Çek No
+  banka         String?   // Banka Adı
+  evrakDosya    Bytes?    // Fatura / Dekont / Çek Görseli veya PDF
+  evrakDosyaAdi String?
+  evrakDosyaTipi String?
 }
 
-model TeklifKalem {
-  id          String @id @default(cuid())
-  teklif      Teklif @relation(fields: [teklifId], references: [id], onDelete: Cascade)
-  teklifId    String
-  aciklama    String
-  adet        Int
-  birimFiyat  Decimal @db.Decimal(10, 2)
+model SatinalmaTeklifi {
+  id          String                  @id @default(cuid())
+  tedarikci   Tedarikci               @relation(fields: [tedarikciId], references: [id])
+  tedarikciId String
+  baslik      String
+  paraBirimi  String                  @default("TRY")
+  tarih       DateTime                @default(now())
+  kalemler    SatinalmaTeklifKalemi[]
+  tekliflar   Teklif[]
 }
 
-model CariHareket {
+model SatinalmaTeklifKalemi {
+  id                 String           @id @default(cuid())
+  satinalmaTeklifi   SatinalmaTeklifi @relation(fields: [satinalmaTeklifiId], references: [id], onDelete: Cascade)
+  satinalmaTeklifiId String
+  aciklama           String
+  adet               Float            @default(1)
+  birimFiyat         Float
+}
+
+model KesifFormu {
+  id                 String    @id @default(cuid())
+  musteriAdi         String
+  telefon            String?
+  adres              String?
+  alanM2             Float?
+  mevcutSistem       String?
+  notlar             String
+  olusturanAdi       String    @default("")
+  tarih              DateTime  @default(now())
+  olusturulanTeklifId String?
+  olusturulanTeklif   Teklif?  @relation(fields: [olusturulanTeklifId], references: [id])
+}
+
+model WebTalebi {
   id        String   @id @default(cuid())
-  musteri   Musteri  @relation(fields: [musteriId], references: [id])
-  musteriId String
+  ad        String
+  telefon   String?
+  email     String?
+  mesaj     String
+  dosyaAdi  String?
+  dosyaTipi String?
+  dosya     Bytes?
+  okundu    Boolean  @default(false)
   tarih     DateTime @default(now())
-  aciklama  String
-  tur       CariTur
-  tutar     Decimal  @db.Decimal(10, 2)
+}
+
+model Proje {
+  id              String           @id @default(cuid())
+  ad              String
+  konum           String?
+  musteriId       String?
+  musteri         Musteri?         @relation(fields: [musteriId], references: [id])
+  kaynak          String?
+  ihaleDurumu     ProjeIhaleDurumu @default(TAKIPTE)
+  ihaleyiAlan     String?
+  tahminiDeger    Float?
+  paraBirimi      String           @default("TRY")
+  notlar          String?
+  olusturanAdi    String           @default("")
+  olusturmaTarihi DateTime         @default(now())
+  teklifler       Teklif[]
+  ziyaretler      Ziyaret[]
+}
+
+model Ziyaret {
+  id               String    @id @default(cuid())
+  musteriId        String?
+  musteri          Musteri?  @relation(fields: [musteriId], references: [id])
+  projeId          String?
+  proje            Proje?    @relation(fields: [projeId], references: [id])
+  tarih            DateTime  @default(now())
+  not              String
+  hatirlatmaTarihi DateTime?
+  hatirlatmaNotu   String?
+  hatirlatmaTamam  Boolean   @default(false)
+  olusturanAdi     String    @default("")
+}
+
+model SirketAyarlari {
+  id           String   @id @default("default")
+  unvan        String   @default("İklim Ofisi Mühendislik A.Ş.")
+  slogan       String?  @default("İklimlendirme & VRF Sistem Çözümleri")
+  adres        String?  @default("Atatürk Mah. Sanayi Cad. No:142/A, Ümraniye / İstanbul")
+  telefon      String?  @default("+90 (216) 450 00 00")
+  email        String?  @default("info@iklimofisi.com")
+  web          String?  @default("www.iklimofisi.com")
+  vergiDairesi String?
+  vergiNo      String?
+  updatedAt    DateTime @updatedAt
+}
+
+// ---------------- STOK VE DEPO MODELLERİ ----------------
+
+model StokHareket {
+  id           String          @id @default(cuid())
+  urun         Urun            @relation(fields: [urunId], references: [id], onDelete: Cascade)
+  urunId       String
+  tur          StokHareketTuru
+  miktar       Float
+  birimMaliyet Float           @default(0)
+  aciklama     String
+  referansNo   String?
+  olusturanAdi String          @default("")
+  tarih        DateTime        @default(now())
+}
+
+model Depo {
+  id        String     @id @default(cuid())
+  ad        String
+  kod       String?    @unique
+  adres     String?
+  stoklar   DepoStok[]
+}
+
+model DepoStok {
+  id             String @id @default(cuid())
+  depo           Depo   @relation(fields: [depoId], references: [id], onDelete: Cascade)
+  depoId         String
+  urun           Urun   @relation(fields: [urunId], references: [id], onDelete: Cascade)
+  urunId         String
+
+  fizikselMiktar Float  @default(0)
+  rezerveMiktar  Float  @default(0)
+  
+  @@unique([depoId, urunId])
+}
+
+model UrunSeriNo {
+  id               String      @id @default(cuid())
+  urun             Urun        @relation(fields: [urunId], references: [id], onDelete: Cascade)
+  urunId           String
+  seriNo           String      @unique
+  depoId           String?
+  durum            SeriNoDurum @default(DEPODA)
+  musteriAdi       String?
+  garantiBaslangic DateTime?
+  tarih            DateTime    @default(now())
+}
+
+// ---------------- ENUM TANIMLARI ----------------
+
+enum ProjeIhaleDurumu {
+  TAKIPTE
+  TEKLIF_VERILDI
+  KAZANILDI
+  KAYBEDILDI
+  IPTAL
+}
+
+enum KullaniciRol {
+  ADMIN
+  SATIS
 }
 
 enum TeklifDurum {
@@ -61,4 +411,34 @@ enum TeklifDurum {
 enum CariTur {
   BORC
   ALACAK
+}
+
+enum SiparisDurum {
+  ONAY_BEKLIYOR
+  HAZIRLANIYOR
+  KISMEN_SEVK_EDILDI
+  SEVK_EDILDI
+  KISMEN_TESLIM_EDILDI
+  TESLIM_EDILDI
+  FATURALANDI
+  IPTAL
+  REDDEDILDI
+}
+
+enum TedarikciHareketTuru {
+  BORC
+  ODEME
+}
+
+enum StokHareketTuru {
+  GIRIS
+  CIKIS
+  DUZELTME
+}
+
+enum SeriNoDurum {
+  DEPODA
+  REZERVE
+  SATILDI
+  SERVISDE
 }

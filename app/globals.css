@@ -28,3 +28,13 @@ body {
   outline: 2px solid #0E7C86;
   outline-offset: 2px;
 }
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+  body {
+    background: white;
+  }
+}

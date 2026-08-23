@@ -34,13 +34,13 @@ export default function TemperatureGauge() {
           );
         })}
 
-        <text x="20" y="120" fontFamily="var(--font-mono)" fontSize="14" fill="#0B646C">
+        <text x="20" y="120" style={{ fontFamily: "var(--font-mono)" }} fontSize="14" fill="#0B646C">
           -5°C
         </text>
-        <text x="300" y="120" fontFamily="var(--font-mono)" fontSize="14" fill="#12212B" textAnchor="middle">
+        <text x="300" y="120" style={{ fontFamily: "var(--font-mono)" }} fontSize="14" fill="#12212B" textAnchor="middle">
           İKLİM OFİSİ ARALIĞI
         </text>
-        <text x="600" y="120" fontFamily="var(--font-mono)" fontSize="14" fill="#C75E39" textAnchor="end">
+        <text x="600" y="120" style={{ fontFamily: "var(--font-mono)" }} fontSize="14" fill="#C75E39" textAnchor="end">
           +35°C
         </text>
 
