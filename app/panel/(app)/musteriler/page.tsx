@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { musteriEkle } from "@/lib/actions";
+import { musteriEkle, musteriSil } from "@/lib/actions";
+import SilButon from "@/components/SilButon";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -173,6 +174,15 @@ export default async function MusterilerPage() {
                   >
                     Görüntüle →
                   </Link>
+                </td>
+
+                {/* MÜŞTERİ SİL BUTONU EKLENDİ */}
+                <td className="py-3 px-4 text-center">
+                  <SilButon
+                    id={m.id}
+                    action={musteriSil}
+                    onayMesaji="Bu müşteriyi ve tüm ilişkili kayıtlarını silmek istediğinizden emin misiniz?"
+                  />
                 </td>
               </tr>
             ))}

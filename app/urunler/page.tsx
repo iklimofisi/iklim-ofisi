@@ -46,6 +46,13 @@ const urunKategorileri = [
     markalar: "Systemair, Ventas, Rosenberg",
   },
   {
+  id: "daygas-radyant",
+  kategori: "ENDÜSTRİYEL ISITMA",
+  baslik: "Daygas Radyant & Sıcak Hava Sistemleri",
+  aciklama: "Fabrika, depo, cafe ve açık alanlar için yüksek tasarruflu Daygas borulu ve seramik radyant ısıtıcılar ile sıcak hava üreteçleri.",
+  urunler: ["Seramik Radyant Isıtıcılar", "Borulu Radyant Isıtma Sistemleri", "Sıcak Hava Üreteçleri"],
+  },
+  {
     id: "tesisat-otomasyon",
     kategori: "MEKANİK TESİSAT",
     baslik: "Tesisat & Otomasyon Ekipmanları",

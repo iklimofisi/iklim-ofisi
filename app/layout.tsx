@@ -21,6 +21,13 @@ export const metadata: Metadata = {
   authors: [{ name: "İklim Ofisi Mühendislik" }],
   metadataBase: new URL("https://iklimofisi.com"),
   
+  // CHROME SEKMESİNDEKİ LOGO (FAVICON) BURAYA TANIMLANDI
+  icons: {
+    icon: "/logo-icon.png",
+    shortcut: "/logo-icon.png",
+    apple: "/logo-icon.png",
+  },
+
   // WHATSAPP, LINKEDIN & SOSYAL MEDYA PAYLAŞIM KARTI (OPEN GRAPH)
   openGraph: {
     title: "İklim Ofisi Mühendislik — VRF & Mekanik Tesisat Çözümleri",

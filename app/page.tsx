@@ -153,22 +153,6 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* 4. MARKA DİSTRİBÜTÖRLÜKLERİ */}
-        <section className="py-8 bg-slate-100/80 border-b border-slate-200">
-          <div className="max-w-7xl mx-auto px-6">
-            <p className="text-center text-[10px] font-bold tracking-widest text-slate-400 uppercase mb-5">
-              ÇÖZÜM ORTAĞI OLDUĞUMUZ DÜNYA STANDARDI MARKALAR
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-8 md:gap-16 font-mono text-sm font-bold text-slate-500">
-              <span>BOSCH</span>
-              <span>DAIKIN</span>
-              <span>MITSUBISHI ELECTRIC</span>
-              <span>TOSHIBA</span>
-              <span>ALARKO CARRIER</span>
-            </div>
-          </div>
-        </section>
-
         {/* 5. MÜHENDİSLİK HİZMETLERİMİZ */}
         <section className="py-20 bg-slate-50">
           <div className="max-w-7xl mx-auto px-6">
