@@ -71,7 +71,7 @@ export default async function HakkimizdaPage() {
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed pt-1">
-                  AutoCAD ve Revit tabanlı mekanik projelendirme, hassas ısı kaybı & kazancı hesaplamaları, metraj hazırlığı ve müşteri süreçleri yönetiminden sorumludur. Müşteri ihtiyacına en uygun cihaz seçimi ve şeffaf tekliflerin hazırlanmasını yürütür.
+                  AutoCAD ve mekanik projelendirme, hassas ısı kaybı & kazancı hesaplamaları, metraj hazırlığı ve müşteri süreçleri yönetiminden sorumludur. Müşteri ihtiyacına en uygun cihaz seçimi ve şeffaf tekliflerin hazırlanmasını yürütür.
                 </p>
               </div>
 

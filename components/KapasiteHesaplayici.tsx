@@ -196,11 +196,11 @@ export default function KapasiteHesaplayici() {
 
                 <div className="py-2">
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Teknik Mail Hattımız:</p>
-                  <p className="text-lg font-bold text-teal-700 font-mono">proje@iklimofisi.com</p>
+                  <p className="text-lg font-bold text-teal-700 font-mono">info@iklimofisi.com</p>
                 </div>
 
                 <a
-                  href="mailto:proje@iklimofisi.com?subject=VRF%20Proje%20Dosyası%20İnceleme%20Talebi"
+                  href="mailto:info@iklimofisi.com?subject=VRF%20Proje%20Dosyası%20İnceleme%20Talebi"
                   className="inline-block px-8 py-3.5 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-md transition-all"
                 >
                   Mail Programını Aç & Dosya Ekle

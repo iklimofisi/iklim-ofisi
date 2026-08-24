@@ -10,9 +10,8 @@ const urunKategorileri = [
     id: "bireysel-klima",
     kategori: "BİREYSEL İKLİMLENDİRME",
     baslik: "Bireysel Klimalar & Multi-Split",
-    aciklama: "Konut ve küçük ofisler için R32 gazlı, A+++ yüksek verimli duvar tipi, kaset tipi ve multi-split klima çözümleri.",
-    urunler: ["Inverter Duvar Tipi Klimalar", "Multi-Split Çoklu İç Ünite Sistemleri", "Konsol Tipi Klimalar"],
-    markalar: "Bosch, Daikin, Mitsubishi Electric",
+    aciklama: "Konut ve küçük ofisler için R32 gazlı, A+++ yüksek verimli duvar tipi ve multi-split klima çözümleri.",
+    urunler: ["Inverter Duvar Tipi Klimalar", "Multi-Split Çoklu İç Ünite Sistemleri"],
   },
   {
     id: "ticari-klima",
@@ -20,7 +19,6 @@ const urunKategorileri = [
     baslik: "Ticari Tip Klimalar",
     aciklama: "Mağaza, restoran, cafe ve açık ofis alanları için 4 yöne üflemeli kaset, kanallı gizli tavan ve salon tipi cihazlar.",
     urunler: ["4 Yöne Üflemeli Kaset Tipi Klimalar", "Gizli Tavan Tipi Kanallı Klimalar", "Salon Tipi Yüksek Kapasiteli Klimalar"],
-    markalar: "Daikin, Toshiba, Alarko Carrier",
   },
   {
     id: "vrf-sistemleri",
@@ -28,7 +26,6 @@ const urunKategorileri = [
     baslik: "VRF / VRV Merkezi Sistem Cihazları",
     aciklama: "Otel, plaza, hastane ve büyük projelerde aynı anda ısıtma ve soğutma yapabilen (Heat Recovery) dış ve iç ünite grupları.",
     urunler: ["Heat Pump & Heat Recovery Dış Üniteler", "Kaset, Kanal ve Duvar Tipi İç Üniteler", "Y-Branch & Bakır Joint Bağlantı Kitleri", "Merkezi Dokunmatik Kumanda Panelleri"],
-    markalar: "Bosch VRF, Daikin VRV, Mitsubishi Electric VRF",
   },
   {
     id: "isi-pompasi",
@@ -36,7 +33,13 @@ const urunKategorileri = [
     baslik: "Isı Pompası Sistemleri",
     aciklama: "Dış havadaki enerjiyi kullanarak binalarda hem yerden ısıtma hem de kullanım sıcak suyu sağlayan yüksek COP değerli sistemler.",
     urunler: ["Hava Kaynaklı Monoblok Isı Pompaları", "Split Tipi Entegre Boylerli Isı Pompaları", "Yüksek Sıcaklık Isı Pompaları (65°C)"],
-    markalar: "Bosch, Daikin Altherma, Mitsubishi Ecodan",
+  },
+  {
+    id: "radyant",
+    kategori: "ENDÜSTRİYEL ISITMA",
+    baslik: "Radyant & Sıcak Hava Sistemleri",
+    aciklama: "Fabrika, depo, cafe ve açık alanlar için yüksek tasarruflu Daygas borulu ve seramik radyant ısıtıcılar ile sıcak hava üreteçleri.",
+    urunler: ["Seramik Radyant Isıtıcılar", "Borulu Radyant Isıtma Sistemleri", "Sıcak Hava Üreteçleri"],
   },
   {
     id: "havalandirma",
@@ -44,7 +47,6 @@ const urunKategorileri = [
     baslik: "Havalandırma & Isı Geri Kazanım Cihazları",
     aciklama: "Kapalı ortamlara filtrelenmiş taze hava sağlarken egzoz havasındaki ısıyı geri kazanan yüksek verimli iklimlendirme santralleri.",
     maddeler: ["Isı Geri Kazanım (İGK) Santralleri", "Spiro Yuvarlak & Dikdörtgen Hava Kanalları", "Sığınak & Otopark Duman Egzoz Fanları"],
-    markalar: "Systemair, Ventas, Rosenberg",
   },
   {
     id: "tesisat-otomasyon",
@@ -52,7 +54,6 @@ const urunKategorileri = [
     baslik: "Tesisat & Otomasyon Ekipmanları",
     aciklama: "Mekanik tesisat projelerinizde kullanılan frekans kontrollü sirkülasyon pompaları, balans vanaları ve akıllı bina otomasyon kartları.",
     maddeler: ["Frekans Kontrollü Sirkülasyon Pompaları", "Dinamik Balans Vanaları & Kolektörler", "VRF Akıllı Bina Otomasyon Arayüzleri (BACnet/Modbus)"],
-    markalar: "Wilo, Grundfos, Honeywell",
   },
 ];
 

@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 const menuTemel = [
   { href: "/panel", label: "Özet" },
   { href: "/panel/stok", label: "Stok & Envanter" },
+  { href: "/panel/genel-cari", label: "Genel Finans & Çekler" },
   { href: "/panel/talepler", label: "Web Talepleri" },
   { href: "/panel/musteriler", label: "Müşteriler" },
   { href: "/panel/projeler", label: "Projeler" },

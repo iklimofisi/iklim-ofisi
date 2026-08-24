@@ -22,13 +22,18 @@ export default async function StokYonetimiPage() {
     }),
   ]);
 
-  // CANLI GERÇEK ENVANTER SERMAYE HESABI (WAC)
-  let toplamEnvanterMaliyetiTL = 0;
+  // ÇOKLU DÖVİZ (TL, USD, EUR) ENVANTER MALİYET HESAPLARI
+  let toplamTL = 0;
+  let toplamUSD = 0;
+  let toplamEUR = 0;
   let toplamStokAdedi = 0;
 
   urunler.forEach((u) => {
-    const maliyet = u.maliyetFiyati * u.stokMiktari;
-    toplamEnvanterMaliyetiTL += maliyet;
+    const maliyet = (u.maliyetFiyati + u.ekGiderler) * u.stokMiktari;
+    if (u.maliyetParaBirimi === "USD") toplamUSD += maliyet;
+    else if (u.maliyetParaBirimi === "EUR") toplamEUR += maliyet;
+    else toplamTL += maliyet;
+
     toplamStokAdedi += u.stokMiktari;
   });
 
@@ -44,12 +49,17 @@ export default async function StokYonetimiPage() {
         </Link>
       </div>
 
-      {/* 📊 CANLI SERMAYE VE STOK ÖZETİ */}
+      {/* 📊 ÇOKLU DÖVİZ DÜZELTİLMİŞ ENVANTER KARTLARI */}
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="bg-yuzey border border-hat p-5 rounded-lg shadow-sm">
-          <p className="text-xs font-semibold text-metin/60 uppercase mb-1">Gerçek Envanter Sermaye Değeri (WAC)</p>
-          <p className="text-3xl font-bold text-emerald-600 font-mono">{paraFormat(toplamEnvanterMaliyetiTL)}</p>
-          <p className="text-[11px] text-metin/50 mt-1">Ağırlıklı ortalama birim maliyet toplamı</p>
+          <p className="text-xs font-semibold text-metin/60 uppercase mb-1">Gerçek Envanter Sermaye Değeri</p>
+          <p className="text-xl sm:text-2xl font-bold text-emerald-600 font-mono">
+            {toplamTL > 0 && `${paraFormat(toplamTL, "TRY")} `}
+            {toplamUSD > 0 && `+ ${paraFormat(toplamUSD, "USD")} `}
+            {toplamEUR > 0 && `+ ${paraFormat(toplamEUR, "EUR")}`}
+            {toplamTL === 0 && toplamUSD === 0 && toplamEUR === 0 && "0,00 ₺"}
+          </p>
+          <p className="text-[11px] text-metin/50 mt-1">Döviz birimlerine göre ayrıştırılmış alış sermaye değerleri</p>
         </div>
 
         <div className="bg-yuzey border border-hat p-5 rounded-lg shadow-sm">

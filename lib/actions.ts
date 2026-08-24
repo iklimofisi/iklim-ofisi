@@ -1266,3 +1266,21 @@ export async function siparisOlustur(teklifId: string) {
   revalidatePath(`/panel/teklifler/${teklifId}`);
   redirect(`/panel/siparisler/${siparis.id}`);
 }
+
+// MÜŞTERİ SİLME FONKSİYONU
+export async function musteriSil(musteriId: string) {
+  const giren = await suankiKullanici();
+  if (!giren || giren.rol !== "ADMIN") return;
+
+  if (!musteriId) return;
+
+  // Bağlı ilişkili cari hareketleri ve ziyaretleri sil
+  await prisma.cariHareket.deleteMany({ where: { musteriId } });
+  await prisma.ziyaret.deleteMany({ where: { musteriId } });
+  await prisma.proje.updateMany({ where: { musteriId }, data: { musteriId: null } });
+
+  await prisma.musteri.delete({ where: { id: musteriId } });
+
+  revalidatePath("/panel/musteriler");
+  redirect("/panel/musteriler");
+}
