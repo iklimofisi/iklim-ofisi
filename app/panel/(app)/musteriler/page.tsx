@@ -1,12 +1,14 @@
 import { prisma } from "@/lib/prisma";
-import { musteriEkle, musteriSil } from "@/lib/actions"; // DÜZELTİLDİ: musteriEkle eklendi
+import { musteriEkle, musteriSil } from "@/lib/actions";
 import SilButon from "@/components/SilButon";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 export default async function MusterilerPage() {
+  // MÜŞTERİ YETKİLİLERİ İLİŞKİSİ DAHİL EDİLDİ
   const musteriler = await prisma.musteri.findMany({
+    include: { yetkililer: true },
     orderBy: { ad: "asc" },
   });
 
@@ -134,60 +136,72 @@ export default async function MusterilerPage() {
           <thead>
             <tr className="border-b border-hat text-xs text-metin/50 bg-soguk-light/20 font-semibold">
               <th className="py-3 px-4">Firma / Müşteri Adı</th>
-              <th className="py-3 px-4">Müşteri Yetkilisi</th>
+              <th className="py-3 px-4">Müşteri Yetkilileri</th>
               <th className="py-3 px-4">Telefon</th>
               <th className="py-3 px-4">E-posta</th>
               <th className="py-3 px-4">Vergi No</th>
               <th className="py-3 px-4 text-right">Detay</th>
-              <th className="py-3 px-4 text-center">Sil</th> {/* DÜZELTİLDİ: Sütun başlığı eklendi */}
+              <th className="py-3 px-4 text-center">Sil</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-hat">
-            {musteriler.map((m) => (
-              <tr key={m.id} className="hover:bg-slate-50/50">
-                <td className="py-3 px-4 font-semibold text-metin">
-                  <Link href={`/panel/musteriler/${m.id}`} className="hover:text-soguk-dim">
-                    {m.ad}
-                  </Link>
-                </td>
-                
-                {/* MÜŞTERİ YETKİLİSİ BİLGİSİ */}
-                <td className="py-3 px-4 text-metin font-medium">
-                  {m.yetkiliAdi ? (
-                    <div>
-                      <div>{m.yetkiliAdi}</div>
-                      {m.yetkiliTelefon && (
-                        <div className="text-xs text-metin/50 font-normal">{m.yetkiliTelefon}</div>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-metin/30">—</span>
-                  )}
-                </td>
+            {musteriler.map((m) => {
+              // DÜZELTİLDİ: Tip-güvenli Yetkili Bilgisi
+              const ilkYetkili = m.yetkililer && m.yetkililer.length > 0 ? m.yetkililer[0] : null;
+              const yetkiliAd = ilkYetkili ? ilkYetkili.ad : (m as any).yetkiliAdi;
+              const yetkiliTel = ilkYetkili ? ilkYetkili.telefon : (m as any).yetkiliTelefon;
 
-                <td className="py-3 px-4 text-metin/70">{m.telefon || m.yetkiliTelefon || "—"}</td>
-                <td className="py-3 px-4 text-metin/70">{m.email || m.yetkiliEmail || "—"}</td>
-                <td className="py-3 px-4 text-metin/50">{m.vergiNo || "—"}</td>
-                
-                <td className="py-3 px-4 text-right">
-                  <Link
-                    href={`/panel/musteriler/${m.id}`}
-                    className="text-xs font-medium text-soguk-dim hover:underline"
-                  >
-                    Görüntüle →
-                  </Link>
-                </td>
+              return (
+                <tr key={m.id} className="hover:bg-slate-50/50">
+                  <td className="py-3 px-4 font-semibold text-metin">
+                    <Link href={`/panel/musteriler/${m.id}`} className="hover:text-soguk-dim">
+                      {m.ad}
+                    </Link>
+                  </td>
+                  
+                  {/* MÜŞTERİ YETKİLİSİ BİLGİSİ */}
+                  <td className="py-3 px-4 text-metin font-medium">
+                    {yetkiliAd ? (
+                      <div>
+                        <div>{yetkiliAd} {ilkYetkili?.unvan ? `(${ilkYetkili.unvan})` : ""}</div>
+                        {yetkiliTel && (
+                          <div className="text-xs text-metin/50 font-normal">{yetkiliTel}</div>
+                        )}
+                        {m.yetkililer && m.yetkililer.length > 1 && (
+                          <div className="text-[10px] text-soguk-dim font-bold mt-0.5">
+                            +{m.yetkililer.length - 1} diğer yetkili
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-metin/30">—</span>
+                    )}
+                  </td>
 
-                {/* MÜŞTERİ SİL BUTONU */}
-                <td className="py-3 px-4 text-center">
-                  <SilButon
-                    id={m.id}
-                    action={musteriSil}
-                    onayMesaji="Bu müşteriyi ve tüm ilişkili kayıtlarını silmek istediğinizden emin misiniz?"
-                  />
-                </td>
-              </tr>
-            ))}
+                  <td className="py-3 px-4 text-metin/70">{m.telefon || yetkiliTel || "—"}</td>
+                  <td className="py-3 px-4 text-metin/70">{m.email || ilkYetkili?.email || "—"}</td>
+                  <td className="py-3 px-4 text-metin/50">{m.vergiNo || "—"}</td>
+                  
+                  <td className="py-3 px-4 text-right">
+                    <Link
+                      href={`/panel/musteriler/${m.id}`}
+                      className="text-xs font-medium text-soguk-dim hover:underline"
+                    >
+                      Görüntüle →
+                    </Link>
+                  </td>
+
+                  {/* MÜŞTERİ SİL BUTONU */}
+                  <td className="py-3 px-4 text-center">
+                    <SilButon
+                      id={m.id}
+                      action={musteriSil}
+                      onayMesaji="Bu müşteriyi ve tüm ilişkili kayıtlarını silmek istediğinizden emin misiniz?"
+                    />
+                  </td>
+                </tr>
+              );
+            })}
             {musteriler.length === 0 && (
               <tr>
                 <td colSpan={7} className="py-8 text-center text-metin/50 text-sm">
