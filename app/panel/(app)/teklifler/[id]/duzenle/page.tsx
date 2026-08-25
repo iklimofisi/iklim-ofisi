@@ -12,11 +12,7 @@ export default async function TeklifDuzenle({ params }: { params: { id: string }
       where: { id: params.id },
       include: { kalemler: true, sablonlar: true },
     }),
-    // DÜZELTİLDİ: Müşteri Yetkilileri Sorguya Dahil Edildi
-    prisma.musteri.findMany({
-      include: { yetkililer: true },
-      orderBy: { ad: "asc" },
-    }),
+    prisma.musteri.findMany({ orderBy: { ad: "asc" } }),
     prisma.teklifSablon.findMany({ orderBy: { sira: "asc" } }),
     prisma.marka.findMany({ orderBy: { ad: "asc" } }),
     prisma.urun.findMany({ orderBy: { ad: "asc" } }),
@@ -54,15 +50,14 @@ export default async function TeklifDuzenle({ params }: { params: { id: string }
           className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm mb-5"
         />
 
-        {/* MÜŞTERİ - YETKİLİ - PROJE SEÇİM ALANI */}
-        <div className="grid sm:grid-cols-3 gap-3 mb-5">
+        <div className="grid sm:grid-cols-2 gap-3 mb-5">
           <div>
-            <label className="block text-xs font-medium text-metin/60 mb-1">Müşteri Firma</label>
+            <label className="block text-xs font-medium text-metin/60 mb-1">Müşteri</label>
             <select
               name="musteriId"
               required
               defaultValue={teklif.musteriId}
-              className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white"
+              className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm"
             >
               {musteriler.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -71,31 +66,9 @@ export default async function TeklifDuzenle({ params }: { params: { id: string }
               ))}
             </select>
           </div>
-
-          {/* DÜZELTİLDİ: TEKLİFİN HİTAP EDİLECEĞİ MÜŞTERİ YETKİLİSİ SEÇİMİ */}
-          <div>
-            <label className="block text-xs font-semibold text-soguk-dim mb-1">Teklif Hitap Edilecek Yetkili Kişi</label>
-            <select
-              name="yetkiliId"
-              defaultValue={(teklif as any).yetkiliId ?? ""}
-              className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white font-medium"
-            >
-              <option value="">— Firma Geneline (Yetkili Seçilmedi) —</option>
-              {musteriler.map((m) => (
-                <optgroup key={m.id} label={m.ad}>
-                  {m.yetkililer?.map((y) => (
-                    <option key={y.id} value={y.id}>
-                      {y.ad} {y.unvan ? `(${y.unvan})` : ""}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-          </div>
-
           <div>
             <label className="block text-xs font-medium text-metin/60 mb-1">Proje (opsiyonel)</label>
-            <select name="projeId" defaultValue={teklif.projeId ?? ""} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
+            <select name="projeId" defaultValue={teklif.projeId ?? ""} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm">
               <option value="">— Proje bağlantısı yok —</option>
               {projeler.map((p) => (
                 <option key={p.id} value={p.id}>{p.ad}</option>
@@ -107,7 +80,7 @@ export default async function TeklifDuzenle({ params }: { params: { id: string }
         <div className="grid sm:grid-cols-4 gap-3 mb-5">
           <div>
             <label className="block text-xs font-medium text-metin/60 mb-1">Para Birimi</label>
-            <select name="paraBirimi" defaultValue={teklif.paraBirimi} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
+            <select name="paraBirimi" defaultValue={teklif.paraBirimi} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm">
               <option value="TRY">₺ TRY</option>
               <option value="USD">$ USD</option>
               <option value="EUR">€ EUR</option>
@@ -115,7 +88,7 @@ export default async function TeklifDuzenle({ params }: { params: { id: string }
           </div>
           <div>
             <label className="block text-xs font-medium text-metin/60 mb-1">KDV Durumu</label>
-            <select name="kdvDurumu" defaultValue={teklif.kdvDahil ? "dahil" : "haric"} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
+            <select name="kdvDurumu" defaultValue={teklif.kdvDahil ? "dahil" : "haric"} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm">
               <option value="haric">Fiyatlara KDV Hariç</option>
               <option value="dahil">Fiyatlara KDV Dahil</option>
             </select>
@@ -126,7 +99,7 @@ export default async function TeklifDuzenle({ params }: { params: { id: string }
               name="kdvOrani"
               type="number"
               defaultValue={teklif.kdvOrani}
-              className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white"
+              className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -135,7 +108,7 @@ export default async function TeklifDuzenle({ params }: { params: { id: string }
               name="gecerlilikGunu"
               type="number"
               defaultValue={teklif.gecerlilikGunu}
-              className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white"
+              className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm"
             />
           </div>
         </div>
@@ -152,10 +125,10 @@ export default async function TeklifDuzenle({ params }: { params: { id: string }
           }))}
           baslangic={teklif.kalemler.map((k, i) => ({
             key: i,
-            bolum: (k as any).bolum || "Genel Kalemler",
+            bolum: (k as any).bolum || "Genel Kalemler", // Bölüm Desteği
             aciklama: k.aciklama,
             adet: k.adet,
-            birimFiyat: String(k.birimFiyat ?? 0),
+            birimFiyat: String(k.birimFiyat ?? 0), // Ondalıklı fiyat için String tutuluyor
             iskontoYuzde: String(k.iskontoYuzde ?? 0),
             markaId: k.markaId,
           }))}
