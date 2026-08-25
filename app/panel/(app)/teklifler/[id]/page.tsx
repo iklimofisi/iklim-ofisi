@@ -168,10 +168,10 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
                 {teklif.yetkili.telefon && <p className="text-metin/70">📞 Tel: {teklif.yetkili.telefon}</p>}
                 {teklif.yetkili.email && <p className="text-metin/70">✉️ Mail: {teklif.yetkili.email}</p>}
               </div>
-            ) : teklif.musteri.yetkiliAdi ? (
+            ) : teklif.musteri.yetkililer.length > 0 ? (
               <p className="text-xs font-semibold text-soguk-dim pt-1">
-                👤 Yetkili: {teklif.musteri.yetkiliAdi}
-                {teklif.musteri.yetkiliTelefon && ` (${teklif.musteri.yetkiliTelefon})`}
+                👤 Yetkili: {teklif.musteri.yetkililer[0].ad}
+                  (${teklif.musteri.yetkililer[0].telefon})`}
               </p>
             ) : null}
             
@@ -307,8 +307,10 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
               <p className="text-xs text-metin/70 mt-0.5">
                 Yetkili: {teklif.yetkili.ad} {teklif.yetkili.unvan ? `(${teklif.yetkili.unvan})` : ""}
               </p>
-            ) : teklif.musteri.yetkiliAdi ? (
-              <p className="text-xs text-metin/70 mt-0.5">Yetkili: {teklif.musteri.yetkiliAdi}</p>
+            ) : teklif.musteri.yetkililer.length > 0 ? (
+              <p className="text-xs text-metin/70 mt-0.5">
+                Yetkili: {teklif.musteri.yetkililer[0].ad}
+              </p>
             ) : null}
             <div className="border-t border-hat mt-10 pt-2 text-metin/40 text-xs">İmza / Kaşe</div>
           </div>
