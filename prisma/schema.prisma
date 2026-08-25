@@ -30,24 +30,35 @@ model Session {
 }
 
 model Musteri {
-  id            String   @id @default(cuid())
-  ad            String   // Müşteri / Firma Unvanı
-  yetkiliAdi    String?  // Müşteri Yetkilisi Adı Soyadı
-  yetkiliTelefon String? // Müşteri Yetkilisi Telefonu
-  yetkiliEmail  String?  // Müşteri Yetkilisi E-postası
-  telefon       String?  // Şirket Santral Telefonu
-  email         String?
+  id            String           @id @default(cuid())
+  ad            String           // Müşteri / Firma Unvanı
+  telefon       String?          // Şirket Santral Telefonu
+  email         String?          // Şirket Kurumsal E-postası
   muhasebeEmail String?
   vergiNo       String?
   faturaAdresi  String?
   sevkAdresi    String?
-  createdAt     DateTime @default(now())
+  createdAt     DateTime         @default(now())
 
+  yetkililer     MusteriYetkili[] // ÇOKLU YETKİLİ KİŞİLER
   teklifler      Teklif[]
   cariHareketler CariHareket[]
   siparisler     Siparis[]
   projeler       Proje[]
   ziyaretler     Ziyaret[]
+}
+
+// B2B ÇOKLU MÜŞTERİ YETKİLİSİ MODELİ
+model MusteriYetkili {
+  id        String   @id @default(cuid())
+  musteri   Musteri  @relation(fields: [musteriId], references: [id], onDelete: Cascade)
+  musteriId String
+  ad        String   // Ad Soyad (Örn: Ahmet Yılmaz)
+  unvan     String?  // Ünvan (Örn: Satınalma Müdürü, Şantiye Şefi)
+  telefon   String?
+  email     String?
+  teklifler Teklif[]
+  createdAt DateTime @default(now())
 }
 
 model Teklif {
@@ -56,6 +67,11 @@ model Teklif {
   baslik                   String            @default("")
   musteri                  Musteri           @relation(fields: [musteriId], references: [id])
   musteriId                String
+  
+  // YENİ: Teklifin Hazırlandığı Müşteri Yetkilisi
+  yetkiliId                String?
+  yetkili                  MusteriYetkili?   @relation(fields: [yetkiliId], references: [id])
+
   projeId                  String?
   proje                    Proje?            @relation(fields: [projeId], references: [id])
   tarih                    DateTime          @default(now())
@@ -66,7 +82,7 @@ model Teklif {
   gecerlilikGunu           Int               @default(15)
   birimFiyatGoster         Boolean           @default(true)
   revizyonNo               Int               @default(1)
-  olusturanKullaniciId     String?           // Hazırlayan Kullanıcı Bağlantısı
+  olusturanKullaniciId     String?
   olusturanKullanici       Kullanici?        @relation(fields: [olusturanKullaniciId], references: [id])
   olusturanAdi             String            @default("")
   kaynakSatinalmaTeklifiId String?

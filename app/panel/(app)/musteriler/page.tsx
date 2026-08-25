@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { musteriEkle, musteriSil } from "@/lib/actions";
+import { musteriEkle, musteriSil } from "@/lib/actions"; // DÜZELTİLDİ: musteriEkle eklendi
 import SilButon from "@/components/SilButon";
 import Link from "next/link";
 
@@ -139,6 +139,7 @@ export default async function MusterilerPage() {
               <th className="py-3 px-4">E-posta</th>
               <th className="py-3 px-4">Vergi No</th>
               <th className="py-3 px-4 text-right">Detay</th>
+              <th className="py-3 px-4 text-center">Sil</th> {/* DÜZELTİLDİ: Sütun başlığı eklendi */}
             </tr>
           </thead>
           <tbody className="divide-y divide-hat">
@@ -167,6 +168,7 @@ export default async function MusterilerPage() {
                 <td className="py-3 px-4 text-metin/70">{m.telefon || m.yetkiliTelefon || "—"}</td>
                 <td className="py-3 px-4 text-metin/70">{m.email || m.yetkiliEmail || "—"}</td>
                 <td className="py-3 px-4 text-metin/50">{m.vergiNo || "—"}</td>
+                
                 <td className="py-3 px-4 text-right">
                   <Link
                     href={`/panel/musteriler/${m.id}`}
@@ -176,7 +178,7 @@ export default async function MusterilerPage() {
                   </Link>
                 </td>
 
-                {/* MÜŞTERİ SİL BUTONU EKLENDİ */}
+                {/* MÜŞTERİ SİL BUTONU */}
                 <td className="py-3 px-4 text-center">
                   <SilButon
                     id={m.id}
@@ -188,7 +190,7 @@ export default async function MusterilerPage() {
             ))}
             {musteriler.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-metin/50 text-sm">
+                <td colSpan={7} className="py-8 text-center text-metin/50 text-sm">
                   Henüz kayıtlı müşteri yok.
                 </td>
               </tr>

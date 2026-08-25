@@ -5,7 +5,7 @@ import Link from "next/link";
 import React from "react";
 import YazdirButon from "@/components/YazdirButon";
 import TeklifDurumSecici from "@/components/TeklifDurumSecici";
-import { getSirketAyarlari } from "@/lib/sirket"; // ŞİRKET AYARLARI EKLENDİ
+import { getSirketAyarlari } from "@/lib/sirket";
 
 export const dynamic = "force-dynamic";
 
@@ -21,12 +21,13 @@ function kurumsalTeklifKodu(teklifNo: number, tarih: Date) {
 }
 
 export default async function TeklifDetay({ params }: { params: { id: string } }) {
-  // TEKLİF VE ŞİRKET BİLGİLERİ DİNAMİK ÇEKİLİYOR
+  // TEKLİF, ŞİRKET VE MÜŞTERİ YETKİLİSİ BİLGİLERİ DİNAMİK ÇEKİLİYOR
   const [teklif, sirket] = await Promise.all([
     prisma.teklif.findUnique({
       where: { id: params.id },
       include: {
-        musteri: true,
+        musteri: { include: { yetkililer: true } },
+        yetkili: true, // DÜZELTİLDİ: Teklifte Seçilen Müşteri Yetkilisi
         proje: true,
         olusturanKullanici: true,
         kalemler: { include: { marka: true } },
@@ -35,7 +36,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
         siparis: true,
       },
     }),
-    getSirketAyarlari(), // <-- PANELDEN GİRDİĞİN ŞİRKET ADRESİ VE BİLGİLERİNİ ÇEKER
+    getSirketAyarlari(),
   ]);
 
   if (!teklif) notFound();
@@ -117,7 +118,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
       </div>
 
       <div className="bg-yuzey border border-hat rounded-lg p-8 sm:p-12 print:border-0 print:p-0">
-        {/* ŞİRKET BİLGİLERİ VE ADRESİ (PANELDEN GİRDİĞİN AYARLARDAN DİNAMİK GELİR) */}
+        {/* ŞİRKET BİLGİLERİ VE ADRESİ */}
         <div className="flex items-start justify-between mb-10 pb-6 border-b border-hat">
           <div className="flex items-center gap-3">
             <Image src="/logo-icon.png" alt={sirket.unvan} width={48} height={48} />
@@ -152,20 +153,29 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
         )}
         {!teklif.proje && <div className="mb-8" />}
 
-        {/* MÜŞTERİ VE YETKİLİ BİLGİLERİ */}
+        {/* MÜŞTERİ VE SEÇİLEN MÜŞTERİ YETKİLİSİ BİLGİLERİ */}
         <div className="grid sm:grid-cols-2 gap-6 mb-10 text-sm">
           <div className="space-y-1">
             <p className="text-xs text-metin/50 uppercase tracking-wider font-semibold">Müşteri / Firma</p>
             <p className="font-bold text-metin text-base">{teklif.musteri.ad}</p>
             
-            {teklif.musteri.yetkiliAdi && (
+            {/* DÜZELTİLDİ: SEÇİLEN YETKİLİ BİLGİSİ YANSITILDI */}
+            {teklif.yetkili ? (
+              <div className="bg-soguk-light/20 p-2.5 rounded border border-hat/50 text-xs mt-1.5 space-y-0.5">
+                <p className="font-bold text-soguk-dim">
+                  👤 Sayın: {teklif.yetkili.ad} {teklif.yetkili.unvan ? `(${teklif.yetkili.unvan})` : ""}
+                </p>
+                {teklif.yetkili.telefon && <p className="text-metin/70">📞 Tel: {teklif.yetkili.telefon}</p>}
+                {teklif.yetkili.email && <p className="text-metin/70">✉️ Mail: {teklif.yetkili.email}</p>}
+              </div>
+            ) : teklif.musteri.yetkiliAdi ? (
               <p className="text-xs font-semibold text-soguk-dim pt-1">
                 👤 Yetkili: {teklif.musteri.yetkiliAdi}
                 {teklif.musteri.yetkiliTelefon && ` (${teklif.musteri.yetkiliTelefon})`}
               </p>
-            )}
+            ) : null}
             
-            {teklif.musteri.telefon && <p className="text-metin/60 text-xs">Santral: {teklif.musteri.telefon}</p>}
+            {teklif.musteri.telefon && <p className="text-metin/60 text-xs pt-1">Santral: {teklif.musteri.telefon}</p>}
             {teklif.musteri.vergiNo && <p className="text-metin/60 text-xs">VN: {teklif.musteri.vergiNo}</p>}
             {teklif.musteri.faturaAdresi && <p className="text-metin/60 text-xs">{teklif.musteri.faturaAdresi}</p>}
           </div>
@@ -287,19 +297,51 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
             <div className="border-t border-hat mt-10 pt-2 text-metin/40 text-xs">İmza / Kaşe</div>
           </div>
           
-          {/* MÜŞTERİ ONAYI */}
+          {/* MÜŞTERİ ONAYI (DÜZELTİLDİ: SEÇİLEN YETKİLİ ADI) */}
           <div>
             <p className="text-xs font-semibold text-metin/50 uppercase tracking-wider mb-2">
               Müşteri Onayı
             </p>
             <p className="font-bold text-metin text-base">{teklif.musteri.ad}</p>
-            {teklif.musteri.yetkiliAdi && (
+            {teklif.yetkili ? (
+              <p className="text-xs text-metin/70 mt-0.5">
+                Yetkili: {teklif.yetkili.ad} {teklif.yetkili.unvan ? `(${teklif.yetkili.unvan})` : ""}
+              </p>
+            ) : teklif.musteri.yetkiliAdi ? (
               <p className="text-xs text-metin/70 mt-0.5">Yetkili: {teklif.musteri.yetkiliAdi}</p>
-            )}
+            ) : null}
             <div className="border-t border-hat mt-10 pt-2 text-metin/40 text-xs">İmza / Kaşe</div>
           </div>
         </div>
       </div>
+
+      {teklif.revizyonlar.length > 0 && (
+        <div className="mt-8 print:hidden">
+          <h2 className="font-display font-medium text-metin mb-3">Revizyon Geçmişi</h2>
+          <div className="bg-yuzey border border-hat rounded-lg divide-y divide-hat">
+            {teklif.revizyonlar.map((r) => {
+              const veri = JSON.parse(r.veriJson) as {
+                baslik: string;
+                paraBirimi: string;
+                kalemler: { adet: number; birimFiyat: number; iskontoYuzde: number }[];
+              };
+              const eskiToplam = veri.kalemler.reduce(
+                (a, k) => a + k.adet * k.birimFiyat * (1 - k.iskontoYuzde / 100),
+                0
+              );
+              return (
+                <div key={r.id} className="p-4 text-sm flex items-center justify-between">
+                  <div>
+                    <p className="text-metin">Rev. {r.revizyonNo} — {veri.baslik || "(Başlıksız)"}</p>
+                    <p className="text-xs text-metin/50">{r.tarih.toISOString().slice(0, 10)}</p>
+                  </div>
+                  <p className="font-mono text-metin/60">{paraFormat(eskiToplam, veri.paraBirimi)}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
