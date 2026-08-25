@@ -1284,32 +1284,3 @@ export async function musteriSil(musteriId: string) {
   revalidatePath("/panel/musteriler");
   redirect("/panel/musteriler");
 }
-
-// --- MÜŞTERİ ÇOKLU YETKİLİ KİŞİ İŞLEMLERİ ---
-
-export async function musteriYetkiliEkle(formData: FormData) {
-  const musteriId = String(formData.get("musteriId") ?? "");
-  const ad = String(formData.get("ad") ?? "").trim();
-  const unvan = String(formData.get("unvan") ?? "").trim();
-  const telefon = String(formData.get("telefon") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
-
-  if (!musteriId || !ad) return;
-
-  await prisma.musteriYetkili.create({
-    data: {
-      musteriId,
-      ad,
-      unvan: unvan || null,
-      telefon: telefon || null,
-      email: email || null,
-    },
-  });
-
-  revalidatePath(`/panel/musteriler/${musteriId}`);
-}
-
-export async function musteriYetkiliSil(id: string, musteriId: string) {
-  await prisma.musteriYetkili.delete({ where: { id } });
-  revalidatePath(`/panel/musteriler/${musteriId}`);
-}
