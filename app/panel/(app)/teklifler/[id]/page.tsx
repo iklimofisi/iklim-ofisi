@@ -171,7 +171,9 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
             ) : teklif.musteri.yetkililer.length > 0 ? (
               <p className="text-xs font-semibold text-soguk-dim pt-1">
                 👤 Yetkili: {teklif.musteri.yetkililer[0].ad}
-                  (${teklif.musteri.yetkililer[0].telefon})`}
+                {teklif.musteri.yetkililer[0].telefon
+                  ? ` (${teklif.musteri.yetkililer[0].telefon})`
+                  : ""}
               </p>
             ) : null}
             
