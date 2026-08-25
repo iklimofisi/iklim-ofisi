@@ -33,17 +33,27 @@ export async function musteriEkle(formData: FormData) {
   const musteri = await prisma.musteri.create({
     data: {
       ad,
-      yetkiliAdi: yetkiliAdi || null,
-      yetkiliTelefon: yetkiliTelefon || null,
-      yetkiliEmail: yetkiliEmail || null,
       telefon: telefon || null,
       email: email || null,
       muhasebeEmail: muhasebeEmail || null,
       vergiNo: vergiNo || null,
       faturaAdresi: faturaAdresi || null,
       sevkAdresi: sevkAdresi || null,
+      // DÜZELTİLDİ: Yetkili varsa ilişkisel olarak MusteriYetkili tablosuna kaydedilir
+      ...(yetkiliAdi
+        ? {
+            yetkililer: {
+              create: {
+                ad: yetkiliAdi,
+                telefon: yetkiliTelefon || null,
+                email: yetkiliEmail || null,
+              },
+            },
+          }
+        : {}),
     },
   });
+
   revalidatePath("/panel/musteriler");
   redirect(`/panel/musteriler/${musteri.id}`);
 }
@@ -51,9 +61,6 @@ export async function musteriEkle(formData: FormData) {
 export async function musteriGuncelle(formData: FormData) {
   const musteriId = String(formData.get("musteriId") ?? "");
   const ad = String(formData.get("ad") ?? "").trim();
-  const yetkiliAdi = String(formData.get("yetkiliAdi") ?? "").trim();
-  const yetkiliTelefon = String(formData.get("yetkiliTelefon") ?? "").trim();
-  const yetkiliEmail = String(formData.get("yetkiliEmail") ?? "").trim();
   const telefon = String(formData.get("telefon") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const muhasebeEmail = String(formData.get("muhasebeEmail") ?? "").trim();
@@ -66,9 +73,6 @@ export async function musteriGuncelle(formData: FormData) {
     where: { id: musteriId },
     data: {
       ad,
-      yetkiliAdi: yetkiliAdi || null,
-      yetkiliTelefon: yetkiliTelefon || null,
-      yetkiliEmail: yetkiliEmail || null,
       telefon: telefon || null,
       email: email || null,
       muhasebeEmail: muhasebeEmail || null,
@@ -77,8 +81,54 @@ export async function musteriGuncelle(formData: FormData) {
       sevkAdresi: sevkAdresi || null,
     },
   });
+
   revalidatePath(`/panel/musteriler/${musteriId}`);
   revalidatePath("/panel/musteriler");
+}
+
+export async function musteriSil(musteriId: string) {
+  const giren = await suankiKullanici();
+  if (!giren || giren.rol !== "ADMIN") return;
+
+  if (!musteriId) return;
+
+  await prisma.cariHareket.deleteMany({ where: { musteriId } });
+  await prisma.ziyaret.deleteMany({ where: { musteriId } });
+  await prisma.proje.updateMany({ where: { musteriId }, data: { musteriId: null } });
+
+  await prisma.musteri.delete({ where: { id: musteriId } });
+
+  revalidatePath("/panel/musteriler");
+  redirect("/panel/musteriler");
+}
+
+// --- MÜŞTERİ ÇOKLU YETKİLİ KİŞİ İŞLEMLERİ ---
+
+export async function musteriYetkiliEkle(formData: FormData) {
+  const musteriId = String(formData.get("musteriId") ?? "");
+  const ad = String(formData.get("ad") ?? "").trim();
+  const unvan = String(formData.get("unvan") ?? "").trim();
+  const telefon = String(formData.get("telefon") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+
+  if (!musteriId || !ad) return;
+
+  await prisma.musteriYetkili.create({
+    data: {
+      musteriId,
+      ad,
+      unvan: unvan || null,
+      telefon: telefon || null,
+      email: email || null,
+    },
+  });
+
+  revalidatePath(`/panel/musteriler/${musteriId}`);
+}
+
+export async function musteriYetkiliSil(id: string, musteriId: string) {
+  await prisma.musteriYetkili.delete({ where: { id } });
+  revalidatePath(`/panel/musteriler/${musteriId}`);
 }
 
 // --- Teklifler ---
@@ -103,12 +153,11 @@ function kalemleriOku(formData: FormData) {
     .filter((k) => k.aciklama);
 }
 
-// 1. TEKLİF EKLEME (MÜŞTERİ YETKİLİSİ EKLENDİ)
 export async function teklifEkle(formData: FormData) {
   const kullanici = await suankiKullanici();
   const baslik = String(formData.get("baslik") ?? "").trim();
   const musteriId = String(formData.get("musteriId") ?? "");
-  const yetkiliId = String(formData.get("yetkiliId") ?? ""); // <--- BURADA OKUNUYOR
+  const yetkiliId = String(formData.get("yetkiliId") ?? "");
   const projeId = String(formData.get("projeId") ?? "");
   const paraBirimi = String(formData.get("paraBirimi") ?? "TRY");
   const kdvOrani = parseSayi(formData.get("kdvOrani"));
@@ -124,7 +173,7 @@ export async function teklifEkle(formData: FormData) {
     data: {
       baslik,
       musteriId,
-      yetkiliId: yetkiliId || null, // <--- BURAYA EKLENDİ
+      yetkiliId: yetkiliId || null,
       projeId: projeId || null,
       paraBirimi,
       kdvOrani,
@@ -142,12 +191,11 @@ export async function teklifEkle(formData: FormData) {
   redirect(`/panel/teklifler/${teklif.id}`);
 }
 
-// 2. TEKLİF GÜNCELLEME (MÜŞTERİ YETKİLİSİ EKLENDİ)
 export async function teklifGuncelle(formData: FormData) {
   const teklifId = String(formData.get("teklifId") ?? "");
   const baslik = String(formData.get("baslik") ?? "").trim();
   const musteriId = String(formData.get("musteriId") ?? "");
-  const yetkiliId = String(formData.get("yetkiliId") ?? ""); // <--- BURADA OKUNUYOR
+  const yetkiliId = String(formData.get("yetkiliId") ?? "");
   const projeId = String(formData.get("projeId") ?? "");
   const paraBirimi = String(formData.get("paraBirimi") ?? "TRY");
   const kdvOrani = parseSayi(formData.get("kdvOrani"));
@@ -188,7 +236,7 @@ export async function teklifGuncelle(formData: FormData) {
     data: {
       baslik,
       musteriId,
-      yetkiliId: yetkiliId || null, // <--- BURAYA EKLENDİ
+      yetkiliId: yetkiliId || null,
       projeId: projeId || null,
       paraBirimi,
       kdvOrani,
@@ -341,7 +389,6 @@ export async function tedarikciHareketSil(id: string) {
 
 // --- AKILLI STOK VEYA KATALOG GİRİŞİ (WAC - AĞIRLIKLI ORTALAMA MALİYET HESAPLI) ---
 
-// AKILLI STOK GİRİŞİ VEYA KATALOG KAYDI
 export async function stokGirisiEkle(formData: FormData) {
   const urunId = String(formData.get("urunId") ?? "").trim();
   const yeniUrunKodu = String(formData.get("yeniUrunKodu") ?? "").trim();
@@ -350,18 +397,20 @@ export async function stokGirisiEkle(formData: FormData) {
 
   const miktar = parseSayi(formData.get("miktar"));
   const birimAlisFiyati = parseSayi(formData.get("birimAlisFiyati"));
-  const birimEkGider = parseSayi(formData.get("birimEkGider")); // Nakliye / Gümrük
-  const listeFiyati = parseSayi(formData.get("listeFiyati"));   // Katalog Satış Fiyatı
+  const birimEkGider = parseSayi(formData.get("birimEkGider"));
+  const listeFiyati = parseSayi(formData.get("listeFiyati"));
   const paraBirimi = String(formData.get("paraBirimi") ?? "TRY");
   const hedefKarMarjiYuzde = parseSayi(formData.get("hedefKarMarjiYuzde")) || 20;
   const depoKonumu = String(formData.get("depoKonumu") ?? "").trim();
 
   const girenBirimToplamMaliyet = birimAlisFiyati + birimEkGider;
 
+  let urun;
+
   if (urunId === "YENI_URUN") {
     if (!yeniUrunAdi) return;
 
-    await prisma.urun.create({
+    urun = await prisma.urun.create({
       data: {
         kod: yeniUrunKodu || null,
         ad: yeniUrunAdi,
@@ -377,13 +426,12 @@ export async function stokGirisiEkle(formData: FormData) {
       },
     });
   } else {
-    const urun = await prisma.urun.findUnique({ where: { id: urunId } });
+    urun = await prisma.urun.findUnique({ where: { id: urunId } });
     if (!urun) return;
 
     const eskiStok = urun.stokMiktari;
     const eskiMaliyet = urun.maliyetFiyati;
 
-    // Ağırlıklı Ortalama Maliyet (WAC)
     const toplamMevcutMaliyet = eskiStok * eskiMaliyet;
     const toplamGelenMaliyet = miktar * girenBirimToplamMaliyet;
     const yeniToplamStok = eskiStok + miktar;
@@ -399,7 +447,6 @@ export async function stokGirisiEkle(formData: FormData) {
         stokMiktari: yeniToplamStok,
         maliyetFiyati: yeniAgirlikliMaliyet,
         ekGiderler: birimEkGider,
-        maliyetParaBirimi: paraBirimi,
         depoKonumu: depoKonumu || urun.depoKonumu,
         listeFiyati: listeFiyati > 0 ? listeFiyati : urun.listeFiyati,
       },
@@ -410,7 +457,6 @@ export async function stokGirisiEkle(formData: FormData) {
   revalidatePath("/panel/ayarlar/urunler");
 }
 
-// TABLO İÇİ HIZLI STOK VE MALİYET GÜNCELLEME
 export async function urunStokVeMaliyetGuncelle(formData: FormData) {
   const urunId = String(formData.get("urunId") ?? "");
   const stokMiktari = parseSayi(formData.get("stokMiktari"));
@@ -590,6 +636,33 @@ export async function siparisTalebiOlustur(formData: FormData) {
       olusturanAdi: kullanici?.ad ?? "",
     },
   });
+  revalidatePath("/panel/siparisler");
+  revalidatePath(`/panel/teklifler/${teklifId}`);
+  redirect(`/panel/siparisler/${siparis.id}`);
+}
+
+export async function siparisOlustur(teklifId: string) {
+  const kullanici = await suankiKullanici();
+  if (!teklifId) return;
+
+  const teklif = await prisma.teklif.findUnique({ where: { id: teklifId } });
+  if (!teklif) return;
+
+  const mevcutSiparis = await prisma.siparis.findUnique({ where: { teklifId } });
+  if (mevcutSiparis) {
+    redirect(`/panel/siparisler/${mevcutSiparis.id}`);
+  }
+
+  const siparis = await prisma.siparis.create({
+    data: {
+      teklifId,
+      musteriId: teklif.musteriId,
+      kur: 1,
+      olusturanKullaniciId: kullanici?.id || null,
+      olusturanAdi: kullanici?.ad ?? "",
+    },
+  });
+
   revalidatePath("/panel/siparisler");
   revalidatePath(`/panel/teklifler/${teklifId}`);
   redirect(`/panel/siparisler/${siparis.id}`);
