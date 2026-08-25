@@ -115,7 +115,6 @@ export async function teklifEkle(formData: FormData) {
   const birimFiyatGoster = formData.get("birimFiyatGoster") !== "hayir";
   const sablonIds = formData.getAll("sablonIds") as string[];
   const kalemler = kalemleriOku(formData);
-  const yetkiliId = String(formData.get("yetkiliId") ?? "");
 
   if (!musteriId || !baslik || kalemler.length === 0) return;
 
@@ -152,7 +151,6 @@ export async function teklifGuncelle(formData: FormData) {
   const birimFiyatGoster = formData.get("birimFiyatGoster") !== "hayir";
   const sablonIds = formData.getAll("sablonIds") as string[];
   const kalemler = kalemleriOku(formData);
-  const yetkiliId = String(formData.get("yetkiliId") ?? "");
 
   if (!teklifId || !musteriId || !baslik || kalemler.length === 0) return;
 
