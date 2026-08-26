@@ -75,6 +75,20 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
               <input name="vergiNo" defaultValue={musteri.vergiNo ?? ""} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm" />
             </div>
           </div>
+                    <div className="flex flex-wrap gap-3">
+            <div className="flex-1 min-w-[180px]">
+              <label className="block text-xs font-medium text-metin/60 mb-1">Müşteri Yetkilisi Ad Soyad</label>
+              <input name="yetkiliAdi" defaultValue={musteri.yetkiliAdi ?? ""} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm" />
+            </div>
+            <div className="flex-1 min-w-[160px]">
+              <label className="block text-xs font-medium text-metin/60 mb-1">Yetkili Telefon</label>
+              <input name="yetkiliTelefon" defaultValue={musteri.yetkiliTelefon ?? ""} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm" />
+            </div>
+            <div className="flex-1 min-w-[220px]">
+              <label className="block text-xs font-medium text-metin/60 mb-1">Yetkili E-posta</label>
+              <input name="yetkiliEmail" type="email" defaultValue={musteri.yetkiliEmail ?? ""} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm" />
+            </div>
+          </div>
           <div className="flex flex-wrap gap-3">
             <div className="flex-1 min-w-[220px]">
               <label className="block text-xs font-medium text-metin/60 mb-1">E-posta</label>
@@ -103,7 +117,20 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
 
       <div className="grid sm:grid-cols-2 gap-6 mb-8 text-sm">
         <div className="bg-yuzey border border-hat rounded-lg p-5 space-y-1">
+                  <div className="bg-yuzey border border-hat rounded-lg p-5 space-y-1">
           <p className="text-xs text-metin/50 mb-2">İletişim</p>
+          {musteri.yetkiliAdi && (
+            <p className="text-metin font-medium">
+              {musteri.yetkiliAdi}
+              {musteri.yetkiliTelefon && <span className="text-metin/50 font-normal"> · {musteri.yetkiliTelefon}</span>}
+            </p>
+          )}
+          {musteri.yetkiliEmail && <p className="text-metin/70">{musteri.yetkiliEmail}</p>}
+          <p className="text-metin">{musteri.telefon ?? "Telefon girilmemiş"}</p>
+          <p className="text-metin">{musteri.email ?? "E-posta girilmemiş"}</p>
+          {musteri.muhasebeEmail && <p className="text-metin/60">Muhasebe: {musteri.muhasebeEmail}</p>}
+          {musteri.vergiNo && <p className="text-metin/60">VN: {musteri.vergiNo}</p>}
+        </div>
           <p className="text-metin">{musteri.telefon ?? "Telefon girilmemiş"}</p>
           <p className="text-metin">{musteri.email ?? "E-posta girilmemiş"}</p>
           {musteri.muhasebeEmail && <p className="text-metin/60">Muhasebe: {musteri.muhasebeEmail}</p>}
