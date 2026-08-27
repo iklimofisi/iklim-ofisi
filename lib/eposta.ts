@@ -1,34 +1,35 @@
+import nodemailer from "nodemailer";
+
 export async function epostaGonder({
   konu,
   icerikHtml,
 }: {
   konu: string;
   icerikHtml: string;
-}) {
+}): Promise<{ basarili: boolean; hata?: string }> {
   const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT || 587);
+  const port = Number(process.env.SMTP_PORT || 465);
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
-  const hedefEmail = process.env.BILDIRIM_EMAIL || "info@iklimofisi.com";
+  const hedefEmail = process.env.BILDIRIM_EMAIL || user || "info@iklimofisi.com";
 
-  // Eğer SMTP ayarları Vercel / .env tarafında henüz yoksa sistemi kilitilemez, log basar
   if (!host || !user || !pass) {
-    console.log("ℹ️ SMTP ayarları Vercel / .env dosyasında eksik. E-posta bildirimi atlandı.");
-    return;
+    const hataMesaji = "SMTP ayarları (SMTP_HOST, SMTP_USER, SMTP_PASS) Vercel üzerinde henüz tanımlanmamış!";
+    console.error(hataMesaji);
+    return { basarili: false, hata: hataMesaji };
   }
 
   try {
-    const nodemailer = await import("nodemailer");
     const transporter = nodemailer.createTransport({
       host,
       port,
-      secure: port === 465, // Port 465 için SSL, 587 için TLS
+      secure: port === 465, // 465 için SSL, 587 için TLS
       auth: { user, pass },
-      connectionTimeout: 8000, // Vercel için 8 saniye zaman aşımı
+      connectionTimeout: 10000,
       greetingTimeout: 5000,
-      socketTimeout: 8000,
+      socketTimeout: 10000,
       tls: {
-        rejectUnauthorized: false, // Sertifika kilitlenmelerini engeller
+        rejectUnauthorized: false, // Vercel için sertifika kilitlenmelerini engeller
       },
     });
 
@@ -39,8 +40,9 @@ export async function epostaGonder({
       html: icerikHtml,
     });
 
-    console.log("✓ Bildirim e-postası başarıyla gönderildi:", hedefEmail);
-  } catch (error) {
-    console.error("✕ E-posta gönderim hatası:", error);
+    return { basarili: true };
+  } catch (error: any) {
+    console.error("E-posta gönderim hatası:", error);
+    return { basarili: false, hata: error?.message || String(error) };
   }
 }
