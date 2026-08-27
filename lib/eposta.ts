@@ -11,8 +11,9 @@ export async function epostaGonder({
   const pass = process.env.SMTP_PASS;
   const hedefEmail = process.env.BILDIRIM_EMAIL || "info@iklimofisi.com";
 
+  // Eğer SMTP ayarları Vercel / .env tarafında henüz yoksa sistemi kilitilemez, log basar
   if (!host || !user || !pass) {
-    console.log("ℹ️ SMTP e-posta ayarları .env dosyasında henüz tanımlanmamış. Bildirim e-postası gönderilmedi.");
+    console.log("ℹ️ SMTP ayarları Vercel / .env dosyasında eksik. E-posta bildirimi atlandı.");
     return;
   }
 
@@ -21,12 +22,18 @@ export async function epostaGonder({
     const transporter = nodemailer.createTransport({
       host,
       port,
-      secure: port === 465,
+      secure: port === 465, // Port 465 için SSL, 587 için TLS
       auth: { user, pass },
+      connectionTimeout: 8000, // Vercel için 8 saniye zaman aşımı
+      greetingTimeout: 5000,
+      socketTimeout: 8000,
+      tls: {
+        rejectUnauthorized: false, // Sertifika kilitlenmelerini engeller
+      },
     });
 
     await transporter.sendMail({
-      from: `"İklim Ofisi Web Bildirim" <${user}>`,
+      from: `"İklim Ofisi Bildirim" <${user}>`,
       to: hedefEmail,
       subject: konu,
       html: icerikHtml,

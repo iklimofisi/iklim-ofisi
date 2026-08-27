@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { suankiKullanici } from "@/lib/oturum";
 import { paraBirimiDogrula, type ParaBirimi } from "@/lib/para";
+import { epostaGonder } from "@/lib/eposta";
 
 // --- Yardımcı Sayı Formatlayıcı (Türkçe Virgülü Düzeltir) ---
 function parseSayi(val: unknown): number {
@@ -850,7 +851,7 @@ export async function kesifEkle(formData: FormData) {
 
   if (!musteriAdi || !notlar) return;
 
-  await prisma.kesifFormu.create({
+  const kesif = await prisma.kesifFormu.create({
     data: {
       musteriAdi,
       telefon: telefon || null,
@@ -861,6 +862,37 @@ export async function kesifEkle(formData: FormData) {
       olusturanAdi: kullanici?.ad ?? "",
     },
   });
+
+  // 📧 ANINDA YÖNETİCİYE VE ŞİRKET E-POSTASINA BİLDİRİM GÖNDERİLİR
+  await epostaGonder({
+    konu: `🚨 YENİ KEŞİF TALEBİ: ${musteriAdi}`,
+    icerikHtml: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8fafc; color: #334155;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 25px; border-radius: 10px; border: 1px solid #e2e8f0;">
+          <h2 style="color: #0f766e; margin-top: 0;">📍 Yeni Keşif Talebi Kaydedildi</h2>
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 15px 0;" />
+          
+          <p style="margin: 8px 0;"><strong>Müşteri / Firma:</strong> ${musteriAdi}</p>
+          <p style="margin: 8px 0;"><strong>Telefon:</strong> ${telefon || "Belirtilmedi"}</p>
+          <p style="margin: 8px 0;"><strong>Adres:</strong> ${adres || "Belirtilmedi"}</p>
+          <p style="margin: 8px 0;"><strong>Alan (m²):</strong> ${alanM2Str || "Belirtilmedi"}</p>
+          <p style="margin: 8px 0;"><strong>Mevcut Sistem:</strong> ${mevcutSistem || "Belirtilmedi"}</p>
+
+          <p style="margin: 15px 0 5px 0;"><strong>Keşif Notları / Detay:</strong></p>
+          <div style="background: #f1f5f9; padding: 12px; border-left: 4px solid #0f766e; font-style: italic; border-radius: 4px;">
+            ${notlar}
+          </div>
+
+          <div style="margin-top: 25px; text-align: center;">
+            <a href="https://iklimofisi.com/panel/kesif" style="background-color: #0f766e; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px; display: inline-block;">
+              Keşif Talebini Panelde Gör →
+            </a>
+          </div>
+        </div>
+      </div>
+    `,
+  });
+
   revalidatePath("/panel/kesif");
 }
 
