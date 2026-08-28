@@ -8,6 +8,7 @@ import { suankiKullanici } from "@/lib/oturum";
 import { paraBirimiDogrula, type ParaBirimi } from "@/lib/para";
 import { epostaGonder } from "@/lib/eposta";
 import { getSirketAyarlari } from "@/lib/sirket";
+import { teklifPdfOlustur } from "@/lib/pdf-olustur";
 
 // --- Yardımcı Sayı Formatlayıcı (Türkçe Virgülü Düzeltir) ---
 function parseSayi(val: unknown): number {
@@ -1334,7 +1335,7 @@ export async function teklifMusteriyeEpostaGonder(formData: FormData) {
     prisma.teklif.findUnique({
       where: { id: teklifId },
       include: {
-        musteri: true, // yetkili: true SILINDI (HATA DÜZELTİLDİ)
+        musteri: true,
         kalemler: { include: { marka: true } },
         olusturanKullanici: true,
       },
@@ -1357,24 +1358,35 @@ export async function teklifMusteriyeEpostaGonder(formData: FormData) {
   const formatPara = (n: number) => n.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " " + sembol;
   const hitapAd = teklif.musteri.yetkiliAdi || teklif.musteri.ad;
 
+  // 1. OTOMATİK PDF DOSYASI OLUŞTURULUR
+  const pdfBuffer = await teklifPdfOlustur(teklif, sirket);
+
   const icerikHtml = `
     <div style="font-family: Arial, sans-serif; max-width: 680px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
       <h2 style="color: #0f766e;">${sirket.unvan}</h2>
       <p>Sayın ${hitapAd},</p>
-      <p>TKL-${String(teklif.teklifNo).padStart(4, "0")} numaralı fiyat teklifimiz aşağıda bilginize sunulmuştur.</p>
-      ${ekNot ? `<p><b>Not:</b> ${ekNot}</p>` : ''}
+      <p>TKL-${String(teklif.teklifNo).padStart(4, "0")} numaralı fiyat teklifimiz ve teknik detayları ekteki PDF dosyasında bilgilerinize sunulmuştur.</p>
+      ${ekNot ? `<p style="background:#f1f5f9; padding:10px; border-left:3px solid #0f766e;"><b>Hazırlayan Notu:</b> ${ekNot}</p>` : ''}
       <h3 style="color: #0f766e;">Genel Toplam: ${formatPara(genelToplam)}</h3>
+      <p style="color: #64748b; font-size: 12px;">📎 Detaylı teklif dokümanı bu e-postaya <b>PDF dosyası</b> olarak eklenmiştir.</p>
       <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
-      <p><b>Teklifi Hazırlayan:</b> ${giren.ad} (${giren.email})</p>
+      <p style="font-size: 12px; color: #64748b;"><b>Teklifi Hazırlayan:</b> ${giren.ad} (${giren.email})</p>
     </div>
   `;
 
+  // 2. MAİL VE PDF EKİ BİRLİKTE GÖNDERİLİR
   await epostaGonder({
     konu: epostaKonu || `İklim Ofisi Teklif: TKL-${String(teklif.teklifNo).padStart(4, "0")}`,
     icerikHtml,
     aliciEmail,
     gonderenAd: giren.ad,
     replyTo: giren.email,
+    ekler: [
+      {
+        filename: `Teklif-TKL-${String(teklif.teklifNo).padStart(4, "0")}.pdf`,
+        content: pdfBuffer,
+      },
+    ],
   });
 
   revalidatePath(`/panel/teklifler/${teklifId}`);
