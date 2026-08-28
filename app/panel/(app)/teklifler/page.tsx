@@ -38,7 +38,8 @@ export default async function TekliflerSayfasi({
             }
           : {}),
       },
-      include: { musteri: true, kalemler: true, siparis: true },
+      // DÜZELTİLDİ: olusturanKullanici ILISKISI SORGUYA EKLENDI
+      include: { musteri: true, kalemler: true, siparis: true, olusturanKullanici: true },
       orderBy: { tarih: "desc" },
     }),
     prisma.teklifSablon.findMany({ orderBy: { sira: "asc" } }),
@@ -258,6 +259,9 @@ export default async function TekliflerSayfasi({
       <div className="space-y-3">
         {teklifler.map((t) => {
           const toplam = t.kalemler.reduce((a, k) => a + kalemToplam(k), 0);
+          // HAZIRLAYAN KULLANICI BİLGİSİ
+          const hazirlayanPersonel = t.olusturanKullanici?.ad || t.olusturanAdi || "—";
+
           return (
             <div key={t.id} className="bg-yuzey border border-hat rounded-lg p-4 flex items-center justify-between gap-3">
               <Link href={`/panel/teklifler/${t.id}`} className="focus-ring min-w-0">
@@ -265,9 +269,11 @@ export default async function TekliflerSayfasi({
                   <span className="font-mono text-soguk-dim">{teklifNoFormat(t.teklifNo)}</span>{" "}
                   {t.baslik || "(Başlıksız Teklif)"}
                 </p>
+                {/* DÜZELTİLDİ: TEKLİFİ HAZIRLAYAN BİLGİSİ ALT SATIRA EKLENDİ */}
                 <p className="text-xs text-metin/50">
                   {t.musteri.ad} · {t.tarih.toISOString().slice(0, 10)} · {t.kalemler.length} kalem
                   {t.revizyonNo > 1 && ` · Rev. ${t.revizyonNo}`}
+                  {` · Hazırlayan: ${hazirlayanPersonel}`}
                   {t.siparis && " · Siparişe dönüştürüldü"}
                 </p>
               </Link>
