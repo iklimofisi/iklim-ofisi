@@ -6,6 +6,7 @@ import React from "react";
 import YazdirButon from "@/components/YazdirButon";
 import TeklifDurumSecici from "@/components/TeklifDurumSecici";
 import { getSirketAyarlari } from "@/lib/sirket"; // ŞİRKET AYARLARI EKLENDİ
+import TeklifEpostaGonderModal from "@/components/TeklifEpostaGonderModal";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +85,15 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
         </Link>
         <div className="flex items-center gap-3">
           <TeklifDurumSecici teklifId={teklif.id} mevcutDurum={teklif.durum} />
+          {/* ✉️ MÜŞTERİYE E-POSTA İLE TEKLİF GÖNDERME BUTONU */}
+          <TeklifEpostaGonderModal
+            teklifId={teklif.id}
+            aliciEmail={(teklif as any).yetkili?.email || teklif.musteri.yetkiliEmail || teklif.musteri.email || ""}
+            hitapAd={(teklif as any).yetkili?.ad || teklif.musteri.yetkiliAdi || teklif.musteri.ad}
+            teklifNo={teklif.teklifNo}
+            hazirlayanAd={hazirlayanAd}
+            hazirlayanEmail={hazirlayanEmail}
+          />
           <Link
             href={`/panel/teklifler/${teklif.id}/duzenle`}
             className="focus-ring text-sm font-medium text-metin/70 border border-hat px-4 py-2 rounded-md hover:border-soguk hover:text-soguk-dim transition-colors"

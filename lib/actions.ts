@@ -1316,3 +1316,123 @@ export async function musteriSil(musteriId: string) {
   revalidatePath("/panel/musteriler");
   redirect("/panel/musteriler");
 }
+
+// MÜŞTERİYE TEKLİF E-POSTASI GÖNDERME
+export async function teklifMusteriyeEpostaGonder(formData: FormData) {
+  const giren = await suankiKullanici();
+  if (!giren) return;
+
+  const teklifId = String(formData.get("teklifId") ?? "");
+  const aliciEmail = String(formData.get("aliciEmail") ?? "").trim();
+  const epostaKonu = String(formData.get("epostaKonu") ?? "").trim();
+  const ekNot = String(formData.get("ekNot") ?? "").trim();
+
+  if (!teklifId || !aliciEmail) return;
+
+  const [teklif, sirket] = await Promise.all([
+    prisma.teklif.findUnique({
+      where: { id: teklifId },
+      include: {
+        musteri: true,
+        yetkili: true,
+        kalemler: { include: { marka: true } },
+        olusturanKullanici: true,
+      },
+    }),
+    getSirketAyarlari(),
+  ]);
+
+  if (!teklif) return;
+
+  const pb = teklif.paraBirimi;
+  const sembol = pb === "EUR" ? "€" : pb === "USD" ? "$" : "₺";
+  const girilenToplam = teklif.kalemler.reduce(
+    (a, k) => a + k.adet * k.birimFiyat * (1 - k.iskontoYuzde / 100),
+    0
+  );
+  const araToplam = teklif.kdvDahil ? girilenToplam / (1 + teklif.kdvOrani / 100) : girilenToplam;
+  const kdvTutari = teklif.kdvDahil ? girilenToplam - araToplam : araToplam * (teklif.kdvOrani / 100);
+  const genelToplam = teklif.kdvDahil ? girilenToplam : araToplam + kdvTutari;
+
+  const formatPara = (n: number) => n.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " " + sembol;
+  const hitapAd = teklif.yetkili?.ad || teklif.musteri.yetkiliAdi || teklif.musteri.ad;
+
+  // KURUMSAL HTML E-POSTA ŞABLONU
+  const icerikHtml = `
+    <div style="font-family: Arial, Helvetica, sans-serif; max-width: 680px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; color: #1e293b;">
+      <div style="background-color: #0f172a; padding: 24px; text-align: left; color: #ffffff;">
+        <h1 style="margin: 0; font-size: 20px; font-weight: bold; color: #ffffff;">${sirket.unvan}</h1>
+        <p style="margin: 4px 0 0 0; font-size: 12px; color: #94a3b8;">${sirket.slogan || "İklimlendirme & VRF Sistem Çözümleri"}</p>
+      </div>
+
+      <div style="padding: 28px;">
+        <p style="font-size: 15px; font-weight: bold; color: #0f766e; margin-top: 0;">Sayın ${hitapAd},</p>
+        <p style="font-size: 13px; color: #334155; line-height: 1.6;">
+          Projenize istinaden hazırlamış olduğumuz <strong>TKL-${String(teklif.teklifNo).padStart(4, "0")}</strong> numaralı fiyat teklifimiz detayları ile birlikte aşağıda bilginize sunulmuştur.
+        </p>
+
+        ${ekNot ? `
+          <div style="background-color: #f1f5f9; border-left: 4px solid #0f766e; padding: 12px 16px; margin: 16px 0; border-radius: 4px; font-size: 13px; font-style: italic; color: #334155;">
+            <strong>Hazırlayan Notu:</strong> ${ekNot}
+          </div>
+        ` : ''}
+
+        <div style="margin: 20px 0; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+            <thead>
+              <tr style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0; text-align: left; color: #64748b;">
+                <th style="padding: 10px 12px;">Açıklama</th>
+                <th style="padding: 10px 12px; text-align: center;">Adet</th>
+                ${teklif.birimFiyatGoster ? `<th style="padding: 10px 12px; text-align: right;">Birim Fiyat</th><th style="padding: 10px 12px; text-align: right;">Tutar</th>` : ''}
+              </tr>
+            </thead>
+            <tbody>
+              ${teklif.kalemler.map(k => {
+                const netBirim = k.birimFiyat * (1 - k.iskontoYuzde / 100);
+                const tutar = k.adet * netBirim;
+                return `
+                  <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 10px 12px; font-weight: 600;">${k.aciklama}</td>
+                    <td style="padding: 10px 12px; text-align: center;">${k.adet}</td>
+                    ${teklif.birimFiyatGoster ? `
+                      <td style="padding: 10px 12px; text-align: right; font-family: monospace;">${formatPara(netBirim)}</td>
+                      <td style="padding: 10px 12px; text-align: right; font-family: monospace; font-weight: bold;">${formatPara(tutar)}</td>
+                    ` : ''}
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div style="text-align: right; margin-top: 16px; padding-top: 12px; border-top: 2px solid #e2e8f0;">
+          <p style="margin: 4px 0; font-size: 12px; color: #64748b;">Ara Toplam: <strong>${formatPara(araToplam)}</strong></p>
+          <p style="margin: 4px 0; font-size: 12px; color: #64748b;">KDV (%${teklif.kdvOrani}): <strong>${formatPara(kdvTutari)}</strong></p>
+          <p style="margin: 8px 0 0 0; font-size: 16px; font-weight: bold; color: #0f766e;">GENEL TOPLAM: ${formatPara(genelToplam)}</p>
+        </div>
+
+        <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b;">
+          <p style="margin: 0; font-weight: bold; color: #1e293b; font-size: 13px;">${giren.ad}</p>
+          <p style="margin: 2px 0;">${sirket.unvan}</p>
+          <p style="margin: 2px 0;">📞 Tel: ${giren.telefon || sirket.telefon}</p>
+          <p style="margin: 2px 0;">✉️ E-posta: ${giren.email}</p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const gonderimSonuc = await epostaGonder({
+    konu: epostaKonu || `İklim Ofisi - Fiyat Teklifi (TKL-${String(teklif.teklifNo).padStart(4, "0")})`,
+    icerikHtml,
+    aliciEmail,
+    gonderenAd: giren.ad,
+    replyTo: giren.email,
+  });
+
+  if (!gonderimSonuc.basarili) {
+    redirect(`/panel/teklifler/${teklifId}?hata=eposta-gonderilemedi`);
+  }
+
+  revalidatePath(`/panel/teklifler/${teklifId}`);
+  redirect(`/panel/teklifler/${teklifId}?basarili=eposta-gonderildi`);
+}
