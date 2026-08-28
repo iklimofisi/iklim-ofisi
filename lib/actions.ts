@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { suankiKullanici } from "@/lib/oturum";
 import { paraBirimiDogrula, type ParaBirimi } from "@/lib/para";
 import { epostaGonder } from "@/lib/eposta";
+import { getSirketAyarlari } from "@/lib/sirket";
 
 // --- Yardımcı Sayı Formatlayıcı (Türkçe Virgülü Düzeltir) ---
 function parseSayi(val: unknown): number {
