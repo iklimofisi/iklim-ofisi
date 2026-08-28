@@ -5,8 +5,8 @@ import Link from "next/link";
 import React from "react";
 import YazdirButon from "@/components/YazdirButon";
 import TeklifDurumSecici from "@/components/TeklifDurumSecici";
-import { getSirketAyarlari } from "@/lib/sirket"; // ŞİRKET AYARLARI EKLENDİ
-import TeklifEpostaGonderModal from "@/components/TeklifEpostaGonderModal";
+import { getSirketAyarlari } from "@/lib/sirket";
+import TeklifEpostaGonderModal from "@/components/TeklifEpostaGonderModal"; // MODAL İMPORT EDİLDİ
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,6 @@ function kurumsalTeklifKodu(teklifNo: number, tarih: Date) {
 }
 
 export default async function TeklifDetay({ params }: { params: { id: string } }) {
-  // TEKLİF VE ŞİRKET BİLGİLERİ DİNAMİK ÇEKİLİYOR
   const [teklif, sirket] = await Promise.all([
     prisma.teklif.findUnique({
       where: { id: params.id },
@@ -36,7 +35,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
         siparis: true,
       },
     }),
-    getSirketAyarlari(), // <-- PANELDEN GİRDİĞİN ŞİRKET ADRESİ VE BİLGİLERİNİ ÇEKER
+    getSirketAyarlari(),
   ]);
 
   if (!teklif) notFound();
@@ -64,7 +63,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
   const gecerlilikTarihi = new Date(teklif.tarih);
   gecerlilikTarihi.setDate(gecerlilikTarihi.getDate() + teklif.gecerlilikGunu);
 
-  // Kalemleri Bölümlerine Göre Grupla (VRF, DX, Split vb.)
+  // Kalemleri Bölümlerine Göre Grupla
   const gruplanmisKalemler = teklif.kalemler.reduce((acc, k) => {
     const b = (k as any).bolum || "Genel Kalemler";
     if (!acc[b]) acc[b] = [];
@@ -79,12 +78,14 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
 
   return (
     <div>
+      {/* ÜST BUTONLAR VE MAİL GÖNDERME MODALI BURAYA YERLEŞTİRİLDİ */}
       <div className="flex items-center justify-between mb-6 print:hidden">
         <Link href="/panel/teklifler" className="focus-ring text-sm text-metin/60 hover:text-metin">
           ← Tekliflere dön
         </Link>
         <div className="flex items-center gap-3">
           <TeklifDurumSecici teklifId={teklif.id} mevcutDurum={teklif.durum} />
+          
           {/* ✉️ MÜŞTERİYE E-POSTA İLE TEKLİF GÖNDERME BUTONU */}
           <TeklifEpostaGonderModal
             teklifId={teklif.id}
@@ -94,6 +95,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
             hazirlayanAd={hazirlayanAd}
             hazirlayanEmail={hazirlayanEmail}
           />
+
           <Link
             href={`/panel/teklifler/${teklif.id}/duzenle`}
             className="focus-ring text-sm font-medium text-metin/70 border border-hat px-4 py-2 rounded-md hover:border-soguk hover:text-soguk-dim transition-colors"
@@ -127,7 +129,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
       </div>
 
       <div className="bg-yuzey border border-hat rounded-lg p-8 sm:p-12 print:border-0 print:p-0">
-        {/* ŞİRKET BİLGİLERİ VE ADRESİ (PANELDEN GİRDİĞİN AYARLARDAN DİNAMİK GELİR) */}
+        {/* ŞİRKET BİLGİLERİ VE ADRESİ */}
         <div className="flex items-start justify-between mb-10 pb-6 border-b border-hat">
           <div className="flex items-center gap-3">
             <Image src="/logo-icon.png" alt={sirket.unvan} width={48} height={48} />
@@ -162,7 +164,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
         )}
         {!teklif.proje && <div className="mb-8" />}
 
-        {/* MÜŞTERİ VE YETKİLİ BİLGİLERİ */}
+        {/* MÜŞTERİ BİLGİLERİ */}
         <div className="grid sm:grid-cols-2 gap-6 mb-10 text-sm">
           <div className="space-y-1">
             <p className="text-xs text-metin/50 uppercase tracking-wider font-semibold">Müşteri / Firma</p>
