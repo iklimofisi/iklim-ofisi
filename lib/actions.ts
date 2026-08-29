@@ -1392,3 +1392,71 @@ export async function teklifMusteriyeEpostaGonder(formData: FormData) {
   revalidatePath(`/panel/teklifler/${teklifId}`);
   redirect(`/panel/teklifler/${teklifId}?basarili=eposta-gonderildi`);
 }
+
+// --- PROJE TAKİP VE EXCEL ENTEGRASYONU ACTIONS ---
+
+// 1. TEK TEKLİF İÇİN ANLIK TAKİP NOTU GÜNCELLEME
+export async function teklifTakipNotuGuncelle(formData: FormData) {
+  const teklifId = String(formData.get("teklifId") ?? "");
+  const takipNotu = String(formData.get("takipNotu") ?? "").trim();
+
+  if (!teklifId) return;
+
+  await prisma.teklif.update({
+    where: { id: teklifId },
+    data: { takipNotu: takipNotu || null },
+  });
+
+  revalidatePath("/panel/proje-takip");
+  revalidatePath("/panel/teklifler");
+}
+
+// 2. EXCEL DOSYASINI OKUYUP TOPLU PROJE NOTU VE DURUMU GÜNCELLEME
+export async function tekliflerExcelImport(formData: FormData) {
+  const dosya = formData.get("dosya") as File | null;
+  if (!dosya || dosya.size === 0) return { basarili: false, hata: "Önce bir Excel dosyası seçin." };
+
+  try {
+    const XLSX = await import("xlsx");
+    const buffer = Buffer.from(await dosya.arrayBuffer());
+    const workbook = XLSX.read(buffer, { type: "buffer" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const satirlar: any[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+    let guncellenen = 0;
+
+    for (const satir of satirlar) {
+      const teklifId = String(satir["Teklif ID"] || satir["id"] || "").trim();
+      const teklifNoStr = String(satir["Teklif No"] || "").replace(/[^0-9]/g, "");
+      const teklifNo = Number(teklifNoStr || 0);
+      const takipNotu = String(satir["Takip Notları / Görüşme Geçmişi"] || satir["Takip Notu"] || "").trim();
+      const durumStr = String(satir["Durum"] || "").trim().toUpperCase();
+
+      let nerede: any = null;
+      if (teklifId) nerede = { id: teklifId };
+      else if (teklifNo > 0) nerede = { teklifNo };
+
+      if (nerede) {
+        const updateData: any = {};
+        if (takipNotu !== undefined) updateData.takipNotu = takipNotu || null;
+        if (["BEKLEMEDE", "ONAYLANDI", "REDDEDILDI"].includes(durumStr)) {
+          updateData.durum = durumStr;
+        }
+
+        if (Object.keys(updateData).length > 0) {
+          await prisma.teklif.update({
+            where: nerede,
+            data: updateData,
+          });
+          guncellenen++;
+        }
+      }
+    }
+
+    revalidatePath("/panel/proje-takip");
+    revalidatePath("/panel/teklifler");
+    return { basarili: true, guncellenen };
+  } catch (e: any) {
+    return { basarili: false, hata: "Excel dosyası okunurken hata oluştu: " + e.message };
+  }
+}
