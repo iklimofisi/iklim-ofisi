@@ -8,10 +8,10 @@ export const dynamic = "force-dynamic";
 const referansProjeler = [
   {
     id: 1,
-    projeAdi: "Nurol Tower Plaza İklimlendirme",
+    projeAdi: "Plaza İş Merkezi VRF İklimlendirme",
     kategori: "VRF MERKEZİ SİSTEM",
     lokasyon: "Şişli / İstanbul",
-    detay: "29 Katlı plaza projesinde Heat Recovery VRF dış üniteler, kaset tipi iç üniteler ve otomasyon kumanda altyapısı.",
+    detay: "Plaza projesinde Heat Recovery VRF dış üniteler, kaset tipi iç üniteler ve otomasyon kumanda altyapısı.",
     kapasite: "1.200 kW Soğutma Gücü",
   },
   {
@@ -66,7 +66,6 @@ export default async function ReferanslarPage() {
             </p>
           </div>
 
-          {/* PROJE KARTLARI GRİDİ */}
           <div className="grid md:grid-cols-2 gap-8">
             {referansProjeler.map((p) => (
               <div

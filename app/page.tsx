@@ -10,14 +10,16 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased selection:bg-teal-700 selection:text-white">
+      {/* 1. ÜST HEADER */}
       <Header />
 
       <main>
-        {/* 1. HERO ALANI */}
+        {/* 2. MANŞET / HERO ALANI */}
         <section className="pt-12 pb-16 md:pt-20 md:pb-24 bg-white border-b border-slate-200/80 relative">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid lg:grid-cols-12 gap-12 items-center">
               
+              {/* Sol Taraf: Tipografik Başlık ve Metinler */}
               <div className="lg:col-span-7 space-y-6">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-teal-50 border border-teal-200 text-teal-800 text-xs font-semibold tracking-wide">
                   <span className="w-2 h-2 rounded-full bg-teal-600 animate-pulse" />
@@ -35,6 +37,7 @@ export default async function Home() {
                   {sirket.unvan}; konut, ofis, otel ve endüstriyel tesislerde klima, VRF merkezi soğutma, ısı pompası ve havalandırma projelerini keşiften montaja anahtar teslim yürütür.
                 </p>
 
+                {/* Butonlar */}
                 <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
                   <Link
                     href="/iletisim"
@@ -50,6 +53,7 @@ export default async function Home() {
                   </Link>
                 </div>
 
+                {/* İstatistikler */}
                 <div className="pt-8 border-t border-slate-100 grid grid-cols-3 gap-6">
                   <div>
                     <p className="text-2xl font-bold text-slate-900 font-mono">+500</p>
@@ -66,13 +70,13 @@ export default async function Home() {
                 </div>
               </div>
 
-              {/* Sağ Taraf: İnteraktif Kart */}
+              {/* Sağ Taraf: İnteraktif İklim Kontrol Kartı */}
               <div className="lg:col-span-5">
                 <div className="bg-slate-900 text-white rounded-2xl p-8 shadow-xl border border-slate-800 space-y-6">
                   <div className="flex justify-between items-center border-b border-slate-800 pb-4">
                     <div>
                       <p className="text-[11px] font-bold text-teal-400 uppercase tracking-widest">İklim Ofisi Çalışma Aralığı</p>
-                      <h3 className="text-lg font-bold text-white mt-0.5">-5°C ile +35°C Arası Tam Kontrol</h3>
+                      <h3 className="text-lg font-bold text-white mt-0.5">-20°C ile +55°C Arası Tam Kontrol</h3>
                     </div>
                     <span className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50" />
                   </div>
@@ -81,11 +85,12 @@ export default async function Home() {
                     Dış hava koşulları ne olursa olsun, Inverter VRF ve Isı Pompası teknolojisiyle iç mekanlarda ideal nem ve sıcaklık dengesini sabit tutuyoruz.
                   </p>
 
+                  {/* Sıcaklık Skalası */}
                   <div className="bg-slate-950 p-4 rounded-xl border border-slate-800/80 space-y-3">
                     <div className="flex justify-between text-[11px] font-mono font-bold text-slate-400">
-                      <span className="text-cyan-400">-5°C Soğuk</span>
+                      <span className="text-cyan-400">-20°C Soğuk</span>
                       <span className="text-teal-300">İdeal 22°C</span>
-                      <span className="text-amber-400">+35°C Sıcak</span>
+                      <span className="text-amber-400">+55°C Sıcak</span>
                     </div>
                     <div className="h-2 w-full bg-gradient-to-r from-cyan-500 via-teal-400 to-amber-500 rounded-full relative">
                       <div className="absolute left-1/2 -top-1 w-4 h-4 rounded-full bg-white border-2 border-slate-900 shadow-md transform -translate-x-1/2" />
@@ -93,6 +98,17 @@ export default async function Home() {
                     <p className="text-[10px] text-center text-slate-400 font-mono">
                       Akıllı Termostat & Inverter Kompresör Hassasiyeti
                     </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-xs pt-1">
+                    <div className="p-3 rounded-lg bg-slate-800/60 border border-slate-800">
+                      <p className="font-bold text-slate-200">VRF Merkezi Sistem</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Bağımsız Alan Kontrolü</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-slate-800/60 border border-slate-800">
+                      <p className="font-bold text-slate-200">Taze Hava Santrali</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Isı Geri Kazanımlı</p>
+                    </div>
                   </div>
 
                   <Link
@@ -108,7 +124,7 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* ☕ KAHVE DAVETİ BANNERI */}
+        {/* ☕ 3. KAHVE DAVETİ BANNERI (ADRES PANEL KONTROLÜNDE) */}
         <section className="py-8 bg-slate-900 text-white border-b border-slate-800">
           <div className="max-w-7xl mx-auto px-6">
             <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-teal-950 p-6 sm:p-8 rounded-2xl border border-teal-500/30 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-6">
@@ -139,7 +155,7 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* 2. HAKKIMIZDA ÖZETİ (HİZMETLERDEN ÖNE ALINDI) */}
+        {/* 4. HAKKIMIZDA ÖZETİ */}
         <section className="py-20 bg-white border-b border-slate-200">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid md:grid-cols-2 gap-12 items-center">
@@ -168,7 +184,7 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* 3. MÜHENDİSLİK HİZMETLERİMİZ */}
+        {/* 5. MÜHENDİSLİK HİZMETLERİMİZ */}
         <section className="py-20 bg-slate-50">
           <div className="max-w-7xl mx-auto px-6">
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
@@ -211,39 +227,6 @@ export default async function Home() {
                 <h3 className="text-lg font-bold text-slate-900">Isı Pompası & Isıtma</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">Hava/su kaynaklı ısı pompaları, sulu yerden ısıtma ve kaskad sistemler.</p>
                 <Link href="/hizmetler" className="inline-block text-xs font-semibold text-teal-700 hover:underline">Detaylı İncele →</Link>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 4. REFERANSLAR ÖZETİ */}
-        <section className="py-20 bg-white border-y border-slate-200">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="flex justify-between items-end mb-12">
-              <div>
-                <p className="text-xs font-bold tracking-widest text-teal-700 uppercase mb-2">SAHA TECRÜBEMİZ</p>
-                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Tamamlanan Referans Projelerimiz</h2>
-              </div>
-              <Link href="/referanslar" className="text-xs font-bold text-teal-700 hover:underline">Tüm Projeleri Gör →</Link>
-            </div>
-
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="bg-slate-50 border border-slate-200 p-6 rounded-xl space-y-2">
-                <span className="text-[10px] font-bold text-teal-700">VRF MERKEZİ SİSTEM</span>
-                <h4 className="font-bold text-slate-900">Nurol Tower Plaza İklimlendirme</h4>
-                <p className="text-xs text-slate-500">29 Katlı plaza projesi Heat Recovery VRF iklimlendirme altyapısı.</p>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200 p-6 rounded-xl space-y-2">
-                <span className="text-[10px] font-bold text-teal-700">HAVALANDIRMA & İGK</span>
-                <h4 className="font-bold text-slate-900">Vadistanbul Ticaret Merkezi</h4>
-                <p className="text-xs text-slate-500">Isı geri kazanımlı taze hava santralleri ve spiro kanal imalatı.</p>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200 p-6 rounded-xl space-y-2">
-                <span className="text-[10px] font-bold text-teal-700">ISI POMPASI & ISITMA</span>
-                <h4 className="font-bold text-slate-900">Bodrum Yalıkavak Villa Kompleksi</h4>
-                <p className="text-xs text-slate-500">Hava kaynaklı ısı pompası ve sulu yerden ısıtma entegrasyonu.</p>
               </div>
             </div>
           </div>
