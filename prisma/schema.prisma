@@ -57,6 +57,9 @@ model Teklif {
   musteri                  Musteri           @relation(fields: [musteriId], references: [id])
   musteriId                String
   takipNotu                String?           // YENİ: Satış Temsilcisinin Proje Takip Notu
+  ihaleyiAlan              String?           // İhaleyi alan firma
+  ekapNo                   String?           // Varsa Ekap No
+  ipkbNo                   String?           // Varsa İpkb no
   projeId                  String?
   proje                    Proje?            @relation(fields: [projeId], references: [id])
   tarih                    DateTime          @default(now())

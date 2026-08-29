@@ -15,8 +15,9 @@ export default async function ProjeTakipPage() {
     prisma.teklif.findMany({
       include: {
         musteri: true,
+        proje: true,
         olusturanKullanici: true,
-        kalemler: true,
+        kalemler: { include: { marka: true } },
       },
       orderBy: { tarih: "desc" },
     }),
@@ -27,7 +28,7 @@ export default async function ProjeTakipPage() {
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
           <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">CRM / Satış Takip</p>
-          <h1 className="font-display text-2xl font-bold text-metin">📊 Proje Takip & Excel Izgarası</h1>
+          <h1 className="font-display text-2xl font-bold text-metin">📊 Proje Takip & Genişletilmiş Excel Izgarası</h1>
         </div>
 
         {/* EXCEL İNDİR VE YÜKLE */}
@@ -57,25 +58,31 @@ export default async function ProjeTakipPage() {
         </div>
       </div>
 
-      {/* EXCEL TABLOSU */}
+      {/* 15 SÜTUNLU GENİŞLETİLMİŞ EXCEL TABLOSU */}
       <div className="bg-yuzey border border-hat rounded-lg overflow-hidden shadow-sm">
         <div className="p-3 border-b border-hat bg-slate-100/80 font-bold text-xs text-metin flex justify-between items-center">
-          <span>📊 Tüm Verilen Teklifler ve Satış Temsilcisi Takip Notları</span>
-          <span className="text-[11px] text-metin/50 font-normal">👁️ Notları büyütmek için göz simgesine tıklayabilirsiniz.</span>
+          <span>📊 Genişletilmiş Proje Takip ve İhale Detay Tablosu</span>
+          <span className="text-[11px] text-metin/50 font-normal">👁️ Notları okumak için göz simgesine tıklayabilirsiniz.</span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-xs border-collapse whitespace-nowrap">
             <thead>
-              <tr className="bg-slate-200/70 border-b border-hat text-metin/70 font-bold uppercase tracking-wider">
-                <th className="py-2.5 px-3 border-r border-hat w-24">Teklif No</th>
-                <th className="py-2.5 px-3 border-r border-hat w-1/4">Teklif / Proje Adı</th>
+              <tr className="bg-slate-200/80 border-b border-hat text-metin/70 font-bold uppercase tracking-wider">
+                <th className="py-2.5 px-3 border-r border-hat">Teklif No</th>
+                <th className="py-2.5 px-3 border-r border-hat">Teklif / Proje Adı</th>
                 <th className="py-2.5 px-3 border-r border-hat">Müşteri Firma</th>
-                <th className="py-2.5 px-3 border-r border-hat w-28">Hazırlayan</th>
-                <th className="py-2.5 px-3 border-r border-hat w-24 text-center">Tarih</th>
-                <th className="py-2.5 px-3 border-r border-hat w-28 text-right">Tutar</th>
-                <th className="py-2.5 px-3 border-r border-hat w-24 text-center">Durum</th>
-                <th className="py-2.5 px-3 w-1/3">Takip Notları / Görüşme Geçmişi</th>
+                <th className="py-2.5 px-3 border-r border-hat">YETKİLİ</th>
+                <th className="py-2.5 px-3 border-r border-hat">İLETİŞİM</th>
+                <th className="py-2.5 px-3 border-r border-hat">Hazırlayan Personel</th>
+                <th className="py-2.5 px-3 border-r border-hat text-center">Tarih</th>
+                <th className="py-2.5 px-3 border-r border-hat text-right">Toplam Tutar</th>
+                <th className="py-2.5 px-3 border-r border-hat text-center">Para Birimi</th>
+                <th className="py-2.5 px-3 border-r border-hat">Marka</th>
+                <th className="py-2.5 px-3 border-r border-hat">İhaleyi Alan Firma</th>
+                <th className="py-2.5 px-3 border-r border-hat">Varsa Ekap No</th>
+                <th className="py-2.5 px-3 border-r border-hat">Varsa İpkb No</th>
+                <th className="py-2.5 px-3 min-w-[280px]">Takip Notları / Görüşme Geçmişi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-hat bg-white">
@@ -85,53 +92,86 @@ export default async function ProjeTakipPage() {
                   0
                 );
                 const hazirlayan = t.olusturanKullanici?.ad || t.olusturanAdi || "—";
+                const markalar = Array.from(
+                  new Set(t.kalemler.map((k) => k.marka?.ad).filter(Boolean))
+                ).join(", ");
+
+                const yetkiliAd = t.musteri?.yetkiliAdi || "—";
+                const iletisim = t.musteri?.yetkiliTelefon || t.musteri?.telefon || t.musteri?.email || "—";
 
                 return (
                   <tr key={t.id} className="hover:bg-amber-50/40 transition-colors">
+                    {/* Teklif No */}
                     <td className="py-2 px-3 border-r border-hat font-mono font-bold text-soguk-dim">
                       <Link href={`/panel/teklifler/${t.id}`} className="hover:underline">
                         TKL-{String(t.teklifNo).padStart(4, "0")}
                       </Link>
                     </td>
 
+                    {/* Teklif / Proje Adı */}
                     <td className="py-2 px-3 border-r border-hat font-semibold text-metin">
                       <Link href={`/panel/teklifler/${t.id}`} className="hover:text-soguk-dim">
                         {t.baslik || "(Başlıksız Teklif)"}
                       </Link>
                     </td>
 
+                    {/* Müşteri Firma */}
                     <td className="py-2 px-3 border-r border-hat text-metin/80 font-medium">
                       {t.musteri.ad}
                     </td>
 
-                    <td className="py-2 px-3 border-r border-hat text-metin/70 font-semibold">
-                      👤 {hazirlayan}
+                    {/* YETKİLİ */}
+                    <td className="py-2 px-3 border-r border-hat text-soguk-dim font-semibold">
+                      👤 {yetkiliAd}
                     </td>
 
+                    {/* İLETİŞİM */}
+                    <td className="py-2 px-3 border-r border-hat text-metin/70 font-mono">
+                      {iletisim}
+                    </td>
+
+                    {/* Hazırlayan Personel */}
+                    <td className="py-2 px-3 border-r border-hat text-metin/70 font-semibold">
+                      {hazirlayan}
+                    </td>
+
+                    {/* Tarih */}
                     <td className="py-2 px-3 border-r border-hat text-center font-mono text-metin/60">
                       {t.tarih.toISOString().slice(0, 10)}
                     </td>
 
+                    {/* Toplam Tutar */}
                     <td className="py-2 px-3 border-r border-hat text-right font-mono font-bold text-metin">
                       {paraFormat(toplam, t.paraBirimi)}
                     </td>
 
-                    <td className="py-2 px-3 border-r border-hat text-center">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          t.durum === "ONAYLANDI"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : t.durum === "REDDEDILDI"
-                            ? "bg-rose-100 text-rose-800"
-                            : "bg-amber-100 text-amber-800"
-                        }`}
-                      >
-                        {t.durum}
-                      </span>
+                    {/* Para Birimi */}
+                    <td className="py-2 px-3 border-r border-hat text-center font-bold text-metin/70">
+                      {t.paraBirimi}
                     </td>
 
-                    {/* DÜZELTİLDİ: GÖZ İKONLU VE YEŞİL BİLDİRİMLİ NOT EDİTÖRÜ */}
-                    <td className="py-1 px-2">
+                    {/* Marka */}
+                    <td className="py-2 px-3 border-r border-hat text-metin/80 font-medium">
+                      {markalar || "—"}
+                    </td>
+
+                    {/* İhaleyi Alan Firma */}
+                    <td className="py-2 px-3 border-r border-hat text-metin/70">
+                      {t.ihaleyiAlan || t.proje?.ihaleyiAlan || "—"}
+                    </td>
+
+                    {/* Varsa Ekap No */}
+                    <td className="py-2 px-3 border-r border-hat font-mono text-metin/60">
+                      {t.ekapNo || "—"}
+                    </td>
+
+                    {/* Varsa İpkb No */}
+                    <td className="py-2 px-3 border-r border-hat font-mono text-metin/60">
+                      {t.ipkbNo || "—"}
+                    </td>
+
+                    {/* TAKİP NOTU EDİTÖRÜ */}
+                    <td className="py-1 px-2 min-w-[280px]">
                       <TakipNotuEditor teklifId={t.id} varsayilanNot={t.takipNotu ?? ""} />
                     </td>
                   </tr>
@@ -140,7 +180,7 @@ export default async function ProjeTakipPage() {
 
               {teklifler.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-metin/50">
+                  <td colSpan={14} className="py-8 text-center text-metin/50">
                     Henüz kayıtlı teklif bulunamadı.
                   </td>
                 </tr>

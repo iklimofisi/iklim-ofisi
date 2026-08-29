@@ -1429,7 +1429,11 @@ export async function tekliflerExcelImport(formData: FormData) {
       const teklifId = String(satir["Teklif ID"] || satir["id"] || "").trim();
       const teklifNoStr = String(satir["Teklif No"] || "").replace(/[^0-9]/g, "");
       const teklifNo = Number(teklifNoStr || 0);
+
       const takipNotu = String(satir["Takip Notları / Görüşme Geçmişi"] || satir["Takip Notu"] || "").trim();
+      const ihaleyiAlan = String(satir["İhaleyi alan firma"] || satir["ihaleyiAlan"] || "").trim();
+      const ekapNo = String(satir["Varsa Ekap No"] || satir["ekapNo"] || "").trim();
+      const ipkbNo = String(satir["Varsa İpkb no"] || satir["ipkbNo"] || "").trim();
       const durumStr = String(satir["Durum"] || "").trim().toUpperCase();
 
       let nerede: any = null;
@@ -1439,6 +1443,9 @@ export async function tekliflerExcelImport(formData: FormData) {
       if (nerede) {
         const updateData: any = {};
         if (takipNotu !== undefined) updateData.takipNotu = takipNotu || null;
+        if (ihaleyiAlan !== undefined) updateData.ihaleyiAlan = ihaleyiAlan || null;
+        if (ekapNo !== undefined) updateData.ekapNo = ekapNo || null;
+        if (ipkbNo !== undefined) updateData.ipkbNo = ipkbNo || null;
         if (["BEKLEMEDE", "ONAYLANDI", "REDDEDILDI"].includes(durumStr)) {
           updateData.durum = durumStr;
         }
