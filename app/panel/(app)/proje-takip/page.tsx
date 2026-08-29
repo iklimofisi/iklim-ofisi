@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { teklifTakipNotuGuncelle, tekliflerExcelImport } from "@/lib/actions";
+import { tekliflerExcelImport } from "@/lib/actions";
+import TakipNotuEditor from "@/components/TakipNotuEditor";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,7 @@ function paraFormat(n: number, pb: string = "TRY") {
 }
 
 export default async function ProjeTakipPage() {
-  const [teklifler, kullanicilar] = await Promise.all([
+  const [teklifler] = await Promise.all([
     prisma.teklif.findMany({
       include: {
         musteri: true,
@@ -19,7 +20,6 @@ export default async function ProjeTakipPage() {
       },
       orderBy: { tarih: "desc" },
     }),
-    prisma.kullanici.findMany({ select: { id: true, ad: true }, orderBy: { ad: "asc" } }),
   ]);
 
   return (
@@ -30,7 +30,7 @@ export default async function ProjeTakipPage() {
           <h1 className="font-display text-2xl font-bold text-metin">📊 Proje Takip & Excel Izgarası</h1>
         </div>
 
-        {/* EXCEL İNDİR VE YÜKLE AKSİYONLARI */}
+        {/* EXCEL İNDİR VE YÜKLE */}
         <div className="flex flex-wrap items-center gap-3">
           <a
             href="/api/export/proje-takip-excel"
@@ -57,11 +57,11 @@ export default async function ProjeTakipPage() {
         </div>
       </div>
 
-      {/* EXCEL GÖRÜNÜMLÜ CANLI TABLO */}
+      {/* EXCEL TABLOSU */}
       <div className="bg-yuzey border border-hat rounded-lg overflow-hidden shadow-sm">
         <div className="p-3 border-b border-hat bg-slate-100/80 font-bold text-xs text-metin flex justify-between items-center">
           <span>📊 Tüm Verilen Teklifler ve Satış Temsilcisi Takip Notları</span>
-          <span className="text-[11px] text-metin/50 font-normal">Notları doğrudan yazıp 'Kaydet'e basabilirsiniz.</span>
+          <span className="text-[11px] text-metin/50 font-normal">👁️ Notları büyütmek için göz simgesine tıklayabilirsiniz.</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -81,48 +81,41 @@ export default async function ProjeTakipPage() {
             <tbody className="divide-y divide-hat bg-white">
               {teklifler.map((t) => {
                 const toplam = t.kalemler.reduce(
-                  (a, k) => a + k.adet * k.birimFiyat * (1 - k.iskontoYuzde / 100),
+                  (a, k) => a + k.adet * k.birimFiyat * (1 - (k.iskontoYuzde || 0) / 100),
                   0
                 );
                 const hazirlayan = t.olusturanKullanici?.ad || t.olusturanAdi || "—";
 
                 return (
                   <tr key={t.id} className="hover:bg-amber-50/40 transition-colors">
-                    {/* Teklif No */}
                     <td className="py-2 px-3 border-r border-hat font-mono font-bold text-soguk-dim">
                       <Link href={`/panel/teklifler/${t.id}`} className="hover:underline">
                         TKL-{String(t.teklifNo).padStart(4, "0")}
                       </Link>
                     </td>
 
-                    {/* Proje Adı */}
                     <td className="py-2 px-3 border-r border-hat font-semibold text-metin">
                       <Link href={`/panel/teklifler/${t.id}`} className="hover:text-soguk-dim">
                         {t.baslik || "(Başlıksız Teklif)"}
                       </Link>
                     </td>
 
-                    {/* Müşteri Firma */}
                     <td className="py-2 px-3 border-r border-hat text-metin/80 font-medium">
                       {t.musteri.ad}
                     </td>
 
-                    {/* Hazırlayan */}
                     <td className="py-2 px-3 border-r border-hat text-metin/70 font-semibold">
                       👤 {hazirlayan}
                     </td>
 
-                    {/* Tarih */}
                     <td className="py-2 px-3 border-r border-hat text-center font-mono text-metin/60">
                       {t.tarih.toISOString().slice(0, 10)}
                     </td>
 
-                    {/* Tutar */}
                     <td className="py-2 px-3 border-r border-hat text-right font-mono font-bold text-metin">
                       {paraFormat(toplam, t.paraBirimi)}
                     </td>
 
-                    {/* Durum */}
                     <td className="py-2 px-3 border-r border-hat text-center">
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] font-bold ${
@@ -137,23 +130,9 @@ export default async function ProjeTakipPage() {
                       </span>
                     </td>
 
-                    {/* TAKİP NOTU CANLI EDİTÖR FORMU */}
+                    {/* DÜZELTİLDİ: GÖZ İKONLU VE YEŞİL BİLDİRİMLİ NOT EDİTÖRÜ */}
                     <td className="py-1 px-2">
-                      <form action={teklifTakipNotuGuncelle} className="flex gap-2 items-center">
-                        <input type="hidden" name="teklifId" value={t.id} />
-                        <input
-                          name="takipNotu"
-                          defaultValue={t.takipNotu ?? ""}
-                          placeholder="Takip notu giriniz (örn. Pazartesi aranacak...)"
-                          className="w-full border border-hat rounded px-2 py-1 text-xs bg-slate-50 focus:bg-white focus:border-soguk text-metin font-medium"
-                        />
-                        <button
-                          type="submit"
-                          className="bg-soguk text-white px-2.5 py-1 rounded text-[11px] font-bold hover:bg-soguk-dim transition-colors shrink-0"
-                        >
-                          Kaydet
-                        </button>
-                      </form>
+                      <TakipNotuEditor teklifId={t.id} varsayilanNot={t.takipNotu ?? ""} />
                     </td>
                   </tr>
                 );
