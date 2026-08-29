@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 // "Profilim & Şifre" MENÜ DİZİSİNE EKLENDİ
 const menuTemel = [
   { href: "/panel", label: "Özet" },
-   { href: "/panel/proje-takip", label: "📊 Proje Takip (Excel)" }, // YENİ EKLENDİ
+  { href: "/panel/proje-takip", label: "📊 Proje Takip (Excel)" }, // YENİ EKLENDİ
   { href: "/panel/stok", label: "Stok & Envanter" },
   { href: "/panel/genel-cari", label: "Genel Finans & Çekler" },
   { href: "/panel/talepler", label: "Web Talepleri" },
