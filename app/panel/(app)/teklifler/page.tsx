@@ -20,14 +20,24 @@ function teklifNoFormat(no: number) {
 export default async function TekliflerSayfasi({
   searchParams,
 }: {
-  searchParams: { musteri?: string; hazirlayan?: string; baslangic?: string; bitis?: string; min?: string; max?: string; proje?: string; no?: string };
+  searchParams: {
+    musteri?: string;
+    hazirlayan?: string;
+    baslangic?: string;
+    bitis?: string;
+    min?: string;
+    max?: string;
+    proje?: string;
+    no?: string;
+    seciliProjeId?: string; // YENİ
+    seciliMusteriId?: string; // YENİ
+  };
 }) {
   const [musteriler, tumTeklifler, sablonlar, markalar, urunler, projeler, kullanicilar] = await Promise.all([
     prisma.musteri.findMany({ orderBy: { ad: "asc" } }),
     prisma.teklif.findMany({
       where: {
         ...(searchParams.musteri ? { musteriId: searchParams.musteri } : {}),
-        // HAZIRLAYAN PERSONEL FİLTRESİ
         ...(searchParams.hazirlayan ? { olusturanKullaniciId: searchParams.hazirlayan } : {}),
         ...(searchParams.proje ? { baslik: { contains: searchParams.proje, mode: "insensitive" } } : {}),
         ...(searchParams.no ? { teklifNo: Number(searchParams.no) || -1 } : {}),
@@ -47,7 +57,7 @@ export default async function TekliflerSayfasi({
     prisma.marka.findMany({ select: { id: true, ad: true }, orderBy: { ad: "asc" } }),
     prisma.urun.findMany({ orderBy: { ad: "asc" } }),
     prisma.proje.findMany({ orderBy: { ad: "asc" } }),
-    prisma.kullanici.findMany({ select: { id: true, ad: true }, orderBy: { ad: "asc" } }), // KULLANICILAR ÇEKİLDİ
+    prisma.kullanici.findMany({ select: { id: true, ad: true }, orderBy: { ad: "asc" } }),
   ]);
 
   const min = searchParams.min ? Number(searchParams.min) : null;
@@ -65,6 +75,11 @@ export default async function TekliflerSayfasi({
   const disaAktarQuery = new URLSearchParams(
     Object.entries(searchParams).filter(([, v]) => v) as [string, string][]
   ).toString();
+
+  // DÜZELTİLDİ: PROJE NAKİL VE OTOMATİK MÜŞTERİ SEÇİMİ
+  const varsayilanBaslik = searchParams.proje || "";
+  const varsayilanMusteriId = searchParams.seciliMusteriId || searchParams.musteri || "";
+  const varsayilanProjeId = searchParams.seciliProjeId || "";
 
   return (
     <div>
@@ -91,22 +106,27 @@ export default async function TekliflerSayfasi({
           </p>
         ) : (
           <>
-            <label className="block text-xs font-medium text-metin/60 mb-1">Teklif / Proje Adı</label>
+            {/* DÜZELTİLDİ: OTOMATİK PROJE ADI DOLU GELİR */}
+            <label className="block text-xs font-medium text-metin/60 mb-1">Teklif / Proje Adı *</label>
             <input
               name="baslik"
               required
+              defaultValue={varsayilanBaslik}
               placeholder="örn. Merkez Ofis VRF Klima Sistemi"
-              className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm mb-5"
+              className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm mb-5 bg-white font-medium"
             />
 
             <div className="grid sm:grid-cols-2 gap-3 mb-5">
+              {/* DÜZELTİLDİ: İLGİLİ MÜŞTERİ OTOMATİK SEÇİLİ GELİR */}
               <div>
-                <label className="block text-xs font-medium text-metin/60 mb-1">Müşteri</label>
+                <label className="block text-xs font-medium text-metin/60 mb-1">Müşteri *</label>
                 <select
                   name="musteriId"
                   required
-                  className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white"
+                  defaultValue={varsayilanMusteriId}
+                  className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white font-medium"
                 >
+                  <option value="">— Müşteri Seçin —</option>
                   {musteriler.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.ad}
@@ -114,9 +134,15 @@ export default async function TekliflerSayfasi({
                   ))}
                 </select>
               </div>
+
+              {/* DÜZELTİLDİ: İLGİLİ PROJE OTOMATİK BAĞLANIR */}
               <div>
                 <label className="block text-xs font-medium text-metin/60 mb-1">Proje (opsiyonel)</label>
-                <select name="projeId" defaultValue="" className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
+                <select
+                  name="projeId"
+                  defaultValue={varsayilanProjeId}
+                  className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white"
+                >
                   <option value="">— Proje bağlantısı yok —</option>
                   {projeler.map((p) => (
                     <option key={p.id} value={p.id}>{p.ad}</option>
@@ -207,7 +233,7 @@ export default async function TekliflerSayfasi({
         )}
       </form>
 
-      {/* FİLTRELEME EKRANI (HAZIRLAYAN PERSONEL FİLTRESİ EKLENDİ) */}
+      {/* FİLTRELEME EKRANI */}
       <details className="bg-yuzey border border-hat rounded-lg mb-6" open={filtreVar}>
         <summary className="cursor-pointer select-none px-5 py-3 text-sm font-medium text-metin/70">
           Filtrele {filtreVar && <span className="text-soguk-dim">(aktif)</span>}
@@ -227,7 +253,6 @@ export default async function TekliflerSayfasi({
             </select>
           </div>
 
-          {/* DÜZELTİLDİ: HAZIRLAYAN PERSONEL FİLTRESİ EKLENDİ */}
           <div>
             <label className="block text-xs font-semibold text-soguk-dim mb-1">Hazırlayan Personel</label>
             <select name="hazirlayan" defaultValue={searchParams.hazirlayan ?? ""} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
@@ -304,7 +329,7 @@ export default async function TekliflerSayfasi({
               <div className="text-right flex items-center gap-3 shrink-0">
                 <p className="font-mono text-metin font-bold">{paraFormat(toplam, t.paraBirimi)}</p>
                 <TeklifDurumSecici teklifId={t.id} mevcutDurum={t.durum} />
-                <Link href={`/panel/teklifler/${t.id}/duzenle`} className="focus-ring text-xs text-metin/60 hover:text-soguk-dim font-medium">
+                <Link href={`/panel/teklifler/${t.id}/duzenle`} className="focus-ring text-xs text-metin/40 hover:text-soguk-dim font-medium">
                   Düzenle
                 </Link>
                 <SilButon id={t.id} action={teklifSil} onayMesaji="Bu teklifi silmek istediğine emin misin?" />
