@@ -4,47 +4,86 @@ import * as XLSX from "xlsx";
 
 export async function GET() {
   try {
-    const teklifler = await prisma.teklif.findMany({
-      include: {
-        musteri: true,
-        proje: true,
-        olusturanKullanici: true,
-        kalemler: { include: { marka: true } },
-      },
-      orderBy: { tarih: "desc" },
+    const [projeler, teklifler] = await Promise.all([
+      prisma.proje.findMany({
+        include: { musteri: true, teklifler: { include: { kalemler: true, olusturanKullanici: true } } },
+        orderBy: { olusturmaTarihi: "desc" },
+      }),
+      prisma.teklif.findMany({
+        where: { projeId: null }, // Projeye bağlı olmayan bağımsız teklifler
+        include: { musteri: true, olusturanKullanici: true, kalemler: { include: { marka: true } } },
+        orderBy: { tarih: "desc" },
+      }),
+    ]);
+
+    const veriler: any[] = [];
+
+    // 1. Projelerden Gelen Satırlar
+    projeler.forEach((p) => {
+      if (p.teklifler.length > 0) {
+        // Projeye ait teklifler varsa herbirini bas
+        p.teklifler.forEach((t) => {
+          const toplam = t.kalemler.reduce((a, k) => a + k.adet * k.birimFiyat * (1 - (k.iskontoYuzde || 0) / 100), 0);
+          veriler.push({
+            "Teklif ID": t.id,
+            "Teklif No": `TKL-${String(t.teklifNo).padStart(4, "0")}`,
+            "Teklif / Proje Adı": p.ad || t.baslik,
+            "Müşteri Firma": p.musteri?.ad || t.musteri?.ad || "—",
+            "YETKİLİ": p.musteri?.yetkiliAdi || "—",
+            "İLETİŞİM": p.musteri?.yetkiliTelefon || p.musteri?.telefon || "—",
+            "Hazırlayan Personel": t.olusturanKullanici?.ad || t.olusturanAdi || p.olusturanAdi || "—",
+            "Tarih": t.tarih.toISOString().slice(0, 10),
+            "Toplam Tutar": toplam.toFixed(2),
+            "Para Birimi": t.paraBirimi,
+            "Marka": "—",
+            "İhaleyi alan firma": p.ihaleyiAlan || t.ihaleyiAlan || "",
+            "Varsa Ekap No": t.ekapNo || "",
+            "Varsa İpkb no": t.ipkbNo || "",
+            "Takip Notları / Görüşme Geçmişi": t.takipNotu || p.notlar || "",
+          });
+        });
+      } else {
+        // Henüz Teklifi Hazırlanmamış Proje / İhale Fırsatı
+        veriler.push({
+          "Teklif ID": "",
+          "Teklif No": "— (Teklif Hazırlanmadı)",
+          "Teklif / Proje Adı": p.ad,
+          "Müşteri Firma": p.musteri?.ad || "—",
+          "YETKİLİ": p.musteri?.yetkiliAdi || "—",
+          "İLETİŞİM": p.musteri?.yetkiliTelefon || p.musteri?.telefon || "—",
+          "Hazırlayan Personel": p.olusturanAdi || "—",
+          "Tarih": p.olusturmaTarihi.toISOString().slice(0, 10),
+          "Toplam Tutar": p.tahminiDeger ? p.tahminiDeger.toFixed(2) : "0.00",
+          "Para Birimi": p.paraBirimi || "TRY",
+          "Marka": "—",
+          "İhaleyi alan firma": p.ihaleyiAlan || "",
+          "Varsa Ekap No": "",
+          "Varsa İpkb no": "",
+          "Takip Notları / Görüşme Geçmişi": p.notlar || "",
+        });
+      }
     });
 
-    const veriler = teklifler.map((t) => {
-      const toplam = t.kalemler.reduce(
-        (a, k) => a + k.adet * k.birimFiyat * (1 - (k.iskontoYuzde || 0) / 100),
-        0
-      );
-
-      // Teklifteki benzersiz markalar
-      const markalar = Array.from(
-        new Set(t.kalemler.map((k) => k.marka?.ad).filter(Boolean))
-      ).join(", ");
-
-      const yetkili = t.musteri?.yetkiliAdi || "—";
-      const iletisim = t.musteri?.yetkiliTelefon || t.musteri?.telefon || t.musteri?.email || "—";
-
-      return {
+    // 2. Projeye Bağlı Olmayan Bağımsız Teklifler
+    teklifler.forEach((t) => {
+      const toplam = t.kalemler.reduce((a, k) => a + k.adet * k.birimFiyat * (1 - (k.iskontoYuzde || 0) / 100), 0);
+      veriler.push({
         "Teklif ID": t.id,
         "Teklif No": `TKL-${String(t.teklifNo).padStart(4, "0")}`,
         "Teklif / Proje Adı": t.baslik || "—",
         "Müşteri Firma": t.musteri?.ad || "—",
-        "YETKİLİ": yetkili,
-        "İLETİŞİM": iletisim,
+        "YETKİLİ": t.musteri?.yetkiliAdi || "—",
+        "İLETİŞİM": t.musteri?.yetkiliTelefon || t.musteri?.telefon || "—",
         "Hazırlayan Personel": t.olusturanKullanici?.ad || t.olusturanAdi || "—",
-        "Tarih": t.tarih ? new Date(t.tarih).toISOString().slice(0, 10) : "",
+        "Tarih": t.tarih.toISOString().slice(0, 10),
         "Toplam Tutar": toplam.toFixed(2),
-        "Para Birimi": t.paraBirimi || "TRY",
-        "Marka": markalar || "—",
-        "İhaleyi alan firma": t.ihaleyiAlan || t.proje?.ihaleyiAlan || "",
+        "Para Birimi": t.paraBirimi,
+        "Marka": "—",
+        "İhaleyi alan firma": t.ihaleyiAlan || "",
         "Varsa Ekap No": t.ekapNo || "",
         "Varsa İpkb no": t.ipkbNo || "",
         "Takip Notları / Görüşme Geçmişi": t.takipNotu || "",
-      };
+      });
     });
 
     const worksheet = XLSX.utils.json_to_sheet(veriler);

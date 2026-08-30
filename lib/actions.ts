@@ -1467,3 +1467,28 @@ export async function tekliflerExcelImport(formData: FormData) {
     return { basarili: false, hata: "Excel dosyası okunurken hata oluştu: " + e.message };
   }
 }
+
+// PROJE VEYA TEKLİF TAKİP NOTU GÜNCELLEME (CRM PIPELINE)
+export async function projeTakipNotuGuncelle(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  const tip = String(formData.get("tip") ?? "TEKLIF"); // 'PROJE' veya 'TEKLIF'
+  const takipNotu = String(formData.get("takipNotu") ?? "").trim();
+
+  if (!id) return;
+
+  if (tip === "PROJE") {
+    await prisma.proje.update({
+      where: { id },
+      data: { notlar: takipNotu || null },
+    });
+  } else {
+    await prisma.teklif.update({
+      where: { id },
+      data: { takipNotu: takipNotu || null },
+    });
+  }
+
+  revalidatePath("/panel/proje-takip");
+  revalidatePath("/panel/projeler");
+  revalidatePath("/panel/teklifler");
+}

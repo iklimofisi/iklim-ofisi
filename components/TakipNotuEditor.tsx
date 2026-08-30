@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { teklifTakipNotuGuncelle } from "@/lib/actions";
+import { projeTakipNotuGuncelle } from "@/lib/actions";
 
 export default function TakipNotuEditor({
-  teklifId,
+  id,
   varsayilanNot,
+  tip = "TEKLIF",
 }: {
-  teklifId: string;
+  id: string;
   varsayilanNot: string;
+  tip?: "PROJE" | "TEKLIF";
 }) {
   const [not, setNot] = useState(varsayilanNot || "");
   const [kaydedildi, setKaydedildi] = useState(false);
@@ -18,11 +20,11 @@ export default function TakipNotuEditor({
   const kaydet = (yeniNot: string) => {
     startTransition(async () => {
       const formData = new FormData();
-      formData.append("teklifId", teklifId);
+      formData.append("id", id);
+      formData.append("tip", tip);
       formData.append("takipNotu", yeniNot);
-      await teklifTakipNotuGuncelle(formData);
+      await projeTakipNotuGuncelle(formData);
 
-      // CANLI YEŞİL "KAYDEDİLDİ!" BİLDİRİMİ
       setKaydedildi(true);
       setTimeout(() => setKaydedildi(false), 3000);
     });
@@ -30,16 +32,14 @@ export default function TakipNotuEditor({
 
   return (
     <div className="flex items-center gap-1.5 w-full">
-      {/* Hızlı Not Kutusu */}
       <input
         type="text"
         value={not}
         onChange={(e) => setNot(e.target.value)}
-        placeholder="Takip notu giriniz..."
+        placeholder={tip === "PROJE" ? "Proje/Fırsat notu..." : "Teklif takip notu..."}
         className="w-full border border-hat rounded px-2 py-1 text-xs bg-slate-50 focus:bg-white focus:border-soguk text-metin font-medium"
       />
 
-      {/* Kaydet Butonu (Kaydedilince Yeşil '✓ Kaydedildi!' Olur) */}
       <button
         type="button"
         disabled={isPending}
@@ -53,23 +53,21 @@ export default function TakipNotuEditor({
         {isPending ? "..." : kaydedildi ? "✓ Kaydedildi!" : "Kaydet"}
       </button>
 
-      {/* 👁️ GÖZ İKONU (Notu Dev Pencerede Gör & Oku) */}
       <button
         type="button"
         onClick={() => setModalAcik(true)}
         className="p-1 text-slate-600 hover:text-teal-700 bg-slate-100 hover:bg-slate-200 border border-hat rounded text-xs shrink-0"
-        title="Göz İşareti: Notun Tamamını Büyük Pencerede Oku & Düzenle"
+        title="Notun Tamamını Büyük Pencerede Oku & Düzenle"
       >
         👁️
       </button>
 
-      {/* 👁️ GÖZ İKONU MODAL PENCERESİ */}
       {modalAcik && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4 text-left">
             <div className="flex justify-between items-center border-b border-slate-100 pb-2">
               <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
-                👁️ Proje Takip Notu & Görüşme Geçmişi
+                👁️ Proje / Fırsat Görüşme Geçmişi
               </h3>
               <button
                 type="button"
@@ -82,13 +80,13 @@ export default function TakipNotuEditor({
 
             <div className="space-y-2">
               <label className="block text-xs font-semibold text-slate-600">
-                Görüşme Notları (Geniş Alan)
+                Görüşme Notları & Fırsat Takip Geçmişi
               </label>
               <textarea
                 rows={6}
                 value={not}
                 onChange={(e) => setNot(e.target.value)}
-                placeholder="Müşteriyle yapılan görüşmeleri, verilen sözleri ve sonraki arama tarihlerini buraya yazabilirsiniz..."
+                placeholder="Müşteriyle yapılan görüşmeleri ve ihale takip notlarını buraya yazabilirsiniz..."
                 className="w-full border border-hat rounded-md p-3 text-xs bg-slate-50 focus:bg-white leading-relaxed text-slate-800 font-medium"
               />
             </div>
