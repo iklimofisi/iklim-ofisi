@@ -1492,3 +1492,40 @@ export async function projeTakipNotuGuncelle(formData: FormData) {
   revalidatePath("/panel/projeler");
   revalidatePath("/panel/teklifler");
 }
+
+// TEKLİF EKRANINDAN HIZLI MÜŞTERİ EKLEME
+export async function hizliMusteriEkle(formData: FormData) {
+  const ad = String(formData.get("ad") ?? "").trim();
+  const yetkiliAdi = String(formData.get("yetkiliAdi") ?? "").trim();
+  const yetkiliTelefon = String(formData.get("yetkiliTelefon") ?? "").trim();
+  const yetkiliEmail = String(formData.get("yetkiliEmail") ?? "").trim();
+  const telefon = String(formData.get("telefon") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const muhasebeEmail = String(formData.get("muhasebeEmail") ?? "").trim();
+  const vergiNo = String(formData.get("vergiNo") ?? "").trim();
+  const faturaAdresi = String(formData.get("faturaAdresi") ?? "").trim();
+  const sevkAdresi = String(formData.get("sevkAdresi") ?? "").trim();
+
+  if (!ad) return;
+
+  const musteri = await prisma.musteri.create({
+    data: {
+      ad,
+      yetkiliAdi: yetkiliAdi || null,
+      yetkiliTelefon: yetkiliTelefon || null,
+      yetkiliEmail: yetkiliEmail || null,
+      telefon: telefon || null,
+      email: email || null,
+      muhasebeEmail: muhasebeEmail || null,
+      vergiNo: vergiNo || null,
+      faturaAdresi: faturaAdresi || null,
+      sevkAdresi: sevkAdresi || null,
+    },
+  });
+
+  revalidatePath("/panel/teklifler");
+  revalidatePath("/panel/musteriler");
+
+  // Yeni eklenen müşteriyi teklif formunda otomatik seçili getirir
+  redirect(`/panel/teklifler?seciliMusteriId=${musteri.id}&basarili=musteri-eklendi`);
+}

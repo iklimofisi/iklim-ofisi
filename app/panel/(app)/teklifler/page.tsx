@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { teklifEkle, teklifSil } from "@/lib/actions";
 import TeklifKalemleri from "@/components/TeklifKalemleri";
 import TeklifDurumSecici from "@/components/TeklifDurumSecici";
+import HizliMusteriEkleModal from "@/components/HizliMusteriEkleModal"; // HIZLI MÜŞTERİ MODALI
 import SilButon from "@/components/SilButon";
 import Link from "next/link";
 
@@ -29,8 +30,9 @@ export default async function TekliflerSayfasi({
     max?: string;
     proje?: string;
     no?: string;
-    seciliProjeId?: string; // YENİ
-    seciliMusteriId?: string; // YENİ
+    seciliProjeId?: string;
+    seciliMusteriId?: string; // Yeni Eklenen Müşteri ID'si
+    basarili?: string;
   };
 }) {
   const [musteriler, tumTeklifler, sablonlar, markalar, urunler, projeler, kullanicilar] = await Promise.all([
@@ -76,7 +78,6 @@ export default async function TekliflerSayfasi({
     Object.entries(searchParams).filter(([, v]) => v) as [string, string][]
   ).toString();
 
-  // DÜZELTİLDİ: PROJE NAKİL VE OTOMATİK MÜŞTERİ SEÇİMİ
   const varsayilanBaslik = searchParams.proje || "";
   const varsayilanMusteriId = searchParams.seciliMusteriId || searchParams.musteri || "";
   const varsayilanProjeId = searchParams.seciliProjeId || "";
@@ -96,141 +97,141 @@ export default async function TekliflerSayfasi({
         </a>
       </div>
 
+      {/* YENİ EKLENEN MÜŞTERİ BİLİDİRİMİ */}
+      {searchParams?.basarili === "musteri-eklendi" && (
+        <div className="bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-md p-3 text-xs font-semibold mb-4">
+          ✓ Yeni müşteri başarıyla eklendi ve aşağıda otomatik seçildi!
+        </div>
+      )}
+
       {/* YENİ TEKLİF FORMU */}
       <form action={teklifEkle} className="bg-yuzey border border-hat rounded-lg p-5 mb-10">
         <h2 className="font-display font-medium text-metin mb-4">Yeni Teklif</h2>
 
-        {musteriler.length === 0 ? (
-          <p className="text-sm text-metin/50 mb-4">
-            Önce Müşteriler sayfasından en az bir müşteri eklemelisin.
-          </p>
-        ) : (
-          <>
-            {/* DÜZELTİLDİ: OTOMATİK PROJE ADI DOLU GELİR */}
-            <label className="block text-xs font-medium text-metin/60 mb-1">Teklif / Proje Adı *</label>
-            <input
-              name="baslik"
+        <label className="block text-xs font-medium text-metin/60 mb-1">Teklif / Proje Adı *</label>
+        <input
+          name="baslik"
+          required
+          defaultValue={varsayilanBaslik}
+          placeholder="örn. Merkez Ofis VRF Klima Sistemi"
+          className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm mb-5 bg-white font-medium"
+        />
+
+        <div className="grid sm:grid-cols-2 gap-3 mb-5">
+          {/* MÜŞTERİ SEÇİMİ VE HIZLI MÜŞTERİ EKLEME BUTONU */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-medium text-metin/60">Müşteri *</label>
+              <HizliMusteriEkleModal />
+            </div>
+            <select
+              name="musteriId"
               required
-              defaultValue={varsayilanBaslik}
-              placeholder="örn. Merkez Ofis VRF Klima Sistemi"
-              className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm mb-5 bg-white font-medium"
+              defaultValue={varsayilanMusteriId}
+              className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white font-medium"
+            >
+              <option value="">— Müşteri Seçin —</option>
+              {musteriler.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.ad}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-metin/60 mb-1">Proje (opsiyonel)</label>
+            <select
+              name="projeId"
+              defaultValue={varsayilanProjeId}
+              className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white"
+            >
+              <option value="">— Proje bağlantısı yok —</option>
+              {projeler.map((p) => (
+                <option key={p.id} value={p.id}>{p.ad}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid sm:grid-cols-4 gap-3 mb-5">
+          <div>
+            <label className="block text-xs font-medium text-metin/60 mb-1">Para Birimi</label>
+            <select name="paraBirimi" defaultValue="TRY" className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
+              <option value="TRY">₺ TRY</option>
+              <option value="USD">$ USD</option>
+              <option value="EUR">€ EUR</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-metin/60 mb-1">KDV Durumu</label>
+            <select name="kdvDurumu" defaultValue="haric" className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
+              <option value="haric">Fiyatlara KDV Hariç</option>
+              <option value="dahil">Fiyatlara KDV Dahil</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-metin/60 mb-1">KDV Oranı (%)</label>
+            <input
+              name="kdvOrani"
+              type="number"
+              defaultValue={20}
+              className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white"
             />
-
-            <div className="grid sm:grid-cols-2 gap-3 mb-5">
-              {/* DÜZELTİLDİ: İLGİLİ MÜŞTERİ OTOMATİK SEÇİLİ GELİR */}
-              <div>
-                <label className="block text-xs font-medium text-metin/60 mb-1">Müşteri *</label>
-                <select
-                  name="musteriId"
-                  required
-                  defaultValue={varsayilanMusteriId}
-                  className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white font-medium"
-                >
-                  <option value="">— Müşteri Seçin —</option>
-                  {musteriler.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.ad}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* DÜZELTİLDİ: İLGİLİ PROJE OTOMATİK BAĞLANIR */}
-              <div>
-                <label className="block text-xs font-medium text-metin/60 mb-1">Proje (opsiyonel)</label>
-                <select
-                  name="projeId"
-                  defaultValue={varsayilanProjeId}
-                  className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white"
-                >
-                  <option value="">— Proje bağlantısı yok —</option>
-                  {projeler.map((p) => (
-                    <option key={p.id} value={p.id}>{p.ad}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid sm:grid-cols-4 gap-3 mb-5">
-              <div>
-                <label className="block text-xs font-medium text-metin/60 mb-1">Para Birimi</label>
-                <select name="paraBirimi" defaultValue="TRY" className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
-                  <option value="TRY">₺ TRY</option>
-                  <option value="USD">$ USD</option>
-                  <option value="EUR">€ EUR</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-metin/60 mb-1">KDV Durumu</label>
-                <select name="kdvDurumu" defaultValue="haric" className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
-                  <option value="haric">Fiyatlara KDV Hariç</option>
-                  <option value="dahil">Fiyatlara KDV Dahil</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-metin/60 mb-1">KDV Oranı (%)</label>
-                <input
-                  name="kdvOrani"
-                  type="number"
-                  defaultValue={20}
-                  className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-metin/60 mb-1">Geçerlilik (gün)</label>
-                <input
-                  name="gecerlilikGunu"
-                  type="number"
-                  defaultValue={15}
-                  className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white"
-                />
-              </div>
-            </div>
-
-            <TeklifKalemleri
-              markalar={markalar.map((m) => ({ id: m.id, ad: m.ad }))}
-              urunler={urunler.map((u) => ({
-                id: u.id,
-                kod: u.kod,
-                ad: u.ad,
-                markaId: u.markaId,
-                birimFiyat: u.listeFiyati,
-                paraBirimi: u.paraBirimi,
-              }))}
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-metin/60 mb-1">Geçerlilik (gün)</label>
+            <input
+              name="gecerlilikGunu"
+              type="number"
+              defaultValue={15}
+              className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white"
             />
+          </div>
+        </div>
 
-            <label className="flex items-center gap-2 text-sm text-metin/80 mb-4 bg-soguk-light/20 p-2.5 rounded border border-hat">
-              <input type="checkbox" name="birimFiyatGoster" value="hayir" className="accent-soguk" />
-              <span className="font-semibold text-metin">PDF çıktısında tüm kalem fiyatlarını gizle</span>
-              <span className="text-xs text-metin/60">(Müşteri kalem fiyatlarını göremez, sadece dip toplam görünür)</span>
-            </label>
+        <TeklifKalemleri
+          markalar={markalar.map((m) => ({ id: m.id, ad: m.ad }))}
+          urunler={urunler.map((u) => ({
+            id: u.id,
+            kod: u.kod,
+            ad: u.ad,
+            markaId: u.markaId,
+            birimFiyat: u.listeFiyati,
+            paraBirimi: u.paraBirimi,
+          }))}
+        />
 
-            {sablonlar.length > 0 && (
-              <div className="border-t border-hat pt-4 mt-4 mb-4">
-                <p className="text-xs font-medium text-metin/60 mb-2">
-                  Bu teklifte hangi bölümler görünsün?
-                </p>
-                <div className="flex flex-wrap gap-x-6 gap-y-2">
-                  {sablonlar.map((s) => (
-                    <label key={s.id} className="flex items-center gap-2 text-sm text-metin/80">
-                      <input type="checkbox" name="sablonIds" value={s.id} defaultChecked className="accent-soguk" />
-                      {s.baslik}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
+        <label className="flex items-center gap-2 text-sm text-metin/80 mb-4 bg-soguk-light/20 p-2.5 rounded border border-hat">
+          <input type="checkbox" name="birimFiyatGoster" value="hayir" className="accent-soguk" />
+          <span className="font-semibold text-metin">PDF çıktısında tüm kalem fiyatlarını gizle</span>
+          <span className="text-xs text-metin/60">(Müşteri kalem fiyatlarını göremez, sadece dip toplam görünür)</span>
+        </label>
 
-            <div className="flex items-center justify-end border-t border-hat pt-4">
-              <button
-                type="submit"
-                className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors"
-              >
-                Teklifi Kaydet
-              </button>
+        {sablonlar.length > 0 && (
+          <div className="border-t border-hat pt-4 mt-4 mb-4">
+            <p className="text-xs font-medium text-metin/60 mb-2">
+              Bu teklifte hangi bölümler görünsün?
+            </p>
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
+              {sablonlar.map((s) => (
+                <label key={s.id} className="flex items-center gap-2 text-sm text-metin/80">
+                  <input type="checkbox" name="sablonIds" value={s.id} defaultChecked className="accent-soguk" />
+                  {s.baslik}
+                </label>
+              ))}
             </div>
-          </>
+          </div>
         )}
+
+        <div className="flex items-center justify-end border-t border-hat pt-4">
+          <button
+            type="submit"
+            className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors"
+          >
+            Teklifi Kaydet
+          </button>
+        </div>
       </form>
 
       {/* FİLTRELEME EKRANI */}
