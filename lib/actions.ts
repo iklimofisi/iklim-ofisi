@@ -773,11 +773,10 @@ export async function tedarikciEkle(formData: FormData) {
 
 // --- Satınalma: Gelen Teklifler ---
 
-// TEDARİKÇİ TEKLİFİ EKLEME (ÇOKLU TEKLİF & DOSYA DESTEKLİ)
+// TEDARİKÇİ TEKLİFİ EKLEME (TEMİZ HATASIZ VERSİYON)
 export async function satinalmaTeklifiEkle(formData: FormData) {
   const tedarikciId = String(formData.get("tedarikciId") ?? "");
   const baslik = String(formData.get("baslik") ?? "").trim();
-  const projeId = String(formData.get("projeId") ?? "").trim();
   const paraBirimi = String(formData.get("paraBirimi") ?? "TRY");
   const aciklamalar = formData.getAll("kalemAciklama") as string[];
   const adetler = formData.getAll("kalemAdet") as string[];
@@ -814,11 +813,10 @@ export async function satinalmaTeklifiEkle(formData: FormData) {
     excelTipi = excelDosya.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
   }
 
-  const satinalmaTeklifi = await prisma.satinalmaTeklifi.create({
+  await prisma.satinalmaTeklifi.create({
     data: {
       tedarikciId,
-      baslik,
-      projeId: projeId || null,
+      baslik, // projeId satırı tamamen kaldırıldı
       paraBirimi,
       maliyetPdf: pdfBuffer,
       maliyetPdfAdi: pdfAdi,
