@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { satinalmaTeklifiEkle, satinalmaTeklifiSil, maliyetDosyaYukle } from "@/lib/actions";
+import { satinalmaTeklifiEkle, satinalmaTeklifiSil } from "@/lib/actions";
 import SilButon from "@/components/SilButon";
 import Link from "next/link";
 
@@ -11,22 +11,18 @@ function paraFormat(n: number, pb: string = "TRY") {
 }
 
 export default async function SatinalmaTekliflerPage() {
-  const [tedarikciler, satinalmaTeklifleri, projeler, satisTeklifleri] = await Promise.all([
+  const [tedarikciler, satinalmaTeklifleri, projeler] = await Promise.all([
     prisma.tedarikci.findMany({ orderBy: { ad: "asc" } }),
     prisma.satinalmaTeklifi.findMany({
-      include: { tedarikci: true, proje: true, kalemler: true },
+      include: { tedarikci: true, kalemler: true }, // DÜZELTİLDİ: proje: true kaldırıldı
       orderBy: { tarih: "desc" },
     }),
     prisma.proje.findMany({ orderBy: { ad: "asc" } }),
-    prisma.teklif.findMany({
-      include: { musteri: true, olusturanKullanici: true, kalemler: true },
-      orderBy: { tarih: "desc" },
-    }),
   ]);
 
-  // TEDARİKÇİ TEKLİFLERİNİ PROJE / KONU BAŞLIĞINA GÖRE GRUPLA
+  // TEDARİKÇİ TEKLİFLERİNİ KONU / PROJE BAŞLIĞINA GÖRE GRUPLA
   const gruplanmisSatinalma = satinalmaTeklifleri.reduce((acc, st) => {
-    const konu = st.proje?.ad || st.baslik || "Genel Satınalma Talepleri";
+    const konu = st.baslik || "Genel Satınalma Talepleri";
     if (!acc[konu]) acc[konu] = [];
     acc[konu].push(st);
     return acc;
