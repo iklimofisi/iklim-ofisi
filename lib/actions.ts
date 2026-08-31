@@ -1541,3 +1541,54 @@ export async function hizliMusteriEkle(formData: FormData) {
   // Çağrıldığı sayfaya yeni müşteriyi seçili olarak geri döndürür
   redirect(`${yonlendirPath}?seciliMusteriId=${musteri.id}&basarili=musteri-eklendi`);
 }
+
+// MALİYET PDF VE EXCEL DOSYASI YÜKLEME
+export async function maliyetDosyaYukle(formData: FormData) {
+  const teklifId = String(formData.get("teklifId") ?? "").trim();
+  const satinalmaTeklifiId = String(formData.get("satinalmaTeklifiId") ?? "").trim();
+  const pdfDosya = formData.get("maliyetPdf") as File | null;
+  const excelDosya = formData.get("maliyetExcel") as File | null;
+
+  if (!teklifId && !satinalmaTeklifiId) return;
+
+  let pdfBuffer: Buffer | undefined;
+  let pdfAdi: string | undefined;
+  let pdfTipi: string | undefined;
+
+  if (pdfDosya && pdfDosya.size > 0) {
+    pdfBuffer = Buffer.from(await pdfDosya.arrayBuffer());
+    pdfAdi = pdfDosya.name;
+    pdfTipi = pdfDosya.type || "application/pdf";
+  }
+
+  let excelBuffer: Buffer | undefined;
+  let excelAdi: string | undefined;
+  let excelTipi: string | undefined;
+
+  if (excelDosya && excelDosya.size > 0) {
+    excelBuffer = Buffer.from(await excelDosya.arrayBuffer());
+    excelAdi = excelDosya.name;
+    excelTipi = excelDosya.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  }
+
+  if (teklifId) {
+    await prisma.teklif.update({
+      where: { id: teklifId },
+      data: {
+        ...(pdfBuffer ? { maliyetPdf: pdfBuffer, maliyetPdfAdi: pdfAdi, maliyetPdfTipi: pdfTipi } : {}),
+        ...(excelBuffer ? { maliyetExcel: excelBuffer, maliyetExcelAdi: excelAdi, maliyetExcelTipi: excelTipi } : {}),
+      },
+    });
+  } else if (satinalmaTeklifiId) {
+    await prisma.satinalmaTeklifi.update({
+      where: { id: satinalmaTeklifiId },
+      data: {
+        ...(pdfBuffer ? { maliyetPdf: pdfBuffer, maliyetPdfAdi: pdfAdi, maliyetPdfTipi: pdfTipi } : {}),
+        ...(excelBuffer ? { maliyetExcel: excelBuffer, maliyetExcelAdi: excelAdi, maliyetExcelTipi: excelTipi } : {}),
+      },
+    });
+  }
+
+  revalidatePath("/panel/satinalma/teklifler");
+  revalidatePath("/panel/teklifler");
+}

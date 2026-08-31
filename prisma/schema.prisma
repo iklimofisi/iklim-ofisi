@@ -56,6 +56,13 @@ model Teklif {
   baslik                   String            @default("")
   musteri                  Musteri           @relation(fields: [musteriId], references: [id])
   musteriId                String
+  // YENİ: MALİYET PDF VE EXCEL DOSYA ALANLARI
+  maliyetPdf               Bytes?
+  maliyetPdfAdi            String?
+  maliyetPdfTipi           String?
+  maliyetExcel             Bytes?
+  maliyetExcelAdi          String?
+  maliyetExcelTipi         String?
   takipNotu                String?           // YENİ: Satış Temsilcisinin Proje Takip Notu
   ihaleyiAlan              String?           // İhaleyi alan firma
   ekapNo                   String?           // Varsa Ekap No
@@ -258,6 +265,13 @@ model SatinalmaTeklifi {
   baslik      String
   paraBirimi  String                  @default("TRY")
   tarih       DateTime                @default(now())
+   // YENİ: MALİYET PDF VE EXCEL DOSYA ALANLARI
+  maliyetPdf        Bytes?
+  maliyetPdfAdi     String?
+  maliyetPdfTipi    String?
+  maliyetExcel      Bytes?
+  maliyetExcelAdi   String?
+  maliyetExcelTipi  String?
   kalemler    SatinalmaTeklifKalemi[]
   tekliflar   Teklif[]
 }
