@@ -1502,7 +1502,9 @@ export async function projeTakipNotuGuncelle(formData: FormData) {
 }
 
 // TEKLİF EKRANINDAN HIZLI MÜŞTERİ EKLEME
+// TEKLİF VEYA PROJE EKRANINDAN ESNEK HIZLI MÜŞTERİ EKLEME
 export async function hizliMusteriEkle(formData: FormData) {
+  const yonlendirPath = String(formData.get("yonlendirPath") ?? "/panel/teklifler").trim();
   const ad = String(formData.get("ad") ?? "").trim();
   const yetkiliAdi = String(formData.get("yetkiliAdi") ?? "").trim();
   const yetkiliTelefon = String(formData.get("yetkiliTelefon") ?? "").trim();
@@ -1532,8 +1534,10 @@ export async function hizliMusteriEkle(formData: FormData) {
   });
 
   revalidatePath("/panel/teklifler");
+  revalidatePath("/panel/projeler");
+  revalidatePath("/panel/proje-takip");
   revalidatePath("/panel/musteriler");
 
-  // Yeni eklenen müşteriyi teklif formunda otomatik seçili getirir
-  redirect(`/panel/teklifler?seciliMusteriId=${musteri.id}&basarili=musteri-eklendi`);
+  // Çağrıldığı sayfaya yeni müşteriyi seçili olarak geri döndürür
+  redirect(`${yonlendirPath}?seciliMusteriId=${musteri.id}&basarili=musteri-eklendi`);
 }

@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { hizliMusteriEkle } from "@/lib/actions";
 
-export default function HizliMusteriEkleModal() {
+export default function HizliMusteriEkleModal({
+  yonlendirPath = "/panel/teklifler",
+}: {
+  yonlendirPath?: string;
+}) {
   const [acik, setAcik] = useState(false);
 
   return (
@@ -34,6 +38,8 @@ export default function HizliMusteriEkleModal() {
             </div>
 
             <form action={hizliMusteriEkle} className="space-y-3">
+              <input type="hidden" name="yonlendirPath" value={yonlendirPath} />
+
               {/* 1. SATIR */}
               <div className="grid sm:grid-cols-3 gap-3">
                 <div>
@@ -149,7 +155,7 @@ export default function HizliMusteriEkleModal() {
                   type="submit"
                   className="px-5 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-md shadow-sm"
                 >
-                  Müşteriyi Kaydet ve Teklife Dön
+                  Müşteriyi Kaydet ve Dön
                 </button>
               </div>
             </form>
