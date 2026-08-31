@@ -1,14 +1,8 @@
 import { prisma } from "@/lib/prisma";
-import { satinalmaTeklifiEkle, satinalmaTeklifiSil, maliyetDosyaYukle } from "@/lib/actions";
-import SilButon from "@/components/SilButon";
+import { satinalmaTeklifiEkle, maliyetDosyaYukle } from "@/lib/actions";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
-
-function paraFormat(n: number, pb: string = "TRY") {
-  const sembol = pb === "EUR" ? "€" : pb === "USD" ? "$" : "₺";
-  return n.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " " + sembol;
-}
 
 export default async function SatinalmaTekliflerPage() {
   const [tedarikciler, satinalmaTeklifleri, satisTeklifleri] = await Promise.all([
@@ -92,7 +86,7 @@ export default async function SatinalmaTekliflerPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-hat bg-white">
-              {/* SATIŞ TEKLİFLERİ (SİSTEMDEKİ TÜM TEKLİFLER) */}
+              {/* SATIŞ TEKLİFLERİ */}
               {satisTeklifleri.map((t) => (
                 <tr key={`st-${t.id}`} className="hover:bg-slate-50/60">
                   <td className="py-3 px-4">
@@ -112,11 +106,11 @@ export default async function SatinalmaTekliflerPage() {
                     👤 {t.olusturanKullanici?.ad || t.olusturanAdi || "—"}
                   </td>
 
-                  {/* MALİYET PDF YÜKLE / AÇ */}
+                  {/* MALİYET PDF YÜKLE / AÇ (DÜZELTİLDİ) */}
                   <td className="py-3 px-4 text-center">
                     {t.maliyetPdfAdi ? (
                       <a
-                        href={`/api/maliyet-dosya/pdf/${t.id}`}
+                        href={`/api/maliyet-pdf/${t.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded border border-emerald-300 font-bold hover:bg-emerald-100 shadow-sm"
@@ -132,11 +126,11 @@ export default async function SatinalmaTekliflerPage() {
                     )}
                   </td>
 
-                  {/* MALİYET EXCEL YÜKLE / İNDİR */}
+                  {/* MALİYET EXCEL YÜKLE / İNDİR (DÜZELTİLDİ) */}
                   <td className="py-3 px-4 text-center">
                     {t.maliyetExcelAdi ? (
                       <a
-                        href={`/api/maliyet-dosya/excel/${t.id}`}
+                        href={`/api/maliyet-excel/${t.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-[11px] bg-blue-50 text-blue-800 px-2.5 py-1 rounded border border-blue-300 font-bold hover:bg-blue-100 shadow-sm"
@@ -174,11 +168,11 @@ export default async function SatinalmaTekliflerPage() {
 
                   <td className="py-3 px-4 text-metin/50">—</td>
 
-                  {/* MALİYET PDF YÜKLE / AÇ */}
+                  {/* MALİYET PDF YÜKLE / AÇ (DÜZELTİLDİ) */}
                   <td className="py-3 px-4 text-center">
                     {st.maliyetPdfAdi ? (
                       <a
-                        href={`/api/maliyet-dosya/pdf/${st.id}`}
+                        href={`/api/maliyet-pdf/${st.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded border border-emerald-300 font-bold hover:bg-emerald-100 shadow-sm"
@@ -194,11 +188,11 @@ export default async function SatinalmaTekliflerPage() {
                     )}
                   </td>
 
-                  {/* MALİYET EXCEL YÜKLE / İNDİR */}
+                  {/* MALİYET EXCEL YÜKLE / İNDİR (DÜZELTİLDİ) */}
                   <td className="py-3 px-4 text-center">
                     {st.maliyetExcelAdi ? (
                       <a
-                        href={`/api/maliyet-dosya/excel/${st.id}`}
+                        href={`/api/maliyet-excel/${st.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-[11px] bg-blue-50 text-blue-800 px-2.5 py-1 rounded border border-blue-300 font-bold hover:bg-blue-100 shadow-sm"
@@ -214,7 +208,6 @@ export default async function SatinalmaTekliflerPage() {
                     )}
                   </td>
 
-                  {/* MEVCUT TEKLİFE DÖNÜŞTÜR BUTONU (ORİJİNAL KORUNDU) */}
                   <td className="py-3 px-4 text-center">
                     <Link
                       href={`/panel/satinalma/teklifler/${st.id}/donustur`}
