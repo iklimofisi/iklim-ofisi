@@ -773,13 +773,18 @@ export async function tedarikciEkle(formData: FormData) {
 
 // --- Satınalma: Gelen Teklifler ---
 
+// TEDARİKÇİ TEKLİFİ EKLEME (ÇOKLU TEKLİF & DOSYA DESTEKLİ)
 export async function satinalmaTeklifiEkle(formData: FormData) {
   const tedarikciId = String(formData.get("tedarikciId") ?? "");
   const baslik = String(formData.get("baslik") ?? "").trim();
+  const projeId = String(formData.get("projeId") ?? "").trim();
   const paraBirimi = String(formData.get("paraBirimi") ?? "TRY");
   const aciklamalar = formData.getAll("kalemAciklama") as string[];
   const adetler = formData.getAll("kalemAdet") as string[];
   const fiyatlar = formData.getAll("kalemFiyat") as string[];
+
+  const pdfDosya = formData.get("maliyetPdf") as File | null;
+  const excelDosya = formData.get("maliyetExcel") as File | null;
 
   const kalemler = aciklamalar
     .map((aciklama, i) => ({
@@ -789,13 +794,44 @@ export async function satinalmaTeklifiEkle(formData: FormData) {
     }))
     .filter((k) => k.aciklama);
 
-  if (!tedarikciId || !baslik || kalemler.length === 0) return;
+  if (!tedarikciId || !baslik) return;
+
+  let pdfBuffer: Buffer | undefined;
+  let pdfAdi: string | undefined;
+  let pdfTipi: string | undefined;
+  if (pdfDosya && pdfDosya.size > 0) {
+    pdfBuffer = Buffer.from(await pdfDosya.arrayBuffer());
+    pdfAdi = pdfDosya.name;
+    pdfTipi = pdfDosya.type || "application/pdf";
+  }
+
+  let excelBuffer: Buffer | undefined;
+  let excelAdi: string | undefined;
+  let excelTipi: string | undefined;
+  if (excelDosya && excelDosya.size > 0) {
+    excelBuffer = Buffer.from(await excelDosya.arrayBuffer());
+    excelAdi = excelDosya.name;
+    excelTipi = excelDosya.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  }
 
   const satinalmaTeklifi = await prisma.satinalmaTeklifi.create({
-    data: { tedarikciId, baslik, paraBirimi, kalemler: { create: kalemler } },
+    data: {
+      tedarikciId,
+      baslik,
+      projeId: projeId || null,
+      paraBirimi,
+      maliyetPdf: pdfBuffer,
+      maliyetPdfAdi: pdfAdi,
+      maliyetPdfTipi: pdfTipi,
+      maliyetExcel: excelBuffer,
+      maliyetExcelAdi: excelAdi,
+      maliyetExcelTipi: excelTipi,
+      kalemler: { create: kalemler },
+    },
   });
+
   revalidatePath("/panel/satinalma/teklifler");
-  redirect(`/panel/satinalma/teklifler/${satinalmaTeklifi.id}`);
+  redirect(`/panel/satinalma/teklifler`);
 }
 
 export async function satinalmaTeklifiSil(id: string) {
