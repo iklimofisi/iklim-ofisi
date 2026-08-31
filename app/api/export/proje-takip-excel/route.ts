@@ -2,13 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 
-// ÖNBELLEKLEME (CACHE) TAMAMEN KAPATILDI - HER ZAMAN CANLI VERİ ÇEKER
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET() {
   try {
-    const [projeler, bagimsizTeklifler] = await Promise.all([
+    const [projeler, teklifler] = await Promise.all([
       prisma.proje.findMany({
         include: {
           musteri: true,
@@ -67,7 +66,6 @@ export async function GET() {
           });
         });
       } else {
-        // Teklifi henüz hazırlanmamış yeni projeler
         veriler.push({
           "Teklif ID": "",
           "Teklif No": "— (Teklif Hazırlanmadı)",
