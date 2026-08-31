@@ -2,18 +2,23 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 
+// ÖNBELLEKLEME (CACHE) TAMAMEN KAPATILDI - HER ZAMAN CANLI VERİ ÇEKER
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   try {
-    const [projeler, teklifler] = await Promise.all([
+    const [projeler, bagimsizTeklifler] = await Promise.all([
       prisma.proje.findMany({
         include: {
           musteri: true,
           teklifler: {
             include: {
-              musteri: true, // DÜZELTİLDİ: musteri ilişkisi eklendi
-              kalemler: true,
+              musteri: true,
+              kalemler: { include: { marka: true } },
               olusturanKullanici: true,
             },
+            orderBy: { tarih: "desc" },
           },
         },
         orderBy: { olusturmaTarihi: "desc" },
@@ -31,7 +36,7 @@ export async function GET() {
 
     const veriler: any[] = [];
 
-    // 1. Projelerden Gelen Satırlar
+    // 1. PROJELER VE TEKLİFLERİ
     projeler.forEach((p) => {
       if (p.teklifler && p.teklifler.length > 0) {
         p.teklifler.forEach((t: any) => {
@@ -39,6 +44,10 @@ export async function GET() {
             (a: number, k: any) => a + k.adet * k.birimFiyat * (1 - (k.iskontoYuzde || 0) / 100),
             0
           );
+          const markalar = Array.from(
+            new Set(t.kalemler.map((k: any) => k.marka?.ad).filter(Boolean))
+          ).join(", ");
+
           veriler.push({
             "Teklif ID": t.id,
             "Teklif No": `TKL-${String(t.teklifNo).padStart(4, "0")}`,
@@ -50,7 +59,7 @@ export async function GET() {
             "Tarih": t.tarih ? new Date(t.tarih).toISOString().slice(0, 10) : "",
             "Toplam Tutar": toplam.toFixed(2),
             "Para Birimi": t.paraBirimi || "TRY",
-            "Marka": "—",
+            "Marka": markalar || "—",
             "İhaleyi alan firma": p.ihaleyiAlan || t.ihaleyiAlan || "",
             "Varsa Ekap No": t.ekapNo || "",
             "Varsa İpkb no": t.ipkbNo || "",
@@ -58,6 +67,7 @@ export async function GET() {
           });
         });
       } else {
+        // Teklifi henüz hazırlanmamış yeni projeler
         veriler.push({
           "Teklif ID": "",
           "Teklif No": "— (Teklif Hazırlanmadı)",
@@ -78,12 +88,16 @@ export async function GET() {
       }
     });
 
-    // 2. Projeye Bağlı Olmayan Bağımsız Teklifler
+    // 2. BAĞIMSIZ TEKLİFLER
     teklifler.forEach((t: any) => {
       const toplam = t.kalemler.reduce(
         (a: number, k: any) => a + k.adet * k.birimFiyat * (1 - (k.iskontoYuzde || 0) / 100),
         0
       );
+      const markalar = Array.from(
+        new Set(t.kalemler.map((k: any) => k.marka?.ad).filter(Boolean))
+      ).join(", ");
+
       veriler.push({
         "Teklif ID": t.id,
         "Teklif No": `TKL-${String(t.teklifNo).padStart(4, "0")}`,
@@ -95,7 +109,7 @@ export async function GET() {
         "Tarih": t.tarih ? new Date(t.tarih).toISOString().slice(0, 10) : "",
         "Toplam Tutar": toplam.toFixed(2),
         "Para Birimi": t.paraBirimi || "TRY",
-        "Marka": "—",
+        "Marka": markalar || "—",
         "İhaleyi alan firma": t.ihaleyiAlan || "",
         "Varsa Ekap No": t.ekapNo || "",
         "Varsa İpkb no": t.ipkbNo || "",
@@ -114,6 +128,7 @@ export async function GET() {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "Content-Disposition": `attachment; filename="Proje_Takip_Listesi_${new Date().toISOString().slice(0, 10)}.xlsx"`,
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
       },
     });
   } catch (error) {

@@ -1121,6 +1121,7 @@ export async function urunlerExcelIceAktar(formData: FormData): Promise<UrunSati
 
 // --- Proje Takibi ---
 
+// PROJE EKLEME (ÖNBELLEK TEMİZLEMELİ)
 export async function projeEkle(formData: FormData) {
   const kullanici = await suankiKullanici();
   const ad = String(formData.get("ad") ?? "").trim();
@@ -1149,10 +1150,13 @@ export async function projeEkle(formData: FormData) {
       olusturanAdi: kullanici?.ad ?? "",
     },
   });
+
+  revalidatePath("/panel/proje-takip"); // PROJE TAKİP EKRANI CANLI GÜNCELLENİR
   revalidatePath("/panel/projeler");
   redirect(`/panel/projeler/${proje.id}`);
 }
 
+// PROJE GÜNCELLEME
 export async function projeGuncelle(formData: FormData) {
   const projeId = String(formData.get("projeId") ?? "");
   const ad = String(formData.get("ad") ?? "").trim();
@@ -1181,12 +1185,16 @@ export async function projeGuncelle(formData: FormData) {
       notlar: notlar || null,
     },
   });
+
+  revalidatePath("/panel/proje-takip"); // PROJE TAKİP EKRANI CANLI GÜNCELLENİR
   revalidatePath(`/panel/projeler/${projeId}`);
   revalidatePath("/panel/projeler");
 }
 
+// PROJE SİLME
 export async function projeSil(id: string) {
   await prisma.proje.delete({ where: { id } });
+  revalidatePath("/panel/proje-takip"); // PROJE TAKİP EKRANI CANLI GÜNCELLENİR
   revalidatePath("/panel/projeler");
 }
 
