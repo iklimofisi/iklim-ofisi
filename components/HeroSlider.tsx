@@ -3,82 +3,71 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
-const slaytlar = [
+const urunSlaytlari = [
   {
     id: 1,
-    rozet: "MERKEZİ İKLİMLENDİRME",
-    baslik: "VRF / VRV Merkezi Sistem Ürünleri",
-    aciklama: "Plaza, otel, hastane ve binalar için yüksek verimli Inverter dış üniteler, kaset tipi ve kanallı iç üniteler.",
-    gorsel: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=1200&q=80",
-    etiket: "VRF Dış & İç Ünite Grupları",
+    kategori: "BİREYSEL İKLİMLENDİRME",
+    baslik: "Inverter Duvar Tipi Split Klima Üniteleri",
+    aciklama: "R32 çevre dostu gazlı, A+++ enerji tasarruflu, ultra sessiz (19 dB) duvar tipi split klima cihazı.",
+    gorsel: "https://images.unsplash.com/photo-1628177142898-93e36e4e3a50?auto=format&fit=crop&w=1200&q=80", // GERÇEK BEYAZ DUVAR TİPİ KLİMA CİHAZI
+    ozellikler: ["A+++ Sezonsal Verim", "19 dB Ses Seviyesi", "R32 Çevre Dostu Gaz", "9.000 - 24.000 BTU/h"],
   },
   {
     id: 2,
-    rozet: "TAZE HAVA & İGK",
-    baslik: "Klima Santralleri (AHU) & Havalandırma",
-    aciklama: "Fabrika, AVM ve kapalı alanlar için Isı Geri Kazanımlı (İGK) taze hava santralleri ve spiro hava kanalları.",
-    gorsel: "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&w=1200&q=80",
-    etiket: "Endüstriyel Havalandırma Santrali",
+    kategori: "MERKEZİ VRF SİSTEMİ",
+    baslik: "VRF / VRV Dış Ünite Cihaz Modülleri",
+    aciklama: "Otel, plaza ve büyük projeler için yüksek kapasiteli VRF/VRV Inverter dış ünite cihaz grupları.",
+    gorsel: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1200&q=80", // GERÇEK VRF/HVAC DIŞ ÜNİTE CİHAZI
+    ozellikler: ["Heat Pump / Heat Recovery", "DC Inverter Kompresör", "8 HP - 96 HP Kombinasyon", "Gece Sessiz Modu"],
   },
   {
     id: 3,
-    rozet: "YENİLENEBİLİR ISITMA",
-    baslik: "Yeni Nesil Isı Pompası Sistemleri",
-    aciklama: "Villa ve konutlar için hava ve su kaynaklı yüksek sıcaklık ısı pompaları, sulu yerden ısıtma entegrasyonu.",
-    gorsel: "https://images.unsplash.com/photo-1585338107529-13afc5f02586?auto=format&fit=crop&w=1200&q=80",
-    etiket: "A+++ Isı Pompaları & Boyler",
+    kategori: "TİCARİ İKLİMLENDİRME",
+    baslik: "4 Yöne Üflemeli Tavan Kaset Tipi Klimalar",
+    aciklama: "Mağaza, cafe ve restoran alanlarında tavan içine gömülen 360° homojen hava dağıtımlı iklimlendirme cihazı.",
+    gorsel: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&w=1200&q=80", // GERÇEK KASET TİPİ KLİMA CİHAZI
+    ozellikler: ["360° Homojen Üfleme", "Gizli Tavan Tipi", "Dahili Drenaj Pompası", "18.000 - 60.000 BTU/h"],
   },
   {
     id: 4,
-    rozet: "BİREYSEL & TİCARİ KLİMA",
-    baslik: "Bireysel ve Ticari Klimalar",
-    aciklama: "A+++ Inverter duvar tipi, kaset tipi, kanallı gizli tavan ve salon tipi iklimlendirme üniteleri.",
-    gorsel: "https://images.unsplash.com/photo-1615873968403-89e068629265?auto=format&fit=crop&w=1200&q=80",
-    etiket: "Inverter Split & Kaset Tipi",
+    kategori: "YENİLENEBİLİR ISITMA",
+    baslik: "Hava Kaynaklı Isı Pompası Cihazları",
+    aciklama: "Villa ve müstakil binalar için 85°C yüksek sıcaklık üreten monoblok/split ısı pompası ünitesi.",
+    gorsel: "https://images.unsplash.com/photo-1581092162384-8987c1d64718?auto=format&fit=crop&w=1200&q=80", // GERÇEK ISI POMPASI CİHAZI
+    ozellikler: ["85°C Yüksek Çıkış Suyu", "Dış Hava -25°C Isıtma", "A+++ Sezonsal Verim", "Entegre Boyler"],
   },
 ];
 
 export default function HeroSlider() {
-  const [aktifAktarma, setAktifAktarma] = useState(0);
+  const [aktifIdx, setAktifIdx] = useState(0);
 
-  // Otomatik Kaydırma (4.5 saniyede bir)
   useEffect(() => {
-    const interval = setInterval(() => {
-      setAktifAktarma((prev) => (prev + 1) % slaytlar.length);
-    }, 4500);
-
-    return () => clearInterval(interval);
+    const timer = setInterval(() => {
+      setAktifIdx((prev) => (prev + 1) % urunSlaytlari.length);
+    }, 5000);
+    return () => clearInterval(timer);
   }, []);
 
-  const oncekiSlayt = () => {
-    setAktifAktarma((prev) => (prev === 0 ? slaytlar.length - 1 : prev - 1));
-  };
-
-  const sonrakiSlayt = () => {
-    setAktifAktarma((prev) => (prev + 1) % slaytlar.length);
-  };
-
-  const mevcut = slaytlar[aktifAktarma];
+  const mevcut = urunSlaytlari[aktifIdx];
 
   return (
-    <div className="relative bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl min-h-[460px] sm:min-h-[500px] flex items-center">
-      {/* Arka Plan Görseli & Karartma Overlay */}
+    <div className="bg-slate-950 text-white rounded-3xl overflow-hidden border border-slate-800 shadow-2xl relative min-h-[480px] sm:min-h-[520px] flex items-center">
+      {/* Gerçek Ürün Fotoğrafı */}
       <div className="absolute inset-0 z-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={mevcut.gorsel}
           alt={mevcut.baslik}
-          className="w-full h-full object-cover opacity-35 transition-all duration-700"
+          className="w-full h-full object-cover opacity-40 transition-all duration-700"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/90 to-slate-950/40" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-transparent" />
       </div>
 
-      {/* İçerik Metinleri */}
+      {/* Slayt İçi Ürün Bilgileri */}
       <div className="relative z-10 p-8 sm:p-12 md:p-14 max-w-2xl space-y-5 text-left">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-teal-500/20 border border-teal-400/30 text-teal-300 text-xs font-bold tracking-wider uppercase backdrop-blur-md">
-          <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
-          {mevcut.rozet}
-        </div>
+        <span className="inline-block px-3 py-1 rounded bg-teal-500/20 border border-teal-400/30 text-teal-300 text-xs font-bold tracking-wider uppercase backdrop-blur-md">
+          {mevcut.kategori}
+        </span>
 
         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-[1.15]">
           {mevcut.baslik}
@@ -88,38 +77,43 @@ export default function HeroSlider() {
           {mevcut.aciklama}
         </p>
 
-        <div className="pt-2 flex flex-wrap items-center gap-4">
+        {/* Ürün Teknik Özellik Etiketleri */}
+        <div className="flex flex-wrap gap-2 pt-1">
+          {mevcut.ozellikler.map((ozellik, i) => (
+            <span
+              key={i}
+              className="bg-slate-900/80 border border-slate-700 text-slate-200 text-[11px] font-semibold px-2.5 py-1 rounded backdrop-blur-sm"
+            >
+              ✓ {ozellik}
+            </span>
+          ))}
+        </div>
+
+        <div className="pt-3 flex flex-wrap items-center gap-4">
           <Link
             href="/iletisim"
             className="px-6 py-3.5 rounded-xl bg-teal-400 hover:bg-teal-300 text-slate-950 font-bold text-xs shadow-lg transition-all"
           >
-            Ücretsiz Keşif & Teklif İsteyin →
+            Bu Cihaz İçin Keşif & Teklif İsteyin →
           </Link>
           <Link
             href="/urunler"
             className="px-6 py-3.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 backdrop-blur-md transition-all"
           >
-            Ürün Kataloğunu İnceleyin
+            Tüm Cihaz Kataloğunu Gör
           </Link>
         </div>
       </div>
 
-      {/* Sağ Üst Etiket */}
-      <div className="absolute top-6 right-6 z-10 hidden sm:block">
-        <span className="bg-slate-950/80 border border-slate-800 text-slate-300 text-[11px] font-bold px-3 py-1.5 rounded-lg backdrop-blur-md">
-          🏷️ {mevcut.etiket}
-        </span>
-      </div>
-
-      {/* Sağ Alt Ok Butonları ve Sayfa Göstergeleri */}
+      {/* Slayt Kontrol Butonları */}
       <div className="absolute bottom-6 right-6 z-20 flex items-center gap-3">
         <div className="flex gap-1.5">
-          {slaytlar.map((s, idx) => (
+          {urunSlaytlari.map((s, idx) => (
             <button
               key={s.id}
-              onClick={() => setAktifAktarma(idx)}
+              onClick={() => setAktifIdx(idx)}
               className={`h-2 rounded-full transition-all ${
-                idx === aktifAktarma
+                idx === aktifIdx
                   ? "w-8 bg-teal-400"
                   : "w-2 bg-slate-600 hover:bg-slate-400"
               }`}
@@ -130,16 +124,16 @@ export default function HeroSlider() {
 
         <div className="flex gap-1 ml-2">
           <button
-            onClick={oncekiSlayt}
+            onClick={() =>
+              setAktifIdx((prev) => (prev === 0 ? urunSlaytlari.length - 1 : prev - 1))
+            }
             className="w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-teal-500 hover:text-slate-950 text-white border border-slate-700 flex items-center justify-center font-bold text-sm backdrop-blur-md transition-all"
-            title="Önceki Ürün"
           >
             ←
           </button>
           <button
-            onClick={sonrakiSlayt}
+            onClick={() => setAktifIdx((prev) => (prev + 1) % urunSlaytlari.length)}
             className="w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-teal-500 hover:text-slate-950 text-white border border-slate-700 flex items-center justify-center font-bold text-sm backdrop-blur-md transition-all"
-            title="Sonraki Ürün"
           >
             →
           </button>

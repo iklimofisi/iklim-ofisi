@@ -1,6 +1,6 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import HeroSlider from "@/components/HeroSlider"; // YENİ SLIDER EKLENDİ
+import HeroSlider from "@/components/HeroSlider";
 import Link from "next/link";
 import { getSirketAyarlari } from "@/lib/sirket";
 
@@ -11,49 +11,18 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased selection:bg-teal-700 selection:text-white">
-      {/* 1. ÜST HEADER */}
+      {/* HEADER */}
       <Header />
 
       <main>
-        {/* 2. KAYDIRMALI GERÇEK ÜRÜN GÖRSELLERİ (HERO SLIDER) */}
+        {/* 1. GERÇEK ÜRÜN FOTOĞRAFLI SLIDER */}
         <section className="pt-8 pb-16 bg-white border-b border-slate-200/80">
           <div className="max-w-7xl mx-auto px-6">
             <HeroSlider />
           </div>
         </section>
 
-        {/* ☕ 3. KAHVE DAVETİ BANNERI (ADRES PANEL KONTROLÜNDE) */}
-        <section className="py-8 bg-slate-900 text-white border-b border-slate-800">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-teal-950 p-6 sm:p-8 rounded-2xl border border-teal-500/30 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-4 text-center sm:text-left">
-                <div className="w-14 h-14 rounded-2xl bg-teal-500/20 border border-teal-400/30 text-teal-400 flex items-center justify-center text-2xl shrink-0 font-bold">
-                  ☕
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-teal-400 uppercase tracking-widest">SİZİ MİSAFİR EDELİM</p>
-                  <h3 className="text-lg sm:text-xl font-bold text-white mt-0.5">
-                    Ofisimize kahve içmeye davetlisiniz :)
-                  </h3>
-                  {sirket.adres && (
-                    <p className="text-xs text-slate-300 mt-1">
-                      📍 <strong className="text-white">{sirket.adres}</strong> adresindeki ofisimizde projenizi yüz yüze değerlendirelim.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <Link
-                href="/iletisim"
-                className="shrink-0 px-6 py-3.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-md"
-              >
-                Konum & İletişim Bilgileri →
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* 4. HAKKIMIZDA ÖZETİ */}
+        {/* 2. HAKKIMIZDA ÖZETİ */}
         <section className="py-20 bg-white border-b border-slate-200">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid md:grid-cols-2 gap-12 items-center">
@@ -82,7 +51,7 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* 5. MÜHENDİSLİK HİZMETLERİMİZ */}
+        {/* 3. MÜHENDİSLİK HİZMETLERİMİZ */}
         <section className="py-20 bg-slate-50">
           <div className="max-w-7xl mx-auto px-6">
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
@@ -130,6 +99,58 @@ export default async function Home() {
           </div>
         </section>
 
+        {/* 4. REFERANSLAR ÖZETİ */}
+        <section className="py-20 bg-white border-y border-slate-200">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="flex justify-between items-end mb-12">
+              <div>
+                <p className="text-xs font-bold tracking-widest text-teal-700 uppercase mb-2">SAHA TECRÜBEMİZ</p>
+                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Tamamlanan Referans Projelerimiz</h2>
+              </div>
+              <Link href="/referanslar" className="text-xs font-bold text-teal-700 hover:underline">Tüm Projeleri Gör →</Link>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="bg-slate-50 border border-slate-200 p-6 rounded-xl space-y-2">
+                <span className="text-[10px] font-bold text-teal-700">VRF MERKEZİ SİSTEM</span>
+                <h4 className="font-bold text-slate-900">Plaza İş Merkezi İklimlendirme</h4>
+                <p className="text-xs text-slate-500">29 Katlı plaza projesi Heat Recovery VRF iklimlendirme altyapısı.</p>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 p-6 rounded-xl space-y-2">
+                <span className="text-[10px] font-bold text-teal-700">HAVALANDIRMA & İGK</span>
+                <h4 className="font-bold text-slate-900">Vadistanbul Ticaret Merkezi</h4>
+                <p className="text-xs text-slate-500">Isı geri kazanımlı taze hava santralleri ve spiro kanal imalatı.</p>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 p-6 rounded-xl space-y-2">
+                <span className="text-[10px] font-bold text-teal-700">ISI POMPASI & ISITMA</span>
+                <h4 className="font-bold text-slate-900">Bodrum Yalıkavak Villa Kompleksi</h4>
+                <p className="text-xs text-slate-500">Hava kaynaklı ısı pompası ve sulu yerden ısıtma entegrasyonu.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 5. ÇAĞRI BANNERI */}
+        <section className="py-16 bg-slate-900 text-white">
+          <div className="max-w-5xl mx-auto px-6 text-center space-y-6">
+            <h3 className="text-2xl sm:text-3xl font-bold">
+              Projeniz İçin Doğru İklimlendirme Çözümünü Birlikte Planlayalım.
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">
+              İster yeni bir bina projesi ister mevcut sistem yenilemesi olsun; uzman ekibimiz ücretsiz keşif ve teklif hazırlığı için hazır.
+            </p>
+            <div>
+              <Link
+                href="/iletisim"
+                className="inline-block px-8 py-3.5 bg-teal-600 hover:bg-teal-500 text-white font-bold text-sm rounded-lg transition-colors shadow-md"
+              >
+                Ücretsiz Keşif Formu Doldurun →
+              </Link>
+            </div>
+          </div>
+        </section>
       </main>
 
       {/* FOOTER */}
