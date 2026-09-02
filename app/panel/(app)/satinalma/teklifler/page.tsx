@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { satinalmaTeklifiEkle, satinalmaTeklifiSil } from "@/lib/actions";
+import { satinalmaTeklifiEkle, satinalmaTeklifiSil, maliyetDosyaYukle } from "@/lib/actions";
+import TedarikciTeklifiEkleModal from "@/components/TedarikciTeklifiEkleModal"; // YENİ MODAL
 import SilButon from "@/components/SilButon";
 import Link from "next/link";
 
@@ -11,22 +12,43 @@ function paraFormat(n: number, pb: string = "TRY") {
 }
 
 export default async function SatinalmaTekliflerPage() {
-  const [tedarikciler, satinalmaTeklifleri, projeler] = await Promise.all([
+  const [tedarikciler, satinalmaTeklifleri, satisTeklifleri] = await Promise.all([
     prisma.tedarikci.findMany({ orderBy: { ad: "asc" } }),
     prisma.satinalmaTeklifi.findMany({
-      include: { tedarikci: true, kalemler: true }, // DÜZELTİLDİ: proje: true kaldırıldı
+      include: { tedarikci: true, kalemler: true },
       orderBy: { tarih: "desc" },
     }),
-    prisma.proje.findMany({ orderBy: { ad: "asc" } }),
+    prisma.teklif.findMany({
+      include: { musteri: true, olusturanKullanici: true, kalemler: true, proje: true },
+      orderBy: { tarih: "desc" },
+    }),
   ]);
 
-  // TEDARİKÇİ TEKLİFLERİNİ KONU / PROJE BAŞLIĞINA GÖRE GRUPLA
-  const gruplanmisSatinalma = satinalmaTeklifleri.reduce((acc, st) => {
-    const konu = st.baslik || "Genel Satınalma Talepleri";
-    if (!acc[konu]) acc[konu] = [];
-    acc[konu].push(st);
-    return acc;
-  }, {} as Record<string, typeof satinalmaTeklifleri>);
+  // TÜM SATIŞ TEKLİFLERİNİ VE TEDARİKÇİ TEKLİFLERİNİ PROJE/KONU BAŞLIĞINA GÖRE BİRLEŞTİRİP GRUPLA
+  const tumKonular: {
+    [konu: string]: {
+      satisTeklifi?: (typeof satisTeklifleri)[0];
+      satinalmaTeklifleri: typeof satinalmaTeklifleri;
+    };
+  } = {};
+
+  // 1. Satış Tekliflerini Konu Listesine Ekle
+  satisTeklifleri.forEach((st) => {
+    const konu = st.proje?.ad || st.baslik || "Genel Satış Teklifleri";
+    if (!tumKonular[konu]) {
+      tumKonular[konu] = { satinalmaTeklifleri: [] };
+    }
+    tumKonular[konu].satisTeklifi = st;
+  });
+
+  // 2. Tedarikçi Tekliflerini Aynı Konu Listesine Ekle
+  satinalmaTeklifleri.forEach((sat) => {
+    const konu = sat.baslik || "Genel Satınalma Talepleri";
+    if (!tumKonular[konu]) {
+      tumKonular[konu] = { satinalmaTeklifleri: [] };
+    }
+    tumKonular[konu].satinalmaTeklifleri.push(sat);
+  });
 
   return (
     <div className="space-y-8">
@@ -40,16 +62,16 @@ export default async function SatinalmaTekliflerPage() {
         </div>
       </div>
 
-      {/* 1. YENİ TEDARİKÇİ TEKLİFİ GİRİŞ FORMU */}
+      {/* 1. YENİ TEDARİKÇİ TEKLİFİ / PROJE GİRİŞ FORMU */}
       <form action={satinalmaTeklifiEkle} className="bg-yuzey border border-hat rounded-lg p-5 space-y-4 shadow-sm">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-soguk-dim border-b border-hat pb-2">
-          + Yeni Tedarikçi Teklifi Girişi (İhale Karşılaştırma Kartı)
+          + Yeni Proje / İhale İçin Tedarikçi Teklifi Girişi
         </h2>
 
-        <div className="grid sm:grid-cols-4 gap-3">
+        <div className="grid sm:grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-medium text-metin/60 mb-1">Proje / Satınalma Konusu *</label>
-            <input name="baslik" required placeholder="Örn: Sancaktepe AVM VRF Alımı" className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white font-medium" />
+            <input name="baslik" required placeholder="Örn: TEKİRDAĞ NKÜ PROJESİ" className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white font-medium" />
           </div>
 
           <div>
@@ -58,16 +80,6 @@ export default async function SatinalmaTekliflerPage() {
               <option value="">— Tedarikçi Seçin —</option>
               {tedarikciler.map((t) => (
                 <option key={t.id} value={t.id}>{t.ad}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-metin/60 mb-1">İlişkili Proje (Opsiyonel)</label>
-            <select name="projeId" className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
-              <option value="">— Proje Bağlantısı Yok —</option>
-              {projeler.map((p) => (
-                <option key={p.id} value={p.id}>{p.ad}</option>
               ))}
             </select>
           </div>
@@ -102,111 +114,171 @@ export default async function SatinalmaTekliflerPage() {
       {/* 2. PROJE BAZLI ÇOKLU İHALE VE TEDARİKÇİ KIYASLAMA KARTLARI */}
       <div className="space-y-6">
         <h2 className="text-sm font-bold text-metin border-b border-hat pb-2">
-          📊 Proje ve Konu Bazlı Alınan Tedarikçi Teklifleri ({Object.keys(gruplanmisSatinalma).length} Konu)
+          📊 Proje / İhale Bazlı Satış ve Tedarikçi Teklifleri ({Object.keys(tumKonular).length} Konu)
         </h2>
 
-        {Object.entries(gruplanmisSatinalma).map(([konuBasligi, teklifListesi]) => (
-          <div key={konuBasligi} className="bg-yuzey border border-hat rounded-lg overflow-hidden shadow-sm space-y-2">
-            <div className="p-3.5 border-b border-hat bg-slate-100/90 font-bold text-sm text-soguk-dim flex justify-between items-center">
-              <span className="flex items-center gap-2">
-                <span>📂 Konu / Proje:</span>
-                <strong className="text-metin font-bold text-base">{konuBasligi}</strong>
-              </span>
-              <span className="text-xs bg-soguk-light text-soguk-dim px-2.5 py-1 rounded font-bold border border-soguk/20">
-                {teklifListesi.length} Tedarikçiden Teklif Alındı
-              </span>
-            </div>
+        {Object.entries(tumKonular).map(([konuBasligi, veri]) => {
+          const satisTeklifi = veri.satisTeklifi;
+          const satinalmaListesi = veri.satinalmaTeklifleri;
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-hat text-metin/70 font-bold uppercase tracking-wider">
-                    <th className="py-2.5 px-4">Tedarikçi Firma</th>
-                    <th className="py-2.5 px-4">Tarih</th>
-                    <th className="py-2.5 px-4 text-right">Gelen Toplam Tutar</th>
-                    <th className="py-2.5 px-4 text-center">Maliyet PDF</th>
-                    <th className="py-2.5 px-4 text-center">Maliyet Excel</th>
-                    <th className="py-2.5 px-4 text-center">Seç & Satış Teklifine Dönüştür</th>
-                    <th className="py-2.5 px-4 text-center">Sil</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-hat bg-white">
-                  {teklifListesi.map((st) => {
-                    const toplam = st.kalemler.reduce((a, k) => a + k.adet * k.birimFiyat, 0);
+          return (
+            <div key={konuBasligi} className="bg-yuzey border border-hat rounded-lg overflow-hidden shadow-sm space-y-2">
+              
+              {/* KART BAŞLIĞI VE ÇOKLU TEDARİKÇİ EKLEME BUTONU */}
+              <div className="p-3.5 border-b border-hat bg-slate-100/90 font-bold text-sm text-soguk-dim flex flex-wrap justify-between items-center gap-2">
+                <span className="flex items-center gap-2">
+                  <span>📂 Konu / Proje:</span>
+                  <strong className="text-metin font-bold text-base">{konuBasligi}</strong>
+                </span>
 
-                    return (
-                      <tr key={st.id} className="hover:bg-amber-50/40">
-                        <td className="py-3 px-4 font-bold text-metin text-sm">
-                          🚚 {st.tedarikci.ad}
-                        </td>
+                {/* BU PROJEYE İKİNCİ / ÜÇÜNCÜ TEDARİKÇİ TEKLİFİ EKLEME MODAL BUTONU */}
+                <TedarikciTeklifiEkleModal konuBasligi={konuBasligi} tedarikciler={tedarikciler} />
+              </div>
 
-                        <td className="py-3 px-4 font-mono text-metin/60">
-                          {st.tarih.toISOString().slice(0, 10)}
-                        </td>
+              {/* A. MÜŞTERİYE VERİLEN SATIŞ TEKLİFİ (VARSA EN ÜSTTE GÖRÜNÜR) */}
+              {satisTeklifi && (
+                <div className="p-3 bg-teal-50/50 border-b border-teal-200/80 flex flex-wrap justify-between items-center text-xs gap-3">
+                  <div>
+                    <span className="font-bold text-teal-800 bg-teal-100 px-2 py-0.5 rounded text-[10px] mr-2">
+                      MÜŞTERİ SATIŞ TEKLİFİ
+                    </span>
+                    <Link href={`/panel/teklifler/${satisTeklifi.id}`} className="font-bold text-metin hover:underline">
+                      TKL-{String(satisTeklifi.teklifNo).padStart(4, "0")} — {satisTeklifi.musteri.ad}
+                    </Link>
+                    <span className="text-metin/50 ml-2">({satisTeklifi.tarih.toISOString().slice(0, 10)})</span>
+                  </div>
 
-                        <td className="py-3 px-4 text-right font-mono font-bold text-sm text-metin">
-                          {toplam > 0 ? paraFormat(toplam, st.paraBirimi) : "—"}
-                        </td>
+                  <div className="flex items-center gap-4">
+                    {/* Satış Teklifi Maliyet PDF */}
+                    {satisTeklifi.maliyetPdfAdi ? (
+                      <a href={`/api/maliyet-pdf/${satisTeklifi.id}`} target="_blank" rel="noopener noreferrer" className="text-emerald-800 font-bold underline">
+                        📄 Maliyet PDF Gör
+                      </a>
+                    ) : (
+                      <form action={maliyetDosyaYukle} className="inline-flex items-center gap-1">
+                        <input type="hidden" name="teklifId" value={satisTeklifi.id} />
+                        <input type="file" name="maliyetPdf" accept=".pdf" required className="w-28 text-[9px] border border-hat rounded p-0.5 bg-white" />
+                        <button type="submit" className="bg-soguk text-white text-[9px] font-bold px-1.5 py-0.5 rounded">PDF Yükle</button>
+                      </form>
+                    )}
 
-                        {/* MALİYET PDF */}
-                        <td className="py-3 px-4 text-center">
-                          {st.maliyetPdfAdi ? (
-                            <a
-                              href={`/api/maliyet-pdf/${st.id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded border border-emerald-300 font-bold hover:bg-emerald-100 shadow-sm"
+                    {/* Satış Teklifi Maliyet Excel */}
+                    {satisTeklifi.maliyetExcelAdi ? (
+                      <a href={`/api/maliyet-excel/${satisTeklifi.id}`} target="_blank" rel="noopener noreferrer" className="text-blue-800 font-bold underline">
+                        📊 Maliyet Excel İndir
+                      </a>
+                    ) : (
+                      <form action={maliyetDosyaYukle} className="inline-flex items-center gap-1">
+                        <input type="hidden" name="teklifId" value={satisTeklifi.id} />
+                        <input type="file" name="maliyetExcel" accept=".xlsx,.xls" required className="w-28 text-[9px] border border-hat rounded p-0.5 bg-white" />
+                        <button type="submit" className="bg-soguk text-white text-[9px] font-bold px-1.5 py-0.5 rounded">Excel Yükle</button>
+                      </form>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* B. TEDARİKÇİLERDEN ALINAN MALİYET TEKLİFLERİ TABLOSU */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-hat text-metin/70 font-bold uppercase tracking-wider">
+                      <th className="py-2.5 px-4">Tedarikçi Firma</th>
+                      <th className="py-2.5 px-4">Tarih</th>
+                      <th className="py-2.5 px-4 text-right">Gelen Toplam Tutar</th>
+                      <th className="py-2.5 px-4 text-center">Maliyet PDF</th>
+                      <th className="py-2.5 px-4 text-center">Maliyet Excel</th>
+                      <th className="py-2.5 px-4 text-center">Seç & Satış Teklifine Dönüştür</th>
+                      <th className="py-2.5 px-4 text-center">Sil</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-hat bg-white">
+                    {satinalmaListesi.map((st) => {
+                      const toplam = st.kalemler.reduce((a, k) => a + k.adet * k.birimFiyat, 0);
+
+                      return (
+                        <tr key={st.id} className="hover:bg-amber-50/40">
+                          <td className="py-3 px-4 font-bold text-metin text-sm">
+                            🚚 {st.tedarikci.ad}
+                          </td>
+
+                          <td className="py-3 px-4 font-mono text-metin/60">
+                            {st.tarih.toISOString().slice(0, 10)}
+                          </td>
+
+                          <td className="py-3 px-4 text-right font-mono font-bold text-sm text-metin">
+                            {toplam > 0 ? paraFormat(toplam, st.paraBirimi) : "—"}
+                          </td>
+
+                          {/* MALİYET PDF */}
+                          <td className="py-3 px-4 text-center">
+                            {st.maliyetPdfAdi ? (
+                              <a
+                                href={`/api/maliyet-pdf/${st.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded border border-emerald-300 font-bold hover:bg-emerald-100 shadow-sm"
+                              >
+                                📄 Maliyet PDF Gör
+                              </a>
+                            ) : (
+                              <form action={maliyetDosyaYukle} className="inline-flex items-center gap-1">
+                                <input type="hidden" name="satinalmaTeklifiId" value={st.id} />
+                                <input type="file" name="maliyetPdf" accept=".pdf" required className="w-32 text-[9px] border border-hat rounded p-0.5 bg-white" />
+                                <button type="submit" className="bg-soguk text-white text-[9px] font-bold px-1.5 py-0.5 rounded">Yükle</button>
+                              </form>
+                            )}
+                          </td>
+
+                          {/* MALİYET EXCEL */}
+                          <td className="py-3 px-4 text-center">
+                            {st.maliyetExcelAdi ? (
+                              <a
+                                href={`/api/maliyet-excel/${st.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[11px] bg-blue-50 text-blue-800 px-2.5 py-1 rounded border border-blue-300 font-bold hover:bg-blue-100 shadow-sm"
+                              >
+                                📊 Maliyet Excel İndir
+                              </a>
+                            ) : (
+                              <form action={maliyetDosyaYukle} className="inline-flex items-center gap-1">
+                                <input type="hidden" name="satinalmaTeklifiId" value={st.id} />
+                                <input type="file" name="maliyetExcel" accept=".xlsx,.xls" required className="w-32 text-[9px] border border-hat rounded p-0.5 bg-white" />
+                                <button type="submit" className="bg-soguk text-white text-[9px] font-bold px-1.5 py-0.5 rounded">Yükle</button>
+                              </form>
+                            )}
+                          </td>
+
+                          <td className="py-3 px-4 text-center">
+                            <Link
+                              href={`/panel/satinalma/teklifler/${st.id}/donustur`}
+                              className="text-xs bg-soguk text-white px-3 py-1.5 rounded font-bold hover:bg-soguk-dim inline-block shadow-sm"
                             >
-                              📄 Maliyet PDF Gör
-                            </a>
-                          ) : (
-                            <span className="text-metin/30">—</span>
-                          )}
-                        </td>
+                              Teklife Dönüştür →
+                            </Link>
+                          </td>
 
-                        {/* MALİYET EXCEL */}
-                        <td className="py-3 px-4 text-center">
-                          {st.maliyetExcelAdi ? (
-                            <a
-                              href={`/api/maliyet-excel/${st.id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-[11px] bg-blue-50 text-blue-800 px-2.5 py-1 rounded border border-blue-300 font-bold hover:bg-blue-100 shadow-sm"
-                            >
-                              📊 Maliyet Excel İndir
-                            </a>
-                          ) : (
-                            <span className="text-metin/30">—</span>
-                          )}
-                        </td>
+                          <td className="py-3 px-4 text-center">
+                            <SilButon id={st.id} action={satinalmaTeklifiSil} onayMesaji="Bu tedarikçi teklifini silmek istediğinize emin misiniz?" />
+                          </td>
+                        </tr>
+                      );
+                    })}
 
-                        {/* SEÇİLEN TEDARİKÇİ TEKLİFİNİ MÜŞTERİ SATIŞ TEKLİFİNE DÖNÜŞTÜR */}
-                        <td className="py-3 px-4 text-center">
-                          <Link
-                            href={`/panel/satinalma/teklifler/${st.id}/donustur`}
-                            className="text-xs bg-soguk text-white px-3 py-1.5 rounded font-bold hover:bg-soguk-dim inline-block shadow-sm"
-                          >
-                            Teklife Dönüştür →
-                          </Link>
-                        </td>
-
-                        <td className="py-3 px-4 text-center">
-                          <SilButon id={st.id} action={satinalmaTeklifiSil} onayMesaji="Bu tedarikçi teklifini silmek istediğinize emin misiniz?" />
+                    {satinalmaListesi.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="py-4 text-center text-metin/50">
+                          Bu proje için henüz tedarikçi teklifi eklenmedi. Sağ üstteki <b>"+ Bu Projeye Tedarikçi Teklifi Ekle"</b> butonundan ekleyebilirsiniz.
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        ))}
-
-        {Object.keys(gruplanmisSatinalma).length === 0 && (
-          <p className="text-xs text-metin/50 py-6 text-center bg-yuzey border border-hat rounded-lg">
-            Henüz girilmiş bir tedarikçi teklifi bulunmuyor. Yukarıdaki formdan ekleyebilirsiniz.
-          </p>
-        )}
+          );
+        })}
       </div>
     </div>
   );
