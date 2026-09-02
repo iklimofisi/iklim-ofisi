@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
+import Script from "next/script"; // Google Analytics için Eklendi
 import "./globals.css";
+
+// Google Analytics Kimliği Vercel'den Otomatik Okunur
+const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
 export const metadata: Metadata = {
   title: {
@@ -70,6 +74,26 @@ export default function RootLayout({
     <html lang="tr" className="scroll-smooth">
       <body className="bg-slate-50 text-slate-800 antialiased font-sans">
         {children}
+
+        {/* GOOGLE ANALYTICS (GA4) KODLARI */}
+        {gaId && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+              strategy="afterInteractive"
+            />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${gaId}', {
+                  page_path: window.location.pathname,
+                });
+              `}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );
