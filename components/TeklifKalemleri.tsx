@@ -22,6 +22,7 @@ type Urun = {
   paraBirimi: string;
 };
 
+// Türkçe virgülü ve noktayı güvenli sayıya çevirici
 const parseSayi = (val: string | number | undefined): number => {
   if (val === undefined || val === null || val === "") return 0;
   if (typeof val === "number") return val;
@@ -29,6 +30,7 @@ const parseSayi = (val: string | number | undefined): number => {
   return parseFloat(clean) || 0;
 };
 
+// Fiyat Formatlayıcı
 const formatPara = (val: number) => {
   return val.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
@@ -44,6 +46,7 @@ export default function TeklifKalemleri({
   urunler?: Urun[];
   paraBirimi?: string;
 }) {
+  // State: Tüm kalemler
   const [satirlar, setSatirlar] = useState<Satir[]>(() => {
     if (baslangic && baslangic.length > 0) {
       return baslangic.map((s, idx) => ({
@@ -73,13 +76,14 @@ export default function TeklifKalemleri({
   const [yeniBolumAdi, setYeniBolumAdi] = useState("");
   const [seciliParaBirimi, setSeciliParaBirimi] = useState<string>(paraBirimi || "TRY");
 
+  // DİNANMİK PARA BİRİMİ SİMGESİ (EUR -> €, USD -> $, TRY -> ₺)
   useEffect(() => {
     const selectEl = document.querySelector<HTMLSelectElement>('select[name="paraBirimi"]');
     if (!selectEl) return;
 
     const handler = () => setSeciliParaBirimi(selectEl.value);
     selectEl.addEventListener("change", handler);
-    setSeciliParaBirimi(selectEl.value);
+    setSeciliParaBirimi(selectEl.value); // Açılışta oku
 
     return () => selectEl.removeEventListener("change", handler);
   }, []);
@@ -90,68 +94,10 @@ export default function TeklifKalemleri({
     return "₺";
   }, [seciliParaBirimi]);
 
-  // 📥 EXCEL'DEN KALEMLERİ OTOMATİK OKUYUP TABLOYA DİZME
-  const exceldenKalemYukle = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const XLSX = await import("xlsx");
-      const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const satirlarExcel: any[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-
-      const yeniKalemler: Satir[] = satirlarExcel
-        .map((s, idx) => ({
-          key: Date.now() + idx,
-          bolum: String(s["Bölüm"] || s["Bolum"] || s["Kategori"] || "Genel Kalemler").trim(),
-          aciklama: String(s["Açıklama"] || s["Aciklama"] || s["Ürün Adı"] || s["Urun Adi"] || "").trim(),
-          adet: String(s["Miktar"] || s["Adet"] || "1"),
-          birimFiyat: String(s["Birim Fiyat"] || s["Fiyat"] || "0"),
-          iskontoYuzde: String(s["İskonto %"] || s["Iskonto"] || "0"),
-          markaId: "",
-        }))
-        .filter((k) => k.aciklama);
-
-      if (yeniKalemler.length > 0) {
-        setSatirlar(yeniKalemler);
-      } else {
-        alert("Excel'de uygun sütun başlıkları (Açıklama, Adet, Birim Fiyat) bulunamadı.");
-      }
-    } catch (err) {
-      alert("Excel dosyası okunamadı. Lütfen geçerli bir .xlsx dosyası seçin.");
-    }
-  };
-
-  // 📄 ÖRNEK EXCEL ŞABLONUNU BİLGİSAYARA İNDİRME
-  const ornekSablonIndir = async () => {
-    const XLSX = await import("xlsx");
-    const örnekVeri = [
-      {
-        "Bölüm": "VRF Sistemleri",
-        "Açıklama": "Bosch VRF Dış Ünite 18HP (AF5301A 50 C-3)",
-        "Miktar": 1,
-        "Birim Fiyat": 5000,
-        "İskonto %": 10,
-      },
-      {
-        "Bölüm": "VRF Sistemleri",
-        "Açıklama": "Bosch Kablolu Kumanda Bağlantı Kartı (AC-CCB)",
-        "Miktar": 5,
-        "Birim Fiyat": 150,
-        "İskonto %": 0,
-      },
-    ];
-    const worksheet = XLSX.utils.json_to_sheet(örnekVeri);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Teklif Kalemleri");
-    XLSX.writeFile(workbook, "Teklif_Kalemleri_Sablonu.xlsx");
-  };
-
   const markaVar = markalar && markalar.length > 0;
   const urunVar = urunler && urunler.length > 0;
 
+  // --- SIRALAMA & KONUM DEĞİŞTİRME MANTIKLARI ---
   const satirYukaritas = (orjinalIndex: number) => {
     if (orjinalIndex === 0) return;
     setSatirlar((prev) => {
@@ -175,7 +121,7 @@ export default function TeklifKalemleri({
   };
 
   const satirKonumDegistir = (currentIndex: number, hedefSira: number) => {
-    const newIndex = hedefSira - 1;
+    const newIndex = hedefSira - 1; // 1-tabanlı sıradan 0-tabanlı indekse
     if (newIndex < 0 || newIndex >= satirlar.length || newIndex === currentIndex) return;
     setSatirlar((prev) => {
       const clone = [...prev];
@@ -185,12 +131,14 @@ export default function TeklifKalemleri({
     });
   };
 
+  // Satır Güncelleme
   const satirGuncelle = (key: number | string, field: keyof Satir, value: string) => {
     setSatirlar((prev) =>
       prev.map((s) => (s.key === key ? { ...s, [field]: value } : s))
     );
   };
 
+  // Yeni Satır Ekle
   const satirEkle = (bolumAdi: string = "Genel Kalemler") => {
     setSatirlar((prev) => [
       ...prev,
@@ -206,10 +154,12 @@ export default function TeklifKalemleri({
     ]);
   };
 
+  // Satır Sil
   const satirSil = (key: number | string) => {
     setSatirlar((prev) => prev.filter((s) => s.key !== key));
   };
 
+  // Katalogdan Ürün Seçildiğinde Fiyat ve Açıklamayı Doldur
   const urunSecildi = (key: number | string, urun: Urun) => {
     setSatirlar((prev) =>
       prev.map((s) => {
@@ -226,6 +176,7 @@ export default function TeklifKalemleri({
     );
   };
 
+  // TOPLU İSKONTO UYGULA
   const topluIskontoUygula = () => {
     if (!topluIskontoOrani) return;
     setSatirlar((prev) =>
@@ -236,6 +187,7 @@ export default function TeklifKalemleri({
     );
   };
 
+  // İSKONTOLARI SIFIRLA (%0)
   const iskontolariSifirla = () => {
     setTopluIskontoOrani("0");
     setSatirlar((prev) =>
@@ -246,12 +198,14 @@ export default function TeklifKalemleri({
     );
   };
 
+  // Yeni Bölüm Ekle
   const bolumEkle = () => {
     if (!yeniBolumAdi.trim()) return;
     satirEkle(yeniBolumAdi.trim());
     setYeniBolumAdi("");
   };
 
+  // Kalemleri Bölümlere Göre Grupla
   const gruplanmisSatirlar = useMemo(() => {
     const gruplar: { [key: string]: { item: Satir; orjinalIndex: number }[] } = {};
     satirlar.forEach((s, index) => {
@@ -262,6 +216,7 @@ export default function TeklifKalemleri({
     return gruplar;
   }, [satirlar]);
 
+  // CANLI DİP TOPLAM HESAPLAMA
   const canlıOzet = useMemo(() => {
     let brutToplam = 0;
     let netToplam = 0;
@@ -289,31 +244,9 @@ export default function TeklifKalemleri({
 
   return (
     <div className="space-y-4 mb-6">
-      {/* 📥 EXCEL'DEN TOPLU KALEM İTHAL ETME PANELI */}
-      <div className="bg-emerald-50 border border-emerald-300 rounded-md p-3 flex flex-wrap items-center justify-between gap-3 shadow-sm">
-        <div className="text-xs text-emerald-900">
-          <p className="font-bold">📊 Excel Çalışmanızı Doğrudan Teklife Aktarın:</p>
-          <p className="text-[11px] text-emerald-800">Fiyat çalışmanızı hazırladığınız Excel dosyasını seçerek kalemleri ekrana otomatik dizebilirsiniz.</p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={ornekSablonIndir}
-            className="text-xs font-semibold bg-white border border-emerald-300 text-emerald-800 px-3 py-1.5 rounded hover:bg-emerald-100"
-          >
-            📄 Örnek Excel Şablonu İndir
-          </button>
-
-          <label className="text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded cursor-pointer transition-colors">
-            📥 Excel'den Kalemleri Yükle
-            <input type="file" accept=".xlsx,.xls" onChange={exceldenKalemYukle} className="hidden" />
-          </label>
-        </div>
-      </div>
-
-      {/* ÜST PANEL: BÖLÜM EKLEME VE TOPLU İSKONTO */}
+      {/* 1. ÜST PANEL: BÖLÜM EKLEME VE TOPLU İSKONTO / SIFIRLAMA */}
       <div className="bg-soguk-light rounded-md p-3 flex flex-wrap items-center justify-between gap-4 border border-hat">
+        {/* Bölüm Ekle */}
         <div className="flex items-center gap-2">
           <input
             type="text"
@@ -331,6 +264,7 @@ export default function TeklifKalemleri({
           </button>
         </div>
 
+        {/* Toplu İskonto Ve İptal Butonu */}
         <div className="flex items-center gap-2">
           <label className="text-xs font-medium text-soguk-dim">
             Tüm Satırlara İskonto (%):
@@ -354,13 +288,14 @@ export default function TeklifKalemleri({
             type="button"
             onClick={iskontolariSifirla}
             className="focus-ring text-xs bg-sicak-dim/10 text-sicak-dim hover:bg-sicak-dim hover:text-white border border-sicak-dim/30 px-3 py-1.5 rounded-md font-medium transition-colors"
+            title="Birim fiyatları bozmadan tüm iskontoları %0 yapar"
           >
             İskontoları Sıfırla (%0)
           </button>
         </div>
       </div>
 
-      {/* BÖLÜMLERE GÖRE GRUPLANMIŞ SATIRLAR */}
+      {/* 2. BÖLÜMLERE GÖRE GRUPLANMIŞ SATIRLAR */}
       {Object.entries(gruplanmisSatirlar).map(([bolumAdi, satirlarGrubu]) => (
         <div key={bolumAdi} className="border border-hat rounded-md p-3 bg-yuzey space-y-3">
           <div className="flex justify-between items-center border-b border-hat pb-2">
@@ -376,6 +311,7 @@ export default function TeklifKalemleri({
             </button>
           </div>
 
+          {/* Kolon Başlıkları */}
           <div className="hidden sm:grid grid-cols-[65px_1fr_75px_110px_75px_110px_100px_28px] gap-2 text-xs text-metin/50 px-1 font-medium">
             <span className="text-center">Sıra / Taşı</span>
             <span>Açıklama</span>
@@ -387,6 +323,7 @@ export default function TeklifKalemleri({
             <span></span>
           </div>
 
+          {/* Bölüm Satırları */}
           {satirlarGrubu.map(({ item: satir, orjinalIndex }) => {
             const adetSayi = parseSayi(satir.adet);
             const fiyatSayi = parseSayi(satir.birimFiyat);
@@ -407,6 +344,8 @@ export default function TeklifKalemleri({
                 )}
 
                 <div className="grid grid-cols-2 sm:grid-cols-[65px_1fr_75px_110px_75px_110px_100px_28px] gap-2 items-center">
+                  
+                  {/* SIRALAMA KONTROLÜ (Sıra No Kutusu + Yön Okları) */}
                   <div className="flex items-center gap-1 justify-center bg-slate-50 border border-hat rounded p-1">
                     <input
                       type="number"
@@ -420,6 +359,7 @@ export default function TeklifKalemleri({
                         }
                       }}
                       className="w-8 text-center font-bold text-xs bg-white border border-hat rounded py-0.5 text-metin focus:bg-amber-50"
+                      title="Yeni Sıra No Yazın (Örn: 1)"
                     />
                     <div className="flex flex-col">
                       <button
@@ -427,6 +367,7 @@ export default function TeklifKalemleri({
                         onClick={() => satirYukaritas(orjinalIndex)}
                         disabled={orjinalIndex === 0}
                         className="text-[9px] leading-none px-1 py-0.5 hover:bg-slate-200 rounded disabled:opacity-20 text-slate-700 font-bold"
+                        title="Yukarı Taşı"
                       >
                         ▲
                       </button>
@@ -435,12 +376,14 @@ export default function TeklifKalemleri({
                         onClick={() => satirAsagiTas(orjinalIndex)}
                         disabled={orjinalIndex === satirlar.length - 1}
                         className="text-[9px] leading-none px-1 py-0.5 hover:bg-slate-200 rounded disabled:opacity-20 text-slate-700 font-bold"
+                        title="Aşağı Taşı"
                       >
                         ▼
                       </button>
                     </div>
                   </div>
 
+                  {/* Açıklama */}
                   <input
                     name="kalemAciklama"
                     value={satir.aciklama}
@@ -449,6 +392,7 @@ export default function TeklifKalemleri({
                     className="focus-ring col-span-2 sm:col-span-1 border border-hat rounded-md px-2.5 py-1.5 text-sm"
                   />
 
+                  {/* Adet */}
                   <input
                     name="kalemAdet"
                     type="text"
@@ -459,6 +403,7 @@ export default function TeklifKalemleri({
                     className="focus-ring border border-hat rounded-md px-2 py-1.5 text-sm text-center"
                   />
 
+                  {/* Birim Fiyat */}
                   <input
                     name="kalemFiyat"
                     type="text"
@@ -469,6 +414,7 @@ export default function TeklifKalemleri({
                     className="focus-ring border border-hat rounded-md px-2 py-1.5 text-sm text-right font-mono"
                   />
 
+                  {/* İskonto % */}
                   <input
                     name="kalemIskonto"
                     type="text"
