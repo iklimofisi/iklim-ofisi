@@ -1,25 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { hizliMusteriEkle } from "@/lib/actions";
 
-export default function HizliMusteriEkleModal({
-  yonlendirPath = "/panel/teklifler",
-}: {
-  yonlendirPath?: string;
-}) {
+export default function HizliMusteriEkleModal() {
   const [acik, setAcik] = useState(false);
-  const [isPending, startTransition] = useTransition();
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-
-    startTransition(async () => {
-      await hizliMusteriEkle(formData);
-      setAcik(false);
-    });
-  };
 
   return (
     <>
@@ -48,9 +33,7 @@ export default function HizliMusteriEkleModal({
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <input type="hidden" name="yonlendirPath" value={yonlendirPath} />
-
+            <form action={hizliMusteriEkle} className="space-y-3">
               {/* 1. SATIR */}
               <div className="grid sm:grid-cols-3 gap-3">
                 <div>
@@ -164,10 +147,9 @@ export default function HizliMusteriEkleModal({
 
                 <button
                   type="submit"
-                  disabled={isPending}
-                  className="px-5 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-md shadow-sm disabled:opacity-50"
+                  className="px-5 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-md shadow-sm"
                 >
-                  {isPending ? "Müşteri Kaydediliyor..." : "Müşteriyi Kaydet ve Dön"}
+                  Müşteriyi Kaydet ve Teklife Dön
                 </button>
               </div>
             </form>
