@@ -106,7 +106,6 @@ function kalemleriOku(formData: FormData) {
     .filter((k) => k.aciklama);
 }
 
-// TEKLİF EKLEME (İLK TARİH KAYDEDİLİR)
 export async function teklifEkle(formData: FormData) {
   const kullanici = await suankiKullanici();
   const baslik = String(formData.get("baslik") ?? "").trim();
@@ -122,8 +121,6 @@ export async function teklifEkle(formData: FormData) {
 
   if (!musteriId || !baslik || kalemler.length === 0) return;
 
-  const simdi = new Date();
-
   const teklif = await prisma.teklif.create({
     data: {
       baslik,
@@ -136,8 +133,6 @@ export async function teklifEkle(formData: FormData) {
       birimFiyatGoster,
       olusturanKullaniciId: kullanici?.id || null,
       olusturanAdi: kullanici?.ad ?? "",
-      tarih: simdi,
-      ilkTarih: simdi, // İlk Oluşturulma Tarihi Saklanır
       kalemler: { create: kalemler },
       sablonlar: { connect: sablonIds.map((id) => ({ id })) },
     },
@@ -147,7 +142,6 @@ export async function teklifEkle(formData: FormData) {
   redirect(`/panel/teklifler/${teklif.id}`);
 }
 
-// TEKLİF GÜNCELLEME (SON REVİZYON TARİHİ GÜNCELLENİR)
 export async function teklifGuncelle(formData: FormData) {
   const teklifId = String(formData.get("teklifId") ?? "");
   const baslik = String(formData.get("baslik") ?? "").trim();
@@ -198,7 +192,6 @@ export async function teklifGuncelle(formData: FormData) {
       kdvDahil,
       gecerlilikGunu,
       birimFiyatGoster,
-      tarih: new Date(), // Son Güncelleme / Revizyon Tarihi Olur
       revizyonNo: mevcut.revizyonNo + 1,
       kalemler: { create: kalemler },
       sablonlar: { set: sablonIds.map((id) => ({ id })) },

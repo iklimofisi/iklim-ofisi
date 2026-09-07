@@ -70,7 +70,6 @@ model Teklif {
   projeId                  String?
   proje                    Proje?            @relation(fields: [projeId], references: [id])
   tarih                    DateTime          @default(now())
-  ilkTarih                 DateTime          @default(now()) // YENİ: İlk Oluşturulma Tarihi
   durum                    TeklifDurum       @default(BEKLEMEDE)
   paraBirimi               String            @default("TRY")
   kdvOrani                 Float             @default(20)
