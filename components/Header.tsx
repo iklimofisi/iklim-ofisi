@@ -20,7 +20,7 @@ export default function Header() {
               İklim <span className="text-teal-700">Ofisi</span>
             </span>
             <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase -mt-1">
-              Mühendislik
+              Türkiye'nin güvenilir iklimlendirme markası
             </span>
           </div>
         </Link>
