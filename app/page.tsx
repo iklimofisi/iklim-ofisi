@@ -52,22 +52,6 @@ export default async function Home() {
                     Hizmetlerimizi İnceleyin
                   </Link>
                 </div>
-
-                {/* İstatistikler */}
-                <div className="pt-8 border-t border-slate-100 grid grid-cols-3 gap-6">
-                  <div>
-                    <p className="text-2xl font-bold text-slate-900 font-mono">+500</p>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">Tamamlanan Proje</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-teal-700 font-mono">A+++</p>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">Enerji Verimliliği</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-slate-900 font-mono">7/24</p>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">Teknik Servis Desteği</p>
-                  </div>
-                </div>
               </div>
 
               {/* Sağ Taraf: İnteraktif İklim Kontrol Kartı */}
