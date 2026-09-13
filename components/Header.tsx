@@ -17,10 +17,10 @@ export default function Header() {
           />
           <div className="flex flex-col">
             <span className="font-display font-extrabold text-xl sm:text-2xl tracking-tight text-slate-950">
-              İklim <span className="text-teal-700">Ofisi</span>
+              İklim <span className="text-teal-700">Ofisi <span className="text-teal-700">Mekanik Mühendislik </span>
             </span>
             <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase -mt-1">
-              Mühendislik
+              Türkiye'nin güvenilir iklimlendirme markası.
             </span>
           </div>
         </Link>
