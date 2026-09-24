@@ -271,7 +271,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
         </div>
 
         <p className="text-xs text-metin/60 mb-10">
-          Fiyatlara {teklif.kdvDahil ? "KDV dahildir." : "KDV dahil değildir."} Bu teklif,
+          Birim Fiyatlara {teklif.kdvDahil ? "KDV dahildir." : "KDV dahil değildir."} Bu teklif,
           geçerlilik tarihine kadar geçerlidir.
         </p>
 
