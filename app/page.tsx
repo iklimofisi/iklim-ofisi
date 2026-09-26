@@ -215,6 +215,15 @@ export default async function Home() {
                   >
                     AIRNEX&apos;i İnceleyin →
                   </Link>
+                  <a
+                    href="/kataloglar/airnex-elektrostatik-hucreli-aspirator-katalog.pdf"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    download="AIRNEX-Elektrostatik-Hucreli-Aspirator-Katalogu.pdf"
+                    className="px-6 py-3 rounded-lg border border-slate-700 text-slate-200 hover:bg-slate-800 font-bold text-xs text-center transition-colors"
+                  >
+                    Katalog (PDF) ↓
+                  </a>
                   <Link
                     href="/iletisim"
                     className="px-6 py-3 rounded-lg border border-slate-700 text-slate-200 hover:bg-slate-800 font-bold text-xs text-center transition-colors"

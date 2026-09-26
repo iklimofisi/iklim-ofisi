@@ -72,6 +72,13 @@ const SLAYTLAR: Slayt[] = [
     gorsel: "/airnex/airnex-calisma-prensibi.jpg",
   },
   {
+    etiket: "VERTA · Endüstriyel Mutfak",
+    baslik: "Konveksiyonel Fırınlar: 4, 6 ve 10 Tepsi",
+    alt: "Profesyonel mutfakta VERTA konveksiyonel fırın",
+    href: "/verta",
+    gorsel: "/slider/slider-verta-firin.jpg",
+  },
+  {
     etiket: "Buderus",
     baslik: "Isı Pompası & Kaskad Isıtma",
     alt: "Isı pompası ve yerden ısıtma sistemi",

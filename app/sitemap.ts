@@ -8,6 +8,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/hizmetler",
     "/urunler",
     "/airnex",
+    "/verta",
     "/hakkimizda",
     "/referanslar",
     "/hesaplama",

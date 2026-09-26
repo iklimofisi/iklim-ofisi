@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Ürünler — Mitsubishi Electric, TCL, Buderus & AIRNEX",
   description:
-    "Mitsubishi Electric ve TCL VRF ve klima sistemleri, Buderus ısıtma ve ısı pompaları, AIRNEX elektrostatik hücreli mutfak aspiratörleri ve havalandırma ürünleri.",
+    "Mitsubishi Electric ve TCL VRF ve klima sistemleri, Buderus ısıtma ve ısı pompaları, AIRNEX elektrostatik hücreli mutfak aspiratörleri, VERTA konveksiyonel fırınlar ve havalandırma ürünleri.",
   alternates: { canonical: "/urunler" },
 };
 
@@ -107,7 +107,7 @@ export default async function UrunlerPage() {
               </span>
             </h1>
             <p className="text-base text-slate-600 leading-relaxed pt-2">
-              {sirket.unvan}; Mitsubishi Electric ve TCL VRF sistemlerinden Buderus ısıtma teknolojilerine, AIRNEX mutfak havalandırma çözümlerine kadar projenizin tüm mekanik ürün ihtiyacını mühendislik güvencesiyle sağlar.
+              {sirket.unvan}; Mitsubishi Electric ve TCL VRF sistemlerinden Buderus ısıtma teknolojilerine, AIRNEX mutfak havalandırma çözümlerine ve VERTA konveksiyonel fırınlara kadar projenizin tüm mekanik ürün ihtiyacını mühendislik güvencesiyle sağlar.
             </p>
           </div>
 
@@ -145,6 +145,68 @@ export default async function UrunlerPage() {
                 >
                   Ürün Detayları →
                 </Link>
+                <a
+                  href="/kataloglar/airnex-elektrostatik-hucreli-aspirator-katalog.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download="AIRNEX-Elektrostatik-Hucreli-Aspirator-Katalogu.pdf"
+                  className="flex-1 py-2.5 bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-800 text-center font-bold text-xs rounded-lg transition-colors"
+                >
+                  Katalog (PDF) ↓
+                </a>
+                <Link
+                  href="/iletisim"
+                  className="flex-1 py-2.5 bg-slate-900 hover:bg-teal-700 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm"
+                >
+                  Fiyat Teklifi İsteyin →
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* ÖNE ÇIKAN: VERTA KONVEKSİYONEL FIRINLAR */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm grid lg:grid-cols-2">
+            <div className="relative h-56 sm:h-72 lg:h-auto lg:min-h-[20rem] bg-slate-950 lg:order-2">
+              <Image
+                src="/verta/verta-kapak.jpg"
+                alt="VERTA konveksiyonel fırın — profesyonel mutfak"
+                fill
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className="object-cover"
+              />
+            </div>
+            <div className="p-8 space-y-4 flex flex-col justify-center">
+              <span className="text-[11px] font-bold tracking-wider text-teal-700 uppercase">
+                ENDÜSTRİYEL MUTFAK · FIRINLAR
+              </span>
+              <h2 className="text-2xl font-bold text-slate-900">VERTA Konveksiyonel Fırınlar</h2>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Pastane, restoran, kafe ve oteller için 4, 6 ve 10 tepsili profesyonel konveksiyonel fırınlar. Çift yöne dönen fanlarla homojen pişirme, paslanmaz çelik gövde ve kolay temizlik.
+              </p>
+              <div className="space-y-2">
+                {["4 tepsili · 220 V, kompakt", "6 tepsili · GN 2/1, 380 V", "10 tepsili · 100 program, direkt nemlendirme"].map((u) => (
+                  <div key={u} className="flex items-center gap-2 text-xs font-medium text-slate-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-600" />
+                    <span>{u}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <Link
+                  href="/verta"
+                  className="flex-1 py-2.5 bg-teal-700 hover:bg-teal-800 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm"
+                >
+                  Modeller & Özellikler →
+                </Link>
+                <a
+                  href="/kataloglar/verta-konveksiyonel-firin-katalog.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download="VERTA-Konveksiyonel-Firin-Katalogu.pdf"
+                  className="flex-1 py-2.5 bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-800 text-center font-bold text-xs rounded-lg transition-colors"
+                >
+                  Katalog (PDF) ↓
+                </a>
                 <Link
                   href="/iletisim"
                   className="flex-1 py-2.5 bg-slate-900 hover:bg-teal-700 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm"
