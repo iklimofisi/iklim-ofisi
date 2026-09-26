@@ -1,9 +1,18 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
+import Image from "next/image";
+import type { Metadata } from "next";
 import { getSirketAyarlari } from "@/lib/sirket";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Hizmetlerimiz — VRF, Klima, Havalandırma & Mutfak Egzozu",
+  description:
+    "Mitsubishi Electric ve TCL VRF sistemleri, bireysel ve ticari klimalar, klima santrali (AHU), AIRNEX mutfak havalandırma, ısı pompası ve mekanik tesisatta anahtar teslim hizmet.",
+  alternates: { canonical: "/hizmetler" },
+};
 
 export default async function HizmetlerPage() {
   const sirket = await getSirketAyarlari();
@@ -29,7 +38,7 @@ export default async function HizmetlerPage() {
               </span>
             </h1>
             <p className="text-base text-slate-600 leading-relaxed pt-2">
-              {sirket.unvan}; konut, ofis, otel ve endüstriyel yapılarda sıhhi tesisattan klima santraline, VRF iklimlendirmeden ısı pompası ve havalandırmaya kadar mühendislik standartlarında anahtar teslim mekanik çözümler sunar.
+              {sirket.unvan}; konut, ofis, otel ve endüstriyel yapılarda sıhhi tesisattan klima santraline, VRF iklimlendirmeden ısı pompasına, havalandırmadan endüstriyel mutfak egzozuna kadar mühendislik standartlarında anahtar teslim mekanik çözümler sunar.
             </p>
           </div>
 
@@ -109,7 +118,7 @@ export default async function HizmetlerPage() {
                   <span className="text-[11px] font-bold tracking-wider text-teal-700 uppercase block">
                     KLİMA SANTRALLERİ & İGK
                   </span>
-                  <h2 className="text-1xl font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                  <h2 className="text-xl font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
                     Klima Santrali (AHU) & Havalandırma
                   </h2>
                   <p className="text-xs text-slate-600 leading-relaxed">
@@ -166,13 +175,13 @@ export default async function HizmetlerPage() {
                     VRF / VRV Merkezi Sistemler
                   </h2>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Plaza, otel, hastane ve binalarda her odayı bağımsız iklimlendiren Heat Pump ve Heat Recovery dış/iç ünite grupları ve azot testli borulama.
+                    Plaza, otel, hastane ve binalarda her odayı bağımsız iklimlendiren Mitsubishi Electric City Multi ve TCL TMV VRF sistemleri; Heat Pump ve Heat Recovery dış/iç ünite grupları ve azot testli borulama.
                   </p>
 
                   <div className="pt-3 border-t border-slate-100 space-y-2">
                     <div className="flex items-start gap-2 text-xs text-slate-700">
                       <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
-                      <span>VRF / VRV dış ve iç ünite montajı</span>
+                      <span>Mitsubishi Electric & TCL VRF dış ve iç ünite montajı</span>
                     </div>
                     <div className="flex items-start gap-2 text-xs text-slate-700">
                       <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
@@ -264,7 +273,7 @@ export default async function HizmetlerPage() {
                     Bireysel & Ticari Klimalar
                   </h2>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Duvar tipi, multi-split, kaset tipi, kanallı gizli tavan, konsol ve salon tipi klimaların keşfi, kapasite hesabı ve montajı.
+                    Mitsubishi Electric ve TCL duvar tipi, multi-split, kaset tipi, kanallı gizli tavan, konsol ve salon tipi klimaların keşfi, kapasite hesabı ve montajı.
                   </p>
 
                   <div className="pt-3 border-t border-slate-100 space-y-2">
@@ -339,6 +348,64 @@ export default async function HizmetlerPage() {
                 <Link href="/iletisim" className="block w-full py-2.5 bg-slate-900 hover:bg-teal-700 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm">
                   Projeniz İçin Keşif & Teklif İsteyin →
                 </Link>
+              </div>
+            </div>
+
+            {/* 7. KART (GENİŞ): MUTFAK HAVALANDIRMA — AIRNEX */}
+            <div className="md:col-span-2 lg:col-span-3 bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500/40 transition-all duration-300 grid lg:grid-cols-5 group">
+              <div className="lg:col-span-2 relative h-56 lg:h-auto bg-slate-950">
+                <Image
+                  src="/airnex/airnex-kesit.jpg"
+                  alt="AIRNEX elektrostatik hücreli aspiratör kesit görünümü"
+                  fill
+                  sizes="(min-width: 1024px) 40vw, 100vw"
+                  className="object-cover"
+                />
+                <span className="absolute top-3 right-3 text-[10px] font-bold text-teal-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
+                  Markamız: AIRNEX
+                </span>
+              </div>
+
+              <div className="lg:col-span-3 p-6 sm:p-8 space-y-4 flex flex-col justify-between">
+                <div className="space-y-4">
+                  <span className="text-[11px] font-bold tracking-wider text-teal-700 uppercase block">
+                    MUTFAK HAVALANDIRMA
+                  </span>
+                  <h2 className="text-xl font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                    Endüstriyel Mutfak Havalandırma — AIRNEX Elektrostatik Hücreli Aspiratör
+                  </h2>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Restoran, otel ve endüstriyel mutfaklarda pişirme kaynaklı yağ aerosolleri, duman ve ince partiküllerin kontrolü için elektrostatik filtrasyon hücreli egzoz sistemleri. Davlumbazdan fana kadar tüm hattı projelendirip anahtar teslim kuruyoruz.
+                  </p>
+
+                  <div className="pt-3 border-t border-slate-100 grid sm:grid-cols-2 gap-2">
+                    <div className="flex items-start gap-2 text-xs text-slate-700">
+                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
+                      <span>Ön filtre + elektrostatik (ESP) hücre + fan</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs text-slate-700">
+                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
+                      <span>Opsiyonel koku kontrol kademesi</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs text-slate-700">
+                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
+                      <span>Davlumbaz ve egzoz kanalı projelendirme</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs text-slate-700">
+                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
+                      <span>Periyodik bakım ve hücre temizliği</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <Link href="/airnex" className="flex-1 py-2.5 bg-teal-700 hover:bg-teal-800 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm">
+                    AIRNEX Ürün Detayları →
+                  </Link>
+                  <Link href="/iletisim" className="flex-1 py-2.5 bg-slate-900 hover:bg-teal-700 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm">
+                    Mutfak Projeniz İçin Teklif İsteyin →
+                  </Link>
+                </div>
               </div>
             </div>
 

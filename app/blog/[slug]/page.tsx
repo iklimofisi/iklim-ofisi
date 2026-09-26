@@ -1,12 +1,32 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { notFound, permanentRedirect } from "next/navigation";
 import { MAKALELER } from "../data";
 
 export const dynamic = "force-dynamic";
 
+// Yayındaki eski makale adresleri yeni adreslere kalıcı (308) yönlendirilir.
+const ESKI_SLUGLAR: Record<string, string> = {
+  "vrf-sistemler-ve-mitsu-samsung-teknolojisi": "vrf-rehberi-mitsubishi-electric-ve-tcl",
+};
+
+export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
+  const makale = MAKALELER.find((m) => m.slug === params.slug);
+  if (!makale) return {};
+  return {
+    title: makale.baslik,
+    description: makale.ozet,
+    alternates: { canonical: `/blog/${makale.slug}` },
+    openGraph: { title: makale.baslik, description: makale.ozet, type: "article" },
+  };
+}
+
 export default function BlogDetayPage({ params }: { params: { slug: string } }) {
+  const yeniSlug = ESKI_SLUGLAR[params.slug];
+  if (yeniSlug) permanentRedirect(`/blog/${yeniSlug}`);
+
   const makale = MAKALELER.find((m) => m.slug === params.slug);
 
   if (!makale) notFound();
@@ -52,7 +72,7 @@ export default function BlogDetayPage({ params }: { params: { slug: string } }) 
               href="/iletisim"
               className="shrink-0 px-6 py-3 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs rounded-lg transition-colors"
             >
-              Ücretsiz Keşif İsteğin →
+              Ücretsiz Keşif İsteyin →
             </Link>
           </div>
 

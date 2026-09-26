@@ -1,9 +1,17 @@
+import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { webTalebiOlustur } from "@/lib/web-talep-actions";
 import { getSirketAyarlari } from "@/lib/sirket"; // PANEL AYARLARI EKLENDİ
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "İletişim — Ücretsiz Keşif & Teklif",
+  description:
+    "VRF, klima, ısıtma, havalandırma veya mutfak egzozu projeniz için İklim Ofisi ile iletişime geçin; ücretsiz keşif ve teklif isteyin.",
+  alternates: { canonical: "/iletisim" },
+};
 
 export default async function Iletisim({
   searchParams,

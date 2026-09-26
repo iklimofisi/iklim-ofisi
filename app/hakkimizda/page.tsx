@@ -1,9 +1,17 @@
+import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 import { getSirketAyarlari } from "@/lib/sirket";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Hakkımızda — Mühendislik Kökenli Yönetim",
+  description:
+    "20 yılı aşan saha deneyimi ve mühendislik disipliniyle iklimlendirme, VRF, havalandırma ve mekanik tesisat projeleri yürüten İklim Ofisi ekibini tanıyın.",
+  alternates: { canonical: "/hakkimizda" },
+};
 
 export default async function HakkimizdaPage() {
   const sirket = await getSirketAyarlari();
@@ -132,7 +140,7 @@ export default async function HakkimizdaPage() {
               href="/iletisim"
               className="shrink-0 px-7 py-3.5 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs sm:text-sm rounded-lg transition-colors shadow-md"
             >
-              Ücretsiz Keşif İsteğin →
+              Ücretsiz Keşif İsteyin →
             </Link>
           </div>
 

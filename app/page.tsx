@@ -1,6 +1,7 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
+import Image from "next/image";
 import { getSirketAyarlari } from "@/lib/sirket";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +35,7 @@ export default async function Home() {
                 </h1>
 
                 <p className="text-base sm:text-lg text-slate-600 max-w-2xl leading-relaxed">
-                  {sirket.unvan}; konut, ofis, otel ve endüstriyel tesislerde klima, VRF merkezi soğutma, ısı pompası ve havalandırma projelerini keşiften montaja anahtar teslim yürütür.
+                  {sirket.unvan}; konut, ofis, otel ve endüstriyel tesislerde klima, VRF merkezi soğutma, ısı pompası, havalandırma ve endüstriyel mutfak egzoz projelerini keşiften montaja anahtar teslim yürütür.
                 </p>
 
                 {/* Butonlar */}
@@ -99,7 +100,7 @@ export default async function Home() {
                     href="/iletisim"
                     className="block w-full py-3 bg-teal-600 hover:bg-teal-500 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm"
                   >
-                    Projeniz İçin Keşif İsteğin →
+                    Projeniz İçin Keşif İsteyin →
                   </Link>
                 </div>
               </div>
@@ -116,7 +117,7 @@ export default async function Home() {
                 <p className="text-xs font-bold tracking-widest text-teal-700 uppercase">20+ YILLIK MÜHENDİSLİK GÜCÜ</p>
                 <h2 className="text-3xl font-bold text-slate-900">Mühendislik Kökenli Yönetim Anlayışı</h2>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  20 yılı aşkın kıdemli Makine Mühendisi ve Proje Mühendisi kurucu ortaklarımızın öncülüğünde; Mitsubishi Electric, Samsung VRF iklimlendirme ve Buderus ısıtma teknolojileriyle yapının ısı kayıp/kazanç hesabına tam uygun mekanik tesisat çözümleri üretiyoruz.
+                  20 yılı aşkın kıdemli Makine Mühendisi ve Proje Mühendisi kurucu ortaklarımızın öncülüğünde; Mitsubishi Electric ve TCL VRF iklimlendirme, Buderus ısıtma ve AIRNEX mutfak havalandırma teknolojileriyle yapının ısı kayıp/kazanç hesabına tam uygun mekanik tesisat çözümleri üretiyoruz.
                 </p>
                 <div>
                   <Link href="/hakkimizda" className="inline-block text-xs font-bold text-teal-700 hover:underline">
@@ -129,7 +130,7 @@ export default async function Home() {
                 <h4 className="font-bold text-slate-900 text-sm">Disiplinli Mühendislik İlkelerimiz</h4>
                 <div className="space-y-2 text-xs text-slate-600">
                   <p>✓ 20+ yıllık saha tecrübesiyle hatasız kapasite seçimi</p>
-                  <p>✓ Mitsubishi Electric, Samsung ve Buderus çözümleri</p>
+                  <p>✓ Mitsubishi Electric, TCL, Buderus ve AIRNEX çözümleri</p>
                   <p>✓ AutoCAD tabanlı çizim, metraj ve şeffaf bütçelendirme</p>
                   <p>✓ Tesisatta azot basınç testi, vakumlama ve 2 yıl tam garanti</p>
                 </div>
@@ -165,14 +166,14 @@ export default async function Home() {
               <div className="bg-white border border-slate-200 p-6 rounded-xl hover:border-teal-500/40 hover:shadow-md transition-all space-y-4">
                 <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center font-mono font-bold text-sm">02</div>
                 <h3 className="text-lg font-bold text-slate-900">VRF / VRV Sistemleri</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">Mitsubishi Electric ve Samsung VRF sistemleri ile merkezi iklimlendirme.</p>
+                <p className="text-xs text-slate-600 leading-relaxed">Mitsubishi Electric ve TCL VRF sistemleri ile merkezi iklimlendirme.</p>
                 <Link href="/hizmetler" className="inline-block text-xs font-semibold text-teal-700 hover:underline">Detaylı İncele →</Link>
               </div>
 
               <div className="bg-white border border-slate-200 p-6 rounded-xl hover:border-teal-500/40 hover:shadow-md transition-all space-y-4">
                 <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center font-mono font-bold text-sm">03</div>
                 <h3 className="text-lg font-bold text-slate-900">Havalandırma & AHU</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">Klima santralleri (AHU), ısı geri kazanım üniteleri ve spiro kanal imali.</p>
+                <p className="text-xs text-slate-600 leading-relaxed">Klima santralleri (AHU), ısı geri kazanım, AIRNEX mutfak egzozu ve spiro kanal imali.</p>
                 <Link href="/hizmetler" className="inline-block text-xs font-semibold text-teal-700 hover:underline">Detaylı İncele →</Link>
               </div>
 
@@ -181,6 +182,52 @@ export default async function Home() {
                 <h3 className="text-lg font-bold text-slate-900">Buderus Isıtma & Isı Pompası</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">Buderus kaskad kazan sistemleri, hava/su kaynaklı ısı pompaları.</p>
                 <Link href="/hizmetler" className="inline-block text-xs font-semibold text-teal-700 hover:underline">Detaylı İncele →</Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 5. AIRNEX — MUTFAK HAVALANDIRMA ÖNE ÇIKAN ÜRÜN */}
+        <section className="py-20 bg-white border-t border-slate-200">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="grid lg:grid-cols-2 gap-10 items-center bg-slate-900 rounded-2xl overflow-hidden shadow-xl">
+              <div className="p-8 sm:p-10 space-y-5">
+                <p className="text-xs font-bold tracking-widest text-teal-400 uppercase">MUTFAK HAVALANDIRMA · MARKAMIZ</p>
+                <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                  AIRNEX<sup className="text-sm align-super">®</sup> Elektrostatik Hücreli Aspiratör
+                </h2>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  Restoran, otel ve endüstriyel mutfaklarda egzoz havasındaki yağ aerosolleri, duman ve ince partikülleri elektrostatik filtrasyonla tutan; ön filtre, ESP hücre, fan ve opsiyonel koku kademesiyle projelendirilen modüler sistem.
+                </p>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 rounded-lg bg-slate-800/60 border border-slate-800 text-slate-200 font-semibold">Temiz egzoz havası</div>
+                  <div className="p-3 rounded-lg bg-slate-800/60 border border-slate-800 text-slate-200 font-semibold">Verimli filtrasyon</div>
+                  <div className="p-3 rounded-lg bg-slate-800/60 border border-slate-800 text-slate-200 font-semibold">Çıkarılabilir hücreler</div>
+                  <div className="p-3 rounded-lg bg-slate-800/60 border border-slate-800 text-slate-200 font-semibold">Kolay servis erişimi</div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 pt-1">
+                  <Link
+                    href="/airnex"
+                    className="px-6 py-3 rounded-lg bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs text-center transition-colors"
+                  >
+                    AIRNEX&apos;i İnceleyin →
+                  </Link>
+                  <Link
+                    href="/iletisim"
+                    className="px-6 py-3 rounded-lg border border-slate-700 text-slate-200 hover:bg-slate-800 font-bold text-xs text-center transition-colors"
+                  >
+                    Mutfağınız İçin Teklif Alın
+                  </Link>
+                </div>
+              </div>
+              <div className="relative h-64 sm:h-80 lg:h-full min-h-[18rem]">
+                <Image
+                  src="/airnex/airnex-mutfak.jpg"
+                  alt="Endüstriyel mutfakta AIRNEX elektrostatik hücreli aspiratör ünitesi"
+                  fill
+                  sizes="(min-width: 1024px) 50vw, 100vw"
+                  className="object-cover"
+                />
               </div>
             </div>
           </div>

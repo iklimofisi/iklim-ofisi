@@ -1,18 +1,27 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
+import Image from "next/image";
+import type { Metadata } from "next";
 import { getSirketAyarlari } from "@/lib/sirket";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Ürünler — Mitsubishi Electric, TCL, Buderus & AIRNEX",
+  description:
+    "Mitsubishi Electric ve TCL VRF ve klima sistemleri, Buderus ısıtma ve ısı pompaları, AIRNEX elektrostatik hücreli mutfak aspiratörleri ve havalandırma ürünleri.",
+  alternates: { canonical: "/urunler" },
+};
 
 const urunKategorileri = [
   {
     id: "bireysel-klima",
     kategori: "BİREYSEL İKLİMLENDİRME",
-    baslik: "Mitsubishi Electric & Samsung Bireysel Klimalar",
-    aciklama: "Konut ve küçük ofisler için Mitsubishi Electric ve Samsung A+++ yüksek verimli Inverter duvar tipi ve multi-split klima cihazları.",
-    urunler: ["Mitsubishi Electric Inverter Duvar Tipi", "Samsung WindFree™ Rüzgarsız Klimalar", "Multi-Split Çoklu İç Ünite Sistemleri"],
-    markalar: "Mitsubishi Electric, Samsung",
+    baslik: "Mitsubishi Electric & TCL Bireysel Klimalar",
+    aciklama: "Konut ve küçük ofisler için Mitsubishi Electric ve TCL yüksek verimli Inverter duvar tipi ve multi-split klima cihazları.",
+    urunler: ["Mitsubishi Electric Inverter Duvar Tipi Klimalar", "TCL Inverter Duvar Tipi Klimalar", "Multi-Split Çoklu İç Ünite Sistemleri"],
+    markalar: "Mitsubishi Electric, TCL",
   },
   {
     id: "ticari-klima",
@@ -20,15 +29,15 @@ const urunKategorileri = [
     baslik: "Ticari Tip Klimalar",
     aciklama: "Mağaza, cafe, restoran ve açık ofis alanları için 4 yöne üflemeli kaset, kanallı gizli tavan, konsol ve salon tipi cihazlar.",
     urunler: ["4 Yöne Üflemeli Kaset Tipi Klimalar", "Gizli Tavan Tipi Kanallı Klimalar", "Konsol Tipi Klimalar", "Salon Tipi Klimalar"],
-    markalar: "Mitsubishi Electric, Samsung",
+    markalar: "Mitsubishi Electric, TCL",
   },
   {
     id: "vrf-sistemleri",
     kategori: "MERKEZİ İKLİMLENDİRME",
-    baslik: "Mitsubishi Electric & Samsung VRF Sistemleri",
-    aciklama: "Otel, plaza, hastane ve binalarda her odayı bağımsız iklimlendiren Mitsubishi Electric City Multi ve Samsung DVM S VRF dış/iç ünite grupları.",
-    urunler: ["Mitsubishi Electric City Multi VRF", "Samsung DVM S2 AI VRF Sistemleri", "Heat Pump & Heat Recovery Dış Üniteler", "Y-Branch & Joint Bağlantı Kitleri"],
-    markalar: "Mitsubishi Electric, Samsung",
+    baslik: "Mitsubishi Electric & TCL VRF Sistemleri",
+    aciklama: "Otel, plaza, hastane ve binalarda her odayı bağımsız iklimlendiren Mitsubishi Electric City Multi ve TCL TMV serisi VRF dış/iç ünite grupları.",
+    urunler: ["Mitsubishi Electric City Multi VRF", "TCL TMV Serisi VRF Sistemleri", "Heat Pump & Heat Recovery Dış Üniteler", "Y-Branch & Joint Bağlantı Kitleri"],
+    markalar: "Mitsubishi Electric, TCL",
   },
   {
     id: "isi-pompasi-isitma",
@@ -72,14 +81,58 @@ export default async function UrunlerPage() {
               MEKANİK TESİSAT & İKLİMLENDİRME ÜRÜNLERİ
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900 leading-[1.15]">
-              Mitsubishi Electric, Samsung ve Buderus <br />
+              Mitsubishi Electric, TCL, Buderus ve AIRNEX <br />
               <span className="text-teal-700 underline decoration-teal-300/80 decoration-4 underline-offset-8">
                 İklimlendirme Teknolojileri.
               </span>
             </h1>
             <p className="text-base text-slate-600 leading-relaxed pt-2">
-              {sirket.unvan}; Mitsubishi Electric ve Samsung VRF sistemlerinden Buderus ısıtma teknolojilerine kadar projenizin tüm mekanik ürün ihtiyacını mühendislik güvencesiyle sağlar.
+              {sirket.unvan}; Mitsubishi Electric ve TCL VRF sistemlerinden Buderus ısıtma teknolojilerine, AIRNEX mutfak havalandırma çözümlerine kadar projenizin tüm mekanik ürün ihtiyacını mühendislik güvencesiyle sağlar.
             </p>
+          </div>
+
+          {/* ÖNE ÇIKAN: AIRNEX MUTFAK HAVALANDIRMA */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm grid lg:grid-cols-2">
+            <div className="relative h-56 sm:h-72 lg:h-auto bg-slate-950">
+              <Image
+                src="/airnex/airnex-mutfak.jpg"
+                alt="AIRNEX elektrostatik hücreli aspiratör — endüstriyel mutfak uygulaması"
+                fill
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className="object-cover"
+              />
+            </div>
+            <div className="p-8 space-y-4 flex flex-col justify-center">
+              <span className="text-[11px] font-bold tracking-wider text-teal-700 uppercase">
+                MUTFAK HAVALANDIRMA · MARKAMIZ
+              </span>
+              <h2 className="text-2xl font-bold text-slate-900">AIRNEX Elektrostatik Hücreli Aspiratör</h2>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Restoran, otel ve endüstriyel mutfak egzozlarında yağ aerosolleri, duman ve ince partiküllerin kontrolü için elektrostatik filtrasyon hücreli, modüler ve servis dostu aspiratör sistemi.
+              </p>
+              <div className="space-y-2">
+                {["Ön filtre + elektrostatik hücre + fan", "Opsiyonel aktif karbon / UV koku kademesi", "Izgara, fritöz, fırın ve proses egzozları"].map((u) => (
+                  <div key={u} className="flex items-center gap-2 text-xs font-medium text-slate-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-600" />
+                    <span>{u}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <Link
+                  href="/airnex"
+                  className="flex-1 py-2.5 bg-teal-700 hover:bg-teal-800 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm"
+                >
+                  Ürün Detayları →
+                </Link>
+                <Link
+                  href="/iletisim"
+                  className="flex-1 py-2.5 bg-slate-900 hover:bg-teal-700 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm"
+                >
+                  Fiyat Teklifi İsteyin →
+                </Link>
+              </div>
+            </div>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -125,7 +178,7 @@ export default async function UrunlerPage() {
             <div className="space-y-2 text-center sm:text-left">
               <h3 className="text-xl sm:text-2xl font-bold">Projeniz İçin Toplu Cihaz Fiyatı Alın</h3>
               <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
-                Mitsubishi Electric, Samsung ve Buderus cihaz listelerinizi gönderin, mühendislerimiz avantajlı fiyat teklifi hazırlasın.
+                Mitsubishi Electric, TCL, Buderus ve AIRNEX cihaz listelerinizi gönderin, mühendislerimiz avantajlı fiyat teklifi hazırlasın.
               </p>
             </div>
             <Link

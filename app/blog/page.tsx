@@ -1,9 +1,17 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { MAKALELER } from "./data";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Blog & Teknik Makaleler",
+  description:
+    "VRF, klima, ısıtma, havalandırma ve endüstriyel mutfak egzozu hakkında İklim Ofisi mühendislerinin hazırladığı teknik rehber yazılar.",
+  alternates: { canonical: "/blog" },
+};
 
 export default function BlogPage() {
   return (
@@ -25,7 +33,7 @@ export default function BlogPage() {
               </span>
             </h1>
             <p className="text-base text-slate-600 leading-relaxed pt-2">
-              Mitsubishi Electric, Samsung VRF teknolojileri, Buderus ısıtma çözümleri ve mekanik tesisat hakkında uzman mühendislerimizin hazırladığı rehber yazılar.
+              Mitsubishi Electric ve TCL VRF teknolojileri, Buderus ısıtma çözümleri, AIRNEX mutfak havalandırma ve mekanik tesisat hakkında uzman mühendislerimizin hazırladığı rehber yazılar.
             </p>
           </div>
 

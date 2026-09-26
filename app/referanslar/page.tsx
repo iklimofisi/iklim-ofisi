@@ -1,9 +1,17 @@
+import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 import { getSirketAyarlari } from "@/lib/sirket";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Referans Projeler",
+  description:
+    "İklim Ofisi tarafından tamamlanan otel, plaza, konut ve endüstriyel iklimlendirme referans projeleri.",
+  alternates: { canonical: "/referanslar" },
+};
 
 export default async function ReferanslarPage() {
   const sirket = await getSirketAyarlari();

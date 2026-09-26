@@ -1,8 +1,16 @@
+import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import KapasiteHesaplayici from "@/components/KapasiteHesaplayici";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Klima Kapasite Hesaplama",
+  description:
+    "Mekanınız için gereken klima / VRF kapasitesini hızlıca hesaplayın, ardından ücretsiz keşif ile netleştirelim.",
+  alternates: { canonical: "/hesaplama" },
+};
 
 export default function HesaplamaPage() {
   return (

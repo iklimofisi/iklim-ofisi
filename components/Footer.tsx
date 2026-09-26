@@ -29,6 +29,7 @@ export default async function Footer() {
             <Link href="/hakkimizda" className="hover:text-white transition-colors">Hakkımızda</Link>
             <Link href="/hizmetler" className="hover:text-white transition-colors">Hizmetlerimiz</Link>
             <Link href="/urunler" className="hover:text-white transition-colors">Ürün Kataloğu</Link>
+            <Link href="/airnex" className="hover:text-white transition-colors">AIRNEX Mutfak Havalandırma</Link>
             <Link href="/referanslar" className="hover:text-white transition-colors">Referans Projeler</Link>
             <Link href="/hesaplama" className="hover:text-white transition-colors">Kapasite Hesaplama</Link>
             <Link href="/blog" className="hover:text-white transition-colors">Blog & Teknik Makaleler</Link>

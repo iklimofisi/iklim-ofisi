@@ -4,9 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 
 const links = [
-  { href: "/hizmetler", label: "Hizmetler" },
-  { href: "/hesaplama", label: "Kapasite Hesaplama" },
   { href: "/hakkimizda", label: "Hakkımızda" },
+  { href: "/hizmetler", label: "Hizmetler" },
+  { href: "/urunler", label: "Ürünler" },
+  { href: "/airnex", label: "AIRNEX Mutfak Havalandırma" },
+  { href: "/referanslar", label: "Referanslar" },
+  { href: "/hesaplama", label: "Kapasite Hesaplama" },
+  { href: "/blog", label: "Blog" },
   { href: "/iletisim", label: "İletişim" },
 ];
 
@@ -14,12 +18,13 @@ export default function MobilMenu() {
   const [acik, setAcik] = useState(false);
 
   return (
-    <div className="sm:hidden">
+    <div className="lg:hidden">
       <button
+        type="button"
         onClick={() => setAcik((v) => !v)}
         aria-label={acik ? "Menüyü kapat" : "Menüyü aç"}
         aria-expanded={acik}
-        className="focus-ring w-9 h-9 flex items-center justify-center"
+        className="focus-ring w-10 h-10 flex items-center justify-center rounded-lg border border-slate-200 text-slate-800 hover:bg-slate-50"
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           {acik ? (
@@ -31,18 +36,18 @@ export default function MobilMenu() {
       </button>
 
       {acik && (
-        <div className="absolute left-0 right-0 top-16 bg-yuzey border-b border-hat px-6 py-4 flex flex-col gap-4 text-metin/80">
+        <nav className="absolute left-0 right-0 top-full bg-white border-b border-slate-200 shadow-lg px-6 py-4 flex flex-col text-sm font-semibold text-slate-700">
           {links.map((l) => (
             <Link
               key={l.href}
               href={l.href}
               onClick={() => setAcik(false)}
-              className="focus-ring hover:text-soguk transition-colors"
+              className="focus-ring py-3 border-b border-slate-100 last:border-b-0 hover:text-teal-700 transition-colors"
             >
               {l.label}
             </Link>
           ))}
-        </div>
+        </nav>
       )}
     </div>
   );
