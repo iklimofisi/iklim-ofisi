@@ -1,11 +1,12 @@
 import { getSirketAyarlari } from "@/lib/sirket";
 import Link from "next/link";
+import IletisimButonlari from "@/components/IletisimButonlari";
 
 export default async function Footer() {
   const sirket = await getSirketAyarlari();
 
   return (
-    <footer className="bg-slate-950 text-white py-12 border-t border-slate-900">
+    <footer className="bg-slate-950 text-white pt-12 pb-24 sm:pb-12 border-t border-slate-900">
       <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-3 gap-8">
         <div>
           <h3 className="font-bold text-base mb-1 text-white">{sirket.unvan}</h3>
@@ -37,6 +38,17 @@ export default async function Footer() {
           </div>
         </div>
       </div>
+
+      <div className="max-w-7xl mx-auto px-6 mt-10 pt-6 border-t border-slate-900 flex flex-col sm:flex-row gap-2 justify-between text-[11px] text-slate-500">
+        <p>
+          © {new Date().getFullYear()} {sirket.unvan}
+        </p>
+        <Link href="/kvkk" className="hover:text-white transition-colors">
+          KVKK Aydınlatma Metni & Çerezler
+        </Link>
+      </div>
+
+      <IletisimButonlari telefon={sirket.telefon} whatsapp={sirket.whatsapp} />
     </footer>
   );
 }

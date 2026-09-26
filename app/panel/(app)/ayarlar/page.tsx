@@ -119,6 +119,16 @@ export default async function AyarlarSayfasi() {
             </div>
           </div>
 
+          <div>
+            <label className="block text-xs font-medium text-metin/60 mb-1">WhatsApp Numarası (sitede buton olarak görünür)</label>
+            <input
+              name="whatsapp"
+              defaultValue={sirket.whatsapp ?? ""}
+              placeholder="Örn: 0532 123 45 67 — boş bırakılırsa WhatsApp butonu çıkmaz"
+              className="focus-ring w-full sm:w-1/2 border border-hat rounded-md px-3 py-2 text-sm"
+            />
+          </div>
+
           <div className="grid sm:grid-cols-2 gap-3 pt-2 border-t border-hat">
             <div>
               <label className="block text-xs font-medium text-metin/60 mb-1">Vergi Dairesi</label>

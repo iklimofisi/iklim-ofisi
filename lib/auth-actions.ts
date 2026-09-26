@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { girisKaydet } from "@/lib/islem-kaydi";
 
 export async function girisYap(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -13,8 +14,13 @@ export async function girisYap(formData: FormData) {
   const dogruMu = kullanici ? await bcrypt.compare(sifre, kullanici.sifreHash) : false;
 
   if (!kullanici || !dogruMu) {
+    await girisKaydet(kullanici, email, false);
+    // Şifre denemelerini yavaşlatmak için kısa bekleme
+    await new Promise((r) => setTimeout(r, 800));
     redirect("/panel/giris?hata=1");
   }
+
+  await girisKaydet(kullanici, email, true);
 
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 gün
   const oturum = await prisma.session.create({

@@ -1,5 +1,7 @@
 "use server";
 
+import { girisZorunlu } from "@/lib/oturum";
+
 export type AyiklananKalem = {
   aciklama: string;
   adet: number;
@@ -14,6 +16,8 @@ export type AyiklamaSonucu = {
 };
 
 export async function satinalmaPdfAyikla(formData: FormData): Promise<AyiklamaSonucu> {
+  // Yapay zekâ servisi ücretli: yalnızca giriş yapmış kullanıcılar kullanabilir
+  await girisZorunlu();
   const dosya = formData.get("pdf") as File | null;
   if (!dosya || dosya.size === 0) {
     return { basarili: false, hata: "Önce bir PDF dosyası seç." };

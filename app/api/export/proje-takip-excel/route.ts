@@ -1,11 +1,17 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
+import { suankiKullanici } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET() {
+  // Panel dosyası: yalnızca giriş yapmış kullanıcılar indirebilir
+  if (!(await suankiKullanici())) {
+    return new NextResponse("Yetkisiz", { status: 401 });
+  }
+
   try {
     const [projeler, teklifler] = await Promise.all([
       prisma.proje.findMany({

@@ -54,7 +54,11 @@ export default async function PanelLayout({ children }: { children: React.ReactN
 
   const menu =
     kullanici.rol === "ADMIN"
-      ? [...menuTemel, { href: "/panel/kullanicilar", label: "Kullanıcılar" }]
+      ? [
+          ...menuTemel,
+          { href: "/panel/kullanicilar", label: "Kullanıcılar" },
+          { href: "/panel/islem-gecmisi", label: "İşlem Geçmişi" },
+        ]
       : menuTemel;
 
   return (

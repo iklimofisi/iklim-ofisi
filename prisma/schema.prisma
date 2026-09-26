@@ -375,7 +375,24 @@ model SirketAyarlari {
   web          String?  @default("www.iklimofisi.com")
   vergiDairesi String?
   vergiNo      String?
+  whatsapp     String?  // Sitede görünen WhatsApp numarası (boşsa WhatsApp butonu çıkmaz)
   updatedAt    DateTime @updatedAt
+}
+
+// Kim, ne zaman, hangi işlemi yaptı (panel işlem geçmişi).
+// Kullanıcıya bağlı değildir: kullanıcı silinse bile geçmiş kaybolmaz.
+model IslemKaydi {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  kullaniciId String?
+  kullaniciAd String?
+  islem       String
+  hedefId     String?
+  veri        String?
+
+  @@index([createdAt])
+  @@index([kullaniciId])
+  @@index([hedefId])
 }
 
 // ---------------- STOK VE DEPO MODELLERİ ----------------

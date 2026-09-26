@@ -13,6 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/hesaplama",
     "/blog",
     "/iletisim",
+    "/kvkk",
   ];
 
   return [

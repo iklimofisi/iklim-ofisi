@@ -8,7 +8,7 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-3">
         
         {/* BÜYÜTÜLMÜŞ LOGO */}
-        <Link href="/" className="flex items-center gap-3 group">
+        <Link href="/" className="flex items-center gap-3 group shrink-0">
           <Image
             src="/logo-icon.png"
             alt="İklim Ofisi"
@@ -20,14 +20,14 @@ export default function Header() {
             <span className="font-display font-extrabold text-xl sm:text-2xl tracking-tight text-slate-950">
               İklim <span className="text-teal-700">Ofisi</span>
             </span>
-            <span className="hidden sm:block text-[10px] font-bold text-slate-400 tracking-widest uppercase -mt-1">
+            <span className="hidden sm:block lg:hidden xl:block text-[10px] font-bold text-slate-400 tracking-widest uppercase -mt-1">
               Türkiye'nin güvenilir iklimlendirme markası
             </span>
           </div>
         </Link>
 
         {/* MENÜ LİNKLERİ (Hakkımızda Öne Alındı) */}
-        <nav className="hidden lg:flex items-center gap-7 text-sm font-semibold text-slate-700">
+        <nav className="hidden lg:flex items-center gap-3 xl:gap-5 2xl:gap-6 text-sm font-semibold text-slate-700 whitespace-nowrap">
           <Link href="/hakkimizda" className="hover:text-teal-700 transition-colors">
             Hakkımızda
           </Link>
@@ -37,11 +37,15 @@ export default function Header() {
           <Link href="/urunler" className="hover:text-teal-700 transition-colors">
             Ürünler
           </Link>
+          <Link href="/airnex" className="hover:text-teal-700 transition-colors">
+            AIRNEX
+          </Link>
           <Link href="/referanslar" className="hover:text-teal-700 transition-colors">
             Referanslar
           </Link>
           <Link href="/hesaplama" className="hover:text-teal-700 transition-colors">
-            Kapasite Hesaplama
+            <span className="2xl:hidden">Hesaplama</span>
+            <span className="hidden 2xl:inline">Kapasite Hesaplama</span>
           </Link>
           <Link href="/blog" className="hover:text-teal-700 transition-colors">
             Blog

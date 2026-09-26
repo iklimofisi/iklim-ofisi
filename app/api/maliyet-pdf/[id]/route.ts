@@ -1,10 +1,16 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { suankiKullanici } from "@/lib/oturum";
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  // Panel dosyası: yalnızca giriş yapmış kullanıcılar indirebilir
+  if (!(await suankiKullanici())) {
+    return new NextResponse("Yetkisiz", { status: 401 });
+  }
+
   try {
     const id = params.id;
 

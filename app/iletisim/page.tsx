@@ -3,6 +3,18 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { webTalebiOlustur } from "@/lib/web-talep-actions";
 import { getSirketAyarlari } from "@/lib/sirket"; // PANEL AYARLARI EKLENDİ
+import Link from "next/link";
+import DosyaSecici from "@/components/DosyaSecici";
+import TelefonEpostaAlanlari from "@/components/TelefonEpostaAlanlari";
+import { whatsappNumarasi } from "@/components/IletisimButonlari";
+
+const HATA_MESAJI: Record<string, string> = {
+  "eksik-bilgi": "Ad soyad ve proje detayı alanlarını doldurmanız gerekiyor, tekrar deneyin.",
+  "iletisim-yok": "Size dönebilmemiz için telefon veya e-postadan en az birini yazın.",
+  kvkk: "Formu gönderebilmek için KVKK Aydınlatma Metni'ni okuduğunuzu onaylamanız gerekiyor.",
+  "dosya-boyutu": "Eklediğiniz dosya 4 MB'tan büyük. Daha küçük bir dosya ekleyin ya da dosyayı e-posta ile gönderin.",
+  "dosya-turu": "Yalnızca PDF, DWG, DXF, JPG veya PNG dosyası ekleyebilirsiniz.",
+};
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +32,9 @@ export default async function Iletisim({
 }) {
   // Paneldeki güncel şirket bilgilerini veritabanından çeker
   const sirket = await getSirketAyarlari();
+  const wa = whatsappNumarasi(sirket.whatsapp);
+  // Spam korumasında kullanılan form açılış zamanı
+  const formAcilis = Date.now();
 
   return (
     <>
@@ -65,7 +80,17 @@ export default async function Iletisim({
               {sirket.email && (
                 <div>
                   <span className="font-semibold text-metin">✉️ E-posta: </span>
-                  <span>{sirket.email}</span>
+                  <a href={`mailto:${sirket.email}`} className="hover:underline">
+                    {sirket.email}
+                  </a>
+                </div>
+              )}
+              {wa && (
+                <div>
+                  <span className="font-semibold text-metin">💬 WhatsApp: </span>
+                  <a href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                    {sirket.whatsapp}
+                  </a>
                 </div>
               )}
               {sirket.vergiDairesi && sirket.vergiNo && (
@@ -85,11 +110,19 @@ export default async function Iletisim({
         )}
         {searchParams?.hata && (
           <div className="bg-sicak-light text-sicak-dim rounded-md px-4 py-3 mb-6 text-sm">
-            Ad ve mesaj alanlarını doldurmanız gerekiyor, tekrar deneyin.
+            {(Object.prototype.hasOwnProperty.call(HATA_MESAJI, searchParams.hata) && HATA_MESAJI[searchParams.hata]) ||
+              "Form gönderilemedi, lütfen tekrar deneyin."}
           </div>
         )}
 
         <form action={webTalebiOlustur} className="space-y-5">
+          {/* Spam koruması: görünmez alan (gerçek ziyaretçiler görmez) + form açılış zamanı */}
+          <div aria-hidden="true" className="absolute -left-[9999px] w-px h-px overflow-hidden">
+            <label htmlFor="firma_web_adresi">Bu alanı boş bırakın</label>
+            <input id="firma_web_adresi" name="firma_web_adresi" type="text" tabIndex={-1} autoComplete="off" />
+          </div>
+          <input type="hidden" name="form_acilis" value={formAcilis} />
+
           <div>
             <label className="block text-sm font-medium text-metin mb-1" htmlFor="ad">
               Ad Soyad
@@ -102,31 +135,7 @@ export default async function Iletisim({
               placeholder="Adınız Soyadınız"
             />
           </div>
-          <div className="grid sm:grid-cols-2 gap-5">
-            <div>
-              <label className="block text-sm font-medium text-metin mb-1" htmlFor="telefon">
-                Telefon
-              </label>
-              <input
-                id="telefon"
-                name="telefon"
-                className="focus-ring w-full border border-hat rounded-md px-4 py-2.5 bg-yuzey"
-                placeholder="05xx xxx xx xx"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-metin mb-1" htmlFor="email">
-                E-posta
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                className="focus-ring w-full border border-hat rounded-md px-4 py-2.5 bg-yuzey"
-                placeholder="ornek@sirket.com"
-              />
-            </div>
-          </div>
+          <TelefonEpostaAlanlari />
           <div>
             <label className="block text-sm font-medium text-metin mb-1" htmlFor="mesaj">
               Proje Detayı
@@ -144,15 +153,19 @@ export default async function Iletisim({
             <label className="block text-sm font-medium text-metin mb-1" htmlFor="dosya">
               Proje Dosyası (opsiyonel)
             </label>
-            <input
-              id="dosya"
-              name="dosya"
-              type="file"
-              accept=".pdf,.dwg,.jpg,.jpeg,.png"
-              className="focus-ring w-full border border-hat rounded-md px-4 py-2.5 bg-yuzey text-sm"
-            />
-            <p className="text-xs text-metin/40 mt-1">PDF, DWG veya görsel — opsiyonel.</p>
+            <DosyaSecici />
+            <p className="text-xs text-metin/40 mt-1">PDF, DWG, DXF veya görsel — en fazla 4 MB, opsiyonel.</p>
           </div>
+          <label className="flex items-start gap-2.5 text-sm text-metin/70">
+            <input type="checkbox" name="kvkk" required className="mt-0.5 accent-soguk w-4 h-4 shrink-0" />
+            <span>
+              <Link href="/kvkk" target="_blank" className="text-soguk-dim underline">
+                KVKK Aydınlatma Metni
+              </Link>
+              &apos;ni okudum; talebime dönüş yapılabilmesi için paylaştığım bilgilerin bu metin kapsamında
+              işleneceğini biliyorum.
+            </span>
+          </label>
           <button
             type="submit"
             className="focus-ring bg-soguk text-white px-6 py-3 rounded-md font-medium hover:bg-soguk-dim transition-colors"

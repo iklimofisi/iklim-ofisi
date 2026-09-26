@@ -1,7 +1,14 @@
 import { epostaGonder } from "@/lib/eposta";
 import { NextResponse } from "next/server";
+import { suankiKullanici } from "@/lib/oturum";
 
 export async function GET() {
+  // Yalnızca yönetici çalıştırabilir (aksi hâlde herkes e-posta gönderttirebilir)
+  const kullanici = await suankiKullanici();
+  if (!kullanici || kullanici.rol !== "ADMIN") {
+    return new NextResponse("Yetkisiz", { status: 401 });
+  }
+
   const host = process.env.SMTP_HOST;
   const port = process.env.SMTP_PORT;
   const user = process.env.SMTP_USER;

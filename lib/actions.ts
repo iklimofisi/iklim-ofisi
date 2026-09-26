@@ -4,12 +4,22 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { suankiKullanici } from "@/lib/oturum";
+import { girisZorunlu } from "@/lib/oturum";
+import { islemKaydet } from "@/lib/islem-kaydi";
 import { paraBirimiDogrula, type ParaBirimi } from "@/lib/para";
 import { epostaGonder } from "@/lib/eposta";
 import { getSirketAyarlari } from "@/lib/sirket";
 import { teklifPdfOlustur } from "@/lib/pdf-olustur";
 import { randomUUID } from "crypto";
+
+// --- Yetki kontrolü + işlem kaydı ---
+// Her sunucu işleminin ilk satırında çağrılır: giriş yapılmamışsa işlem yapılmaz
+// (giriş sayfasına yönlendirir), yapılmışsa kim, ne zaman, hangi işlemi yaptı kaydedilir.
+async function yetki(islem: string, girdi?: FormData | Record<string, unknown>) {
+  const kullanici = await girisZorunlu();
+  await islemKaydet(kullanici, islem, girdi);
+  return kullanici;
+}
 
 // --- Yardımcı Sayı Formatlayıcı (Türkçe Virgülü Düzeltir) ---
 function parseSayi(val: unknown): number {
@@ -22,6 +32,7 @@ function parseSayi(val: unknown): number {
 // --- Müşteriler ---
 
 export async function musteriEkle(formData: FormData) {
+  await yetki("musteriEkle", formData);
   const ad = String(formData.get("ad") ?? "").trim();
   const yetkiliAdi = String(formData.get("yetkiliAdi") ?? "").trim();
   const yetkiliTelefon = String(formData.get("yetkiliTelefon") ?? "").trim();
@@ -53,6 +64,7 @@ export async function musteriEkle(formData: FormData) {
 }
 
 export async function musteriGuncelle(formData: FormData) {
+  await yetki("musteriGuncelle", formData);
   const musteriId = String(formData.get("musteriId") ?? "");
   const ad = String(formData.get("ad") ?? "").trim();
   const yetkiliAdi = String(formData.get("yetkiliAdi") ?? "").trim();
@@ -88,6 +100,7 @@ export async function musteriGuncelle(formData: FormData) {
 // --- Müşteri Yetkilileri (birden fazla) ---
 
 export async function musteriYetkiliEkle(formData: FormData) {
+  await yetki("musteriYetkiliEkle", formData);
   const musteriId = String(formData.get("musteriId") ?? "");
   const ad = String(formData.get("ad") ?? "").trim();
   const unvan = String(formData.get("unvan") ?? "").trim();
@@ -103,6 +116,7 @@ export async function musteriYetkiliEkle(formData: FormData) {
 }
 
 export async function musteriYetkiliGuncelle(formData: FormData) {
+  await yetki("musteriYetkiliGuncelle", formData);
   const id = String(formData.get("yetkiliId") ?? "");
   const ad = String(formData.get("ad") ?? "").trim();
   const unvan = String(formData.get("unvan") ?? "").trim();
@@ -121,6 +135,7 @@ export async function musteriYetkiliGuncelle(formData: FormData) {
 // Yetkili silinirse ona bağlı tekliflerde yetkili alanı boşalır (teklif silinmez),
 // teklif otomatik olarak müşterinin ana yetkilisine döner.
 export async function musteriYetkiliSil(id: string) {
+  await yetki("musteriYetkiliSil", { id });
   if (!id) return;
   const y = await prisma.musteriYetkili.delete({ where: { id } });
   revalidatePath(`/panel/musteriler/${y.musteriId}`);
@@ -172,7 +187,7 @@ function kalemVerisi(k: ReturnType<typeof kalemleriOku>[number]) {
 
 // TEKLİF EKLEME (İLK TARİH KAYDEDİLİR) — Kopyalama ekranı da bu fonksiyonu kullanır
 export async function teklifEkle(formData: FormData) {
-  const kullanici = await suankiKullanici();
+  const kullanici = await yetki("teklifEkle", formData);
   const baslik = String(formData.get("baslik") ?? "").trim();
   const musteriId = String(formData.get("musteriId") ?? "");
   const projeId = String(formData.get("projeId") ?? "");
@@ -231,6 +246,7 @@ export async function teklifEkle(formData: FormData) {
 // Artık bu kayıtlar silinmez; güncellenen kaleme taşınır. Sevkiyat/teslim kaydı olan bir
 // kalem formdan kaldırılmışsa güncelleme yapılmaz ve kullanıcı uyarılır.
 export async function teklifGuncelle(formData: FormData) {
+  await yetki("teklifGuncelle", formData);
   const teklifId = String(formData.get("teklifId") ?? "");
   const baslik = String(formData.get("baslik") ?? "").trim();
   const musteriId = String(formData.get("musteriId") ?? "");
@@ -336,6 +352,7 @@ export async function teklifGuncelle(formData: FormData) {
 }
 
 export async function teklifDurumGuncelle(teklifId: string, durum: "BEKLEMEDE" | "ONAYLANDI" | "REDDEDILDI") {
+  await yetki("teklifDurumGuncelle", { teklifId, durum });
   await prisma.teklif.update({ where: { id: teklifId }, data: { durum } });
   revalidatePath("/panel/teklifler");
   revalidatePath(`/panel/teklifler/${teklifId}`);
@@ -343,6 +360,7 @@ export async function teklifDurumGuncelle(teklifId: string, durum: "BEKLEMEDE" |
 }
 
 export async function teklifSil(teklifId: string) {
+  await yetki("teklifSil", { teklifId });
   const siparis = await prisma.siparis.findUnique({
     where: { teklifId },
     select: { id: true },
@@ -368,6 +386,7 @@ export async function teklifSil(teklifId: string) {
 // --- Cari Hesap (Müşteri) ---
 
 export async function cariHareketEkle(formData: FormData) {
+  await yetki("cariHareketEkle", formData);
   const musteriId = String(formData.get("musteriId") ?? "");
   const aciklama = String(formData.get("aciklama") ?? "").trim();
   const tur = String(formData.get("tur") ?? "BORC") as "BORC" | "ALACAK";
@@ -414,6 +433,7 @@ export async function cariHareketEkle(formData: FormData) {
 }
 
 export async function cariHareketSil(hareketId: string) {
+  await yetki("cariHareketSil", { hareketId });
   await prisma.cariHareket.delete({ where: { id: hareketId } });
   revalidatePath("/panel/cari");
   revalidatePath("/panel");
@@ -422,6 +442,7 @@ export async function cariHareketSil(hareketId: string) {
 // --- Satınalma: Tedarikçi Cari ---
 
 export async function tedarikciHareketEkle(formData: FormData) {
+  await yetki("tedarikciHareketEkle", formData);
   const tedarikciId = String(formData.get("tedarikciId") ?? "");
   const aciklama = String(formData.get("aciklama") ?? "").trim();
   const tur = String(formData.get("tur") ?? "BORC") as "BORC" | "ODEME";
@@ -463,6 +484,7 @@ export async function tedarikciHareketEkle(formData: FormData) {
 }
 
 export async function tedarikciHareketSil(id: string) {
+  await yetki("tedarikciHareketSil", { id });
   await prisma.tedarikciHareket.delete({ where: { id } });
   revalidatePath("/panel/satinalma/cari");
 }
@@ -471,6 +493,7 @@ export async function tedarikciHareketSil(id: string) {
 
 // AKILLI STOK GİRİŞİ VEYA KATALOG KAYDI
 export async function stokGirisiEkle(formData: FormData) {
+  await yetki("stokGirisiEkle", formData);
   const urunId = String(formData.get("urunId") ?? "").trim();
   const yeniUrunKodu = String(formData.get("yeniUrunKodu") ?? "").trim();
   const yeniUrunAdi = String(formData.get("yeniUrunAdi") ?? "").trim();
@@ -540,6 +563,7 @@ export async function stokGirisiEkle(formData: FormData) {
 
 // TABLO İÇİ HIZLI STOK VE MALİYET GÜNCELLEME
 export async function urunStokVeMaliyetGuncelle(formData: FormData) {
+  await yetki("urunStokVeMaliyetGuncelle", formData);
   const urunId = String(formData.get("urunId") ?? "");
   const stokMiktari = parseSayi(formData.get("stokMiktari"));
   const maliyetFiyati = parseSayi(formData.get("maliyetFiyati"));
@@ -565,7 +589,7 @@ export async function urunStokVeMaliyetGuncelle(formData: FormData) {
 // --- Şirket Ayarları Güncelleme ---
 
 export async function sirketAyarlariGuncelle(formData: FormData) {
-  const giren = await suankiKullanici();
+  const giren = await yetki("sirketAyarlariGuncelle", formData);
   if (!giren || giren.rol !== "ADMIN") return;
 
   const unvan = String(formData.get("unvan") ?? "").trim();
@@ -579,39 +603,63 @@ export async function sirketAyarlariGuncelle(formData: FormData) {
 
   if (!unvan) return;
 
-  await prisma.sirketAyarlari.upsert({
-    where: { id: "default" },
-    create: {
-      id: "default",
-      unvan,
-      slogan: slogan || null,
-      adres: adres || null,
-      telefon: telefon || null,
-      email: email || null,
-      web: web || null,
-      vergiDairesi: vergiDairesi || null,
-      vergiNo: vergiNo || null,
-    },
-    update: {
-      unvan,
-      slogan: slogan || null,
-      adres: adres || null,
-      telefon: telefon || null,
-      email: email || null,
-      web: web || null,
-      vergiDairesi: vergiDairesi || null,
-      vergiNo: vergiNo || null,
-    },
-  });
+  const veri: {
+    unvan: string;
+    slogan: string | null;
+    adres: string | null;
+    telefon: string | null;
+    email: string | null;
+    web: string | null;
+    vergiDairesi: string | null;
+    vergiNo: string | null;
+    whatsapp?: string | null;
+  } = {
+    unvan,
+    slogan: slogan || null,
+    adres: adres || null,
+    telefon: telefon || null,
+    email: email || null,
+    web: web || null,
+    vergiDairesi: vergiDairesi || null,
+    vergiNo: vergiNo || null,
+  };
+  // WhatsApp alanı yalnızca formda varsa güncellenir (alan olmayan formlar numarayı silmez)
+  if (formData.has("whatsapp")) {
+    veri.whatsapp = String(formData.get("whatsapp") ?? "").trim() || null;
+  }
+
+  try {
+    await prisma.sirketAyarlari.upsert({
+      where: { id: "default" },
+      create: { id: "default", ...veri },
+      update: veri,
+      select: { id: true },
+    });
+  } catch (hata) {
+    // "whatsapp" sütunu veritabanına henüz eklenmediyse (P2022) diğer bilgileri yine de kaydet
+    const kod = (hata as { code?: string } | null)?.code;
+    if (!("whatsapp" in veri) || kod !== "P2022") throw hata;
+    const eskiVeri = { ...veri };
+    delete eskiVeri.whatsapp;
+    await prisma.sirketAyarlari.upsert({
+      where: { id: "default" },
+      create: { id: "default", ...eskiVeri },
+      update: eskiVeri,
+      select: { id: true },
+    });
+  }
 
   revalidatePath("/panel/ayarlar/sirket");
+  revalidatePath("/panel/ayarlar");
   revalidatePath("/panel/teklifler");
   revalidatePath("/panel");
+  revalidatePath("/", "layout");
 }
 
 // --- Ayarlar (Teklif Şablonları) ---
 
 export async function sablonEkle(formData: FormData) {
+  await yetki("sablonEkle", formData);
   const baslik = String(formData.get("baslik") ?? "").trim();
   const icerik = String(formData.get("icerik") ?? "").trim();
   const sira = parseSayi(formData.get("sira"));
@@ -622,6 +670,7 @@ export async function sablonEkle(formData: FormData) {
 }
 
 export async function sablonGuncelle(formData: FormData) {
+  await yetki("sablonGuncelle", formData);
   const id = String(formData.get("id") ?? "");
   const baslik = String(formData.get("baslik") ?? "").trim();
   const icerik = String(formData.get("icerik") ?? "").trim();
@@ -633,6 +682,7 @@ export async function sablonGuncelle(formData: FormData) {
 }
 
 export async function sablonSil(id: string) {
+  await yetki("sablonSil", { id });
   await prisma.teklifSablon.delete({ where: { id } });
   revalidatePath("/panel/ayarlar");
 }
@@ -640,7 +690,7 @@ export async function sablonSil(id: string) {
 // --- Kullanıcılar ---
 
 export async function kullaniciEkle(formData: FormData) {
-  const giren = await suankiKullanici();
+  const giren = await yetki("kullaniciEkle", formData);
   if (!giren || giren.rol !== "ADMIN") return;
 
   const ad = String(formData.get("ad") ?? "").trim();
@@ -658,7 +708,7 @@ export async function kullaniciEkle(formData: FormData) {
 }
 
 export async function kullaniciSil(id: string) {
-  const giren = await suankiKullanici();
+  const giren = await yetki("kullaniciSil", { id });
   if (!giren || giren.rol !== "ADMIN") return;
   if (giren.id === id) return;
 
@@ -667,7 +717,7 @@ export async function kullaniciSil(id: string) {
 }
 
 export async function kullaniciSifreSifirla(formData: FormData) {
-  const giren = await suankiKullanici();
+  const giren = await yetki("kullaniciSifreSifirla", formData);
   if (!giren || giren.rol !== "ADMIN") return;
 
   const kullaniciId = String(formData.get("kullaniciId") ?? "");
@@ -684,12 +734,12 @@ export async function kullaniciSifreSifirla(formData: FormData) {
 // --- Siparişler ---
 
 export async function siparisTalebiOlustur(formData: FormData) {
+  const kullanici = await yetki("siparisTalebiOlustur", formData);
   const teklifId = String(formData.get("teklifId") ?? "");
   const kur = parseSayi(formData.get("kur")) || 1;
   const ekNot = String(formData.get("ekNot") ?? "").trim();
   const sevkAdresi = String(formData.get("sevkAdresi") ?? "").trim();
   const dosya = formData.get("sozlesmeDosyasi") as File | null;
-  const kullanici = await suankiKullanici();
   if (!teklifId) return;
 
   const teklif = await prisma.teklif.findUnique({ where: { id: teklifId } });
@@ -724,7 +774,7 @@ export async function siparisTalebiOlustur(formData: FormData) {
 }
 
 export async function siparisOnayla(siparisId: string) {
-  const giren = await suankiKullanici();
+  const giren = await yetki("siparisOnayla", { siparisId });
   if (!giren || giren.rol !== "ADMIN") return;
 
   const siparis = await prisma.siparis.findUnique({
@@ -760,7 +810,7 @@ export async function siparisOnayla(siparisId: string) {
 }
 
 export async function siparisReddet(formData: FormData) {
-  const giren = await suankiKullanici();
+  const giren = await yetki("siparisReddet", formData);
   if (!giren || giren.rol !== "ADMIN") return;
 
   const siparisId = String(formData.get("siparisId") ?? "");
@@ -779,18 +829,21 @@ export async function siparisDurumGuncelle(
   siparisId: string,
   durum: "HAZIRLANIYOR" | "IPTAL"
 ) {
+  await yetki("siparisDurumGuncelle", { siparisId, durum });
   await prisma.siparis.update({ where: { id: siparisId }, data: { durum } });
   revalidatePath("/panel/siparisler");
   revalidatePath(`/panel/siparisler/${siparisId}`);
 }
 
 export async function siparisSil(siparisId: string) {
+  await yetki("siparisSil", { siparisId });
   await prisma.siparis.delete({ where: { id: siparisId } });
   revalidatePath("/panel/siparisler");
   revalidatePath("/panel");
 }
 
 export async function siparisFaturaGuncelle(formData: FormData) {
+  await yetki("siparisFaturaGuncelle", formData);
   const siparisId = String(formData.get("siparisId") ?? "");
   const faturaNo = String(formData.get("faturaNo") ?? "").trim();
   const faturaTarihiStr = String(formData.get("faturaTarihi") ?? "");
@@ -809,6 +862,7 @@ export async function siparisFaturaGuncelle(formData: FormData) {
 }
 
 export async function sevkiyatEkle(formData: FormData) {
+  await yetki("sevkiyatEkle", formData);
   const siparisId = String(formData.get("siparisId") ?? "");
   const teklifKalemId = String(formData.get("teklifKalemId") ?? "");
   const adet = parseSayi(formData.get("adet"));
@@ -839,12 +893,14 @@ export async function sevkiyatEkle(formData: FormData) {
 }
 
 export async function sevkiyatSil(id: string) {
+  await yetki("sevkiyatSil", { id });
   const kayit = await prisma.sevkiyatKaydi.delete({ where: { id } });
   revalidatePath(`/panel/siparisler/${kayit.siparisId}`);
   revalidatePath("/panel/siparisler");
 }
 
 export async function teslimKaydiEkle(formData: FormData) {
+  await yetki("teslimKaydiEkle", formData);
   const siparisId = String(formData.get("siparisId") ?? "");
   const teklifKalemId = String(formData.get("teklifKalemId") ?? "");
   const adet = parseSayi(formData.get("adet"));
@@ -882,6 +938,7 @@ export async function teslimKaydiEkle(formData: FormData) {
 }
 
 export async function teslimKaydiSil(id: string) {
+  await yetki("teslimKaydiSil", { id });
   const kayit = await prisma.teslimKaydi.delete({ where: { id } });
   revalidatePath(`/panel/siparisler/${kayit.siparisId}`);
   revalidatePath("/panel/siparisler");
@@ -890,6 +947,7 @@ export async function teslimKaydiSil(id: string) {
 // --- Satınalma: Tedarikçiler ---
 
 export async function tedarikciEkle(formData: FormData) {
+  await yetki("tedarikciEkle", formData);
   const ad = String(formData.get("ad") ?? "").trim();
   const telefon = String(formData.get("telefon") ?? "").trim();
   const vergiNo = String(formData.get("vergiNo") ?? "").trim();
@@ -906,6 +964,7 @@ export async function tedarikciEkle(formData: FormData) {
 
 // TEDARİKÇİ TEKLİFİ EKLEME (TEMİZ HATASIZ VERSİYON)
 export async function satinalmaTeklifiEkle(formData: FormData) {
+  await yetki("satinalmaTeklifiEkle", formData);
   const tedarikciId = String(formData.get("tedarikciId") ?? "");
   const baslik = String(formData.get("baslik") ?? "").trim();
   const paraBirimi = String(formData.get("paraBirimi") ?? "TRY");
@@ -964,12 +1023,13 @@ export async function satinalmaTeklifiEkle(formData: FormData) {
 }
 
 export async function satinalmaTeklifiSil(id: string) {
+  await yetki("satinalmaTeklifiSil", { id });
   await prisma.satinalmaTeklifi.delete({ where: { id } });
   revalidatePath("/panel/satinalma/teklifler");
 }
 
 export async function satinalmaTeklifiniDonustur(formData: FormData) {
-  const kullanici = await suankiKullanici();
+  const kullanici = await yetki("satinalmaTeklifiniDonustur", formData);
   const satinalmaTeklifiId = String(formData.get("satinalmaTeklifiId") ?? "");
   const musteriId = String(formData.get("musteriId") ?? "");
   const baslik = String(formData.get("baslik") ?? "").trim();
@@ -1008,7 +1068,7 @@ export async function satinalmaTeklifiniDonustur(formData: FormData) {
 // --- Keşif ---
 
 export async function kesifEkle(formData: FormData) {
-  const kullanici = await suankiKullanici();
+  const kullanici = await yetki("kesifEkle", formData);
   const musteriAdi = String(formData.get("musteriAdi") ?? "").trim();
   const telefon = String(formData.get("telefon") ?? "").trim();
   const adres = String(formData.get("adres") ?? "").trim();
@@ -1064,12 +1124,13 @@ export async function kesifEkle(formData: FormData) {
 }
 
 export async function kesifSil(id: string) {
+  await yetki("kesifSil", { id });
   await prisma.kesifFormu.delete({ where: { id } });
   revalidatePath("/panel/kesif");
 }
 
 export async function kesifiTeklifeDonustur(formData: FormData) {
-  const kullanici = await suankiKullanici();
+  const kullanici = await yetki("kesifiTeklifeDonustur", formData);
   const kesifId = String(formData.get("kesifId") ?? "");
   const musteriId = String(formData.get("musteriId") ?? "");
   const baslik = String(formData.get("baslik") ?? "").trim();
@@ -1100,11 +1161,13 @@ export async function kesifiTeklifeDonustur(formData: FormData) {
 // --- Web Talepleri ---
 
 export async function webTalebiOkunduIsaretle(id: string) {
+  await yetki("webTalebiOkunduIsaretle", { id });
   await prisma.webTalebi.update({ where: { id }, data: { okundu: true } });
   revalidatePath("/panel/talepler");
 }
 
 export async function webTalebiSil(id: string) {
+  await yetki("webTalebiSil", { id });
   await prisma.webTalebi.delete({ where: { id } });
   revalidatePath("/panel/talepler");
 }
@@ -1112,6 +1175,7 @@ export async function webTalebiSil(id: string) {
 // --- Markalar ---
 
 export async function markaEkle(formData: FormData) {
+  await yetki("markaEkle", formData);
   const ad = String(formData.get("ad") ?? "").trim();
   const dosya = formData.get("logo") as File | null;
   if (!ad) return;
@@ -1130,6 +1194,7 @@ export async function markaEkle(formData: FormData) {
 }
 
 export async function markaSil(id: string) {
+  await yetki("markaSil", { id });
   await prisma.marka.delete({ where: { id } });
   revalidatePath("/panel/ayarlar/markalar");
 }
@@ -1137,6 +1202,7 @@ export async function markaSil(id: string) {
 // --- Ürün Kataloğu ---
 
 export async function urunEkle(formData: FormData) {
+  await yetki("urunEkle", formData);
   const kod = String(formData.get("kod") ?? "").trim();
   const ad = String(formData.get("ad") ?? "").trim();
   const markaId = String(formData.get("markaId") ?? "");
@@ -1161,11 +1227,15 @@ export async function urunEkle(formData: FormData) {
 }
 
 export async function urunSil(id: string) {
+  await yetki("urunSil", { id });
   await prisma.urun.delete({ where: { id } });
   revalidatePath("/panel/ayarlar/urunler");
 }
 
 export async function urunlerTumunuSil() {
+  const giren = await yetki("urunlerTumunuSil");
+  // Tüm ürün kataloğunu silen toplu işlem: yalnızca yönetici yapabilir
+  if (giren.rol !== "ADMIN") return;
   await prisma.urun.deleteMany({});
   revalidatePath("/panel/ayarlar/urunler");
 }
@@ -1175,6 +1245,7 @@ type UrunSatiriSonuc =
   | { basarili: false; hata: string };
 
 export async function urunlerExcelIceAktar(formData: FormData): Promise<UrunSatiriSonuc> {
+  await yetki("urunlerExcelIceAktar", formData);
   const dosya = formData.get("dosya") as File | null;
   if (!dosya || dosya.size === 0) {
     return { basarili: false, hata: "Önce bir Excel/CSV dosyası seç." };
@@ -1288,7 +1359,7 @@ export async function urunlerExcelIceAktar(formData: FormData): Promise<UrunSati
 
 // PROJE EKLEME (ÖNBELLEK TEMİZLEMELİ)
 export async function projeEkle(formData: FormData) {
-  const kullanici = await suankiKullanici();
+  const kullanici = await yetki("projeEkle", formData);
   const ad = String(formData.get("ad") ?? "").trim();
   const konum = String(formData.get("konum") ?? "").trim();
   const musteriId = String(formData.get("musteriId") ?? "");
@@ -1323,6 +1394,7 @@ export async function projeEkle(formData: FormData) {
 
 // PROJE GÜNCELLEME
 export async function projeGuncelle(formData: FormData) {
+  await yetki("projeGuncelle", formData);
   const projeId = String(formData.get("projeId") ?? "");
   const ad = String(formData.get("ad") ?? "").trim();
   const konum = String(formData.get("konum") ?? "").trim();
@@ -1358,6 +1430,7 @@ export async function projeGuncelle(formData: FormData) {
 
 // PROJE SİLME
 export async function projeSil(id: string) {
+  await yetki("projeSil", { id });
   await prisma.proje.delete({ where: { id } });
   revalidatePath("/panel/proje-takip"); // PROJE TAKİP EKRANI CANLI GÜNCELLENİR
   revalidatePath("/panel/projeler");
@@ -1366,7 +1439,7 @@ export async function projeSil(id: string) {
 // --- Ziyaret Modülü ---
 
 export async function ziyaretEkle(formData: FormData) {
-  const kullanici = await suankiKullanici();
+  const kullanici = await yetki("ziyaretEkle", formData);
   let musteriId = String(formData.get("musteriId") ?? "");
   const projeId = String(formData.get("projeId") ?? "");
   const tarihStr = String(formData.get("tarih") ?? "");
@@ -1409,12 +1482,14 @@ export async function ziyaretEkle(formData: FormData) {
 }
 
 export async function ziyaretHatirlatmaTamamlandi(id: string) {
+  await yetki("ziyaretHatirlatmaTamamlandi", { id });
   await prisma.ziyaret.update({ where: { id }, data: { hatirlatmaTamam: true } });
   revalidatePath("/panel/ziyaretler");
   revalidatePath("/panel");
 }
 
 export async function ziyaretSil(id: string) {
+  await yetki("ziyaretSil", { id });
   const ziyaret = await prisma.ziyaret.delete({ where: { id } });
   if (ziyaret.musteriId) revalidatePath(`/panel/musteriler/${ziyaret.musteriId}`);
   if (ziyaret.projeId) revalidatePath(`/panel/projeler/${ziyaret.projeId}`);
@@ -1424,7 +1499,7 @@ export async function ziyaretSil(id: string) {
 
 // --- PROFİL VE ŞİFRE GÜNCELLEME ---
 export async function profilGuncelle(formData: FormData) {
-  const giren = await suankiKullanici();
+  const giren = await yetki("profilGuncelle", formData);
   if (!giren) return;
 
   const ad = String(formData.get("ad") ?? "").trim();
@@ -1462,7 +1537,7 @@ export async function profilGuncelle(formData: FormData) {
 
 // SİPARİŞE DÖNÜŞTÜR BUTONU İÇİN EKSİK OLAN FONKSİYON EKLENDİ
 export async function siparisOlustur(teklifId: string) {
-  const kullanici = await suankiKullanici();
+  const kullanici = await yetki("siparisOlustur", { teklifId });
   if (!teklifId) return;
 
   const teklif = await prisma.teklif.findUnique({ where: { id: teklifId } });
@@ -1491,7 +1566,7 @@ export async function siparisOlustur(teklifId: string) {
 
 // MÜŞTERİ SİLME FONKSİYONU
 export async function musteriSil(musteriId: string) {
-  const giren = await suankiKullanici();
+  const giren = await yetki("musteriSil", { musteriId });
   if (!giren || giren.rol !== "ADMIN") return;
 
   if (!musteriId) return;
@@ -1509,7 +1584,7 @@ export async function musteriSil(musteriId: string) {
 
 // MÜŞTERİYE TEKLİF E-POSTASI GÖNDERME
 export async function teklifMusteriyeEpostaGonder(formData: FormData) {
-  const giren = await suankiKullanici();
+  const giren = await yetki("teklifMusteriyeEpostaGonder", formData);
   if (!giren) return;
 
   const teklifId = String(formData.get("teklifId") ?? "");
@@ -1586,6 +1661,7 @@ export async function teklifMusteriyeEpostaGonder(formData: FormData) {
 
 // 1. TEK TEKLİF İÇİN ANLIK TAKİP NOTU GÜNCELLEME
 export async function teklifTakipNotuGuncelle(formData: FormData) {
+  await yetki("teklifTakipNotuGuncelle", formData);
   const teklifId = String(formData.get("teklifId") ?? "");
   const takipNotu = String(formData.get("takipNotu") ?? "").trim();
 
@@ -1602,6 +1678,7 @@ export async function teklifTakipNotuGuncelle(formData: FormData) {
 
 // 2. EXCEL DOSYASINI OKUYUP TOPLU PROJE NOTU VE DURUMU GÜNCELLEME
 export async function tekliflerExcelImport(formData: FormData) {
+  await yetki("tekliflerExcelImport", formData);
   const dosya = formData.get("dosya") as File | null;
   if (!dosya || dosya.size === 0) return { basarili: false, hata: "Önce bir Excel dosyası seçin." };
 
@@ -1659,6 +1736,7 @@ export async function tekliflerExcelImport(formData: FormData) {
 
 // PROJE VEYA TEKLİF TAKİP NOTU GÜNCELLEME (CRM PIPELINE)
 export async function projeTakipNotuGuncelle(formData: FormData) {
+  await yetki("projeTakipNotuGuncelle", formData);
   const id = String(formData.get("id") ?? "");
   const tip = String(formData.get("tip") ?? "TEKLIF"); // 'PROJE' veya 'TEKLIF'
   const takipNotu = String(formData.get("takipNotu") ?? "").trim();
@@ -1685,6 +1763,7 @@ export async function projeTakipNotuGuncelle(formData: FormData) {
 // TEKLİF EKRANINDAN HIZLI MÜŞTERİ EKLEME
 // TEKLİF VEYA PROJE EKRANINDAN ESNEK HIZLI MÜŞTERİ EKLEME
 export async function hizliMusteriEkle(formData: FormData) {
+  await yetki("hizliMusteriEkle", formData);
   const yonlendirPath = String(formData.get("yonlendirPath") ?? "/panel/teklifler").trim();
   const ad = String(formData.get("ad") ?? "").trim();
   const yetkiliAdi = String(formData.get("yetkiliAdi") ?? "").trim();
@@ -1725,6 +1804,7 @@ export async function hizliMusteriEkle(formData: FormData) {
 
 // MALİYET PDF VE EXCEL DOSYASI YÜKLEME
 export async function maliyetDosyaYukle(formData: FormData) {
+  await yetki("maliyetDosyaYukle", formData);
   const teklifId = String(formData.get("teklifId") ?? "").trim();
   const satinalmaTeklifiId = String(formData.get("satinalmaTeklifiId") ?? "").trim();
   const pdfDosya = formData.get("maliyetPdf") as File | null;
