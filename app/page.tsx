@@ -2,6 +2,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 import Image from "next/image";
+import UrunSlider from "@/components/UrunSlider";
 import { getSirketAyarlari } from "@/lib/sirket";
 
 export const dynamic = "force-dynamic";
@@ -16,42 +17,44 @@ export default async function Home() {
 
       <main>
         {/* 2. MANŞET / HERO ALANI */}
-        <section className="pt-12 pb-16 md:pt-20 md:pb-24 bg-white border-b border-slate-200/80 relative">
+        <section className="pt-8 pb-14 md:pt-12 md:pb-20 bg-white border-b border-slate-200/80 relative">
           <div className="max-w-7xl mx-auto px-6">
-            <div className="grid lg:grid-cols-12 gap-12 items-center">
+            <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-start">
               
-              {/* Sol Taraf: Tipografik Başlık ve Metinler */}
+              {/* Sol Taraf: Kayan Ürün Görselleri + Kısa Metin */}
               <div className="lg:col-span-7 space-y-6">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-teal-50 border border-teal-200 text-teal-800 text-xs font-semibold tracking-wide">
-                  <span className="w-2 h-2 rounded-full bg-teal-600 animate-pulse" />
-                  MÜHENDİSLİK & İKLİMLENDİRME ÇÖZÜMLERİ
-                </div>
+                <UrunSlider />
 
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-950 leading-[1.12]">
-                  Her lokasyon için doğru <br />
-                  <span className="text-teal-700 underline decoration-teal-300/80 decoration-4 underline-offset-8">
-                    iklimlendirme sistemini
-                  </span> sağlıyoruz.
-                </h1>
+                <div className="space-y-4">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-teal-50 border border-teal-200 text-teal-800 text-xs font-semibold tracking-wide">
+                    <span className="w-2 h-2 rounded-full bg-teal-600 animate-pulse" />
+                    MÜHENDİSLİK & İKLİMLENDİRME ÇÖZÜMLERİ
+                  </div>
 
-                <p className="text-base sm:text-lg text-slate-600 max-w-2xl leading-relaxed">
-                  {sirket.unvan}; konut, ofis, otel ve endüstriyel tesislerde klima, VRF merkezi soğutma, ısı pompası, havalandırma ve endüstriyel mutfak egzoz projelerini keşiften montaja anahtar teslim yürütür.
-                </p>
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-slate-950 leading-tight">
+                    Her lokasyon için doğru{" "}
+                    <span className="text-teal-700">iklimlendirme sistemini</span> sağlıyoruz.
+                  </h1>
 
-                {/* Butonlar */}
-                <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-                  <Link
-                    href="/iletisim"
-                    className="px-8 py-4 rounded-lg bg-teal-700 text-white font-semibold text-sm hover:bg-teal-800 shadow-sm transition-all text-center"
-                  >
-                    Ücretsiz Keşif & Teklif İsteyin →
-                  </Link>
-                  <Link
-                    href="/hizmetler"
-                    className="px-8 py-4 rounded-lg bg-slate-100 border border-slate-300 text-slate-700 font-semibold text-sm hover:bg-slate-200 transition-all text-center"
-                  >
-                    Hizmetlerimizi İnceleyin
-                  </Link>
+                  <p className="text-sm sm:text-base text-slate-600 max-w-2xl leading-relaxed">
+                    {sirket.unvan}; konut, ofis, otel ve endüstriyel tesislerde klima, VRF, ısı pompası, havalandırma ve mutfak egzoz projelerini keşiften montaja anahtar teslim yürütür.
+                  </p>
+
+                  {/* Butonlar */}
+                  <div className="pt-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <Link
+                      href="/iletisim"
+                      className="px-7 py-3.5 rounded-lg bg-teal-700 text-white font-semibold text-sm hover:bg-teal-800 shadow-sm transition-all text-center"
+                    >
+                      Ücretsiz Keşif & Teklif İsteyin →
+                    </Link>
+                    <Link
+                      href="/hizmetler"
+                      className="px-7 py-3.5 rounded-lg bg-slate-100 border border-slate-300 text-slate-700 font-semibold text-sm hover:bg-slate-200 transition-all text-center"
+                    >
+                      Hizmetlerimizi İnceleyin
+                    </Link>
+                  </div>
                 </div>
               </div>
 
