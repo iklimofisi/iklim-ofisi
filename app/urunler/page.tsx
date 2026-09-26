@@ -24,6 +24,7 @@ const urunKategorileri: {
   markalar: string;
   gorsel?: string;
   gorselAlt?: string;
+  gorselBaslik?: string; // Fotoğraf yoksa kart başlığındaki büyük yazı (boşsa marka adı)
 }[] = [
   {
     id: "bireysel-klima",
@@ -64,20 +65,23 @@ const urunKategorileri: {
     markalar: "Buderus",
   },
   {
-    id: "daygas-radyant",
+    id: "radyant-isitma",
     kategori: "ENDÜSTRİYEL ISITMA",
-    baslik: "Daygas Radyant & Sıcak Hava Sistemleri",
-    aciklama: "Fabrika, depo, cafe ve açık alanlar için yüksek tasarruflu Daygas borulu ve seramik radyant ısıtıcılar ile sıcak hava üreteçleri.",
+    baslik: "Radyant & Sıcak Hava Isıtma Sistemleri",
+    aciklama: "Fabrika, depo, cafe ve açık alanlar için yüksek tasarruflu borulu ve seramik radyant ısıtıcılar ile sıcak hava üreteçleri. Projenize en uygun markayı birlikte seçiyoruz.",
     urunler: ["Seramik Radyant Isıtıcılar", "Borulu Radyant Isıtma Sistemleri", "Sıcak Hava Üreteçleri"],
-    markalar: "Daygas",
+    markalar: "",
+    gorselBaslik: "Radyant & Sıcak Hava",
   },
   {
     id: "havalandirma",
     kategori: "TAZE HAVA & İGK",
     baslik: "Havalandırma & Isı Geri Kazanım Cihazları",
-    aciklama: "Kapalı ortamlara filtrelenmiş taze hava sağlarken egzoz havasındaki ısıyı geri kazanan yüksek verimli iklimlendirme santralleri.",
+    aciklama: "Kapalı ortamlara filtrelenmiş taze hava sağlarken egzoz havasındaki ısıyı geri kazanan yüksek verimli iklimlendirme santralleri. Projenize en uygun markayı birlikte seçiyoruz.",
     urunler: ["Isı Geri Kazanım (İGK) Santralleri", "Spiro Yuvarlak & Dikdörtgen Hava Kanalları", "Sığınak & Otopark Duman Egzoz Fanları"],
-    markalar: "Systemair, Ventas",
+    markalar: "",
+    gorsel: "/urunler/urun-havalandirma.jpg",
+    gorselAlt: "Isı geri kazanımlı havalandırma cihazının kesit görünümü",
   },
 ];
 
@@ -170,7 +174,7 @@ export default async function UrunlerPage() {
                 ) : (
                   <div className="w-full aspect-[3/2] bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950 flex flex-col items-center justify-center text-center px-6">
                     <span className="text-[11px] font-bold tracking-widest text-teal-300 uppercase">{kat.kategori}</span>
-                    <span className="text-2xl font-bold text-white mt-2">{kat.markalar}</span>
+                    <span className="text-2xl font-bold text-white mt-2">{kat.gorselBaslik || kat.markalar}</span>
                   </div>
                 )}
                 <div className="p-8 space-y-6 flex flex-col justify-between flex-1">
@@ -195,7 +199,11 @@ export default async function UrunlerPage() {
                 </div>
 
                 <div className="pt-4 border-t border-slate-100 space-y-3">
-                  <p className="text-[10px] font-bold text-slate-400 font-mono">Marka: {kat.markalar}</p>
+                  {kat.markalar ? (
+                    <p className="text-[10px] font-bold text-slate-400 font-mono">Marka: {kat.markalar}</p>
+                  ) : (
+                    <p className="text-[10px] font-bold text-slate-400 font-mono">Marka: Projeye uygun marka seçimi</p>
+                  )}
                   <Link
                     href="/iletisim"
                     className="block w-full py-2.5 bg-slate-900 hover:bg-teal-700 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm"

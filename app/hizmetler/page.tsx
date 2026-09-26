@@ -50,16 +50,17 @@ export default async function HizmetlerPage() {
               <div>
                 {/* CAD Sıhhi Tesisat Şeması */}
                 <div className="h-44 w-full bg-slate-950 p-4 flex items-center justify-center relative overflow-hidden">
-                  <span className="absolute top-3 right-3 text-[10px] font-bold text-teal-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
+                  <span className="absolute z-10 top-3 right-3 text-[10px] font-bold text-teal-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
                     Anahtar Teslim
                   </span>
-                  <svg className="w-full h-32 text-teal-400 opacity-90" viewBox="0 0 200 100" fill="none" stroke="currentColor">
-                    <path d="M20 50h70v-25h80M90 50v30h80" strokeWidth="4" className="text-teal-500" strokeLinecap="round" />
-                    <polygon points="50,42 60,50 50,58" fill="currentColor" className="text-cyan-400" />
-                    <polygon points="70,58 60,50 70,42" fill="currentColor" className="text-cyan-400" />
-                    <circle cx="120" cy="25" r="8" strokeWidth="2" className="text-emerald-400" fill="#0f172a" />
-                    <circle cx="120" cy="80" r="8" strokeWidth="2" className="text-emerald-400" fill="#0f172a" />
-                  </svg>
+                  <Image
+                    src="/hizmetler/hizmet-mekanik-tesisat.jpg"
+                    alt="Mekanik tesisat dairesinde borulama ve pompa grupları"
+                    fill
+                    sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-transparent to-transparent" />
                 </div>
 
                 <div className="p-6 space-y-4">
@@ -102,16 +103,17 @@ export default async function HizmetlerPage() {
               <div>
                 {/* CAD AHU Santral Şeması */}
                 <div className="h-44 w-full bg-slate-950 p-4 flex items-center justify-center relative overflow-hidden">
-                  <span className="absolute top-3 right-3 text-[10px] font-bold text-teal-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
+                  <span className="absolute z-10 top-3 right-3 text-[10px] font-bold text-teal-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
                     AHU & Taze Hava
                   </span>
-                  <svg className="w-full h-32 text-teal-400 opacity-90" viewBox="0 0 200 100" fill="none" stroke="currentColor">
-                    <rect x="15" y="20" width="170" height="60" rx="4" strokeWidth="2" className="text-slate-700" fill="#0f172a" />
-                    <line x1="45" y1="20" x2="45" y2="80" strokeWidth="2" strokeDasharray="3 3" className="text-teal-500" />
-                    <path d="M75 25v50M85 25v50M95 25v50" strokeWidth="3" className="text-cyan-400" />
-                    <circle cx="145" cy="50" r="18" strokeWidth="2" className="text-teal-400" />
-                    <path d="M145 32v36M127 50h36" strokeWidth="2" className="text-teal-400" />
-                  </svg>
+                  <Image
+                    src="/hizmetler/hizmet-havalandirma.jpg"
+                    alt="Isı geri kazanımlı havalandırma cihazının kesit görünümü"
+                    fill
+                    sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-transparent to-transparent" />
                 </div>
 
                 <div className="p-6 space-y-4">
@@ -154,17 +156,17 @@ export default async function HizmetlerPage() {
               <div>
                 {/* CAD VRF Devre Şeması */}
                 <div className="h-44 w-full bg-slate-950 p-4 flex items-center justify-center relative overflow-hidden">
-                  <span className="absolute top-3 right-3 text-[10px] font-bold text-teal-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
+                  <span className="absolute z-10 top-3 right-3 text-[10px] font-bold text-teal-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
                     VRF Uzmanlığı
                   </span>
-                  <svg className="w-full h-32 text-teal-400 opacity-90" viewBox="0 0 200 100" fill="none" stroke="currentColor">
-                    <rect x="15" y="20" width="45" height="60" rx="4" strokeWidth="2" className="text-teal-400" fill="#0f172a" />
-                    <path d="M60 35h60v-15h40M60 65h60v15h40" strokeWidth="2" className="text-cyan-400" />
-                    <circle cx="120" cy="35" r="4" fill="currentColor" className="text-teal-300" />
-                    <circle cx="120" cy="65" r="4" fill="currentColor" className="text-teal-300" />
-                    <rect x="160" y="10" width="30" height="18" rx="2" strokeWidth="2" className="text-slate-300" fill="#1e293b" />
-                    <rect x="160" y="70" width="30" height="18" rx="2" strokeWidth="2" className="text-slate-300" fill="#1e293b" />
-                  </svg>
+                  <Image
+                    src="/hizmetler/hizmet-vrf.jpg"
+                    alt="Bina çatısında VRF dış ünite uygulaması"
+                    fill
+                    sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-transparent to-transparent" />
                 </div>
 
                 <div className="p-6 space-y-4">
@@ -207,13 +209,17 @@ export default async function HizmetlerPage() {
               <div>
                 {/* CAD Isı Pompası Yerden Isıtma Şeması */}
                 <div className="h-44 w-full bg-slate-950 p-4 flex items-center justify-center relative overflow-hidden">
-                  <span className="absolute top-3 right-3 text-[10px] font-bold text-amber-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
+                  <span className="absolute z-10 top-3 right-3 text-[10px] font-bold text-amber-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
                     A+++ Tasarruf
                   </span>
-                  <svg className="w-full h-32 text-amber-400 opacity-90" viewBox="0 0 200 100" fill="none" stroke="currentColor">
-                    <rect x="15" y="25" width="40" height="50" rx="4" strokeWidth="2" className="text-amber-400" fill="#0f172a" />
-                    <path d="M65 35h110v10H75v10h100v10H75v10h100" strokeWidth="2.5" className="text-amber-500" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  <Image
+                    src="/hizmetler/hizmet-isi-pompasi.jpg"
+                    alt="Isı pompası dış üniteleri"
+                    fill
+                    sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-transparent to-transparent" />
                 </div>
 
                 <div className="p-6 space-y-4">
@@ -256,13 +262,17 @@ export default async function HizmetlerPage() {
               <div>
                 {/* CAD Split Klima Şeması */}
                 <div className="h-44 w-full bg-slate-950 p-4 flex items-center justify-center relative overflow-hidden">
-                  <span className="absolute top-3 right-3 text-[10px] font-bold text-teal-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
+                  <span className="absolute z-10 top-3 right-3 text-[10px] font-bold text-teal-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
                     Split & Kaset
                   </span>
-                  <svg className="w-full h-32 text-cyan-400 opacity-90" viewBox="0 0 200 100" fill="none" stroke="currentColor">
-                    <rect x="30" y="20" width="140" height="35" rx="4" strokeWidth="2" className="text-slate-200" fill="#0f172a" />
-                    <path d="M50 65c10 12 20 12 30 0M85 65c10 12 20 12 30 0M120 65c10 12 20 12 30 0" strokeWidth="2" className="text-cyan-400" strokeDasharray="2 2" />
-                  </svg>
+                  <Image
+                    src="/hizmetler/hizmet-klima.jpg"
+                    alt="Ofiste tavana monte kaset tipi klima"
+                    fill
+                    sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-transparent to-transparent" />
                 </div>
 
                 <div className="p-6 space-y-4">
@@ -305,15 +315,17 @@ export default async function HizmetlerPage() {
               <div>
                 {/* CAD Plan Çizim Şeması */}
                 <div className="h-44 w-full bg-slate-950 p-4 flex items-center justify-center relative overflow-hidden">
-                  <span className="absolute top-3 right-3 text-[10px] font-bold text-teal-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
+                  <span className="absolute z-10 top-3 right-3 text-[10px] font-bold text-teal-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
                     AutoCAD Proje
                   </span>
-                  <svg className="w-full h-32 text-teal-400 opacity-90" viewBox="0 0 200 100" fill="none" stroke="currentColor">
-                    <path d="M0 25h200M0 50h200M0 75h200M50 0v100M100 0v100M150 0v100" strokeWidth="0.5" className="text-slate-800" />
-                    <rect x="20" y="15" width="160" height="70" strokeWidth="2" className="text-teal-400" />
-                    <line x1="80" y1="15" x2="80" y2="85" strokeWidth="2" className="text-teal-400" />
-                    <line x1="80" y1="50" x2="180" y2="50" strokeWidth="2" className="text-teal-400" />
-                  </svg>
+                  <Image
+                    src="/hizmetler/hizmet-projelendirme.jpg"
+                    alt="Şantiyede tablet ile proje kontrolü yapan mühendis"
+                    fill
+                    sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-transparent to-transparent" />
                 </div>
 
                 <div className="p-6 space-y-4">
