@@ -54,6 +54,23 @@ export function ilkHazirlanmaTarihi(teklif: {
   return new Date(Math.min(...adaylar.map((d) => new Date(d).getTime())));
 }
 
+// MÜŞTERİYE giden belgede yazan teklif tarihi:
+// revize edilmişse son revizyon tarihi, edilmemişse ilk hazırlanma tarihi.
+export function musteriTeklifTarihi(teklif: {
+  ilkTarih: Date;
+  tarih: Date;
+  revizyonNo: number;
+  revizyonlar?: { tarih: Date }[];
+}): Date {
+  return teklif.revizyonNo > 1 ? new Date(teklif.tarih) : ilkHazirlanmaTarihi(teklif);
+}
+
+// Müşteri belgesindeki KDV + geçerlilik cümlesi (ekran, PDF aynı metin)
+export function kosulCumlesi(teklif: { kdvDahil: boolean; gecerlilikGunu: number }): string {
+  const kdv = teklif.kdvDahil ? "Birim fiyatlara KDV dahildir." : "Birim fiyatlara KDV dahil değildir.";
+  return teklif.gecerlilikGunu > 0 ? `${kdv} Bu teklif ${teklif.gecerlilikGunu} gün süreyle geçerlidir.` : kdv;
+}
+
 export function tarihYaz(d: Date) {
   return new Date(d).toISOString().slice(0, 10);
 }

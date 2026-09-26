@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import { LIBERATION_SANS_NORMAL, LIBERATION_SANS_KALIN } from "@/lib/pdf-fontlari";
-import { musteriToplami, ilkHazirlanmaTarihi } from "@/lib/teklif-hesap";
+import { musteriToplami, ilkHazirlanmaTarihi, musteriTeklifTarihi, kosulCumlesi } from "@/lib/teklif-hesap";
 
 // Türkçe karakterler (ş, ğ, ı, İ, ö, ü, ç) için PDF'e gömülen yazı tipi.
 // Önceden bu harfler s, g, i... olarak değiştiriliyordu; artık olduğu gibi basılıyor.
@@ -87,8 +87,8 @@ export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer
   doc.text("TEKLİF TARİHİ", 195, y, { align: "right" });
   doc.setFont(YAZI_TIPI, "normal");
   doc.setTextColor(15, 23, 42);
-  // Müşteriye yalnızca teklifin ilk hazırlandığı tarih gösterilir (revizyon tarihi gösterilmez)
-  doc.text(trTarih.format(ilkHazirlanmaTarihi(teklif)), 195, y + 5, { align: "right" });
+  // Revize edilmişse son revizyon tarihi, edilmemişse ilk hazırlanma tarihi
+  doc.text(trTarih.format(musteriTeklifTarihi(teklif)), 195, y + 5, { align: "right" });
 
   y += 20;
 
@@ -160,6 +160,12 @@ export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer
     y + 2,
     { align: "right" }
   );
+
+  // KDV + geçerlilik süresi (panelde seçilen gün sayısı)
+  doc.setFont(YAZI_TIPI, "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(100, 116, 139);
+  doc.text(kosulCumlesi(teklif), 15, y + 12, { maxWidth: 180 });
 
   const arrayBuffer = doc.output("arraybuffer");
   return Buffer.from(arrayBuffer);

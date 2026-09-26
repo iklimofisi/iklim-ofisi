@@ -7,7 +7,7 @@ import YazdirButon from "@/components/YazdirButon";
 import TeklifDurumSecici from "@/components/TeklifDurumSecici";
 import { getSirketAyarlari } from "@/lib/sirket";
 import TeklifEpostaGonderModal from "@/components/TeklifEpostaGonderModal"; // MODAL İMPORT EDİLDİ
-import { musteriToplami, ilkHazirlanmaTarihi, tarihYaz } from "@/lib/teklif-hesap";
+import { musteriToplami, ilkHazirlanmaTarihi, musteriTeklifTarihi, kosulCumlesi, tarihYaz } from "@/lib/teklif-hesap";
 
 export const dynamic = "force-dynamic";
 
@@ -59,8 +59,8 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
   const yetkiliAd = teklif.yetkili?.ad || teklif.musteri.yetkiliAdi;
   const yetkiliTelefon = teklif.yetkili ? teklif.yetkili.telefon : teklif.musteri.yetkiliTelefon;
 
-  const gecerlilikTarihi = new Date(teklif.tarih);
-  gecerlilikTarihi.setDate(gecerlilikTarihi.getDate() + teklif.gecerlilikGunu);
+  // Müşteriye giden tarih: revize varsa son revizyon tarihi, yoksa ilk hazırlanma tarihi
+  const belgeTarih = musteriTeklifTarihi(teklif);
 
   // Kalemleri Bölümlerine Göre Grupla
   const gruplanmisKalemler = teklif.kalemler.reduce((acc, k) => {
@@ -203,12 +203,10 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
           </div>
           
           <div className="sm:text-right space-y-1">
-            {/* Müşteriye yalnızca teklifin ilk hazırlandığı tarih gösterilir.
-                Revizyon bilgisi sadece bizim gördüğümüz üst şeritte (yazdırılmaz). */}
+            {/* Revize edilmişse son revizyon tarihi, edilmemişse ilk hazırlanma tarihi.
+                Revizyon numarası müşteriye yazılmaz (yalnızca üst şeritte, yazdırılmaz). */}
             <p className="text-xs text-metin/50 uppercase tracking-wider font-semibold">Teklif Tarihi</p>
-            <p className="text-metin font-mono">{belgeTarihi(ilkTarih)}</p>
-            <p className="text-xs text-metin/50 uppercase tracking-wider font-semibold pt-2">Geçerlilik Tarihi</p>
-            <p className="text-metin font-mono">{belgeTarihi(gecerlilikTarihi)}</p>
+            <p className="text-metin font-mono">{belgeTarihi(belgeTarih)}</p>
           </div>
         </div>
 
@@ -287,8 +285,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
         </div>
 
         <p className="text-xs text-metin/60 mb-10">
-          Birim Fiyatlara {teklif.kdvDahil ? "KDV dahildir." : "KDV dahil değildir."} Bu teklif,
-          geçerlilik tarihine kadar geçerlidir.
+          {kosulCumlesi(teklif)}
         </p>
 
         {teklif.sablonlar.length > 0 && (
