@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { projeGuncelle, projeSil } from "@/lib/actions";
 import SilButon from "@/components/SilButon";
-import ZiyaretEkleFormu from "@/components/ZiyaretEkleFormu";
 import ZiyaretListesi from "@/components/ZiyaretListesi";
+import { teklifToplamlari } from "@/lib/teklif-hesap";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +27,7 @@ export default async function ProjeDetay({ params }: { params: { id: string } })
       include: {
         musteri: true,
         teklifler: { include: { musteri: true, kalemler: true }, orderBy: { tarih: "desc" } },
-        ziyaretler: { orderBy: { tarih: "desc" } },
+        ziyaretler: { orderBy: { tarih: "desc" }, include: { musteri: { select: { id: true, ad: true } } } },
       },
     }),
     prisma.musteri.findMany({ orderBy: { ad: "asc" } }),
@@ -145,13 +145,16 @@ export default async function ProjeDetay({ params }: { params: { id: string } })
       <div className="mb-10">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-display font-medium text-metin">Teklifler ({proje.teklifler.length})</h2>
-          <Link href={`/panel/teklifler?proje=${encodeURIComponent(proje.ad)}`} className="text-xs text-soguk-dim hover:underline">
+          <Link
+            href={`/panel/teklifler?seciliProjeId=${proje.id}&seciliMusteriId=${proje.musteriId ?? ""}&proje=${encodeURIComponent(proje.ad)}`}
+            className="text-xs text-soguk-dim hover:underline"
+          >
             Yeni teklif oluştururken bu projeye bağla →
           </Link>
         </div>
         <div className="space-y-2">
           {proje.teklifler.map((t) => {
-            const toplam = t.kalemler.reduce((a, k) => a + k.adet * k.birimFiyat * (1 - k.iskontoYuzde / 100), 0);
+            const toplam = teklifToplamlari(t).araToplam; // KDV hariç net
             return (
               <Link key={t.id} href={`/panel/teklifler/${t.id}`} className="focus-ring block bg-yuzey border border-hat rounded-lg p-4 hover:border-soguk transition-colors">
                 <div className="flex items-center justify-between gap-3">
@@ -170,8 +173,15 @@ export default async function ProjeDetay({ params }: { params: { id: string } })
       </div>
 
       <div>
-        <h2 className="font-display font-medium text-metin mb-3">Ziyaretler</h2>
-        <ZiyaretEkleFormu projeId={proje.id} />
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-display font-medium text-metin">Ziyaretler ({proje.ziyaretler.length})</h2>
+          <Link
+            href={`/panel/ziyaretler?yeniProje=${proje.id}${proje.musteriId ? `&yeniMusteri=${proje.musteriId}` : ""}#ziyaret-ekle`}
+            className="focus-ring text-xs bg-soguk text-white px-3 py-1.5 rounded-md font-medium hover:bg-soguk-dim transition-colors"
+          >
+            + Ziyaret Ekle
+          </Link>
+        </div>
         <ZiyaretListesi ziyaretler={proje.ziyaretler} />
       </div>
     </div>

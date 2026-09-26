@@ -7,6 +7,7 @@ import YazdirButon from "@/components/YazdirButon";
 import TeklifDurumSecici from "@/components/TeklifDurumSecici";
 import { getSirketAyarlari } from "@/lib/sirket";
 import TeklifEpostaGonderModal from "@/components/TeklifEpostaGonderModal"; // MODAL İMPORT EDİLDİ
+import { teklifToplamlari, ilkHazirlanmaTarihi, tarihYaz } from "@/lib/teklif-hesap";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
       include: {
         musteri: true,
         proje: true,
+        yetkili: true,
         olusturanKullanici: true,
         kalemler: { include: { marka: true } },
         sablonlar: { orderBy: { sira: "asc" } },
@@ -41,24 +43,12 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
   if (!teklif) notFound();
 
   const pb = teklif.paraBirimi;
-  const girilenToplam = teklif.kalemler.reduce(
-    (a, k) => a + k.adet * k.birimFiyat * (1 - k.iskontoYuzde / 100),
-    0
-  );
+  const { araToplam, kdvTutari, genelToplam } = teklifToplamlari(teklif);
+  const ilkTarih = ilkHazirlanmaTarihi(teklif);
 
-  let araToplam: number;
-  let kdvTutari: number;
-  let genelToplam: number;
-
-  if (teklif.kdvDahil) {
-    genelToplam = girilenToplam;
-    araToplam = girilenToplam / (1 + teklif.kdvOrani / 100);
-    kdvTutari = genelToplam - araToplam;
-  } else {
-    araToplam = girilenToplam;
-    kdvTutari = araToplam * (teklif.kdvOrani / 100);
-    genelToplam = araToplam + kdvTutari;
-  }
+  // Teklifin muhatabı: seçilen yetkili, yoksa müşterinin ana yetkilisi
+  const yetkiliAd = teklif.yetkili?.ad || teklif.musteri.yetkiliAdi;
+  const yetkiliTelefon = teklif.yetkili ? teklif.yetkili.telefon : teklif.musteri.yetkiliTelefon;
 
   const gecerlilikTarihi = new Date(teklif.tarih);
   gecerlilikTarihi.setDate(gecerlilikTarihi.getDate() + teklif.gecerlilikGunu);
@@ -89,8 +79,8 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
           {/* ✉️ MÜŞTERİYE E-POSTA İLE TEKLİF GÖNDERME BUTONU */}
           <TeklifEpostaGonderModal
             teklifId={teklif.id}
-            aliciEmail={(teklif as any).yetkili?.email || teklif.musteri.yetkiliEmail || teklif.musteri.email || ""}
-            hitapAd={(teklif as any).yetkili?.ad || teklif.musteri.yetkiliAdi || teklif.musteri.ad}
+            aliciEmail={teklif.yetkili?.email || teklif.musteri.yetkiliEmail || teklif.musteri.email || ""}
+            hitapAd={teklif.yetkili?.ad || teklif.musteri.yetkiliAdi || teklif.musteri.ad}
             teklifNo={teklif.teklifNo}
             hazirlayanAd={hazirlayanAd}
             hazirlayanEmail={hazirlayanEmail}
@@ -102,13 +92,33 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
           >
             Düzenle
           </Link>
+          <Link
+            href={`/panel/teklifler/${teklif.id}/kopyala`}
+            className="focus-ring text-sm font-medium text-metin/70 border border-hat px-4 py-2 rounded-md hover:border-soguk hover:text-soguk-dim transition-colors"
+          >
+            Kopyala
+          </Link>
           <YazdirButon />
         </div>
       </div>
 
       <div className="flex items-center justify-between mb-4 print:hidden">
         <p className="text-xs text-metin/50">
-          Rev. {teklif.revizyonNo} · Hazırlayan: {hazirlayanAd}
+          Rev. {teklif.revizyonNo} · Hazırlayan: {hazirlayanAd} · İlk hazırlanma: {tarihYaz(ilkTarih)}
+          {teklif.revizyonNo > 1 && ` · Son revizyon: ${tarihYaz(teklif.tarih)}`}
+          {/* Kopya notu yalnızca panelde görünür (yazdırmada gizli, PDF/e-postada yok) */}
+          {teklif.kopyaKaynakTeklifNo && (
+            <>
+              {" · "}
+              {teklif.kopyaKaynakTeklifId ? (
+                <Link href={`/panel/teklifler/${teklif.kopyaKaynakTeklifId}`} className="text-soguk-dim hover:underline">
+                  TKL-{String(teklif.kopyaKaynakTeklifNo).padStart(4, "0")} teklifinin kopyası
+                </Link>
+              ) : (
+                <>TKL-{String(teklif.kopyaKaynakTeklifNo).padStart(4, "0")} teklifinin kopyası</>
+              )}
+            </>
+          )}
         </p>
         {teklif.durum === "ONAYLANDI" && !teklif.siparis && (
           <Link
@@ -145,7 +155,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
           <div className="text-right">
             <p className="font-display text-2xl font-bold text-metin">TEKLİF</p>
             <p className="text-sm font-mono font-bold text-soguk-dim mt-1">
-              {kurumsalTeklifKodu(teklif.teklifNo, teklif.tarih)}
+              {kurumsalTeklifKodu(teklif.teklifNo, ilkTarih)}
             </p>
           </div>
         </div>
@@ -170,10 +180,11 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
             <p className="text-xs text-metin/50 uppercase tracking-wider font-semibold">Müşteri / Firma</p>
             <p className="font-bold text-metin text-base">{teklif.musteri.ad}</p>
             
-            {teklif.musteri.yetkiliAdi && (
+            {yetkiliAd && (
               <p className="text-xs font-semibold text-soguk-dim pt-1">
-                👤 Yetkili: {teklif.musteri.yetkiliAdi}
-                {teklif.musteri.yetkiliTelefon && ` (${teklif.musteri.yetkiliTelefon})`}
+                👤 Yetkili: {yetkiliAd}
+                {teklif.yetkili?.unvan && ` · ${teklif.yetkili.unvan}`}
+                {yetkiliTelefon && ` (${yetkiliTelefon})`}
               </p>
             )}
             
@@ -183,8 +194,18 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
           </div>
           
           <div className="sm:text-right space-y-1">
-            <p className="text-xs text-metin/50 uppercase tracking-wider font-semibold">Teklif Tarihi</p>
-            <p className="text-metin font-mono">{teklif.tarih.toISOString().slice(0, 10)}</p>
+            <p className="text-xs text-metin/50 uppercase tracking-wider font-semibold">
+              {teklif.revizyonNo > 1 ? "İlk Hazırlanma Tarihi" : "Teklif Tarihi"}
+            </p>
+            <p className="text-metin font-mono">{tarihYaz(ilkTarih)}</p>
+            {teklif.revizyonNo > 1 && (
+              <>
+                <p className="text-xs text-metin/50 uppercase tracking-wider font-semibold pt-2">
+                  Revizyon Tarihi (Rev. {teklif.revizyonNo})
+                </p>
+                <p className="text-metin font-mono">{tarihYaz(teklif.tarih)}</p>
+              </>
+            )}
             <p className="text-xs text-metin/50 uppercase tracking-wider font-semibold pt-2">Geçerlilik Tarihi</p>
             <p className="text-metin font-mono">{gecerlilikTarihi.toISOString().slice(0, 10)}</p>
           </div>
@@ -305,8 +326,8 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
               Müşteri Onayı
             </p>
             <p className="font-bold text-metin text-base">{teklif.musteri.ad}</p>
-            {teklif.musteri.yetkiliAdi && (
-              <p className="text-xs text-metin/70 mt-0.5">Yetkili: {teklif.musteri.yetkiliAdi}</p>
+            {yetkiliAd && (
+              <p className="text-xs text-metin/70 mt-0.5">Yetkili: {yetkiliAd}</p>
             )}
             <div className="border-t border-hat mt-10 pt-2 text-metin/40 text-xs">İmza / Kaşe</div>
           </div>

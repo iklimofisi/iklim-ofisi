@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { tekliflerExcelImport } from "@/lib/actions";
 import TakipNotuEditor from "@/components/TakipNotuEditor";
 import Link from "next/link";
+import { teklifToplamlari } from "@/lib/teklif-hesap";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ export default async function ProjeTakipPage() {
           include: {
             kalemler: { include: { marka: true } },
             olusturanKullanici: true,
+            yetkili: true,
           },
         },
       },
@@ -28,6 +30,7 @@ export default async function ProjeTakipPage() {
       where: { projeId: null },
       include: {
         musteri: true,
+        yetkili: true,
         olusturanKullanici: true,
         kalemler: { include: { marka: true } },
       },
@@ -107,7 +110,7 @@ export default async function ProjeTakipPage() {
                 const varOlanTeklif = p.teklifler && p.teklifler.length > 0 ? p.teklifler[0] : null;
 
                 if (varOlanTeklif) {
-                  const toplam = varOlanTeklif.kalemler.reduce((a, k) => a + k.adet * k.birimFiyat * (1 - (k.iskontoYuzde || 0) / 100), 0);
+                  const toplam = teklifToplamlari(varOlanTeklif).araToplam;
                   const hazirlayan = varOlanTeklif.olusturanKullanici?.ad || varOlanTeklif.olusturanAdi || p.olusturanAdi || "—";
 
                   return (
@@ -122,8 +125,8 @@ export default async function ProjeTakipPage() {
                       </td>
                       <td className="py-2 px-3 border-r border-hat font-bold text-metin">{p.ad}</td>
                       <td className="py-2 px-3 border-r border-hat font-medium text-metin/80">{p.musteri?.ad || "—"}</td>
-                      <td className="py-2 px-3 border-r border-hat text-soguk-dim font-semibold">👤 {p.musteri?.yetkiliAdi || "—"}</td>
-                      <td className="py-2 px-3 border-r border-hat font-mono text-metin/70">{p.musteri?.yetkiliTelefon || p.musteri?.telefon || "—"}</td>
+                      <td className="py-2 px-3 border-r border-hat text-soguk-dim font-semibold">👤 {varOlanTeklif.yetkili?.ad || p.musteri?.yetkiliAdi || "—"}</td>
+                      <td className="py-2 px-3 border-r border-hat font-mono text-metin/70">{(varOlanTeklif.yetkili ? varOlanTeklif.yetkili.telefon : p.musteri?.yetkiliTelefon) || p.musteri?.telefon || "—"}</td>
                       <td className="py-2 px-3 border-r border-hat font-semibold text-metin/70">{hazirlayan}</td>
                       <td className="py-2 px-3 border-r border-hat text-center font-mono text-metin/60">{varOlanTeklif.tarih.toISOString().slice(0, 10)}</td>
                       <td className="py-2 px-3 border-r border-hat text-right font-mono font-bold text-metin">{paraFormat(toplam, varOlanTeklif.paraBirimi)}</td>
@@ -166,7 +169,7 @@ export default async function ProjeTakipPage() {
 
               {/* 2. BAĞIMSIZ TEKLİFLER */}
               {bagimsizTeklifler.map((t) => {
-                const toplam = t.kalemler.reduce((a, k) => a + k.adet * k.birimFiyat * (1 - (k.iskontoYuzde || 0) / 100), 0);
+                const toplam = teklifToplamlari(t).araToplam;
                 const hazirlayan = t.olusturanKullanici?.ad || t.olusturanAdi || "—";
 
                 return (
@@ -179,8 +182,8 @@ export default async function ProjeTakipPage() {
                     </td>
                     <td className="py-2 px-3 border-r border-hat font-semibold text-metin">{t.baslik || "(Başlıksız)"}</td>
                     <td className="py-2 px-3 border-r border-hat text-metin/80 font-medium">{t.musteri.ad}</td>
-                    <td className="py-2 px-3 border-r border-hat text-soguk-dim font-semibold">👤 {t.musteri?.yetkiliAdi || "—"}</td>
-                    <td className="py-2 px-3 border-r border-hat font-mono text-metin/70">{t.musteri?.yetkiliTelefon || t.musteri?.telefon || "—"}</td>
+                    <td className="py-2 px-3 border-r border-hat text-soguk-dim font-semibold">👤 {t.yetkili?.ad || t.musteri?.yetkiliAdi || "—"}</td>
+                    <td className="py-2 px-3 border-r border-hat font-mono text-metin/70">{(t.yetkili ? t.yetkili.telefon : t.musteri?.yetkiliTelefon) || t.musteri?.telefon || "—"}</td>
                     <td className="py-2 px-3 border-r border-hat text-metin/70 font-semibold">{hazirlayan}</td>
                     <td className="py-2 px-3 border-r border-hat text-center font-mono text-metin/60">{t.tarih.toISOString().slice(0, 10)}</td>
                     <td className="py-2 px-3 border-r border-hat text-right font-mono font-bold text-metin">{paraFormat(toplam, t.paraBirimi)}</td>

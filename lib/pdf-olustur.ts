@@ -45,7 +45,8 @@ export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer
 
   doc.setFontSize(9);
   doc.setTextColor(15, 118, 110);
-  const teklifKodu = `IKL-${new Date(teklif.tarih).getFullYear()}-${String(teklif.teklifNo).padStart(5, "0")}`;
+  // Teklif kodu ilk hazırlanma yılına göre sabit kalır (revizyonda değişmez)
+  const teklifKodu = `IKL-${new Date(teklif.ilkTarih ?? teklif.tarih).getFullYear()}-${String(teklif.teklifNo).padStart(5, "0")}`;
   doc.text(teklifKodu, 195, 27, { align: "right" });
 
   // Çizgi
@@ -63,7 +64,7 @@ export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer
   doc.setTextColor(15, 23, 42);
   doc.text(turkceTemizle(teklif.musteri.ad || ""), 15, y + 5);
 
-  const hitapAd = teklif.yetkiliAdi || teklif.musteri.yetkiliAdi;
+  const hitapAd = teklif.yetkili?.ad || teklif.yetkiliAdi || teklif.musteri.yetkiliAdi;
   if (hitapAd) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);

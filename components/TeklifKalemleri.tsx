@@ -5,6 +5,7 @@ import UrunArama from "@/components/UrunArama";
 
 export type Satir = {
   key: number | string;
+  id?: string; // Düzenlemede mevcut kalemin veritabanı ID'si (sevkiyat/teslim kayıtlarını korumak için)
   bolum?: string;
   aciklama?: string;
   adet?: string | number;
@@ -51,6 +52,7 @@ export default function TeklifKalemleri({
     if (baslangic && baslangic.length > 0) {
       return baslangic.map((s, idx) => ({
         key: s.key ?? idx,
+        id: s.id,
         bolum: s.bolum || "VRF Sistemleri",
         aciklama: s.aciklama ?? "",
         adet: String(s.adet ?? 1),
@@ -410,6 +412,7 @@ export default function TeklifKalemleri({
             return (
               <div key={satir.key} className="border border-hat rounded-md p-3 sm:border-0 sm:p-0 space-y-2 sm:space-y-0">
                 <input type="hidden" name="kalemBolum" value={satir.bolum} />
+                <input type="hidden" name="kalemId" value={satir.id ?? ""} />
 
                 {urunVar && (
                   <div className="mb-1">

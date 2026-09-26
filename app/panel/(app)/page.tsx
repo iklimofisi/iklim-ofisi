@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { teklifToplamlari, tarihYaz } from "@/lib/teklif-hesap";
 
 export const dynamic = "force-dynamic";
 
@@ -154,7 +155,8 @@ export default async function PanelOzet() {
           )}
           <div className="space-y-3">
             {sonTeklifler.map((t) => {
-              const toplam = t.kalemler.reduce((a, k) => a + k.adet * k.birimFiyat, 0);
+              // İskonto dahil, KDV hariç net tutar (Teklifler listesiyle aynı hesap)
+              const toplam = teklifToplamlari(t).araToplam;
               return (
                 <Link
                   key={t.id}
@@ -163,10 +165,14 @@ export default async function PanelOzet() {
                 >
                   <div>
                     <p className="font-medium text-metin">{t.baslik || "(Başlıksız Teklif)"}</p>
-                    <p className="text-metin/50 text-xs">{t.musteri.ad} · {t.tarih.toISOString().slice(0, 10)}</p>
+                    <p className="text-metin/50 text-xs">
+                      {t.musteri.ad} · {tarihYaz(t.tarih)}
+                      {t.revizyonNo > 1 && ` · Rev. ${t.revizyonNo}`}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="font-mono text-metin">{paraFormat(toplam, t.paraBirimi)}</p>
+                    <p className="text-[10px] text-metin/40">KDV hariç</p>
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full ${
                         t.durum === "ONAYLANDI"

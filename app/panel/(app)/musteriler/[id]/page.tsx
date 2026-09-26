@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { musteriGuncelle } from "@/lib/actions";
-import ZiyaretEkleFormu from "@/components/ZiyaretEkleFormu";
+import { musteriGuncelle, musteriYetkiliEkle, musteriYetkiliGuncelle, musteriYetkiliSil } from "@/lib/actions";
 import ZiyaretListesi from "@/components/ZiyaretListesi";
+import SilButon from "@/components/SilButon";
+import { teklifToplamlari, tarihYaz } from "@/lib/teklif-hesap";
 
 export const dynamic = "force-dynamic";
 
@@ -11,8 +12,18 @@ function paraFormat(n: number, paraBirimi: string = "TRY") {
   return n.toLocaleString("tr-TR", { style: "currency", currency: paraBirimi });
 }
 
-function kalemToplam(k: { adet: number; birimFiyat: number; iskontoYuzde: number }) {
-  return k.adet * k.birimFiyat * (1 - k.iskontoYuzde / 100);
+const ihaleDurumEtiket: Record<string, string> = {
+  TAKIPTE: "Takipte",
+  TEKLIF_VERILDI: "Teklif Verildi",
+  KAZANILDI: "Kazanıldı",
+  KAYBEDILDI: "Kaybedildi",
+  IPTAL: "İptal",
+};
+
+function ihaleRozetRenk(durum: string) {
+  if (durum === "KAZANILDI") return "bg-emerald-100 text-emerald-800";
+  if (durum === "KAYBEDILDI" || durum === "IPTAL") return "bg-rose-100 text-rose-800";
+  return "bg-amber-100 text-amber-800";
 }
 
 const teklifDurumEtiket: Record<string, string> = {
@@ -27,7 +38,16 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
     include: {
       cariHareketler: { orderBy: { tarih: "desc" } },
       teklifler: { include: { kalemler: true }, orderBy: { tarih: "desc" } },
-      ziyaretler: { orderBy: { tarih: "desc" } },
+      ziyaretler: { orderBy: { tarih: "desc" }, include: { proje: { select: { id: true, ad: true } } } },
+      yetkililer: { orderBy: { ad: "asc" } },
+      // Projeler ekranındaki bilgiler: durum, konum, kaynak, değer, bağlı teklifler ve ziyaretler
+      projeler: {
+        orderBy: { olusturmaTarihi: "desc" },
+        include: {
+          teklifler: { include: { kalemler: true }, orderBy: { tarih: "desc" } },
+          _count: { select: { ziyaretler: true } },
+        },
+      },
     },
   });
 
@@ -117,7 +137,6 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
 
       <div className="grid sm:grid-cols-2 gap-6 mb-8 text-sm">
         <div className="bg-yuzey border border-hat rounded-lg p-5 space-y-1">
-                  <div className="bg-yuzey border border-hat rounded-lg p-5 space-y-1">
           <p className="text-xs text-metin/50 mb-2">İletişim</p>
           {musteri.yetkiliAdi && (
             <p className="text-metin font-medium">
@@ -131,15 +150,146 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
           {musteri.muhasebeEmail && <p className="text-metin/60">Muhasebe: {musteri.muhasebeEmail}</p>}
           {musteri.vergiNo && <p className="text-metin/60">VN: {musteri.vergiNo}</p>}
         </div>
-          <p className="text-metin">{musteri.telefon ?? "Telefon girilmemiş"}</p>
-          <p className="text-metin">{musteri.email ?? "E-posta girilmemiş"}</p>
-          {musteri.muhasebeEmail && <p className="text-metin/60">Muhasebe: {musteri.muhasebeEmail}</p>}
-          {musteri.vergiNo && <p className="text-metin/60">VN: {musteri.vergiNo}</p>}
-        </div>
         <div className="bg-yuzey border border-hat rounded-lg p-5 space-y-1">
           <p className="text-xs text-metin/50 mb-2">Adresler</p>
           <p className="text-metin/70"><span className="text-metin/40">Fatura:</span> {musteri.faturaAdresi ?? "—"}</p>
           <p className="text-metin/70"><span className="text-metin/40">Sevk:</span> {musteri.sevkAdresi ?? "—"}</p>
+        </div>
+      </div>
+
+      {/* YETKİLİLER */}
+      <div id="yetkililer" className="mb-10 scroll-mt-6">
+        <h2 className="font-display font-medium text-metin mb-3">
+          Yetkililer ({musteri.yetkililer.length + (musteri.yetkiliAdi ? 1 : 0)})
+        </h2>
+        <div className="space-y-2 mb-3">
+          {musteri.yetkiliAdi && (
+            <div className="bg-yuzey border border-hat rounded-lg p-4 text-sm flex flex-wrap items-center justify-between gap-2">
+              <p className="text-metin">
+                <span className="font-medium">{musteri.yetkiliAdi}</span>
+                <span className="ml-2 text-[11px] bg-soguk-light text-soguk-dim px-2 py-0.5 rounded-full">Ana yetkili</span>
+                {musteri.yetkiliTelefon && <span className="text-metin/50"> · {musteri.yetkiliTelefon}</span>}
+                {musteri.yetkiliEmail && <span className="text-metin/50"> · {musteri.yetkiliEmail}</span>}
+              </p>
+              <p className="text-xs text-metin/40">Yukarıdaki &quot;Müşteri Bilgilerini Düzenle&quot; bölümünden değiştirilir</p>
+            </div>
+          )}
+          {musteri.yetkililer.map((y) => (
+            <details key={y.id} className="bg-yuzey border border-hat rounded-lg text-sm">
+              <summary className="cursor-pointer select-none p-4 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-metin">
+                  <span className="font-medium">{y.ad}</span>
+                  {y.unvan && <span className="text-metin/60"> · {y.unvan}</span>}
+                  {y.telefon && <span className="text-metin/50"> · {y.telefon}</span>}
+                  {y.email && <span className="text-metin/50"> · {y.email}</span>}
+                </span>
+                <span className="text-xs text-soguk-dim">Düzenle</span>
+              </summary>
+              <div className="px-4 pb-4 flex flex-wrap items-end gap-3">
+                <form action={musteriYetkiliGuncelle} className="flex flex-wrap items-end gap-3 flex-1">
+                  <input type="hidden" name="yetkiliId" value={y.id} />
+                  <input name="ad" required defaultValue={y.ad} placeholder="Ad Soyad" className="focus-ring flex-1 min-w-[150px] border border-hat rounded-md px-3 py-2 text-sm" />
+                  <input name="unvan" defaultValue={y.unvan ?? ""} placeholder="Ünvan / Görev" className="focus-ring flex-1 min-w-[130px] border border-hat rounded-md px-3 py-2 text-sm" />
+                  <input name="telefon" defaultValue={y.telefon ?? ""} placeholder="Telefon" className="focus-ring flex-1 min-w-[130px] border border-hat rounded-md px-3 py-2 text-sm" />
+                  <input name="email" type="email" defaultValue={y.email ?? ""} placeholder="E-posta" className="focus-ring flex-1 min-w-[180px] border border-hat rounded-md px-3 py-2 text-sm" />
+                  <button type="submit" className="focus-ring bg-soguk text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
+                    Kaydet
+                  </button>
+                </form>
+                <SilButon
+                  id={y.id}
+                  action={musteriYetkiliSil}
+                  onayMesaji="Bu yetkiliyi silmek istediğine emin misin? Bu yetkiliye hazırlanan teklifler silinmez; müşterinin ana yetkilisine döner."
+                />
+              </div>
+            </details>
+          ))}
+          {!musteri.yetkiliAdi && musteri.yetkililer.length === 0 && (
+            <p className="text-sm text-metin/50">Henüz yetkili eklenmedi.</p>
+          )}
+        </div>
+        <form action={musteriYetkiliEkle} className="bg-yuzey border border-dashed border-hat rounded-lg p-4 flex flex-wrap items-end gap-3">
+          <input type="hidden" name="musteriId" value={musteri.id} />
+          <div className="flex-1 min-w-[150px]">
+            <label className="block text-xs font-medium text-metin/60 mb-1">Yeni Yetkili Ad Soyad *</label>
+            <input name="ad" required className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm" />
+          </div>
+          <div className="flex-1 min-w-[130px]">
+            <label className="block text-xs font-medium text-metin/60 mb-1">Ünvan / Görev</label>
+            <input name="unvan" placeholder="örn. Satınalma Müdürü" className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm" />
+          </div>
+          <div className="flex-1 min-w-[130px]">
+            <label className="block text-xs font-medium text-metin/60 mb-1">Telefon</label>
+            <input name="telefon" className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm" />
+          </div>
+          <div className="flex-1 min-w-[180px]">
+            <label className="block text-xs font-medium text-metin/60 mb-1">E-posta</label>
+            <input name="email" type="email" className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm" />
+          </div>
+          <button type="submit" className="focus-ring bg-soguk text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
+            + Yetkili Ekle
+          </button>
+        </form>
+      </div>
+
+      {/* PROJELER (Projeler ekranındaki bu müşteriye ait bilgiler) */}
+      <div className="mb-10">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-display font-medium text-metin">Projeler ({musteri.projeler.length})</h2>
+          <Link href={`/panel/projeler?seciliMusteriId=${musteri.id}`} className="text-xs text-soguk-dim hover:underline">
+            + Bu müşteriye yeni proje →
+          </Link>
+        </div>
+        <div className="space-y-2">
+          {musteri.projeler.map((p) => {
+            const sonTeklif = p.teklifler[0];
+            return (
+              <div key={p.id} className="bg-yuzey border border-hat rounded-lg p-4 hover:border-soguk transition-colors">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <Link href={`/panel/projeler/${p.id}`} className="focus-ring font-semibold text-sm text-metin hover:text-soguk-dim">
+                      {p.ad}
+                    </Link>
+                    <p className="text-xs text-metin/50 mt-0.5">
+                      {p.konum || "Konum belirtilmedi"}
+                      {p.kaynak && ` · Kaynak: ${p.kaynak}`}
+                      {` · ${p.teklifler.length} teklif · ${p._count.ziyaretler} ziyaret`}
+                      {` · ${tarihYaz(p.olusturmaTarihi)}`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    {p.tahminiDeger != null && (
+                      <span className="font-mono text-xs text-amber-700 font-semibold">
+                        Tahmini: {paraFormat(p.tahminiDeger, p.paraBirimi)}
+                      </span>
+                    )}
+                    <span className={`px-2.5 py-1 rounded text-xs font-bold ${ihaleRozetRenk(p.ihaleDurumu)}`}>
+                      {ihaleDurumEtiket[p.ihaleDurumu] || p.ihaleDurumu}
+                    </span>
+                  </div>
+                </div>
+                {(p.ihaleyiAlan || sonTeklif || p.notlar) && (
+                  <div className="mt-2 pt-2 border-t border-hat text-xs text-metin/60 space-y-1">
+                    {p.ihaleyiAlan && <p>İhaleyi alan: <span className="text-metin">{p.ihaleyiAlan}</span></p>}
+                    {sonTeklif && (
+                      <p>
+                        Son teklif:{" "}
+                        <Link href={`/panel/teklifler/${sonTeklif.id}`} className="text-soguk-dim hover:underline font-mono">
+                          TKL-{String(sonTeklif.teklifNo).padStart(4, "0")}
+                        </Link>{" "}
+                        · {paraFormat(teklifToplamlari(sonTeklif).araToplam, sonTeklif.paraBirimi)} (KDV hariç) ·{" "}
+                        {teklifDurumEtiket[sonTeklif.durum]}
+                      </p>
+                    )}
+                    {p.notlar && <p className="whitespace-pre-line line-clamp-3">📝 {p.notlar}</p>}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {musteri.projeler.length === 0 && (
+            <p className="text-sm text-metin/50">Bu müşteriye bağlı proje yok.</p>
+          )}
         </div>
       </div>
 
@@ -163,7 +313,7 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
                   {t.baslik || "(Başlıksız Teklif)"}
                 </p>
                 <div className="text-right shrink-0">
-                  <p className="font-mono text-sm text-metin">{paraFormat(t.kalemler.reduce((a, k) => a + kalemToplam(k), 0), t.paraBirimi)}</p>
+                  <p className="font-mono text-sm text-metin">{paraFormat(teklifToplamlari(t).araToplam, t.paraBirimi)}</p>
                   <p className="text-xs text-metin/50">{teklifDurumEtiket[t.durum]}</p>
                 </div>
               </div>
@@ -213,8 +363,15 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
       </div>
 
       <div className="mt-10">
-        <h2 className="font-display font-medium text-metin mb-3">Ziyaretler</h2>
-        <ZiyaretEkleFormu musteriId={musteri.id} />
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-display font-medium text-metin">Ziyaretler ({musteri.ziyaretler.length})</h2>
+          <Link
+            href={`/panel/ziyaretler?yeniMusteri=${musteri.id}#ziyaret-ekle`}
+            className="focus-ring text-xs bg-soguk text-white px-3 py-1.5 rounded-md font-medium hover:bg-soguk-dim transition-colors"
+          >
+            + Ziyaret Ekle
+          </Link>
+        </div>
         <ZiyaretListesi ziyaretler={musteri.ziyaretler} />
       </div>
     </div>

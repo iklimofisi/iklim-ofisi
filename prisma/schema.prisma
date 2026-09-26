@@ -48,6 +48,22 @@ model Musteri {
   siparisler     Siparis[]
   projeler       Proje[]
   ziyaretler     Ziyaret[]
+  yetkililer     MusteriYetkili[] // YENİ: Birden fazla müşteri yetkilisi
+}
+
+// YENİ: Müşteriye bağlı ek yetkililer (ana yetkili Musteri.yetkiliAdi alanında durmaya devam eder)
+model MusteriYetkili {
+  id        String   @id @default(cuid())
+  musteriId String
+  musteri   Musteri  @relation(fields: [musteriId], references: [id], onDelete: Cascade)
+  ad        String
+  unvan     String?
+  telefon   String?
+  email     String?
+  createdAt DateTime @default(now())
+  teklifler Teklif[]
+
+  @@index([musteriId])
 }
 
 model Teklif {
@@ -69,6 +85,10 @@ model Teklif {
   ipkbNo                   String?           // Varsa İpkb no
   projeId                  String?
   proje                    Proje?            @relation(fields: [projeId], references: [id])
+  yetkiliId                String?           // YENİ: Teklifin muhatabı olan müşteri yetkilisi (boşsa ana yetkili)
+  yetkili                  MusteriYetkili?   @relation(fields: [yetkiliId], references: [id], onDelete: SetNull)
+  kopyaKaynakTeklifId      String?           // YENİ: Kopyalandığı teklifin ID'si (sadece panelde görünür)
+  kopyaKaynakTeklifNo      Int?              // YENİ: Kopyalandığı teklifin numarası (kaynak silinse de görünsün)
   tarih                    DateTime          @default(now())
   ilkTarih                 DateTime          @default(now()) // YENİ: İlk Oluşturulma Tarihi
   durum                    TeklifDurum       @default(BEKLEMEDE)

@@ -4,14 +4,12 @@ import TeklifKalemleri from "@/components/TeklifKalemleri";
 import TeklifDurumSecici from "@/components/TeklifDurumSecici";
 import HizliMusteriEkleModal from "@/components/HizliMusteriEkleModal"; // HIZLI MÜŞTERİ MODALI
 import SilButon from "@/components/SilButon";
+import MusteriYetkiliSecici from "@/components/MusteriYetkiliSecici";
 import Link from "next/link";
+import { teklifToplamlari, ilkHazirlanmaTarihi, tarihYaz } from "@/lib/teklif-hesap";
 
 function paraFormat(n: number, paraBirimi: string = "TRY") {
   return n.toLocaleString("tr-TR", { style: "currency", currency: paraBirimi });
-}
-
-function kalemToplam(k: { adet: number; birimFiyat: number; iskontoYuzde: number }) {
-  return k.adet * k.birimFiyat * (1 - k.iskontoYuzde / 100);
 }
 
 function teklifNoFormat(no: number) {
@@ -36,7 +34,10 @@ export default async function TekliflerSayfasi({
   };
 }) {
   const [musteriler, tumTeklifler, sablonlar, markalar, urunler, projeler, kullanicilar] = await Promise.all([
-    prisma.musteri.findMany({ orderBy: { ad: "asc" } }),
+    prisma.musteri.findMany({
+      orderBy: { ad: "asc" },
+      include: { yetkililer: { orderBy: { ad: "asc" }, select: { id: true, ad: true, unvan: true } } },
+    }),
     prisma.teklif.findMany({
       where: {
         ...(searchParams.musteri ? { musteriId: searchParams.musteri } : {}),
@@ -52,7 +53,13 @@ export default async function TekliflerSayfasi({
             }
           : {}),
       },
-      include: { musteri: true, kalemler: true, siparis: true, olusturanKullanici: true },
+      include: {
+        musteri: true,
+        kalemler: true,
+        siparis: true,
+        olusturanKullanici: true,
+        revizyonlar: { select: { tarih: true } },
+      },
       orderBy: { tarih: "desc" },
     }),
     prisma.teklifSablon.findMany({ orderBy: { sira: "asc" } }),
@@ -67,7 +74,7 @@ export default async function TekliflerSayfasi({
 
   const teklifler = tumTeklifler.filter((t) => {
     if (min === null && max === null) return true;
-    const toplam = t.kalemler.reduce((a, k) => a + kalemToplam(k), 0);
+    const toplam = teklifToplamlari(t).araToplam; // KDV hariç net (listede gösterilenle aynı)
     if (min !== null && toplam < min) return false;
     if (max !== null && toplam > max) return false;
     return true;
@@ -117,27 +124,14 @@ export default async function TekliflerSayfasi({
           className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm mb-5 bg-white font-medium"
         />
 
-        <div className="grid sm:grid-cols-2 gap-3 mb-5">
-          {/* MÜŞTERİ SEÇİMİ VE HIZLI MÜŞTERİ EKLEME BUTONU */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-medium text-metin/60">Müşteri *</label>
-              <HizliMusteriEkleModal />
-            </div>
-            <select
-              name="musteriId"
-              required
-              defaultValue={varsayilanMusteriId}
-              className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white font-medium"
-            >
-              <option value="">— Müşteri Seçin —</option>
-              {musteriler.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.ad}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="grid sm:grid-cols-3 gap-3 mb-5">
+          {/* MÜŞTERİ + MÜŞTERİ YETKİLİSİ SEÇİMİ VE HIZLI MÜŞTERİ EKLEME BUTONU */}
+          <MusteriYetkiliSecici
+            key={varsayilanMusteriId /* hızlı müşteri eklenince yeni müşteri seçili gelsin */}
+            musteriler={musteriler.map((m) => ({ id: m.id, ad: m.ad, yetkiliAdi: m.yetkiliAdi, yetkililer: m.yetkililer }))}
+            varsayilanMusteriId={varsayilanMusteriId}
+            musteriEtiketSag={<HizliMusteriEkleModal />}
+          />
 
           <div>
             <label className="block text-xs font-medium text-metin/60 mb-1">Proje (opsiyonel)</label>
@@ -278,11 +272,11 @@ export default async function TekliflerSayfasi({
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-xs font-medium text-metin/60 mb-1">Min Tutar</label>
+              <label className="block text-xs font-medium text-metin/60 mb-1">Min (KDV hariç)</label>
               <input name="min" type="number" defaultValue={searchParams.min ?? ""} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-metin/60 mb-1">Max Tutar</label>
+              <label className="block text-xs font-medium text-metin/60 mb-1">Max (KDV hariç)</label>
               <input name="max" type="number" defaultValue={searchParams.max ?? ""} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white" />
             </div>
           </div>
@@ -302,7 +296,8 @@ export default async function TekliflerSayfasi({
       {/* TEKLİFLER LİSTESİ */}
       <div className="space-y-3">
         {teklifler.map((t) => {
-          const toplam = t.kalemler.reduce((a, k) => a + kalemToplam(k), 0);
+          const toplam = teklifToplamlari(t).araToplam;
+          const ilkTarih = ilkHazirlanmaTarihi(t);
           const hazirlayanPersonel = t.olusturanKullanici?.ad || t.olusturanAdi || "—";
 
           return (
@@ -315,7 +310,8 @@ export default async function TekliflerSayfasi({
                 <div className="text-xs text-metin/60 flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
                   <span className="font-semibold text-metin">{t.musteri.ad}</span>
                   <span>·</span>
-                  <span>{t.tarih.toISOString().slice(0, 10)}</span>
+                  <span title="İlk hazırlanma tarihi">{tarihYaz(ilkTarih)}</span>
+                  {t.revizyonNo > 1 && <span title="Son revizyon tarihi">(rev. {tarihYaz(t.tarih)})</span>}
                   <span>·</span>
                   <span>{t.kalemler.length} kalem</span>
                   {t.revizyonNo > 1 && <span>· Rev. {t.revizyonNo}</span>}
@@ -325,13 +321,22 @@ export default async function TekliflerSayfasi({
                   </span>
 
                   {t.siparis && <span className="text-emerald-700 font-bold">· Siparişe dönüştürüldü</span>}
+                  {t.kopyaKaynakTeklifNo && (
+                    <span className="text-metin/40 italic">· TKL-{String(t.kopyaKaynakTeklifNo).padStart(4, "0")} kopyası</span>
+                  )}
                 </div>
               </Link>
               <div className="text-right flex items-center gap-3 shrink-0">
-                <p className="font-mono text-metin font-bold">{paraFormat(toplam, t.paraBirimi)}</p>
+                <div>
+                  <p className="font-mono text-metin font-bold">{paraFormat(toplam, t.paraBirimi)}</p>
+                  <p className="text-[10px] text-metin/40">KDV hariç</p>
+                </div>
                 <TeklifDurumSecici teklifId={t.id} mevcutDurum={t.durum} />
                 <Link href={`/panel/teklifler/${t.id}/duzenle`} className="focus-ring text-xs text-metin/40 hover:text-soguk-dim font-medium">
                   Düzenle
+                </Link>
+                <Link href={`/panel/teklifler/${t.id}/kopyala`} className="focus-ring text-xs text-metin/40 hover:text-soguk-dim font-medium">
+                  Kopyala
                 </Link>
                 <SilButon id={t.id} action={teklifSil} onayMesaji="Bu teklifi silmek istediğine emin misin?" />
               </div>

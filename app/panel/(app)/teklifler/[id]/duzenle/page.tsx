@@ -2,17 +2,30 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { teklifGuncelle } from "@/lib/actions";
 import TeklifKalemleri from "@/components/TeklifKalemleri";
+import MusteriYetkiliSecici from "@/components/MusteriYetkiliSecici";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-export default async function TeklifDuzenle({ params }: { params: { id: string } }) {
+export default async function TeklifDuzenle({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams?: { hata?: string; adet?: string };
+}) {
   const [teklif, musteriler, sablonlar, markalar, urunler, projeler] = await Promise.all([
     prisma.teklif.findUnique({
       where: { id: params.id },
-      include: { kalemler: true, sablonlar: true },
+      include: {
+        kalemler: { include: { _count: { select: { sevkiyatlar: true, teslimler: true } } } },
+        sablonlar: true,
+      },
     }),
-    prisma.musteri.findMany({ orderBy: { ad: "asc" } }),
+    prisma.musteri.findMany({
+      orderBy: { ad: "asc" },
+      include: { yetkililer: { orderBy: { ad: "asc" }, select: { id: true, ad: true, unvan: true } } },
+    }),
     prisma.teklifSablon.findMany({ orderBy: { sira: "asc" } }),
     prisma.marka.findMany({ orderBy: { ad: "asc" } }),
     prisma.urun.findMany({ orderBy: { ad: "asc" } }),
@@ -22,6 +35,7 @@ export default async function TeklifDuzenle({ params }: { params: { id: string }
   if (!teklif) notFound();
 
   const seciliSablonIdleri = new Set(teklif.sablonlar.map((s) => s.id));
+  const kayitliKalemSayisi = teklif.kalemler.filter((k) => k._count.sevkiyatlar + k._count.teslimler > 0).length;
 
   return (
     <div>
@@ -39,6 +53,24 @@ export default async function TeklifDuzenle({ params }: { params: { id: string }
         otomatik olarak teklif detayındaki revizyon geçmişine kaydedilecek.
       </p>
 
+      {searchParams?.hata === "sevkiyatli-kalem" && (
+        <div className="bg-sicak-light text-sicak-dim border border-sicak/30 rounded-md px-4 py-3 mb-6 text-sm">
+          <p className="font-semibold">Değişiklikler kaydedilmedi.</p>
+          <p className="text-xs mt-1">
+            Formdan kaldırdığınız {searchParams.adet ?? ""} kalemin sevkiyat veya teslim kaydı var. Bu kayıtları korumak için
+            bu kalemler silinemez. Kalemi silmek yerine adet/fiyat bilgisini güncelleyebilirsiniz.
+            (Excel&apos;den kalem yükleme de mevcut kalemleri değiştirdiği için bu uyarıya yol açar.)
+          </p>
+        </div>
+      )}
+
+      {kayitliKalemSayisi > 0 && (
+        <p className="text-xs text-metin/60 mb-6 bg-amber-50 border border-amber-200 text-amber-900 rounded-md px-4 py-3">
+          Bu teklifte sevkiyat/teslim kaydı olan {kayitliKalemSayisi} kalem var. Bu kalemleri düzenleyebilirsiniz; kayıtları
+          korunur. Ancak bu kalemler silinemez.
+        </p>
+      )}
+
       <form action={teklifGuncelle} className="bg-yuzey border border-hat rounded-lg p-5">
         <input type="hidden" name="teklifId" value={teklif.id} />
 
@@ -50,22 +82,12 @@ export default async function TeklifDuzenle({ params }: { params: { id: string }
           className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm mb-5"
         />
 
-        <div className="grid sm:grid-cols-2 gap-3 mb-5">
-          <div>
-            <label className="block text-xs font-medium text-metin/60 mb-1">Müşteri</label>
-            <select
-              name="musteriId"
-              required
-              defaultValue={teklif.musteriId}
-              className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm"
-            >
-              {musteriler.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.ad}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="grid sm:grid-cols-3 gap-3 mb-5">
+          <MusteriYetkiliSecici
+            musteriler={musteriler.map((m) => ({ id: m.id, ad: m.ad, yetkiliAdi: m.yetkiliAdi, yetkililer: m.yetkililer }))}
+            varsayilanMusteriId={teklif.musteriId}
+            varsayilanYetkiliId={teklif.yetkiliId ?? ""}
+          />
           <div>
             <label className="block text-xs font-medium text-metin/60 mb-1">Proje (opsiyonel)</label>
             <select name="projeId" defaultValue={teklif.projeId ?? ""} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm">
@@ -125,6 +147,7 @@ export default async function TeklifDuzenle({ params }: { params: { id: string }
           }))}
           baslangic={teklif.kalemler.map((k, i) => ({
             key: i,
+            id: k.id, // Mevcut kalem kimliği: sevkiyat/teslim kayıtları bu kaleme bağlı kalır
             bolum: (k as any).bolum || "Genel Kalemler", // Bölüm Desteği
             aciklama: k.aciklama,
             adet: k.adet,

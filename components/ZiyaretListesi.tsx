@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ziyaretSil } from "@/lib/actions";
 import SilButon from "@/components/SilButon";
 
@@ -9,6 +10,9 @@ type ZiyaretGoruntu = {
   hatirlatmaNotu: string | null;
   hatirlatmaTamam: boolean;
   olusturanAdi: string;
+  // Opsiyonel: bağlı proje / müşteri adı gösterilir
+  proje?: { id: string; ad: string } | null;
+  musteri?: { id: string; ad: string } | null;
 };
 
 export default function ZiyaretListesi({ ziyaretler }: { ziyaretler: ZiyaretGoruntu[] }) {
@@ -24,6 +28,22 @@ export default function ZiyaretListesi({ ziyaretler }: { ziyaretler: ZiyaretGoru
             <p className="text-xs text-metin/50">
               {z.tarih.toISOString().slice(0, 10)}
               {z.olusturanAdi && ` · ${z.olusturanAdi}`}
+              {z.musteri && (
+                <>
+                  {" · "}
+                  <Link href={`/panel/musteriler/${z.musteri.id}`} className="text-soguk-dim hover:underline">
+                    {z.musteri.ad}
+                  </Link>
+                </>
+              )}
+              {z.proje && (
+                <>
+                  {" · "}
+                  <Link href={`/panel/projeler/${z.proje.id}`} className="text-soguk-dim hover:underline">
+                    {z.proje.ad}
+                  </Link>
+                </>
+              )}
             </p>
             <SilButon id={z.id} action={ziyaretSil} onayMesaji="Bu ziyaret kaydını silmek istediğine emin misin?" />
           </div>

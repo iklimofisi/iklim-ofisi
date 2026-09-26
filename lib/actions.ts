@@ -9,6 +9,7 @@ import { paraBirimiDogrula, type ParaBirimi } from "@/lib/para";
 import { epostaGonder } from "@/lib/eposta";
 import { getSirketAyarlari } from "@/lib/sirket";
 import { teklifPdfOlustur } from "@/lib/pdf-olustur";
+import { randomUUID } from "crypto";
 
 // --- Yardımcı Sayı Formatlayıcı (Türkçe Virgülü Düzeltir) ---
 function parseSayi(val: unknown): number {
@@ -84,6 +85,48 @@ export async function musteriGuncelle(formData: FormData) {
   revalidatePath("/panel/musteriler");
 }
 
+// --- Müşteri Yetkilileri (birden fazla) ---
+
+export async function musteriYetkiliEkle(formData: FormData) {
+  const musteriId = String(formData.get("musteriId") ?? "");
+  const ad = String(formData.get("ad") ?? "").trim();
+  const unvan = String(formData.get("unvan") ?? "").trim();
+  const telefon = String(formData.get("telefon") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  if (!musteriId || !ad) return;
+
+  await prisma.musteriYetkili.create({
+    data: { musteriId, ad, unvan: unvan || null, telefon: telefon || null, email: email || null },
+  });
+  revalidatePath(`/panel/musteriler/${musteriId}`);
+  revalidatePath("/panel/teklifler");
+}
+
+export async function musteriYetkiliGuncelle(formData: FormData) {
+  const id = String(formData.get("yetkiliId") ?? "");
+  const ad = String(formData.get("ad") ?? "").trim();
+  const unvan = String(formData.get("unvan") ?? "").trim();
+  const telefon = String(formData.get("telefon") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  if (!id || !ad) return;
+
+  const y = await prisma.musteriYetkili.update({
+    where: { id },
+    data: { ad, unvan: unvan || null, telefon: telefon || null, email: email || null },
+  });
+  revalidatePath(`/panel/musteriler/${y.musteriId}`);
+  revalidatePath("/panel/teklifler");
+}
+
+// Yetkili silinirse ona bağlı tekliflerde yetkili alanı boşalır (teklif silinmez),
+// teklif otomatik olarak müşterinin ana yetkilisine döner.
+export async function musteriYetkiliSil(id: string) {
+  if (!id) return;
+  const y = await prisma.musteriYetkili.delete({ where: { id } });
+  revalidatePath(`/panel/musteriler/${y.musteriId}`);
+  revalidatePath("/panel/teklifler");
+}
+
 // --- Teklifler ---
 
 function kalemleriOku(formData: FormData) {
@@ -93,9 +136,11 @@ function kalemleriOku(formData: FormData) {
   const fiyatlar = formData.getAll("kalemFiyat") as string[];
   const iskontolar = formData.getAll("kalemIskonto") as string[];
   const markalar = formData.getAll("kalemMarka") as string[];
+  const eskiIdler = formData.getAll("kalemId") as string[]; // Düzenlemede mevcut kalemin ID'si (yeni satırda boş)
 
   return aciklamalar
     .map((aciklama, i) => ({
+      eskiId: eskiIdler[i] || "",
       bolum: bolumler[i] ? bolumler[i].trim() : "Genel Kalemler",
       aciklama: aciklama.trim(),
       adet: parseSayi(adetler[i]),
@@ -106,12 +151,33 @@ function kalemleriOku(formData: FormData) {
     .filter((k) => k.aciklama);
 }
 
-// TEKLİF EKLEME (İLK TARİH KAYDEDİLİR)
+// Seçilen yetkili gerçekten bu müşteriye mi ait? Değilse boş (ana yetkili) kabul edilir.
+async function yetkiliDogrula(yetkiliId: string, musteriId: string): Promise<string | null> {
+  if (!yetkiliId || !musteriId) return null;
+  const y = await prisma.musteriYetkili.findUnique({ where: { id: yetkiliId }, select: { musteriId: true } });
+  return y && y.musteriId === musteriId ? yetkiliId : null;
+}
+
+// Kalemi veritabanına yazılacak alanlara indirger (formdaki eskiId alanı yazılmaz)
+function kalemVerisi(k: ReturnType<typeof kalemleriOku>[number]) {
+  return {
+    bolum: k.bolum,
+    aciklama: k.aciklama,
+    adet: k.adet,
+    birimFiyat: k.birimFiyat,
+    iskontoYuzde: k.iskontoYuzde,
+    markaId: k.markaId,
+  };
+}
+
+// TEKLİF EKLEME (İLK TARİH KAYDEDİLİR) — Kopyalama ekranı da bu fonksiyonu kullanır
 export async function teklifEkle(formData: FormData) {
   const kullanici = await suankiKullanici();
   const baslik = String(formData.get("baslik") ?? "").trim();
   const musteriId = String(formData.get("musteriId") ?? "");
   const projeId = String(formData.get("projeId") ?? "");
+  const yetkiliIdHam = String(formData.get("yetkiliId") ?? "");
+  const kopyaKaynakTeklifId = String(formData.get("kopyaKaynakTeklifId") ?? "");
   const paraBirimi = String(formData.get("paraBirimi") ?? "TRY");
   const kdvOrani = parseSayi(formData.get("kdvOrani"));
   const kdvDahil = String(formData.get("kdvDurumu") ?? "haric") === "dahil";
@@ -123,12 +189,25 @@ export async function teklifEkle(formData: FormData) {
   if (!musteriId || !baslik || kalemler.length === 0) return;
 
   const simdi = new Date();
+  const yetkiliId = await yetkiliDogrula(yetkiliIdHam, musteriId);
+
+  // Kopyalanarak oluşturuluyorsa kaynak teklif bilgisi (yalnızca panelde görünür)
+  let kopyaKaynak: { id: string; teklifNo: number } | null = null;
+  if (kopyaKaynakTeklifId) {
+    kopyaKaynak = await prisma.teklif.findUnique({
+      where: { id: kopyaKaynakTeklifId },
+      select: { id: true, teklifNo: true },
+    });
+  }
 
   const teklif = await prisma.teklif.create({
     data: {
       baslik,
       musteriId,
       projeId: projeId || null,
+      yetkiliId,
+      kopyaKaynakTeklifId: kopyaKaynak?.id ?? null,
+      kopyaKaynakTeklifNo: kopyaKaynak?.teklifNo ?? null,
       paraBirimi,
       kdvOrani,
       kdvDahil,
@@ -138,7 +217,7 @@ export async function teklifEkle(formData: FormData) {
       olusturanAdi: kullanici?.ad ?? "",
       tarih: simdi,
       ilkTarih: simdi, // İlk Oluşturulma Tarihi Saklanır
-      kalemler: { create: kalemler },
+      kalemler: { create: kalemler.map(kalemVerisi) },
       sablonlar: { connect: sablonIds.map((id) => ({ id })) },
     },
   });
@@ -147,12 +226,16 @@ export async function teklifEkle(formData: FormData) {
   redirect(`/panel/teklifler/${teklif.id}`);
 }
 
-// TEKLİF GÜNCELLEME (SON REVİZYON TARİHİ GÜNCELLENİR)
+// TEKLİF GÜNCELLEME (SON REVİZYON TARİHİ GÜNCELLENİR, İLK TARİH KORUNUR)
+// ÖNEMLİ: Eskiden her güncellemede teklifin TÜM sevkiyat ve teslim kayıtları siliniyordu.
+// Artık bu kayıtlar silinmez; güncellenen kaleme taşınır. Sevkiyat/teslim kaydı olan bir
+// kalem formdan kaldırılmışsa güncelleme yapılmaz ve kullanıcı uyarılır.
 export async function teklifGuncelle(formData: FormData) {
   const teklifId = String(formData.get("teklifId") ?? "");
   const baslik = String(formData.get("baslik") ?? "").trim();
   const musteriId = String(formData.get("musteriId") ?? "");
   const projeId = String(formData.get("projeId") ?? "");
+  const yetkiliIdHam = String(formData.get("yetkiliId") ?? "");
   const paraBirimi = String(formData.get("paraBirimi") ?? "TRY");
   const kdvOrani = parseSayi(formData.get("kdvOrani"));
   const kdvDahil = String(formData.get("kdvDurumu") ?? "haric") === "dahil";
@@ -165,49 +248,90 @@ export async function teklifGuncelle(formData: FormData) {
 
   const mevcut = await prisma.teklif.findUnique({
     where: { id: teklifId },
-    include: { kalemler: true, sablonlar: true },
+    include: {
+      kalemler: { include: { _count: { select: { sevkiyatlar: true, teslimler: true } } } },
+      sablonlar: true,
+    },
   });
   if (!mevcut) return;
 
-  await prisma.teklifRevizyon.create({
-    data: {
-      teklifId,
-      revizyonNo: mevcut.revizyonNo,
-      veriJson: JSON.stringify({
-        baslik: mevcut.baslik,
-        paraBirimi: mevcut.paraBirimi,
-        kdvOrani: mevcut.kdvOrani,
-        kdvDahil: mevcut.kdvDahil,
-        kalemler: mevcut.kalemler,
-      }),
-    },
+  // Sevkiyat / teslim kaydı bulunan mevcut kalemler
+  const mevcutKalemIdleri = new Set(mevcut.kalemler.map((k) => k.id));
+  const kayitliKalemIdleri = new Set(
+    mevcut.kalemler.filter((k) => k._count.sevkiyatlar + k._count.teslimler > 0).map((k) => k.id)
+  );
+
+  // Formdan gelen satırlara yeni ID ver; eski kalemden gelenleri eşleştir
+  const kullanilanEskiIdler = new Set<string>();
+  const yeniSatirlar = kalemler.map((k) => {
+    const eskiId =
+      k.eskiId && mevcutKalemIdleri.has(k.eskiId) && !kullanilanEskiIdler.has(k.eskiId) ? k.eskiId : null;
+    if (eskiId) kullanilanEskiIdler.add(eskiId);
+    return { yeniId: randomUUID(), eskiId, veri: kalemVerisi(k) };
   });
 
-  await prisma.teslimKaydi.deleteMany({ where: { teklifKalem: { teklifId } } });
-  await prisma.sevkiyatKaydi.deleteMany({ where: { teklifKalem: { teklifId } } });
-  await prisma.teklifKalem.deleteMany({ where: { teklifId } });
+  // Kaydı olan bir kalem formdan kaldırıldıysa dur: veriyi silmeyiz
+  const kaldirilanKayitli = [...kayitliKalemIdleri].filter((id) => !kullanilanEskiIdler.has(id));
+  if (kaldirilanKayitli.length > 0) {
+    redirect(`/panel/teklifler/${teklifId}/duzenle?hata=sevkiyatli-kalem&adet=${kaldirilanKayitli.length}`);
+  }
 
-  await prisma.teklif.update({
-    where: { id: teklifId },
-    data: {
-      baslik,
-      musteriId,
-      projeId: projeId || null,
-      paraBirimi,
-      kdvOrani,
-      kdvDahil,
-      gecerlilikGunu,
-      birimFiyatGoster,
-      tarih: new Date(), // Son Güncelleme / Revizyon Tarihi Olur
-      revizyonNo: mevcut.revizyonNo + 1,
-      kalemler: { create: kalemler },
-      sablonlar: { set: sablonIds.map((id) => ({ id })) },
-    },
-  });
+  const yetkiliId = await yetkiliDogrula(yetkiliIdHam, musteriId);
+
+  const tasinacaklar = yeniSatirlar.filter((s) => s.eskiId && kayitliKalemIdleri.has(s.eskiId));
+
+  await prisma.$transaction([
+    // 1) Önceki hali revizyon geçmişine kaydet
+    prisma.teklifRevizyon.create({
+      data: {
+        teklifId,
+        revizyonNo: mevcut.revizyonNo,
+        veriJson: JSON.stringify({
+          baslik: mevcut.baslik,
+          paraBirimi: mevcut.paraBirimi,
+          kdvOrani: mevcut.kdvOrani,
+          kdvDahil: mevcut.kdvDahil,
+          kalemler: mevcut.kalemler.map(({ _count, ...k }) => k),
+        }),
+      },
+    }),
+    // 2) Yeni kalemleri formdaki sırayla oluştur
+    prisma.teklifKalem.createMany({
+      data: yeniSatirlar.map((s) => ({ id: s.yeniId, teklifId, ...s.veri })),
+    }),
+    // 3) Sevkiyat ve teslim kayıtlarını eski kalemden yeni kaleme taşı (silinmez)
+    ...tasinacaklar.flatMap((s) => [
+      prisma.sevkiyatKaydi.updateMany({ where: { teklifKalemId: s.eskiId! }, data: { teklifKalemId: s.yeniId } }),
+      prisma.teslimKaydi.updateMany({ where: { teklifKalemId: s.eskiId! }, data: { teklifKalemId: s.yeniId } }),
+    ]),
+    // 4) Eski kalemleri kaldır (bu noktada hiçbirine bağlı kayıt kalmadı)
+    prisma.teklifKalem.deleteMany({ where: { id: { in: [...mevcutKalemIdleri] } } }),
+    // 5) Teklif başlık bilgilerini güncelle — ilkTarih'e DOKUNULMAZ
+    prisma.teklif.update({
+      where: { id: teklifId },
+      data: {
+        baslik,
+        musteriId,
+        projeId: projeId || null,
+        yetkiliId,
+        paraBirimi,
+        kdvOrani,
+        kdvDahil,
+        gecerlilikGunu,
+        birimFiyatGoster,
+        tarih: new Date(), // Son Güncelleme / Revizyon Tarihi Olur
+        revizyonNo: mevcut.revizyonNo + 1,
+        sablonlar: { set: sablonIds.map((id) => ({ id })) },
+      },
+    }),
+  ]);
 
   revalidatePath("/panel/teklifler");
   revalidatePath(`/panel/teklifler/${teklifId}`);
   revalidatePath("/panel");
+  revalidatePath("/panel/proje-takip");
+  revalidatePath(`/panel/musteriler/${musteriId}`);
+  if (mevcut.musteriId !== musteriId) revalidatePath(`/panel/musteriler/${mevcut.musteriId}`);
   redirect(`/panel/teklifler/${teklifId}`);
 }
 
@@ -1243,23 +1367,33 @@ export async function projeSil(id: string) {
 
 export async function ziyaretEkle(formData: FormData) {
   const kullanici = await suankiKullanici();
-  const musteriId = String(formData.get("musteriId") ?? "");
+  let musteriId = String(formData.get("musteriId") ?? "");
   const projeId = String(formData.get("projeId") ?? "");
   const tarihStr = String(formData.get("tarih") ?? "");
   const not = String(formData.get("not") ?? "").trim();
   const hatirlatmaTarihiStr = String(formData.get("hatirlatmaTarihi") ?? "");
   const hatirlatmaNotu = String(formData.get("hatirlatmaNotu") ?? "").trim();
+  const ziyaretiYapan = String(formData.get("ziyaretiYapan") ?? "").trim();
+  const donus = String(formData.get("donus") ?? "");
   if (!not || (!musteriId && !projeId)) return;
+
+  // Proje seçilip müşteri seçilmediyse müşteri projeden otomatik bağlanır
+  if (projeId && !musteriId) {
+    const proje = await prisma.proje.findUnique({ where: { id: projeId }, select: { musteriId: true } });
+    if (proje?.musteriId) musteriId = proje.musteriId;
+  }
+
+  const tarih = tarihStr ? new Date(tarihStr) : new Date();
 
   await prisma.ziyaret.create({
     data: {
       musteriId: musteriId || null,
       projeId: projeId || null,
-      tarih: tarihStr ? new Date(tarihStr) : new Date(),
+      tarih,
       not,
       hatirlatmaTarihi: hatirlatmaTarihiStr ? new Date(hatirlatmaTarihiStr) : null,
       hatirlatmaNotu: hatirlatmaNotu || null,
-      olusturanAdi: kullanici?.ad ?? "",
+      olusturanAdi: ziyaretiYapan || kullanici?.ad || "",
     },
   });
 
@@ -1267,6 +1401,11 @@ export async function ziyaretEkle(formData: FormData) {
   if (projeId) revalidatePath(`/panel/projeler/${projeId}`);
   revalidatePath("/panel/ziyaretler");
   revalidatePath("/panel");
+
+  if (donus === "ziyaretler") {
+    const gun = tarih.toISOString().slice(0, 10);
+    redirect(`/panel/ziyaretler?ay=${gun.slice(0, 7)}&gun=${gun}&eklendi=1`);
+  }
 }
 
 export async function ziyaretHatirlatmaTamamlandi(id: string) {
@@ -1385,6 +1524,7 @@ export async function teklifMusteriyeEpostaGonder(formData: FormData) {
       where: { id: teklifId },
       include: {
         musteri: true,
+        yetkili: true,
         kalemler: { include: { marka: true } },
         olusturanKullanici: true,
       },
@@ -1405,7 +1545,7 @@ export async function teklifMusteriyeEpostaGonder(formData: FormData) {
   const genelToplam = teklif.kdvDahil ? girilenToplam : araToplam + kdvTutari;
 
   const formatPara = (n: number) => n.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " " + sembol;
-  const hitapAd = teklif.musteri.yetkiliAdi || teklif.musteri.ad;
+  const hitapAd = teklif.yetkili?.ad || teklif.musteri.yetkiliAdi || teklif.musteri.ad;
 
   // 1. OTOMATİK PDF DOSYASI OLUŞTURULUR
   const pdfBuffer = await teklifPdfOlustur(teklif, sirket);
