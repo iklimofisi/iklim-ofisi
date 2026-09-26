@@ -75,6 +75,7 @@ function formVerisiOzeti(fd: FormData) {
 }
 
 const HEDEF_ANAHTARLARI = [
+  "talepId",
   "teklifId",
   "siparisId",
   "musteriId",

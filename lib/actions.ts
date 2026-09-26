@@ -10,6 +10,7 @@ import { paraBirimiDogrula, type ParaBirimi } from "@/lib/para";
 import { epostaGonder } from "@/lib/eposta";
 import { getSirketAyarlari } from "@/lib/sirket";
 import { teklifPdfOlustur } from "@/lib/pdf-olustur";
+import { musteriToplami } from "@/lib/teklif-hesap";
 import { randomUUID } from "crypto";
 
 // --- Yetki kontrolü + işlem kaydı ---
@@ -1172,6 +1173,117 @@ export async function webTalebiSil(id: string) {
   revalidatePath("/panel/talepler");
 }
 
+// Web talebini tek adımda müşteriye (+ istenirse projeye) dönüştürür.
+// Hiçbir şey silinmez: talep yerinde kalır, yalnızca "okundu" işaretlenir.
+export async function webTalebiDonustur(formData: FormData) {
+  const kullanici = await yetki("webTalebiDonustur", formData);
+  const talepId = String(formData.get("talepId") ?? "");
+  const talep = talepId
+    ? await prisma.webTalebi.findUnique({
+        where: { id: talepId },
+        select: { id: true, ad: true, telefon: true, email: true, mesaj: true, dosyaAdi: true, tarih: true },
+      })
+    : null;
+  if (!talep) redirect("/panel/talepler");
+
+  // Aynı talep ikinci kez dönüştürülmesin (çift tıklama / iki kişi aynı anda)
+  const onceki = await prisma.islemKaydi
+    .findFirst({
+      where: { islem: "webTalebiDonusturuldu", hedefId: talep.id },
+      select: { id: true },
+    })
+    .catch(() => null);
+  if (onceki) redirect("/panel/talepler?zaten=1");
+
+  let secilenMusteriId = String(formData.get("musteriId") ?? "").trim();
+  const firmaAdi = String(formData.get("firmaAdi") ?? "").trim() || talep.ad;
+  const yetkiliAdi = String(formData.get("yetkiliAdi") ?? "").trim();
+  const yetkiliTelefon = String(formData.get("yetkiliTelefon") ?? "").trim();
+  const yetkiliEmail = String(formData.get("yetkiliEmail") ?? "").trim();
+  const projeOlustur = formData.get("projeOlustur") === "on";
+  const projeAdi = String(formData.get("projeAdi") ?? "").trim() || `Web talebi – ${talep.ad}`;
+  const konum = String(formData.get("konum") ?? "").trim();
+
+  // Seçilen müşteri gerçekten var mı?
+  const mevcutMusteri = secilenMusteriId
+    ? await prisma.musteri.findUnique({
+        where: { id: secilenMusteriId },
+        select: { id: true, yetkiliAdi: true, yetkililer: { select: { ad: true } } },
+      })
+    : null;
+  if (!mevcutMusteri) secilenMusteriId = "";
+
+  const talepTarihi = new Intl.DateTimeFormat("tr-TR", { timeZone: "Europe/Istanbul" }).format(talep.tarih);
+  const projeNotu = [
+    `Web sitesi talebi (${talepTarihi}):`,
+    talep.mesaj,
+    talep.dosyaAdi ? `Talep dosyası: ${talep.dosyaAdi} (Web Talepleri sayfasından indirilebilir)` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const { musteriId, projeId } = await prisma.$transaction(async (tx) => {
+    let mId = secilenMusteriId;
+
+    if (!mevcutMusteri) {
+      const m = await tx.musteri.create({
+        data: {
+          ad: firmaAdi,
+          yetkiliAdi: yetkiliAdi || null,
+          yetkiliTelefon: yetkiliTelefon || null,
+          yetkiliEmail: yetkiliEmail || null,
+        },
+      });
+      mId = m.id;
+    } else if (yetkiliAdi) {
+      // Mevcut müşteri: talep sahibi yetkililer arasında yoksa ek yetkili olarak ekle
+      const ad = yetkiliAdi.toLocaleLowerCase("tr-TR");
+      const zatenVar =
+        (mevcutMusteri.yetkiliAdi ?? "").toLocaleLowerCase("tr-TR") === ad ||
+        mevcutMusteri.yetkililer.some((y) => y.ad.toLocaleLowerCase("tr-TR") === ad);
+      if (!zatenVar) {
+        await tx.musteriYetkili.create({
+          data: {
+            musteriId: mId,
+            ad: yetkiliAdi,
+            telefon: yetkiliTelefon || null,
+            email: yetkiliEmail || null,
+          },
+        });
+      }
+    }
+
+    let pId: string | null = null;
+    if (projeOlustur) {
+      const p = await tx.proje.create({
+        data: {
+          ad: projeAdi,
+          konum: konum || null,
+          musteriId: mId,
+          kaynak: "Web sitesi",
+          ihaleDurumu: "TAKIPTE",
+          notlar: projeNotu,
+          olusturanAdi: kullanici.ad,
+        },
+      });
+      pId = p.id;
+    }
+
+    await tx.webTalebi.update({ where: { id: talep.id }, data: { okundu: true } });
+    return { musteriId: mId, projeId: pId };
+  });
+
+  // Talepler sayfasında "dönüştürüldü" bilgisini göstermek için
+  await islemKaydet(kullanici, "webTalebiDonusturuldu", { talepId: talep.id, musteriId, projeId });
+
+  revalidatePath("/panel/talepler");
+  revalidatePath("/panel/musteriler");
+  revalidatePath("/panel/projeler");
+  revalidatePath("/panel/proje-takip");
+  revalidatePath("/panel");
+  redirect(projeId ? `/panel/projeler/${projeId}` : `/panel/musteriler/${musteriId}`);
+}
+
 // --- Markalar ---
 
 export async function markaEkle(formData: FormData) {
@@ -1602,6 +1714,8 @@ export async function teklifMusteriyeEpostaGonder(formData: FormData) {
         yetkili: true,
         kalemler: { include: { marka: true } },
         olusturanKullanici: true,
+        // İlk hazırlanma tarihinin doğru bulunması için (PDF'te bu tarih gösterilir)
+        revizyonlar: { select: { tarih: true } },
       },
     }),
     getSirketAyarlari(),
@@ -1610,14 +1724,11 @@ export async function teklifMusteriyeEpostaGonder(formData: FormData) {
   if (!teklif) return;
 
   const pb = teklif.paraBirimi;
-  const sembol = pb === "EUR" ? "€" : pb === "USD" ? "$" : "₺";
-  const girilenToplam = teklif.kalemler.reduce(
-    (a, k) => a + k.adet * k.birimFiyat * (1 - k.iskontoYuzde / 100),
-    0
-  );
-  const araToplam = teklif.kdvDahil ? girilenToplam / (1 + teklif.kdvOrani / 100) : girilenToplam;
-  const kdvTutari = teklif.kdvDahil ? girilenToplam - araToplam : araToplam * (teklif.kdvOrani / 100);
-  const genelToplam = teklif.kdvDahil ? girilenToplam : araToplam + kdvTutari;
+  const sembol = pb === "EUR" ? "€" : pb === "USD" ? "$" : "TL";
+  // Müşteriye tek satır toplam: "10.250,00 € + KDV" (KDV dahil tekliflerde "(KDV dahil)")
+  const toplam = musteriToplami(teklif);
+  const htmlGuvenli = (m: string) =>
+    m.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
   const formatPara = (n: number) => n.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " " + sembol;
   const hitapAd = teklif.yetkili?.ad || teklif.musteri.yetkiliAdi || teklif.musteri.ad;
@@ -1627,14 +1738,14 @@ export async function teklifMusteriyeEpostaGonder(formData: FormData) {
 
   const icerikHtml = `
     <div style="font-family: Arial, sans-serif; max-width: 680px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-      <h2 style="color: #0f766e;">${sirket.unvan}</h2>
-      <p>Sayın ${hitapAd},</p>
+      <h2 style="color: #0f766e;">${htmlGuvenli(sirket.unvan)}</h2>
+      <p>Sayın ${htmlGuvenli(hitapAd)},</p>
       <p>TKL-${String(teklif.teklifNo).padStart(4, "0")} numaralı fiyat teklifimiz ve teknik detayları ekteki PDF dosyasında bilgilerinize sunulmuştur.</p>
-      ${ekNot ? `<p style="background:#f1f5f9; padding:10px; border-left:3px solid #0f766e;"><b>Hazırlayan Notu:</b> ${ekNot}</p>` : ''}
-      <h3 style="color: #0f766e;">Genel Toplam: ${formatPara(genelToplam)}</h3>
+      ${ekNot ? `<p style="background:#f1f5f9; padding:10px; border-left:3px solid #0f766e;"><b>Hazırlayan Notu:</b> ${htmlGuvenli(ekNot).replace(/\n/g, "<br />")}</p>` : ''}
+      <h3 style="color: #0f766e;">Genel Toplam: ${formatPara(toplam.tutar)} ${toplam.ek}</h3>
       <p style="color: #64748b; font-size: 12px;">📎 Detaylı teklif dokümanı bu e-postaya <b>PDF dosyası</b> olarak eklenmiştir.</p>
       <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
-      <p style="font-size: 12px; color: #64748b;"><b>Teklifi Hazırlayan:</b> ${giren.ad} (${giren.email})</p>
+      <p style="font-size: 12px; color: #64748b;"><b>Teklifi Hazırlayan:</b> ${htmlGuvenli(giren.ad)} (${htmlGuvenli(giren.email)})</p>
     </div>
   `;
 

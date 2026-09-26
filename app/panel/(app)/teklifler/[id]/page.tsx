@@ -7,13 +7,21 @@ import YazdirButon from "@/components/YazdirButon";
 import TeklifDurumSecici from "@/components/TeklifDurumSecici";
 import { getSirketAyarlari } from "@/lib/sirket";
 import TeklifEpostaGonderModal from "@/components/TeklifEpostaGonderModal"; // MODAL İMPORT EDİLDİ
-import { teklifToplamlari, ilkHazirlanmaTarihi, tarihYaz } from "@/lib/teklif-hesap";
+import { musteriToplami, ilkHazirlanmaTarihi, tarihYaz } from "@/lib/teklif-hesap";
 
 export const dynamic = "force-dynamic";
 
+// Teklif belgesinde tutarlar "10.250,00 €" biçiminde yazılır (PDF ile aynı)
 function paraFormat(n: number, paraBirimi: string) {
-  return n.toLocaleString("tr-TR", { style: "currency", currency: paraBirimi });
+  const sembol = paraBirimi === "EUR" ? "€" : paraBirimi === "USD" ? "$" : paraBirimi === "TRY" ? "TL" : paraBirimi;
+  return `${n.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${sembol}`;
 }
+
+// Teklif belgesindeki tarihler: 20.08.2026 (Türkiye saati, PDF ile aynı)
+const belgeTarihi = (d: Date) =>
+  new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Europe/Istanbul" }).format(
+    new Date(d)
+  );
 
 // Kurumsal ERP Teklif Kodlama Formatı: IKL-2026-00019
 function kurumsalTeklifKodu(teklifNo: number, tarih: Date) {
@@ -43,7 +51,8 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
   if (!teklif) notFound();
 
   const pb = teklif.paraBirimi;
-  const { araToplam, kdvTutari, genelToplam } = teklifToplamlari(teklif);
+  // Müşteriye tek satır toplam gösterilir: "10.250,00 € + KDV" (KDV dahil tekliflerde "(KDV dahil)")
+  const toplam = musteriToplami(teklif);
   const ilkTarih = ilkHazirlanmaTarihi(teklif);
 
   // Teklifin muhatabı: seçilen yetkili, yoksa müşterinin ana yetkilisi
@@ -194,20 +203,12 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
           </div>
           
           <div className="sm:text-right space-y-1">
-            <p className="text-xs text-metin/50 uppercase tracking-wider font-semibold">
-              {teklif.revizyonNo > 1 ? "İlk Hazırlanma Tarihi" : "Teklif Tarihi"}
-            </p>
-            <p className="text-metin font-mono">{tarihYaz(ilkTarih)}</p>
-            {teklif.revizyonNo > 1 && (
-              <>
-                <p className="text-xs text-metin/50 uppercase tracking-wider font-semibold pt-2">
-                  Revizyon Tarihi (Rev. {teklif.revizyonNo})
-                </p>
-                <p className="text-metin font-mono">{tarihYaz(teklif.tarih)}</p>
-              </>
-            )}
+            {/* Müşteriye yalnızca teklifin ilk hazırlandığı tarih gösterilir.
+                Revizyon bilgisi sadece bizim gördüğümüz üst şeritte (yazdırılmaz). */}
+            <p className="text-xs text-metin/50 uppercase tracking-wider font-semibold">Teklif Tarihi</p>
+            <p className="text-metin font-mono">{belgeTarihi(ilkTarih)}</p>
             <p className="text-xs text-metin/50 uppercase tracking-wider font-semibold pt-2">Geçerlilik Tarihi</p>
-            <p className="text-metin font-mono">{gecerlilikTarihi.toISOString().slice(0, 10)}</p>
+            <p className="text-metin font-mono">{belgeTarihi(gecerlilikTarihi)}</p>
           </div>
         </div>
 
@@ -275,18 +276,12 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
 
         {/* DİP TOPLAM */}
         <div className="flex justify-end mb-12">
-          <div className="w-full sm:w-64 space-y-2 text-sm">
-            <div className="flex justify-between text-metin/60">
-              <span>Ara Toplam</span>
-              <span className="font-mono">{paraFormat(araToplam, pb)}</span>
-            </div>
-            <div className="flex justify-between text-metin/60">
-              <span>KDV (%{teklif.kdvOrani})</span>
-              <span className="font-mono">{paraFormat(kdvTutari, pb)}</span>
-            </div>
-            <div className="flex justify-between text-metin font-semibold text-lg border-t border-hat pt-2">
+          <div className="w-full sm:w-auto sm:min-w-[18rem] text-sm">
+            <div className="flex justify-between gap-6 text-metin font-semibold text-lg border-t-2 border-metin/80 pt-2">
               <span>Genel Toplam</span>
-              <span className="font-mono">{paraFormat(genelToplam, pb)}</span>
+              <span className="font-mono whitespace-nowrap">
+                {paraFormat(toplam.tutar, pb)} {toplam.ek}
+              </span>
             </div>
           </div>
         </div>

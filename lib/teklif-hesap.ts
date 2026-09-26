@@ -30,6 +30,19 @@ export function teklifToplamlari(teklif: {
   return { araToplam, kdvTutari, genelToplam };
 }
 
+// MÜŞTERİYE giden belgelerde (yazdır/PDF, e-posta) gösterilen tek toplam satırı.
+// Ara toplam ve KDV tutarı ayrıca yazılmaz:
+//   KDV hariç teklif → "10.250,00 € + KDV"
+//   KDV dahil teklif → "12.300,00 € (KDV dahil)"
+export function musteriToplami(teklif: {
+  kalemler: KalemHesap[];
+  kdvDahil: boolean;
+  kdvOrani: number;
+}): { tutar: number; ek: string } {
+  const t = teklifToplamlari(teklif);
+  return teklif.kdvDahil ? { tutar: t.genelToplam, ek: "(KDV dahil)" } : { tutar: t.araToplam, ek: "+ KDV" };
+}
+
 // İlk hazırlanma tarihi: "ilkTarih" alanı sonradan eklendiği için eski tekliflerde
 // eklendiği günün tarihini taşıyabilir. Bu yüzden bilinen en erken tarih kullanılır.
 export function ilkHazirlanmaTarihi(teklif: {

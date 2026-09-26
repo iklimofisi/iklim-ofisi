@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { teklifToplamlari, tarihYaz } from "@/lib/teklif-hesap";
+import SatisPaneli, { DONEMLER, type Donem } from "@/components/SatisPaneli";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +9,15 @@ function paraFormat(n: number, paraBirimi: string = "TRY") {
   return n.toLocaleString("tr-TR", { style: "currency", currency: paraBirimi });
 }
 
-export default async function PanelOzet() {
+export default async function PanelOzet({
+  searchParams,
+}: {
+  searchParams?: Record<string, string | string[] | undefined>;
+}) {
+  const donemGirdi = searchParams?.donem;
+  const donemKodu = Array.isArray(donemGirdi) ? donemGirdi[0] : donemGirdi;
+  const donem: Donem = DONEMLER.some((d) => d.kod === donemKodu) ? (donemKodu as Donem) : "3ay";
+
   const ayBasi = new Date();
   ayBasi.setDate(1);
   ayBasi.setHours(0, 0, 0, 0);
@@ -23,8 +32,6 @@ export default async function PanelOzet() {
     cariHareketler,
     musteriler,
     sonTeklifler,
-    tumTeklifSayisi,
-    onaylananTeklifSayisi,
     buAyOnaylananSiparisler,
     sonTalepler,
     gelenHatirlatmalar,
@@ -39,8 +46,6 @@ export default async function PanelOzet() {
       orderBy: { tarih: "desc" },
       take: 5,
     }),
-    prisma.teklif.count(),
-    prisma.teklif.count({ where: { durum: "ONAYLANDI" } }),
     prisma.siparis.findMany({
       where: { onayTarihi: { gte: ayBasi }, durum: { not: "REDDEDILDI" } },
       include: { teklif: { include: { kalemler: true } } },
@@ -64,8 +69,6 @@ export default async function PanelOzet() {
     const tl = s.teklif.paraBirimi === "TRY" ? kdvli : kdvli * s.kur;
     return a + tl;
   }, 0);
-
-  const donusumOrani = tumTeklifSayisi > 0 ? Math.round((onaylananTeklifSayisi / tumTeklifSayisi) * 100) : 0;
 
   const enBorcluMusteriler = musteriler
     .map((m) => ({
@@ -134,18 +137,7 @@ export default async function PanelOzet() {
         ))}
       </div>
 
-      <div className="bg-yuzey border border-hat rounded-lg p-5 mb-6">
-        <p className="text-xs text-metin/55 mb-2">Teklif Dönüşüm Oranı</p>
-        <div className="flex items-center gap-3">
-          <div className="flex-1 h-2 bg-hat rounded-full overflow-hidden">
-            <div className="h-full bg-soguk rounded-full" style={{ width: `${donusumOrani}%` }} />
-          </div>
-          <p className="font-mono text-sm text-metin shrink-0">%{donusumOrani}</p>
-        </div>
-        <p className="text-xs text-metin/40 mt-2">
-          {onaylananTeklifSayisi} / {tumTeklifSayisi} teklif onaylandı
-        </p>
-      </div>
+      <SatisPaneli donem={donem} />
 
       <div className="grid sm:grid-cols-2 gap-6">
         <div className="bg-yuzey border border-hat rounded-lg p-5">

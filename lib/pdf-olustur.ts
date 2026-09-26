@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import { LIBERATION_SANS_NORMAL, LIBERATION_SANS_KALIN } from "@/lib/pdf-fontlari";
-import { teklifToplamlari } from "@/lib/teklif-hesap";
+import { musteriToplami, ilkHazirlanmaTarihi } from "@/lib/teklif-hesap";
 
 // Türkçe karakterler (ş, ğ, ı, İ, ö, ü, ç) için PDF'e gömülen yazı tipi.
 // Önceden bu harfler s, g, i... olarak değiştiriliyordu; artık olduğu gibi basılıyor.
@@ -29,7 +29,7 @@ const trTarih = new Intl.DateTimeFormat("tr-TR", {
 export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer> {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   yaziTipiniYukle(doc);
-  const pb = teklif.paraBirimi === "EUR" ? "EUR" : teklif.paraBirimi === "USD" ? "USD" : "TL";
+  const pb = teklif.paraBirimi === "EUR" ? "€" : teklif.paraBirimi === "USD" ? "$" : "TL";
 
   // 1. Şirket Header
   doc.setFont(YAZI_TIPI, "bold");
@@ -55,7 +55,7 @@ export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer
   doc.setFontSize(9);
   doc.setTextColor(15, 118, 110);
   // Teklif kodu ilk hazırlanma yılına göre sabit kalır (revizyonda değişmez)
-  const teklifKodu = `IKL-${new Date(teklif.ilkTarih ?? teklif.tarih).getFullYear()}-${String(teklif.teklifNo).padStart(5, "0")}`;
+  const teklifKodu = `IKL-${ilkHazirlanmaTarihi(teklif).getFullYear()}-${String(teklif.teklifNo).padStart(5, "0")}`;
   doc.text(teklifKodu, 195, 27, { align: "right" });
 
   // Çizgi
@@ -87,7 +87,8 @@ export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer
   doc.text("TEKLİF TARİHİ", 195, y, { align: "right" });
   doc.setFont(YAZI_TIPI, "normal");
   doc.setTextColor(15, 23, 42);
-  doc.text(trTarih.format(new Date(teklif.tarih)), 195, y + 5, { align: "right" });
+  // Müşteriye yalnızca teklifin ilk hazırlandığı tarih gösterilir (revizyon tarihi gösterilmez)
+  doc.text(trTarih.format(ilkHazirlanmaTarihi(teklif)), 195, y + 5, { align: "right" });
 
   y += 20;
 
@@ -142,23 +143,23 @@ export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer
   doc.line(15, y, 195, y);
   y += 6;
 
-  // 5. Dip Toplamlar
-  // Tutarlar panel ve e-posta ile aynı formülle hesaplanır
-  const { araToplam, kdvTutari: kdv, genelToplam } = teklifToplamlari(teklif);
-
-  doc.setFont(YAZI_TIPI, "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(100, 116, 139);
-
-  doc.text(`Ara Toplam: ${araToplam.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${pb}`, 192, y, { align: "right" });
-  y += 5;
-  doc.text(`KDV (%${teklif.kdvOrani}): ${kdv.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${pb}`, 192, y, { align: "right" });
-  y += 7;
+  // 5. Dip Toplam — müşteriye tek satır: "GENEL TOPLAM: 10.250,00 € + KDV"
+  // (KDV dahil tekliflerde "(KDV dahil)"). Ara toplam ve KDV tutarı ayrıca yazılmaz.
+  if (y > 275) {
+    doc.addPage();
+    y = 20;
+  }
+  const toplam = musteriToplami(teklif);
 
   doc.setFont(YAZI_TIPI, "bold");
-  doc.setFontSize(10);
+  doc.setFontSize(11);
   doc.setTextColor(15, 118, 110);
-  doc.text(`GENEL TOPLAM: ${genelToplam.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${pb}`, 192, y, { align: "right" });
+  doc.text(
+    `GENEL TOPLAM: ${toplam.tutar.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${pb} ${toplam.ek}`,
+    192,
+    y + 2,
+    { align: "right" }
+  );
 
   const arrayBuffer = doc.output("arraybuffer");
   return Buffer.from(arrayBuffer);
