@@ -14,9 +14,21 @@ export const metadata: Metadata = {
   alternates: { canonical: "/urunler" },
 };
 
-const urunKategorileri = [
+// "gorsel" alanı olan kartların üstünde ürün fotoğrafı gösterilir (fotoğraflar marka kataloglarından)
+const urunKategorileri: {
+  id: string;
+  kategori: string;
+  baslik: string;
+  aciklama: string;
+  urunler: string[];
+  markalar: string;
+  gorsel?: string;
+  gorselAlt?: string;
+}[] = [
   {
     id: "bireysel-klima",
+    gorsel: "/urunler/urun-bireysel-klima.jpg",
+    gorselAlt: "Oturma odasında duvar tipi klima iç ünitesi",
     kategori: "BİREYSEL İKLİMLENDİRME",
     baslik: "Mitsubishi Electric & TCL Bireysel Klimalar",
     aciklama: "Konut ve küçük ofisler için Mitsubishi Electric ve TCL yüksek verimli Inverter duvar tipi ve multi-split klima cihazları.",
@@ -25,6 +37,8 @@ const urunKategorileri = [
   },
   {
     id: "ticari-klima",
+    gorsel: "/urunler/urun-ticari-klima.jpg",
+    gorselAlt: "Tavana monte kaset tipi klima iç ünitesi",
     kategori: "TİCARİ İKLİMLENDİRME",
     baslik: "Ticari Tip Klimalar",
     aciklama: "Mağaza, cafe, restoran ve açık ofis alanları için 4 yöne üflemeli kaset, kanallı gizli tavan, konsol ve salon tipi cihazlar.",
@@ -33,6 +47,8 @@ const urunKategorileri = [
   },
   {
     id: "vrf-sistemleri",
+    gorsel: "/urunler/urun-vrf.jpg",
+    gorselAlt: "TCL TMV6+ Super Serisi VRF dış ünitesi",
     kategori: "MERKEZİ İKLİMLENDİRME",
     baslik: "Mitsubishi Electric & TCL VRF Sistemleri",
     aciklama: "Otel, plaza, hastane ve binalarda her odayı bağımsız iklimlendiren Mitsubishi Electric City Multi ve TCL TMV serisi VRF dış/iç ünite grupları.",
@@ -139,8 +155,25 @@ export default async function UrunlerPage() {
             {urunKategorileri.map((kat) => (
               <div
                 key={kat.id}
-                className="bg-white border border-slate-200/90 rounded-2xl p-8 hover:shadow-lg hover:border-teal-500/40 transition-all duration-300 space-y-6 flex flex-col justify-between"
+                className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden hover:shadow-lg hover:border-teal-500/40 transition-all duration-300 flex flex-col"
               >
+                {kat.gorsel ? (
+                  <div className="relative w-full aspect-[3/2] bg-slate-100">
+                    <Image
+                      src={kat.gorsel}
+                      alt={kat.gorselAlt ?? kat.baslik}
+                      fill
+                      sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full aspect-[3/2] bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950 flex flex-col items-center justify-center text-center px-6">
+                    <span className="text-[11px] font-bold tracking-widest text-teal-300 uppercase">{kat.kategori}</span>
+                    <span className="text-2xl font-bold text-white mt-2">{kat.markalar}</span>
+                  </div>
+                )}
+                <div className="p-8 space-y-6 flex flex-col justify-between flex-1">
                 <div className="space-y-4">
                   <span className="text-[11px] font-bold tracking-wider text-teal-700 uppercase">
                     {kat.kategori}
@@ -169,6 +202,7 @@ export default async function UrunlerPage() {
                   >
                     Projeniz İçin Fiyat Teklifi İsteyin →
                   </Link>
+                </div>
                 </div>
               </div>
             ))}
