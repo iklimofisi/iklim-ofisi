@@ -5,6 +5,7 @@ import { ziyaretHatirlatmaTamamlandi } from "@/lib/actions";
 import { suankiKullanici } from "@/lib/oturum";
 import ZiyaretKayitFormu from "@/components/ZiyaretKayitFormu";
 import ZiyaretListesi from "@/components/ZiyaretListesi";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
 
@@ -199,9 +200,9 @@ export default async function ZiyaretlerSayfasi({ searchParams = {} }: { searchP
                   </p>
                 </div>
                 <form action={ziyaretHatirlatmaTamamlandi.bind(null, z.id)}>
-                  <button type="submit" className="focus-ring shrink-0 text-xs bg-soguk text-white px-3 py-1.5 rounded-md font-medium hover:bg-soguk-dim transition-colors">
+                  <KaydetButonu basari="Hatırlatma tamamlandı." className="focus-ring shrink-0 text-xs bg-soguk text-white px-3 py-1.5 rounded-md font-medium hover:bg-soguk-dim transition-colors">
                     Tamamlandı
-                  </button>
+                  </KaydetButonu>
                 </form>
               </div>
             ))}

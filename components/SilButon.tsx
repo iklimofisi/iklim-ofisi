@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useBitinceBildir } from "@/lib/bildirim";
 
 export default function SilButon({
   id,
@@ -12,6 +13,7 @@ export default function SilButon({
   onayMesaji: string;
 }) {
   const [pending, startTransition] = useTransition();
+  useBitinceBildir(pending, "Silindi.");
 
   return (
     <button

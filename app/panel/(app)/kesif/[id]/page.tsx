@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { kesifiTeklifeDonustur } from "@/lib/actions";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
 
@@ -97,9 +98,9 @@ export default async function KesifDetay({ params }: { params: { id: string } })
                 />
               </div>
               <div className="flex justify-end">
-                <button type="submit" className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
+                <KaydetButonu basari="Teklif oluşturuldu." className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
                   Teklife Dönüştür
-                </button>
+                </KaydetButonu>
               </div>
             </form>
           )}

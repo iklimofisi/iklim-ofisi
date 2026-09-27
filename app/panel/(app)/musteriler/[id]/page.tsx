@@ -5,6 +5,7 @@ import { musteriGuncelle, musteriYetkiliEkle, musteriYetkiliGuncelle, musteriYet
 import ZiyaretListesi from "@/components/ZiyaretListesi";
 import SilButon from "@/components/SilButon";
 import { teklifToplamlari, tarihYaz } from "@/lib/teklif-hesap";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
 
@@ -129,9 +130,9 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
               <input name="sevkAdresi" defaultValue={musteri.sevkAdresi ?? ""} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm" />
             </div>
           </div>
-          <button type="submit" className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
+          <KaydetButonu className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
             Kaydet
-          </button>
+          </KaydetButonu>
         </form>
       </details>
 
@@ -192,9 +193,9 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
                   <input name="unvan" defaultValue={y.unvan ?? ""} placeholder="Ünvan / Görev" className="focus-ring flex-1 min-w-[130px] border border-hat rounded-md px-3 py-2 text-sm" />
                   <input name="telefon" defaultValue={y.telefon ?? ""} placeholder="Telefon" className="focus-ring flex-1 min-w-[130px] border border-hat rounded-md px-3 py-2 text-sm" />
                   <input name="email" type="email" defaultValue={y.email ?? ""} placeholder="E-posta" className="focus-ring flex-1 min-w-[180px] border border-hat rounded-md px-3 py-2 text-sm" />
-                  <button type="submit" className="focus-ring bg-soguk text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
+                  <KaydetButonu className="focus-ring bg-soguk text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
                     Kaydet
-                  </button>
+                  </KaydetButonu>
                 </form>
                 <SilButon
                   id={y.id}
@@ -226,9 +227,9 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
             <label className="block text-xs font-medium text-metin/60 mb-1">E-posta</label>
             <input name="email" type="email" className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm" />
           </div>
-          <button type="submit" className="focus-ring bg-soguk text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
+          <KaydetButonu basari="Yetkili eklendi." className="focus-ring bg-soguk text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
             + Yetkili Ekle
-          </button>
+          </KaydetButonu>
         </form>
       </div>
 

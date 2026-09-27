@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ziyaretEkle } from "@/lib/actions";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export default function ZiyaretEkleFormu({
   musteriId,
@@ -71,12 +72,11 @@ export default function ZiyaretEkleFormu({
       )}
 
       <div className="flex justify-end">
-        <button
-          type="submit"
+        <KaydetButonu basari="Ziyaret kaydedildi."
           className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors"
         >
           Ziyareti Kaydet
-        </button>
+        </KaydetButonu>
       </div>
     </form>
   );

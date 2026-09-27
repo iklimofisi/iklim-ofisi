@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useBitinceBildir } from "@/lib/bildirim";
 import { teklifDurumGuncelle } from "@/lib/actions";
 
 const durumlar = [
@@ -17,6 +18,7 @@ export default function TeklifDurumSecici({
   mevcutDurum: string;
 }) {
   const [pending, startTransition] = useTransition();
+  useBitinceBildir(pending, "Teklif durumu güncellendi.");
 
   return (
     <select

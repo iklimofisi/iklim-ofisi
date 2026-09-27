@@ -155,7 +155,7 @@ export default async function AyarlarSayfasi() {
           </div>
 
           <div className="pt-2">
-            <KaydetButonu>Şirket Bilgilerini Kaydet</KaydetButonu>
+            <KaydetButonu basari={null}>Şirket Bilgilerini Kaydet</KaydetButonu>
           </div>
         </form>
       </div>
@@ -216,7 +216,7 @@ export default async function AyarlarSayfasi() {
             placeholder="Müşteriye gidecek metin"
             className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm"
           />
-          <KaydetButonu bekleme="Ekleniyor…">Notu Ekle</KaydetButonu>
+          <KaydetButonu basari={null} bekleme="Ekleniyor…">Notu Ekle</KaydetButonu>
         </form>
       </div>
 
@@ -271,7 +271,7 @@ export default async function AyarlarSayfasi() {
                       className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm"
                     />
                     <div className="flex items-center justify-between pt-1">
-                      <KaydetButonu className="focus-ring bg-soguk/10 text-soguk-dim px-4 py-1.5 rounded-md text-sm font-medium hover:bg-soguk/20 transition-colors">
+                      <KaydetButonu basari={null} className="focus-ring bg-soguk/10 text-soguk-dim px-4 py-1.5 rounded-md text-sm font-medium hover:bg-soguk/20 transition-colors">
                         Kaydet
                       </KaydetButonu>
                       <SilButon

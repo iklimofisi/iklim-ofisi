@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { cariHareketEkle } from "@/lib/actions";
+import { bildirimGoster } from "@/lib/bildirim";
 
 const yontemler = [
   { deger: "CEK", etiket: "Çek", detayEtiket: "Çekin tahsil tarihi", placeholder: "örn. 15.09.2026" },
@@ -43,6 +44,7 @@ export default function OdemeAlModal({
                 const formData = new FormData(e.currentTarget);
                 await cariHareketEkle(formData);
                 setAcik(false);
+                bildirimGoster("Ödeme kaydedildi.");
               }}
               className="space-y-4"
             >

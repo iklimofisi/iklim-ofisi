@@ -3,6 +3,7 @@ import { webTalebiOkunduIsaretle, webTalebiSil } from "@/lib/actions";
 import SilButon from "@/components/SilButon";
 import Link from "next/link";
 import { MusteriListesiSaglayici, TalepDonustur } from "@/components/TalepDonusturFormu";
+import KaydetButonu from "@/components/KaydetButonu";
 
 // Telefonu karşılaştırmak için son 10 hane (0532..., +90532... aynı sayılır)
 const telAnahtar = (t: string | null | undefined) => {
@@ -118,9 +119,9 @@ export default async function TaleplerSayfasi({
               <div className="flex items-center gap-3 shrink-0">
                 {!t.okundu && (
                   <form action={webTalebiOkunduIsaretle.bind(null, t.id)}>
-                    <button type="submit" className="focus-ring text-xs text-soguk-dim hover:underline">
+                    <KaydetButonu basari="Okundu olarak işaretlendi." className="focus-ring text-xs text-soguk-dim hover:underline">
                       Okundu işaretle
-                    </button>
+                    </KaydetButonu>
                   </form>
                 )}
                 <SilButon id={t.id} action={webTalebiSil} onayMesaji="Bu talebi silmek istediğine emin misin?" />

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { kullaniciSifreSifirla } from "@/lib/actions";
+import { bildirimGoster } from "@/lib/bildirim";
 
 export default function SifreSifirlaFormu({ kullaniciId }: { kullaniciId: string }) {
   const [acik, setAcik] = useState(false);
@@ -30,6 +31,7 @@ export default function SifreSifirlaFormu({ kullaniciId }: { kullaniciId: string
         const formData = new FormData(e.currentTarget);
         await kullaniciSifreSifirla(formData);
         setGonderildi(true);
+        bildirimGoster("Şifre güncellendi.");
       }}
       className="flex items-center gap-2"
     >

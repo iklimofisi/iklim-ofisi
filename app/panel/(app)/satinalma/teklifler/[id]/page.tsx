@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { satinalmaTeklifiniDonustur } from "@/lib/actions";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
 
@@ -105,9 +106,9 @@ export default async function SatinalmaTeklifiDetay({ params }: { params: { id: 
               />
             </div>
             <div className="sm:col-span-2 flex justify-end">
-              <button type="submit" className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
+              <KaydetButonu basari="Teklif oluşturuldu." className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
                 Teklife Dönüştür
-              </button>
+              </KaydetButonu>
             </div>
           </form>
         )}

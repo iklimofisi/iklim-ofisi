@@ -4,6 +4,7 @@ import { paraFormat } from "@/lib/para";
 import SilButon from "@/components/SilButon";
 import UrunExcelYukle from "@/components/UrunExcelYukle";
 import Link from "next/link";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
 
@@ -71,9 +72,9 @@ export default async function UrunlerSayfasi() {
               </select>
             </div>
           </div>
-          <button type="submit" className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
+          <KaydetButonu basari="Eklendi." className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
             Ekle
-          </button>
+          </KaydetButonu>
         </form>
       </details>
 

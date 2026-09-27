@@ -5,6 +5,7 @@ import TeklifKalemleri from "@/components/TeklifKalemleri";
 import MusteriYetkiliSecici from "@/components/MusteriYetkiliSecici";
 import Link from "next/link";
 import SablonSecici from "@/components/SablonSecici";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
 
@@ -178,12 +179,11 @@ export default async function TeklifDuzenle({
         <SablonSecici sablonlar={sablonlar} seciliIdler={[...seciliSablonIdleri]} />
 
         <div className="flex items-center justify-end border-t border-hat pt-4">
-          <button
-            type="submit"
+          <KaydetButonu
             className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors"
           >
             Değişiklikleri Kaydet
-          </button>
+          </KaydetButonu>
         </div>
       </form>
     </div>

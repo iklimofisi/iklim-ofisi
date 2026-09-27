@@ -1,6 +1,7 @@
 import { suankiKullanici } from "@/lib/oturum";
 import { profilGuncelle } from "@/lib/actions";
 import Link from "next/link";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
 
@@ -90,12 +91,11 @@ export default async function ProfilPage({
         </div>
 
         <div className="pt-2 flex justify-end">
-          <button
-            type="submit"
+          <KaydetButonu
             className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-semibold hover:bg-soguk-dim transition-colors"
           >
             Bilgilerimi Kaydet
-          </button>
+          </KaydetButonu>
         </div>
       </form>
     </div>

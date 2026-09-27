@@ -2,9 +2,11 @@
 
 import { useTransition } from "react";
 import { siparisOlustur } from "@/lib/actions";
+import { useBitinceBildir } from "@/lib/bildirim";
 
 export default function SipariseDonusturButon({ teklifId }: { teklifId: string }) {
   const [pending, startTransition] = useTransition();
+  useBitinceBildir(pending, "Sipariş oluşturuldu.");
 
   return (
     <button

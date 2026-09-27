@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { siparisTalebiOlustur } from "@/lib/actions";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
 
@@ -111,12 +112,11 @@ export default async function SiparisTalebi({ params }: { params: { id: string }
         </div>
 
         <div className="flex justify-end">
-          <button
-            type="submit"
+          <KaydetButonu basari="Sipariş talebi onaya gönderildi."
             className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors"
           >
             Onaya Gönder
-          </button>
+          </KaydetButonu>
         </div>
       </form>
     </div>

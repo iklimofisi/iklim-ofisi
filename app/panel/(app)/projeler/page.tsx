@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { projeEkle, projeSil } from "@/lib/actions";
 import HizliMusteriEkleModal from "@/components/HizliMusteriEkleModal"; // MODAL İMPORT
 import SilButon from "@/components/SilButon";
+import HizliAramaListesi from "@/components/HizliAramaListesi";
+import KaydetButonu from "@/components/KaydetButonu";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -51,9 +53,14 @@ export default async function ProjelerPage({
         </div>
       )}
 
-      {/* YENİ PROJE FORMU */}
-      <form action={projeEkle} className="bg-yuzey border border-hat rounded-lg p-5 mb-10">
-        <h2 className="font-display font-medium text-metin mb-4">Yeni Proje</h2>
+      {/* YENİ PROJE FORMU — kapalı durur; hızlı müşteri eklendikten sonra açık gelir */}
+      <details className="group bg-yuzey border border-hat rounded-lg mb-6" open={Boolean(searchParams?.seciliMusteriId)}>
+        <summary className="cursor-pointer select-none list-none px-5 py-3 text-sm font-semibold text-soguk-dim flex items-center justify-between">
+          <span>+ Yeni Proje Ekle</span>
+          <span className="text-metin/40 text-xs group-open:hidden">formu aç ▾</span>
+          <span className="text-metin/40 text-xs hidden group-open:inline">kapat ▴</span>
+        </summary>
+      <form action={projeEkle} className="px-5 pb-5">
 
         <div className="grid sm:grid-cols-2 gap-3 mb-3">
           <div>
@@ -163,50 +170,51 @@ export default async function ProjelerPage({
         </div>
 
         <div className="flex justify-end">
-          <button
-            type="submit"
-            className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors"
-          >
-            Projeyi Kaydet
-          </button>
+          <KaydetButonu>Projeyi Kaydet</KaydetButonu>
         </div>
       </form>
+      </details>
 
-      {/* PROJELER LİSTESİ */}
-      <div className="space-y-3">
-        {projeler.map((p) => (
-          <div key={p.id} className="bg-yuzey border border-hat rounded-lg p-4 flex items-center justify-between gap-3 shadow-sm hover:border-soguk transition-colors">
-            <Link href={`/panel/projeler/${p.id}`} className="focus-ring min-w-0 flex-1">
-              <p className="font-semibold text-metin text-sm hover:text-soguk-dim transition-colors truncate">
-                {p.ad}
-              </p>
-              <p className="text-xs text-metin/50 mt-0.5">
-                {p.konum || "Konum belirtilmedi"}
-                {p.musteri && ` · ${p.musteri.ad}`}
-                {` · ${p.teklifler.length} teklif`}
-                {` · ${p.ziyaretler.length} ziyaret`}
-                {p.tahminiDeger && ` · Tahmini: ${paraFormat(p.tahminiDeger, p.paraBirimi)}`}
-              </p>
-            </Link>
+      {/* PROJELER LİSTESİ — yazdıkça anında süzülür */}
+      <HizliAramaListesi
+        yerTutucu="Hızlı ara: proje adı, konum, müşteri, durum, kaynak, notlar…"
+        bosMetin="Henüz kayıtlı proje yok."
+        birim="proje"
+        satirlar={projeler.map((p) => ({
+          id: p.id,
+          aramaMetni: [p.ad, p.konum, p.musteri?.ad, ihaleDurumEtiket[p.ihaleDurumu], p.kaynak, p.ihaleyiAlan, p.notlar, p.olusturanAdi]
+            .filter(Boolean)
+            .join(" "),
+          icerik: (
+            <div className="bg-yuzey border border-hat rounded-lg p-4 flex items-center justify-between gap-3 shadow-sm hover:border-soguk transition-colors">
+              <Link href={`/panel/projeler/${p.id}`} className="focus-ring min-w-0 flex-1">
+                <p className="font-semibold text-metin text-sm hover:text-soguk-dim transition-colors truncate">
+                  {p.ad}
+                </p>
+                <p className="text-xs text-metin/50 mt-0.5">
+                  {p.konum || "Konum belirtilmedi"}
+                  {p.musteri && ` · ${p.musteri.ad}`}
+                  {` · ${p.teklifler.length} teklif`}
+                  {` · ${p.ziyaretler.length} ziyaret`}
+                  {p.tahminiDeger && ` · Tahmini: ${paraFormat(p.tahminiDeger, p.paraBirimi)}`}
+                </p>
+              </Link>
 
-            <div className="flex items-center gap-3 shrink-0">
-              <span className={`px-2.5 py-1 rounded text-xs font-bold ${
-                p.ihaleDurumu === 'KAZANILDI' ? 'bg-emerald-100 text-emerald-800' :
-                p.ihaleDurumu === 'KAYBEDILDI' || p.ihaleDurumu === 'IPTAL' ? 'bg-rose-100 text-rose-800' :
-                'bg-amber-100 text-amber-800'
-              }`}>
-                {ihaleDurumEtiket[p.ihaleDurumu] || p.ihaleDurumu}
-              </span>
+              <div className="flex items-center gap-3 shrink-0">
+                <span className={`px-2.5 py-1 rounded text-xs font-bold ${
+                  p.ihaleDurumu === 'KAZANILDI' ? 'bg-emerald-100 text-emerald-800' :
+                  p.ihaleDurumu === 'KAYBEDILDI' || p.ihaleDurumu === 'IPTAL' ? 'bg-rose-100 text-rose-800' :
+                  'bg-amber-100 text-amber-800'
+                }`}>
+                  {ihaleDurumEtiket[p.ihaleDurumu] || p.ihaleDurumu}
+                </span>
 
-              <SilButon id={p.id} action={projeSil} onayMesaji="Bu projeyi silmek istediğinize emin misiniz?" />
+                <SilButon id={p.id} action={projeSil} onayMesaji="Bu projeyi silmek istediğinize emin misiniz?" />
+              </div>
             </div>
-          </div>
-        ))}
-
-        {projeler.length === 0 && (
-          <p className="text-sm text-metin/50 py-4 text-center">Henüz kayıtlı proje yok.</p>
-        )}
-      </div>
+          ),
+        }))}
+      />
     </div>
   );
 }

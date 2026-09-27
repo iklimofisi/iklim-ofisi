@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import HizliAramaListesi from "@/components/HizliAramaListesi";
 
 export const dynamic = "force-dynamic";
 
@@ -64,52 +65,64 @@ export default async function SiparislerSayfasi() {
       </div>
 
       {onayBekleyenler.length > 0 && (
-        <div className="mb-10">
-          <h2 className="font-display font-medium text-metin mb-3">
-            Onay Bekleyenler <span className="text-sicak-dim">({onayBekleyenler.length})</span>
-          </h2>
-          <div className="space-y-3">
-            {onayBekleyenler.map((s) => (
-              <Link
-                key={s.id}
-                href={`/panel/siparisler/${s.id}`}
-                className="focus-ring block bg-sicak-light border border-sicak/30 rounded-lg p-4 hover:border-sicak transition-colors"
-              >
-                <p className="font-medium text-metin text-sm">{s.teklif.baslik || "(Başlıksız Teklif)"}</p>
-                <p className="text-xs text-metin/60">
-                  {s.musteri.ad} · {s.olusturanAdi && `${s.olusturanAdi} tarafından talep edildi · `}
-                  {s.olusturmaTarihi.toISOString().slice(0, 10)}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </div>
+        <p className="text-sm font-medium text-sicak-dim mb-3">
+          {onayBekleyenler.length} sipariş onay bekliyor — listenin en üstünde turuncu olarak görünür.
+        </p>
       )}
 
-      <div className="space-y-3">
-        {digerleri.map((s) => (
-          <div key={s.id} className="bg-yuzey border border-hat rounded-lg p-4 flex items-center justify-between gap-3">
-            <Link href={`/panel/siparisler/${s.id}`} className="focus-ring min-w-0">
-              <p className="font-medium text-metin text-sm hover:text-soguk-dim transition-colors truncate">
-                {s.teklif.baslik || "(Başlıksız Teklif)"}
-              </p>
-              <p className="text-xs text-metin/50">
-                {s.musteri.ad} · {s.olusturmaTarihi.toISOString().slice(0, 10)}
-                {s.faturaNo && ` · Fatura: ${s.faturaNo}`} · {sevkOzeti(s)}
-              </p>
-            </Link>
-            <span className={`text-xs px-2 py-1 rounded-full shrink-0 ${durumRenk[s.durum]}`}>
-              {durumEtiket[s.durum]}
-            </span>
-          </div>
-        ))}
-        {digerleri.length === 0 && onayBekleyenler.length === 0 && (
-          <p className="text-sm text-metin/50">
-            Henüz sipariş yok. Onaylanan bir teklifin detayında "Siparişe Dönüştür"
-            butonuyla buraya taşıyabilirsin.
-          </p>
-        )}
-      </div>
+      {/* SİPARİŞ LİSTESİ — onay bekleyenler üstte; yazdıkça anında süzülür */}
+      <HizliAramaListesi
+        yerTutucu="Hızlı ara: teklif / proje adı, müşteri, teklif no, fatura no, durum…"
+        birim="sipariş"
+        bosMetin='Henüz sipariş yok. Onaylanan bir teklifin detayında "Siparişe Dönüştür" butonuyla buraya taşıyabilirsin.'
+        satirlar={[...onayBekleyenler, ...digerleri].map((s) => ({
+          id: s.id,
+          aramaMetni: [
+            s.teklif.baslik,
+            s.musteri.ad,
+            `TKL-${String(s.teklif.teklifNo).padStart(4, "0")}`,
+            String(s.teklif.teklifNo),
+            s.faturaNo,
+            s.olusturanAdi,
+            durumEtiket[s.durum],
+          ]
+            .filter(Boolean)
+            .join(" "),
+          icerik:
+            s.durum === "ONAY_BEKLIYOR" ? (
+              <Link
+                href={`/panel/siparisler/${s.id}`}
+                className="focus-ring flex items-center justify-between gap-3 bg-sicak-light border border-sicak/30 rounded-lg p-4 hover:border-sicak transition-colors"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium text-metin text-sm truncate">{s.teklif.baslik || "(Başlıksız Teklif)"}</p>
+                  <p className="text-xs text-metin/60">
+                    {s.musteri.ad} · {s.olusturanAdi && `${s.olusturanAdi} tarafından talep edildi · `}
+                    {s.olusturmaTarihi.toISOString().slice(0, 10)}
+                  </p>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded-full shrink-0 font-semibold ${durumRenk[s.durum]}`}>
+                  {durumEtiket[s.durum]}
+                </span>
+              </Link>
+            ) : (
+              <div className="bg-yuzey border border-hat rounded-lg p-4 flex items-center justify-between gap-3">
+                <Link href={`/panel/siparisler/${s.id}`} className="focus-ring min-w-0">
+                  <p className="font-medium text-metin text-sm hover:text-soguk-dim transition-colors truncate">
+                    {s.teklif.baslik || "(Başlıksız Teklif)"}
+                  </p>
+                  <p className="text-xs text-metin/50">
+                    {s.musteri.ad} · {s.olusturmaTarihi.toISOString().slice(0, 10)}
+                    {s.faturaNo && ` · Fatura: ${s.faturaNo}`} · {sevkOzeti(s)}
+                  </p>
+                </Link>
+                <span className={`text-xs px-2 py-1 rounded-full shrink-0 ${durumRenk[s.durum]}`}>
+                  {durumEtiket[s.durum]}
+                </span>
+              </div>
+            ),
+        }))}
+      />
     </div>
   );
 }

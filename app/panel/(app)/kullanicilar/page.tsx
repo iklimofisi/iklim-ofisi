@@ -4,6 +4,7 @@ import { suankiKullanici } from "@/lib/oturum";
 import { kullaniciEkle, kullaniciSil } from "@/lib/actions";
 import SilButon from "@/components/SilButon";
 import SifreSifirlaFormu from "@/components/SifreSifirlaFormu";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
 
@@ -43,12 +44,11 @@ export default async function KullanicilarSayfasi() {
             <option value="ADMIN">Yönetici</option>
           </select>
         </div>
-        <button
-          type="submit"
+        <KaydetButonu basari="Eklendi."
           className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors"
         >
           Ekle
-        </button>
+        </KaydetButonu>
       </form>
 
       <div className="bg-yuzey border border-hat rounded-lg overflow-hidden">

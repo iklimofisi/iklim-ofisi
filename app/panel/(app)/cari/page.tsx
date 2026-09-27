@@ -3,6 +3,7 @@ import { cariHareketEkle, cariHareketSil } from "@/lib/actions";
 import CariFiltre from "@/components/CariFiltre";
 import SilButon from "@/components/SilButon";
 import OdemeAlModal from "@/components/OdemeAlModal";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
 
@@ -150,9 +151,9 @@ export default async function CariSayfasi({
             <label className="block text-xs font-medium text-metin/60 mb-1">Açıklama *</label>
             <input name="aciklama" required className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm" placeholder="Fatura No, çek detayları vb." />
           </div>
-          <button type="submit" className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors shrink-0">
+          <KaydetButonu basari="Eklendi." className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors shrink-0">
             Ekle
-          </button>
+          </KaydetButonu>
         </div>
       </form>
 

@@ -3,6 +3,7 @@ import { tekliflerExcelImport } from "@/lib/actions";
 import TakipNotuEditor from "@/components/TakipNotuEditor";
 import Link from "next/link";
 import { teklifToplamlari } from "@/lib/teklif-hesap";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
 
@@ -69,12 +70,11 @@ export default async function ProjeTakipPage() {
               required
               className="text-xs text-metin/70 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-soguk-light file:text-soguk-dim hover:file:bg-soguk/20"
             />
-            <button
-              type="submit"
+            <KaydetButonu basari="Excel yüklendi, kayıtlar güncellendi."
               className="bg-soguk text-white px-3 py-1 rounded text-xs font-bold hover:bg-soguk-dim transition-colors shrink-0"
             >
               📤 Excel'i Yükle & Güncelle
-            </button>
+            </KaydetButonu>
           </form>
         </div>
       </div>

@@ -2,10 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { siparisOnayla, siparisReddet } from "@/lib/actions";
+import { useBitinceBildir } from "@/lib/bildirim";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export default function SiparisOnayReddet({ siparisId }: { siparisId: string }) {
   const [pending, startTransition] = useTransition();
   const [redFormuAcik, setRedFormuAcik] = useState(false);
+  useBitinceBildir(pending, "Sipariş onaylandı.");
 
   return (
     <div className="space-y-3">
@@ -40,12 +43,11 @@ export default function SiparisOnayReddet({ siparisId }: { siparisId: string }) 
             placeholder="Red sebebi (örn. bütçe uygun değil)"
             className="focus-ring flex-1 min-w-[220px] border border-hat rounded-md px-3 py-2 text-sm"
           />
-          <button
-            type="submit"
+          <KaydetButonu basari="Sipariş reddedildi."
             className="focus-ring bg-sicak text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-sicak-dim transition-colors"
           >
             Reddi Onayla
-          </button>
+          </KaydetButonu>
         </form>
       )}
     </div>

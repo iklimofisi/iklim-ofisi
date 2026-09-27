@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { kesifEkle, kesifSil } from "@/lib/actions";
 import SilButon from "@/components/SilButon";
 import Link from "next/link";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
 
@@ -56,9 +57,9 @@ export default async function KesifSayfasi() {
             placeholder="Ölçüler, önerilen sistem, dikkat edilmesi gerekenler..."
           />
         </div>
-        <button type="submit" className="focus-ring w-full sm:w-auto bg-soguk text-white px-6 py-3 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
+        <KaydetButonu basari="Keşif kaydedildi." className="focus-ring w-full sm:w-auto bg-soguk text-white px-6 py-3 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
           Keşfi Kaydet
-        </button>
+        </KaydetButonu>
       </form>
 
       <div className="space-y-3">

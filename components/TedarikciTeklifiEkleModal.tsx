@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { satinalmaTeklifiEkle } from "@/lib/actions";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export default function TedarikciTeklifiEkleModal({
   konuBasligi,
@@ -81,12 +82,11 @@ export default function TedarikciTeklifiEkleModal({
                 >
                   İptal
                 </button>
-                <button
-                  type="submit"
+                <KaydetButonu
                   className="px-5 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-md shadow-sm"
                 >
                   Tedarikçi Teklifini Kaydet
-                </button>
+                </KaydetButonu>
               </div>
             </form>
           </div>

@@ -5,6 +5,7 @@ import { projeGuncelle, projeSil } from "@/lib/actions";
 import SilButon from "@/components/SilButon";
 import ZiyaretListesi from "@/components/ZiyaretListesi";
 import { teklifToplamlari } from "@/lib/teklif-hesap";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
 
@@ -110,9 +111,9 @@ export default async function ProjeDetay({ params }: { params: { id: string } })
             <label className="block text-xs font-medium text-metin/60 mb-1">Notlar</label>
             <textarea name="notlar" rows={3} defaultValue={proje.notlar ?? ""} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm" />
           </div>
-          <button type="submit" className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
+          <KaydetButonu className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
             Kaydet
-          </button>
+          </KaydetButonu>
         </form>
       </details>
 

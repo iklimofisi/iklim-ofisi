@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { tedarikciEkle } from "@/lib/actions";
 import Link from "next/link";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
 
@@ -40,9 +41,9 @@ export default async function SatinalmaSayfasi() {
           <label className="block text-xs font-medium text-metin/60 mb-1">Adres</label>
           <input name="adres" className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm" />
         </div>
-        <button type="submit" className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
+        <KaydetButonu basari="Eklendi." className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
           Ekle
-        </button>
+        </KaydetButonu>
       </form>
 
       <div className="bg-yuzey border border-hat rounded-lg overflow-hidden">

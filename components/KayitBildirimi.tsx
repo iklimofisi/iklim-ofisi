@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { BILDIRIM_OLAYI } from "@/lib/bildirim";
 
 // Panelde kaydet/sil sonrası sağ üstte görünen kısa bildirim.
 // Sunucu işlemi "?mesaj=..." ile yönlendirir; bildirim birkaç saniye görünür,
@@ -30,6 +31,16 @@ export default function KayitBildirimi() {
     const q = kalan.toString();
     router.replace(`${yol}${q ? `?${q}` : ""}${typeof window !== "undefined" ? window.location.hash : ""}`, { scroll: false });
   }, [kod, params, router, yol]);
+
+  // Formlar ve butonlar da bildirim gönderebilir (bildirimGoster)
+  useEffect(() => {
+    const dinle = (e: Event) => {
+      const m = (e as CustomEvent<string>).detail;
+      if (m) setMetin(m);
+    };
+    window.addEventListener(BILDIRIM_OLAYI, dinle);
+    return () => window.removeEventListener(BILDIRIM_OLAYI, dinle);
+  }, []);
 
   // Bildirim 3,5 saniye sonra kendiliğinden kapanır
   useEffect(() => {

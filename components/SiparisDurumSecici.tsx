@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useBitinceBildir } from "@/lib/bildirim";
 import { siparisDurumGuncelle } from "@/lib/actions";
 
 export default function SiparisDurumSecici({
@@ -11,6 +12,7 @@ export default function SiparisDurumSecici({
   mevcutDurum: string;
 }) {
   const [pending, startTransition] = useTransition();
+  useBitinceBildir(pending, "Sipariş durumu güncellendi.");
 
   return (
     <div className="flex items-center gap-2">

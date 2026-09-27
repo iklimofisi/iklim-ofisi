@@ -119,7 +119,7 @@ export default async function SirketAyarlariPage() {
         </div>
 
         <div className="flex justify-end pt-4 border-t border-hat">
-          <KaydetButonu className="focus-ring bg-soguk text-white px-6 py-2.5 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
+          <KaydetButonu basari={null} className="focus-ring bg-soguk text-white px-6 py-2.5 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
             Şirket Bilgilerini Kaydet
           </KaydetButonu>
         </div>

@@ -15,6 +15,7 @@ import SiparisOnayReddet from "@/components/SiparisOnayReddet";
 import SiparisSureciGostergesi from "@/components/SiparisSureciGostergesi";
 import SilButon from "@/components/SilButon";
 import YazdirButon from "@/components/YazdirButon";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
 
@@ -193,12 +194,11 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
                   className="focus-ring border border-hat rounded-md px-3 py-2 text-sm"
                 />
               </div>
-              <button
-                type="submit"
+              <KaydetButonu
                 className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors"
               >
                 Kaydet
-              </button>
+              </KaydetButonu>
             </form>
           </div>
 
@@ -247,12 +247,11 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
                           placeholder="not (opsiyonel, örn. kargo takip no)"
                           className="focus-ring flex-1 min-w-[160px] border border-hat rounded-md px-3 py-1.5 text-sm"
                         />
-                        <button
-                          type="submit"
+                        <KaydetButonu basari="Sevkiyat kaydedildi."
                           className="focus-ring text-sm text-soguk-dim font-medium hover:underline"
                         >
                           Sevk Et
-                        </button>
+                        </KaydetButonu>
                       </form>
                     )}
                   </div>
@@ -333,12 +332,11 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
                           placeholder="not (opsiyonel)"
                           className="focus-ring flex-1 min-w-[140px] border border-hat rounded-md px-3 py-1.5 text-sm"
                         />
-                        <button
-                          type="submit"
+                        <KaydetButonu basari="Teslim kaydedildi."
                           className="focus-ring text-sm text-soguk-dim font-medium hover:underline"
                         >
                           Teslim Kaydet
-                        </button>
+                        </KaydetButonu>
                       </form>
                     ) : (
                       teslimEdilen < k.adet && (

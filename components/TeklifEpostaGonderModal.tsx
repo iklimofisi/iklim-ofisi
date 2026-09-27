@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { teklifMusteriyeEpostaGonder } from "@/lib/actions";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export default function TeklifEpostaGonderModal({
   teklifId,
@@ -90,12 +91,11 @@ export default function TeklifEpostaGonderModal({
                 >
                   İptal
                 </button>
-                <button
-                  type="submit"
+                <KaydetButonu basari="E-posta gönderildi."
                   className="px-5 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-md shadow-sm"
                 >
                   ✉️ E-Postayı Şimdi Gönder
-                </button>
+                </KaydetButonu>
               </div>
             </form>
           </div>

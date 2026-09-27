@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { stokGirisiEkle } from "@/lib/actions";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export default function StokGirisFormu({
   urunler,
@@ -105,9 +106,9 @@ export default function StokGirisFormu({
         </div>
       </div>
 
-      <button type="submit" className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
+      <KaydetButonu basari="Stok girişi kaydedildi." className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
         Stok Girişini Kaydet
-      </button>
+      </KaydetButonu>
     </form>
   );
 }

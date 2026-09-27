@@ -3,6 +3,7 @@ import { satinalmaTeklifiEkle, satinalmaTeklifiSil, maliyetDosyaYukle } from "@/
 import TedarikciTeklifiEkleModal from "@/components/TedarikciTeklifiEkleModal"; // YENİ MODAL
 import SilButon from "@/components/SilButon";
 import Link from "next/link";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
 
@@ -106,9 +107,9 @@ export default async function SatinalmaTekliflerPage() {
           </div>
         </div>
 
-        <button type="submit" className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
+        <KaydetButonu className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
           Tedarikçi Teklifini Kaydet
-        </button>
+        </KaydetButonu>
       </form>
 
       {/* 2. PROJE BAZLI ÇOKLU İHALE VE TEDARİKÇİ KIYASLAMA KARTLARI */}
@@ -158,7 +159,7 @@ export default async function SatinalmaTekliflerPage() {
                       <form action={maliyetDosyaYukle} className="inline-flex items-center gap-1">
                         <input type="hidden" name="teklifId" value={satisTeklifi.id} />
                         <input type="file" name="maliyetPdf" accept=".pdf" required className="w-28 text-[9px] border border-hat rounded p-0.5 bg-white" />
-                        <button type="submit" className="bg-soguk text-white text-[9px] font-bold px-1.5 py-0.5 rounded">PDF Yükle</button>
+                        <KaydetButonu basari="Dosya yüklendi." className="bg-soguk text-white text-[9px] font-bold px-1.5 py-0.5 rounded">PDF Yükle</KaydetButonu>
                       </form>
                     )}
 
@@ -171,7 +172,7 @@ export default async function SatinalmaTekliflerPage() {
                       <form action={maliyetDosyaYukle} className="inline-flex items-center gap-1">
                         <input type="hidden" name="teklifId" value={satisTeklifi.id} />
                         <input type="file" name="maliyetExcel" accept=".xlsx,.xls" required className="w-28 text-[9px] border border-hat rounded p-0.5 bg-white" />
-                        <button type="submit" className="bg-soguk text-white text-[9px] font-bold px-1.5 py-0.5 rounded">Excel Yükle</button>
+                        <KaydetButonu basari="Dosya yüklendi." className="bg-soguk text-white text-[9px] font-bold px-1.5 py-0.5 rounded">Excel Yükle</KaydetButonu>
                       </form>
                     )}
                   </div>
@@ -225,7 +226,7 @@ export default async function SatinalmaTekliflerPage() {
                               <form action={maliyetDosyaYukle} className="inline-flex items-center gap-1">
                                 <input type="hidden" name="satinalmaTeklifiId" value={st.id} />
                                 <input type="file" name="maliyetPdf" accept=".pdf" required className="w-32 text-[9px] border border-hat rounded p-0.5 bg-white" />
-                                <button type="submit" className="bg-soguk text-white text-[9px] font-bold px-1.5 py-0.5 rounded">Yükle</button>
+                                <KaydetButonu basari="Dosya yüklendi." className="bg-soguk text-white text-[9px] font-bold px-1.5 py-0.5 rounded">Yükle</KaydetButonu>
                               </form>
                             )}
                           </td>
@@ -245,7 +246,7 @@ export default async function SatinalmaTekliflerPage() {
                               <form action={maliyetDosyaYukle} className="inline-flex items-center gap-1">
                                 <input type="hidden" name="satinalmaTeklifiId" value={st.id} />
                                 <input type="file" name="maliyetExcel" accept=".xlsx,.xls" required className="w-32 text-[9px] border border-hat rounded p-0.5 bg-white" />
-                                <button type="submit" className="bg-soguk text-white text-[9px] font-bold px-1.5 py-0.5 rounded">Yükle</button>
+                                <KaydetButonu basari="Dosya yüklendi." className="bg-soguk text-white text-[9px] font-bold px-1.5 py-0.5 rounded">Yükle</KaydetButonu>
                               </form>
                             )}
                           </td>

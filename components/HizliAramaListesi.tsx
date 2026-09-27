@@ -25,12 +25,16 @@ export default function HizliAramaListesi({
   bosMetin = "Kayıt yok.",
   birim = "kayıt",
   araAlan,
+  baslik,
+  bosluk = "space-y-3",
 }: {
   satirlar: { id: string; aramaMetni: string; icerik: React.ReactNode }[];
   yerTutucu?: string;
   bosMetin?: string;
   birim?: string;
   araAlan?: React.ReactNode; // arama kutusu ile liste arasına (ör. gelişmiş filtre)
+  baslik?: React.ReactNode; // listenin üstünde sütun başlıkları
+  bosluk?: string; // satırlar arası boşluk sınıfı
 }) {
   const [sorgu, setSorgu] = useState("");
 
@@ -68,8 +72,9 @@ export default function HizliAramaListesi({
       </div>
 
       {araAlan}
+      {satirlar.length > 0 && gorunen.size > 0 && baslik}
 
-      <div className="space-y-3">
+      <div className={bosluk}>
         {satirlar.map((s) => (
           <div key={s.id} hidden={!gorunen.has(s.id)}>
             {s.icerik}

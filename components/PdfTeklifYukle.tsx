@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { satinalmaPdfAyikla, type AyiklananKalem } from "@/lib/pdf-ayikla";
 import { satinalmaTeklifiEkle } from "@/lib/actions";
 import TeklifKalemleri from "@/components/TeklifKalemleri";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export default function PdfTeklifYukle({
   tedarikciler,
@@ -73,12 +74,11 @@ export default function PdfTeklifYukle({
             >
               Vazgeç, baştan yükle
             </button>
-            <button
-              type="submit"
+            <KaydetButonu
               className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors"
             >
               Kaydet
-            </button>
+            </KaydetButonu>
           </div>
         </form>
       </div>
