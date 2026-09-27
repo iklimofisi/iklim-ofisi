@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import UrunArama from "@/components/UrunArama";
 import { toplamaGoreDagit, tutarOku } from "@/lib/toplam-dagit";
+import { donusumKalemleri } from "@/lib/satinalma-hesap";
 
 export type Satir = {
   key: number | string;
@@ -85,6 +86,12 @@ export default function TeklifKalemleri({
   const [dagitimOncesi, setDagitimOncesi] = useState<Satir[] | null>(null);
   const [dagitimMesaji, setDagitimMesaji] = useState<{ tip: "ok" | "uyari" | "hata"; metin: string } | null>(null);
   const dagitimSonrasi = useRef<Satir[] | null>(null);
+  const kokRef = useRef<HTMLDivElement>(null);
+  // Fiyatsız kalemlere dağıtırken "kalem fiyatlarını gizle" kutusu işaretlenir;
+  // Geri Al'da eski hâline dönmesi için önceki durumu tutulur.
+  const gizleOncesi = useRef<boolean | null>(null);
+  const fiyatGizleKutusu = () =>
+    kokRef.current?.closest("form")?.querySelector<HTMLInputElement>('input[name="birimFiyatGoster"]') ?? null;
 
   // Ayarlamadan sonra kalemlerde elle değişiklik yapılırsa "Geri Al" kalkar
   // (yoksa geri almak sonradan yapılan düzeltmeleri de silerdi).
@@ -289,6 +296,60 @@ export default function TeklifKalemleri({
       setDagitimMesaji({ tip: "hata", metin: "Açıklaması boş ama fiyatı olan kalem var. Önce açıklamasını yazın ya da satırı silin." });
       return;
     }
+
+    // FİYATSIZ KALEM VARSA: fiyatlı kalemler aynen kalır, kalan tutar fiyatsız
+    // kalemlere adet başına eşit paylaştırılır ve müşteri belgesinde birim
+    // fiyatlar gizlenir (müşteri kalemleri + genel toplamı görür).
+    const doluMu = (s: Satir) => !!(s.aciklama ?? "").trim();
+    const netBirim = (s: Satir) => parseSayi(s.birimFiyat) * (1 - parseSayi(s.iskontoYuzde) / 100);
+    const fiyatsizlar = satirlar.filter((s) => doluMu(s) && !(netBirim(s) > 0));
+    if (fiyatsizlar.length > 0) {
+      const dolular = satirlar.filter(doluMu);
+      const fiyatliToplam = dolular.reduce((a, s) => (netBirim(s) > 0 ? a + parseSayi(s.adet) * netBirim(s) : a), 0);
+      if (hedef <= fiyatliToplam + 0.005) {
+        setDagitimMesaji({
+          tip: "hata",
+          metin: `Yazdığınız toplam, fiyatı girilmiş kalemlerin toplamından (${formatPara(fiyatliToplam)} ${sembol}) düşük ya da eşit; fiyatsız kalemlere pay kalmıyor.`,
+        });
+        return;
+      }
+      const d = donusumKalemleri(
+        {
+          baslik: "",
+          toplamTutar: hedef,
+          kalemler: dolular.map((s) => ({
+            aciklama: s.aciklama ?? "",
+            adet: parseSayi(s.adet),
+            birimFiyat: netBirim(s) > 0 ? netBirim(s) : 0,
+          })),
+        },
+        0
+      );
+      const yeniDeger = new Map(dolular.map((s, i) => [s.key, d.kalemler[i]]));
+      const yeni = satirlar.map((s) => {
+        const k = yeniDeger.get(s.key);
+        return k ? { ...s, adet: String(k.adet), birimFiyat: String(k.birimFiyat), iskontoYuzde: "0" } : s;
+      });
+      dagitimSonrasi.current = yeni;
+      setDagitimOncesi(satirlar);
+      setSatirlar(yeni);
+
+      const kutu = fiyatGizleKutusu();
+      let not = "";
+      if (kutu) {
+        gizleOncesi.current = kutu.checked;
+        if (!kutu.checked) {
+          kutu.checked = true;
+          not = " Birim fiyatlar müşteriye gizlendi (\"kalem fiyatlarını gizle\" işaretlendi).";
+        }
+      }
+      setDagitimMesaji({
+        tip: "ok",
+        metin: `Toplam ${formatPara(hedef)} ${sembol}: ${fiyatsizlar.length} fiyatsız kaleme ${formatPara(hedef - fiyatliToplam)} ${sembol} paylaştırıldı.${not} Müşteri kalemleri ve genel toplamı görür. Kaydetmeyi unutmayın.`,
+      });
+      return;
+    }
+
     const sonuc = toplamaGoreDagit(
       satirlar.map((s) => ({
         adet: parseSayi(s.adet),
@@ -308,6 +369,7 @@ export default function TeklifKalemleri({
       iskontoYuzde: String(sonuc.satirlar[i].iskontoYuzde),
     }));
     dagitimSonrasi.current = yeni;
+    gizleOncesi.current = null;
     setDagitimOncesi(satirlar);
     setSatirlar(yeni);
     const oran = Math.abs(sonuc.oranYuzde).toLocaleString("tr-TR", { maximumFractionDigits: 2 });
@@ -326,6 +388,9 @@ export default function TeklifKalemleri({
   const dagitimiGeriAl = () => {
     if (!dagitimOncesi) return;
     dagitimSonrasi.current = null;
+    const kutu = fiyatGizleKutusu();
+    if (kutu && gizleOncesi.current !== null) kutu.checked = gizleOncesi.current;
+    gizleOncesi.current = null;
     setSatirlar(dagitimOncesi);
     setDagitimOncesi(null);
     setDagitimMesaji({ tip: "ok", metin: "Eski fiyatlara geri dönüldü." });
@@ -376,7 +441,7 @@ export default function TeklifKalemleri({
   }, [satirlar]);
 
   return (
-    <div className="space-y-4 mb-6">
+    <div ref={kokRef} className="space-y-4 mb-6">
       {/* 📥 EXCEL'DEN KALEM İTHAL ETME PANELI */}
       <div className="bg-emerald-50 border border-emerald-300 rounded-md p-3 flex flex-wrap items-center justify-between gap-3 shadow-sm">
         <div className="text-xs text-emerald-900">
@@ -633,6 +698,10 @@ export default function TeklifKalemleri({
             Örn: teklif 7.130 {sembol}, masada 7.000 {sembol} anlaşıldı → 7000 yazıp &quot;Toplamı Ayarla&quot;ya basın. Tüm birim fiyatlar aynı
             oranda değişir, kuruş farkı tek kalemde kapatılır; teklifteki toplam tam olarak yazdığınız tutar olur. İskontolar birim
             fiyata katılır (müşteri belgesinde zaten net fiyat görünür).
+          </p>
+          <p className="text-[11px] text-metin/60 mb-2">
+            <b>Birim fiyatınız yoksa:</b> kalemleri fiyatsız (0) girin, toplamı yazıp basın. Toplam fiyatsız kalemlere paylaştırılır ve
+            müşteri belgesinde birim fiyatlar gizlenir; müşteri kalemleri ve genel toplamı görür.
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
