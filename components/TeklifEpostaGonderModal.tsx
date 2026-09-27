@@ -1,8 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { teklifMusteriyeEpostaGonder } from "@/lib/actions";
 import KaydetButonu from "@/components/KaydetButonu";
+
+// Gönderim bitince pencereyi kapatır; sonuç (gönderildi / gönderilemedi)
+// sağ üstte bildirim olarak görünür.
+function BitinceKapat({ kapat }: { kapat: () => void }) {
+  const { pending } = useFormStatus();
+  const onceki = useRef(false);
+  useEffect(() => {
+    if (onceki.current && !pending) kapat();
+    onceki.current = pending;
+  }, [pending, kapat]);
+  return null;
+}
 
 export default function TeklifEpostaGonderModal({
   teklifId,
@@ -44,6 +57,7 @@ export default function TeklifEpostaGonderModal({
 
             <form action={teklifMusteriyeEpostaGonder} className="space-y-4 text-xs">
               <input type="hidden" name="teklifId" value={teklifId} />
+              <BitinceKapat kapat={() => setAcik(false)} />
 
               <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
                 <p className="text-[11px] font-bold text-slate-500 uppercase">Gönderen (Oturum Açan Personel)</p>
@@ -91,7 +105,7 @@ export default function TeklifEpostaGonderModal({
                 >
                   İptal
                 </button>
-                <KaydetButonu basari="E-posta gönderildi."
+                <KaydetButonu basari={null} bekleme="Gönderiliyor…"
                   className="px-5 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-md shadow-sm"
                 >
                   ✉️ E-Postayı Şimdi Gönder

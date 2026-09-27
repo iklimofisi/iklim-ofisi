@@ -1,4 +1,35 @@
 import nodemailer from "nodemailer";
+import { prisma } from "@/lib/prisma";
+
+// Her gönderim denemesi İşlem Geçmişi'ne yazılır (başarılı: "eposta",
+// başarısız: "epostaHatasi"). Böylece "mail gitti mi?" sorusu panelden
+// görülebilir. Kayıt yazılamazsa e-posta akışı bozulmaz.
+export async function epostaKaydet(konu: string, alici: string, basarili: boolean, hata?: string) {
+  try {
+    await prisma.islemKaydi.create({
+      data: {
+        kullaniciAd: "Sistem",
+        islem: basarili ? "eposta" : "epostaHatasi",
+        veri: JSON.stringify({ konu: konu.slice(0, 200), alici, ...(hata ? { hata: hata.slice(0, 500) } : {}) }),
+      },
+    });
+  } catch {
+    // sessizce geç
+  }
+}
+
+// Panelde gösterilecek ayar özeti (şifre GÖSTERİLMEZ)
+export function epostaAyarOzeti() {
+  const user = process.env.SMTP_USER || null;
+  return {
+    host: process.env.SMTP_HOST || null,
+    port: Number(process.env.SMTP_PORT || 465),
+    user,
+    sifreVar: !!process.env.SMTP_PASS,
+    // Web talepleri, keşif ve test e-postaları bu adrese gider
+    bildirimAdresi: process.env.BILDIRIM_EMAIL || user || "info@iklimofisi.com",
+  };
+}
 
 export async function epostaGonder({
   konu,
@@ -24,6 +55,7 @@ export async function epostaGonder({
   if (!host || !user || !pass) {
     const hataMesaji = "SMTP ayarları Vercel üzerinde henüz tanımlanmamış!";
     console.error(hataMesaji);
+    await epostaKaydet(konu, hedefEmail, false, hataMesaji);
     return { basarili: false, hata: hataMesaji };
   }
 
@@ -50,9 +82,12 @@ export async function epostaGonder({
       attachments: ekler ? ekler.map((e) => ({ filename: e.filename, content: e.content })) : [],
     });
 
+    await epostaKaydet(konu, hedefEmail, true);
     return { basarili: true };
   } catch (error: any) {
     console.error("E-posta gönderim hatası:", error);
-    return { basarili: false, hata: error?.message || String(error) };
+    const hata = error?.message || String(error);
+    await epostaKaydet(konu, hedefEmail, false, hata);
+    return { basarili: false, hata };
   }
 }

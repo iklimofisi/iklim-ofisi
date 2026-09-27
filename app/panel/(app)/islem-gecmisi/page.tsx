@@ -62,6 +62,9 @@ const ISLEM_ADI: Record<string, string> = {
   webTalebiDonustur: "Web talebini dönüştürdü",
   webTalebiDonusturuldu: "Web talebi → müşteri/proje oluşturuldu",
   hatirlatmaEpostasi: "Hatırlatma e-postaları gönderildi",
+  eposta: "E-posta gönderildi",
+  epostaHatasi: "E-posta GÖNDERİLEMEDİ",
+  epostaTestiGonder: "Deneme e-postası gönderdi",
   markaEkle: "Marka ekledi",
   markaSil: "Marka sildi",
   urunEkle: "Ürün ekledi",
@@ -286,7 +289,7 @@ export default async function IslemGecmisiSayfasi({
           const veri = veriAc(k.veri);
           const baglanti = kayitBaglantisi(k.islem, veri);
           const silme = k.islem.endsWith("Sil");
-          const hatali = k.islem === "girisBasarisiz";
+          const hatali = k.islem === "girisBasarisiz" || k.islem === "epostaHatasi";
           const ozet = kisaOzet(veri);
           return (
             <details key={k.id} className="group px-5 py-3">

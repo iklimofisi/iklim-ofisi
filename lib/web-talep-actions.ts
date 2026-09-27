@@ -78,7 +78,11 @@ export async function webTalebiOlustur(formData: FormData) {
   });
 
   // 📧 ANINDA YÖNETİCİYE VE ŞİRKET E-POSTASINA BİLDİRİM DÜŞER
+  // Bildirim e-postası gitmese bile talep yukarıda kaydedildi; panelde görünür.
+  // Müşteri e-posta bıraktıysa "Yanıtla" doğrudan müşteriye gider.
+  const gecerliEmail = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(email) ? email : undefined;
   await epostaGonder({
+    replyTo: gecerliEmail,
     konu: `🚨 YENİ MÜŞTERİ TALEBİ: ${ad.replace(/[\r\n]+/g, " ")}`,
     icerikHtml: `
       <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8fafc; color: #334155;">

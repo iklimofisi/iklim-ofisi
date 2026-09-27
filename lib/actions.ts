@@ -8,6 +8,11 @@ import { girisZorunlu } from "@/lib/oturum";
 import { islemKaydet } from "@/lib/islem-kaydi";
 import { paraBirimiDogrula, type ParaBirimi } from "@/lib/para";
 import { epostaGonder } from "@/lib/eposta";
+
+// E-posta içine giden kullanıcı metinlerinde HTML kodu çalışmasın
+function htmlKacir(m: string) {
+  return m.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
 import { getSirketAyarlari, SIRKET_ETIKETI } from "@/lib/sirket";
 import { teklifPdfOlustur } from "@/lib/pdf-olustur";
 import { musteriToplami } from "@/lib/teklif-hesap";
@@ -1151,22 +1156,22 @@ export async function kesifEkle(formData: FormData) {
 
   // 📧 ANINDA YÖNETİCİYE VE ŞİRKET E-POSTASINA BİLDİRİM GÖNDERİLİR
   await epostaGonder({
-    konu: `🚨 YENİ KEŞİF TALEBİ: ${musteriAdi}`,
+    konu: `🚨 YENİ KEŞİF TALEBİ: ${musteriAdi.replace(/[\r\n]+/g, " ")}`,
     icerikHtml: `
       <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8fafc; color: #334155;">
         <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 25px; border-radius: 10px; border: 1px solid #e2e8f0;">
           <h2 style="color: #0f766e; margin-top: 0;">📍 Yeni Keşif Talebi Kaydedildi</h2>
           <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 15px 0;" />
           
-          <p style="margin: 8px 0;"><strong>Müşteri / Firma:</strong> ${musteriAdi}</p>
-          <p style="margin: 8px 0;"><strong>Telefon:</strong> ${telefon || "Belirtilmedi"}</p>
-          <p style="margin: 8px 0;"><strong>Adres:</strong> ${adres || "Belirtilmedi"}</p>
-          <p style="margin: 8px 0;"><strong>Alan (m²):</strong> ${alanM2Str || "Belirtilmedi"}</p>
-          <p style="margin: 8px 0;"><strong>Mevcut Sistem:</strong> ${mevcutSistem || "Belirtilmedi"}</p>
+          <p style="margin: 8px 0;"><strong>Müşteri / Firma:</strong> ${htmlKacir(musteriAdi)}</p>
+          <p style="margin: 8px 0;"><strong>Telefon:</strong> ${telefon ? htmlKacir(telefon) : "Belirtilmedi"}</p>
+          <p style="margin: 8px 0;"><strong>Adres:</strong> ${adres ? htmlKacir(adres) : "Belirtilmedi"}</p>
+          <p style="margin: 8px 0;"><strong>Alan (m²):</strong> ${alanM2Str ? htmlKacir(alanM2Str) : "Belirtilmedi"}</p>
+          <p style="margin: 8px 0;"><strong>Mevcut Sistem:</strong> ${mevcutSistem ? htmlKacir(mevcutSistem) : "Belirtilmedi"}</p>
 
           <p style="margin: 15px 0 5px 0;"><strong>Keşif Notları / Detay:</strong></p>
           <div style="background: #f1f5f9; padding: 12px; border-left: 4px solid #0f766e; font-style: italic; border-radius: 4px;">
-            ${notlar}
+            ${htmlKacir(notlar).replace(/\n/g, "<br />")}
           </div>
 
           <div style="margin-top: 25px; text-align: center;">
@@ -1810,7 +1815,7 @@ export async function teklifMusteriyeEpostaGonder(formData: FormData) {
   `;
 
   // 2. MAİL VE PDF EKİ BİRLİKTE GÖNDERİLİR
-  await epostaGonder({
+  const gonderim = await epostaGonder({
     konu: epostaKonu || `İklim Ofisi Teklif: TKL-${String(teklif.teklifNo).padStart(4, "0")}`,
     icerikHtml,
     aliciEmail,
@@ -1825,7 +1830,8 @@ export async function teklifMusteriyeEpostaGonder(formData: FormData) {
   });
 
   revalidatePath(`/panel/teklifler/${teklifId}`);
-  redirect(`/panel/teklifler/${teklifId}?basarili=eposta-gonderildi`);
+  // Gönderilemediyse kullanıcıya açıkça söylenir (eskiden her durumda "gönderildi" deniyordu)
+  redirect(`/panel/teklifler/${teklifId}?mesaj=${gonderim.basarili ? "eposta-gonderildi" : "eposta-hatasi"}`);
 }
 
 // --- PROJE TAKİP VE EXCEL ENTEGRASYONU ACTIONS ---
@@ -2025,4 +2031,22 @@ export async function maliyetDosyaYukle(formData: FormData) {
 
   revalidatePath("/panel/satinalma/teklifler");
   revalidatePath("/panel/teklifler");
+}
+
+// --- E-POSTA TESTİ (Ayarlar → E-posta Durumu) ---
+// Bildirim adresine bir deneme e-postası gönderir. Sadece yönetici.
+export async function epostaTestiGonder(formData: FormData) {
+  const kullanici = await yetki("epostaTestiGonder", formData);
+  if (!kullanici || kullanici.rol !== "ADMIN") redirect("/panel?hata=yetkisiz-erisim");
+  const s = await epostaGonder({
+    konu: "🧪 İklim Ofisi – deneme e-postası",
+    icerikHtml: `
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2 style="color: #0f766e;">✅ E-posta bildirimleri çalışıyor</h2>
+        <p>Bu deneme e-postası panelden (Ayarlar → E-posta Durumu) ${htmlKacir(kullanici.ad)} tarafından gönderildi.</p>
+        <p>Web sitesi talepleri ve keşif bildirimleri bu adrese gelir.</p>
+      </div>`,
+  });
+  revalidatePath("/panel/ayarlar");
+  redirect(`/panel/ayarlar?mesaj=${s.basarili ? "eposta-test-ok" : "eposta-test-hata"}#eposta`);
 }

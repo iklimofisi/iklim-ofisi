@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { sablonEkle, sablonGuncelle, sablonSil, sirketAyarlariGuncelle } from "@/lib/actions";
+import { sablonEkle, sablonGuncelle, sablonSil, sirketAyarlariGuncelle, epostaTestiGonder } from "@/lib/actions";
+import { epostaAyarOzeti } from "@/lib/eposta";
 import { getSirketAyarlari } from "@/lib/sirket";
 import { suankiKullanici } from "@/lib/oturum"; // YETKİ KONTROLÜ İÇİN EKLENDİ
 import { redirect } from "next/navigation";
@@ -18,10 +19,36 @@ export default async function AyarlarSayfasi() {
     redirect("/panel?hata=yetkisiz-erisim");
   }
 
-  const [sablonlar, sirket] = await Promise.all([
+  const [sablonlar, sirket, sonEpostalar] = await Promise.all([
     prisma.teklifSablon.findMany({ orderBy: { sira: "asc" } }),
     getSirketAyarlari(),
+    // Son e-posta gönderim denemeleri (başarılı / başarısız)
+    prisma.islemKaydi
+      .findMany({
+        where: { islem: { in: ["eposta", "epostaHatasi"] } },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        select: { id: true, createdAt: true, islem: true, veri: true },
+      })
+      .catch(() => []),
   ]);
+  const epostaAyar = epostaAyarOzeti();
+  const smtpTamam = !!(epostaAyar.host && epostaAyar.user && epostaAyar.sifreVar);
+  const epostaSatirlari = sonEpostalar.map((k) => {
+    let v: { konu?: string; alici?: string; hata?: string } = {};
+    try {
+      v = JSON.parse(k.veri ?? "{}");
+    } catch {}
+    return { id: k.id, zaman: k.createdAt, basarili: k.islem === "eposta", ...v };
+  });
+  const zamanYaz = new Intl.DateTimeFormat("tr-TR", {
+    timeZone: "Europe/Istanbul",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
   const gruplar = sablonlariGrupla(sablonlar);
 
   return (
@@ -161,6 +188,68 @@ export default async function AyarlarSayfasi() {
       </div>
 
       {/* TEKLİF NOTLARI — GRUPLU */}
+      {/* E-POSTA DURUMU: web talebi / keşif / teklif e-postaları gidiyor mu? */}
+      <div id="eposta" className="bg-yuzey border border-hat rounded-lg p-5 mb-8 scroll-mt-6">
+        <h2 className="font-display font-medium text-metin mb-1">✉️ E-posta Durumu</h2>
+        <p className="text-xs text-metin/60 mb-4">
+          Web sitesinden gelen talepler ve keşif bildirimleri aşağıdaki adrese e-posta olarak gönderilir. Talepler e-posta
+          gitmese bile her zaman <Link href="/panel/talepler" className="text-soguk-dim hover:underline">Web Talepleri</Link>{" "}
+          sayfasına kaydedilir.
+        </p>
+
+        <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm mb-4">
+          <div>
+            <dt className="text-xs text-metin/50">Bildirimlerin gittiği adres</dt>
+            <dd className="font-medium text-metin">{epostaAyar.bildirimAdresi}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-metin/50">Gönderen hesap (SMTP)</dt>
+            <dd className="font-medium text-metin">
+              {smtpTamam ? (
+                <>
+                  {epostaAyar.user} <span className="text-metin/50 font-normal">· {epostaAyar.host}:{epostaAyar.port}</span>
+                </>
+              ) : (
+                <span className="text-red-700">
+                  Eksik ayar: {[!epostaAyar.host && "SMTP_HOST", !epostaAyar.user && "SMTP_USER", !epostaAyar.sifreVar && "SMTP_PASS"]
+                    .filter(Boolean)
+                    .join(", ")}{" "}
+                  (Vercel → Settings → Environment Variables)
+                </span>
+              )}
+            </dd>
+          </div>
+        </dl>
+
+        <form action={epostaTestiGonder} className="mb-4">
+          <KaydetButonu basari={null} bekleme="Gönderiliyor…">
+            Deneme e-postası gönder
+          </KaydetButonu>
+          <span className="text-xs text-metin/50 ml-3">{epostaAyar.bildirimAdresi} adresine bir deneme e-postası gider.</span>
+        </form>
+
+        <p className="text-xs font-semibold text-metin/70 mb-2">Son gönderimler</p>
+        {epostaSatirlari.length === 0 ? (
+          <p className="text-xs text-metin/50">
+            Henüz kayıt yok. (Bu liste bu güncellemeden sonra gönderilen e-postalarla dolmaya başlar.)
+          </p>
+        ) : (
+          <ul className="divide-y divide-hat border border-hat rounded-md bg-white text-xs">
+            {epostaSatirlari.map((e) => (
+              <li key={e.id} className="px-3 py-2 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                <span className={`font-bold ${e.basarili ? "text-emerald-700" : "text-red-700"}`}>
+                  {e.basarili ? "✓ Gönderildi" : "✕ Gönderilemedi"}
+                </span>
+                <span className="font-mono text-metin/50">{zamanYaz.format(e.zaman)}</span>
+                <span className="text-metin truncate max-w-xs">{e.konu}</span>
+                <span className="text-metin/50">→ {e.alici}</span>
+                {!e.basarili && e.hata && <span className="basis-full text-red-700">Neden: {e.hata}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       <div id="teklif-notlari" className="scroll-mt-6">
         <h2 className="font-display text-lg font-semibold text-metin mb-1">Teklif Notları</h2>
         <p className="text-xs text-metin/60 mb-4">
