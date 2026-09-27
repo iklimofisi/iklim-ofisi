@@ -199,7 +199,7 @@ export default async function UrunlerPage() {
                   Modeller & Özellikler →
                 </Link>
                 <a
-                  href="/kataloglar/verta-konveksiyonel-firin-katalog.pdf"
+                  href="/kataloglar/verta-firin-katalogu-iklim-ofisi.pdf"
                   target="_blank"
                   rel="noopener noreferrer"
                   download="VERTA-Konveksiyonel-Firin-Katalogu.pdf"

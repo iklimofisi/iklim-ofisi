@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
-const KATALOG = "/kataloglar/verta-konveksiyonel-firin-katalog.pdf";
+const KATALOG = "/kataloglar/verta-firin-katalogu-iklim-ofisi.pdf";
 
 export const metadata: Metadata = {
   title: "VERTA Konveksiyonel Fırınlar — 4, 6 ve 10 Tepsili",
