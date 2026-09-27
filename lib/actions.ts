@@ -12,6 +12,8 @@ import { getSirketAyarlari, SIRKET_ETIKETI } from "@/lib/sirket";
 import { teklifPdfOlustur } from "@/lib/pdf-olustur";
 import { musteriToplami } from "@/lib/teklif-hesap";
 import { sablonGrubu } from "@/lib/sablon";
+import { tutarOku } from "@/lib/toplam-dagit";
+import { donusumKalemleri } from "@/lib/satinalma-hesap";
 import { randomUUID } from "crypto";
 
 // --- Yetki kontrolü + işlem kaydı ---
@@ -985,26 +987,34 @@ export async function tedarikciEkle(formData: FormData) {
 
 // --- Satınalma: Gelen Teklifler ---
 
+// Tedarikçi teklifi kalemleri + elle yazılan dip toplam.
+// Birim fiyat boş olabilir (0 kaydedilir). "12.500" / "12.500,50" doğru okunur.
+function satinalmaKalemleriOku(formData: FormData) {
+  const aciklamalar = formData.getAll("kalemAciklama") as string[];
+  const adetler = formData.getAll("kalemAdet") as string[];
+  const fiyatlar = formData.getAll("kalemFiyat") as string[];
+  const kalemler = aciklamalar
+    .map((aciklama, i) => ({
+      aciklama: String(aciklama ?? "").trim(),
+      adet: parseSayi(adetler[i]) || 1,
+      birimFiyat: tutarOku(String(fiyatlar[i] ?? "")) ?? 0,
+    }))
+    .filter((k) => k.aciklama);
+  const toplam = tutarOku(String(formData.get("toplamTutar") ?? ""));
+  return { kalemler, toplamTutar: toplam && toplam > 0 ? toplam : null };
+}
+
 // TEDARİKÇİ TEKLİFİ EKLEME (TEMİZ HATASIZ VERSİYON)
 export async function satinalmaTeklifiEkle(formData: FormData) {
   await yetki("satinalmaTeklifiEkle", formData);
   const tedarikciId = String(formData.get("tedarikciId") ?? "");
   const baslik = String(formData.get("baslik") ?? "").trim();
   const paraBirimi = String(formData.get("paraBirimi") ?? "TRY");
-  const aciklamalar = formData.getAll("kalemAciklama") as string[];
-  const adetler = formData.getAll("kalemAdet") as string[];
-  const fiyatlar = formData.getAll("kalemFiyat") as string[];
 
   const pdfDosya = formData.get("maliyetPdf") as File | null;
   const excelDosya = formData.get("maliyetExcel") as File | null;
 
-  const kalemler = aciklamalar
-    .map((aciklama, i) => ({
-      aciklama: aciklama.trim(),
-      adet: parseSayi(adetler[i]),
-      birimFiyat: parseSayi(fiyatlar[i]),
-    }))
-    .filter((k) => k.aciklama);
+  const { kalemler, toplamTutar } = satinalmaKalemleriOku(formData);
 
   if (!tedarikciId || !baslik) return;
 
@@ -1037,12 +1047,33 @@ export async function satinalmaTeklifiEkle(formData: FormData) {
       maliyetExcel: excelBuffer,
       maliyetExcelAdi: excelAdi,
       maliyetExcelTipi: excelTipi,
+      toplamTutar,
       kalemler: { create: kalemler },
     },
   });
 
   revalidatePath("/panel/satinalma/teklifler");
   redirect(`/panel/satinalma/teklifler`);
+}
+
+// TEDARİKÇİ TEKLİFİNİN KALEMLERİNİ / DİP TOPLAMINI DÜZENLEME
+// (Satınalma kalemlerine bağlı başka kayıt yoktur; kalemler yeniden yazılır.)
+export async function satinalmaTeklifiGuncelle(formData: FormData) {
+  await yetki("satinalmaTeklifiGuncelle", formData);
+  const id = String(formData.get("satinalmaTeklifiId") ?? "");
+  if (!id) return;
+  const { kalemler, toplamTutar } = satinalmaKalemleriOku(formData);
+
+  await prisma.$transaction([
+    prisma.satinalmaTeklifKalemi.deleteMany({ where: { satinalmaTeklifiId: id } }),
+    prisma.satinalmaTeklifi.update({
+      where: { id },
+      data: { toplamTutar, kalemler: { create: kalemler } },
+    }),
+  ]);
+
+  revalidatePath("/panel/satinalma/teklifler");
+  revalidatePath(`/panel/satinalma/teklifler/${id}`);
 }
 
 export async function satinalmaTeklifiSil(id: string) {
@@ -1066,6 +1097,10 @@ export async function satinalmaTeklifiniDonustur(formData: FormData) {
   });
   if (!kaynak) return;
 
+  // Fiyatsız kalem + elle toplam varsa toplam kalemlere paylaştırılır ve
+  // müşteri belgesinde birim fiyatlar gizlenir (müşteri kalemleri + toplamı görür).
+  const { kalemler, fiyatsizVar } = donusumKalemleri(kaynak, marjYuzdesi);
+
   const teklif = await prisma.teklif.create({
     data: {
       baslik,
@@ -1074,11 +1109,12 @@ export async function satinalmaTeklifiniDonustur(formData: FormData) {
       olusturanKullaniciId: kullanici?.id || null,
       olusturanAdi: kullanici?.ad ?? "",
       kaynakSatinalmaTeklifiId: satinalmaTeklifiId,
+      ...(fiyatsizVar ? { birimFiyatGoster: false } : {}),
       kalemler: {
-        create: kaynak.kalemler.map((k) => ({
+        create: kalemler.map((k) => ({
           aciklama: k.aciklama,
           adet: k.adet,
-          birimFiyat: k.birimFiyat * (1 + marjYuzdesi / 100),
+          birimFiyat: k.birimFiyat,
         })),
       },
     },

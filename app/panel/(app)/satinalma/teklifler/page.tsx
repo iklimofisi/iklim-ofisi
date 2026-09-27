@@ -4,6 +4,8 @@ import TedarikciTeklifiEkleModal from "@/components/TedarikciTeklifiEkleModal"; 
 import SilButon from "@/components/SilButon";
 import Link from "next/link";
 import KaydetButonu from "@/components/KaydetButonu";
+import SatinalmaKalemGirisi from "@/components/SatinalmaKalemGirisi";
+import { satinalmaToplami } from "@/lib/satinalma-hesap";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +95,11 @@ export default async function SatinalmaTekliflerPage() {
               <option value="EUR">€ EUR</option>
             </select>
           </div>
+        </div>
+
+        {/* KALEMLER + DİP TOPLAM (birim fiyat verilmediyse sadece toplam yazılabilir) */}
+        <div className="bg-white p-3 rounded-md border border-hat">
+          <SatinalmaKalemGirisi />
         </div>
 
         {/* MALİYET PDF VE EXCEL DOSYASI YÜKLEME ALANLARI */}
@@ -195,12 +202,18 @@ export default async function SatinalmaTekliflerPage() {
                   </thead>
                   <tbody className="divide-y divide-hat bg-white">
                     {satinalmaListesi.map((st) => {
-                      const toplam = st.kalemler.reduce((a, k) => a + k.adet * k.birimFiyat, 0);
+                      const toplam = satinalmaToplami(st);
+                      const goturu = st.toplamTutar != null && st.toplamTutar > 0;
 
                       return (
                         <tr key={st.id} className="hover:bg-amber-50/40">
                           <td className="py-3 px-4 font-bold text-metin text-sm">
-                            🚚 {st.tedarikci.ad}
+                            <Link href={`/panel/satinalma/teklifler/${st.id}`} className="hover:underline">
+                              🚚 {st.tedarikci.ad}
+                            </Link>
+                            {st.kalemler.length > 0 && (
+                              <span className="block text-[10px] font-normal text-metin/50">{st.kalemler.length} kalem</span>
+                            )}
                           </td>
 
                           <td className="py-3 px-4 font-mono text-metin/60">
@@ -209,6 +222,7 @@ export default async function SatinalmaTekliflerPage() {
 
                           <td className="py-3 px-4 text-right font-mono font-bold text-sm text-metin">
                             {toplam > 0 ? paraFormat(toplam, st.paraBirimi) : "—"}
+                            {goturu && <span className="block text-[10px] font-normal text-metin/50">toplam fiyat</span>}
                           </td>
 
                           {/* MALİYET PDF */}
@@ -253,7 +267,7 @@ export default async function SatinalmaTekliflerPage() {
 
                           <td className="py-3 px-4 text-center">
                             <Link
-                              href={`/panel/satinalma/teklifler/${st.id}/donustur`}
+                              href={`/panel/satinalma/teklifler/${st.id}`}
                               className="text-xs bg-soguk text-white px-3 py-1.5 rounded font-bold hover:bg-soguk-dim inline-block shadow-sm"
                             >
                               Teklife Dönüştür →

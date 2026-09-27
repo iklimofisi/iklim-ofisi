@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { satinalmaTeklifiEkle } from "@/lib/actions";
 import KaydetButonu from "@/components/KaydetButonu";
+import SatinalmaKalemGirisi from "@/components/SatinalmaKalemGirisi";
 
 export default function TedarikciTeklifiEkleModal({
   konuBasligi,
@@ -25,7 +26,7 @@ export default function TedarikciTeklifiEkleModal({
 
       {acik && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 text-left print:hidden">
-          <div className="bg-white border border-slate-200 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-white border border-slate-200 rounded-xl max-w-3xl w-full max-h-[92vh] overflow-y-auto p-6 shadow-2xl space-y-4">
             <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div>
                 <h3 className="font-bold text-slate-900 text-base">Bu Projeye Yeni Tedarikçi Teklifi Ekle</h3>
@@ -60,6 +61,11 @@ export default function TedarikciTeklifiEkleModal({
                   <option value="USD">$ USD</option>
                   <option value="EUR">€ EUR</option>
                 </select>
+              </div>
+
+              {/* KALEMLER + DİP TOPLAM */}
+              <div className="p-3 rounded-md border border-slate-200">
+                <SatinalmaKalemGirisi />
               </div>
 
               {/* MALİYET PDF VE EXCEL DOSYASI YÜKLEME */}

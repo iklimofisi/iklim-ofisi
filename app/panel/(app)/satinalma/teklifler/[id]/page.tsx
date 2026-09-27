@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { satinalmaTeklifiniDonustur } from "@/lib/actions";
+import { satinalmaTeklifiniDonustur, satinalmaTeklifiGuncelle } from "@/lib/actions";
 import KaydetButonu from "@/components/KaydetButonu";
+import SatinalmaKalemGirisi from "@/components/SatinalmaKalemGirisi";
+import { satinalmaToplami, kalemToplami } from "@/lib/satinalma-hesap";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +23,10 @@ export default async function SatinalmaTeklifiDetay({ params }: { params: { id: 
 
   if (!satinalmaTeklifi) notFound();
 
-  const toplam = satinalmaTeklifi.kalemler.reduce((a, k) => a + k.adet * k.birimFiyat, 0);
+  const toplam = satinalmaToplami(satinalmaTeklifi);
+  const goturu = satinalmaTeklifi.toplamTutar != null && satinalmaTeklifi.toplamTutar > 0;
+  const fiyatliToplam = kalemToplami(satinalmaTeklifi.kalemler);
+  const fiyatsizVar = satinalmaTeklifi.kalemler.some((k) => !(k.birimFiyat > 0));
 
   return (
     <div className="max-w-3xl">
@@ -48,15 +53,48 @@ export default async function SatinalmaTeklifiDetay({ params }: { params: { id: 
               <tr key={k.id} className="border-b border-hat last:border-0">
                 <td className="py-3 text-metin">{k.aciklama}</td>
                 <td className="py-3 text-right font-mono text-metin/70">{k.adet}</td>
-                <td className="py-3 text-right font-mono text-metin/70">{paraFormat(k.birimFiyat, satinalmaTeklifi.paraBirimi)}</td>
-                <td className="py-3 text-right font-mono text-metin">{paraFormat(k.adet * k.birimFiyat, satinalmaTeklifi.paraBirimi)}</td>
+                <td className="py-3 text-right font-mono text-metin/70">
+                  {k.birimFiyat > 0 ? paraFormat(k.birimFiyat, satinalmaTeklifi.paraBirimi) : "—"}
+                </td>
+                <td className="py-3 text-right font-mono text-metin">
+                  {k.birimFiyat > 0 ? paraFormat(k.adet * k.birimFiyat, satinalmaTeklifi.paraBirimi) : "—"}
+                </td>
               </tr>
             ))}
+            {satinalmaTeklifi.kalemler.length === 0 && (
+              <tr>
+                <td colSpan={4} className="py-3 text-sm text-metin/50">Kalem girilmemiş. Aşağıdan ekleyebilirsiniz.</td>
+              </tr>
+            )}
           </tbody>
         </table>
-        <div className="flex justify-end mt-4 pt-4 border-t border-hat">
-          <p className="font-mono text-lg text-metin">{paraFormat(toplam, satinalmaTeklifi.paraBirimi)}</p>
+        <div className="flex flex-col items-end mt-4 pt-4 border-t border-hat">
+          {goturu && fiyatliToplam > 0 && (
+            <p className="text-xs text-metin/50">Birim fiyatlı kalemler: {paraFormat(fiyatliToplam, satinalmaTeklifi.paraBirimi)}</p>
+          )}
+          <p className="font-mono text-lg text-metin">
+            {goturu && <span className="font-sans text-xs text-metin/50 mr-2">Tedarikçinin verdiği toplam</span>}
+            {paraFormat(toplam, satinalmaTeklifi.paraBirimi)}
+          </p>
         </div>
+
+        <details className="group mt-4 border-t border-hat pt-3" open={satinalmaTeklifi.kalemler.length === 0 && !goturu}>
+          <summary className="cursor-pointer text-sm font-medium text-soguk-dim hover:underline list-none">
+            <span className="group-open:hidden">✎ Kalemleri / toplamı düzenle</span>
+            <span className="hidden group-open:inline">Kalemleri / toplamı düzenle</span>
+          </summary>
+          <form action={satinalmaTeklifiGuncelle} className="mt-3 space-y-3">
+            <input type="hidden" name="satinalmaTeklifiId" value={satinalmaTeklifi.id} />
+            <SatinalmaKalemGirisi
+              sabitParaBirimi={satinalmaTeklifi.paraBirimi}
+              baslangic={satinalmaTeklifi.kalemler.map((k) => ({ aciklama: k.aciklama, adet: k.adet, birimFiyat: k.birimFiyat }))}
+              baslangicToplam={satinalmaTeklifi.toplamTutar}
+            />
+            <div className="flex justify-end">
+              <KaydetButonu>Kaydet</KaydetButonu>
+            </div>
+          </form>
+        </details>
       </div>
 
       {satinalmaTeklifi.tekliflar.length > 0 && (
@@ -79,6 +117,13 @@ export default async function SatinalmaTeklifiDetay({ params }: { params: { id: 
           kopyalanır. Bu teklif "satınalma teklifinden oluşturuldu" olarak
           işaretlenir.
         </p>
+        {goturu && fiyatsizVar && (
+          <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mb-4">
+            Bazı kalemlerin birim fiyatı yok. Tedarikçinin toplamı (+ kâr marjı) kalemlere paylaştırılır ve müşteri
+            teklifinde <b>birim fiyatlar gizlenir</b>: müşteri kalemleri ve genel toplamı görür. İsterseniz sonra teklifi
+            düzenleyip fiyatları elle değiştirebilirsiniz.
+          </p>
+        )}
         {musteriler.length === 0 ? (
           <p className="text-sm text-metin/50">Önce Müşteriler sayfasından bir müşteri eklemelisin.</p>
         ) : (

@@ -294,6 +294,7 @@ model SatinalmaTeklifi {
   maliyetExcel      Bytes?
   maliyetExcelAdi   String?
   maliyetExcelTipi  String?
+  toplamTutar Float?                  // Tedarikçi birim fiyat vermeyip sadece toplam verdiyse (boşsa kalemlerden hesaplanır)
   kalemler    SatinalmaTeklifKalemi[]
   tekliflar   Teklif[]
 }

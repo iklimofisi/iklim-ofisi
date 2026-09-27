@@ -31,6 +31,7 @@ const ISLEM_ADI: Record<string, string> = {
   tedarikciHareketSil: "Tedarikçi hareketi sildi",
   satinalmaTeklifiEkle: "Satınalma teklifi ekledi",
   satinalmaTeklifiSil: "Satınalma teklifi sildi",
+  satinalmaTeklifiGuncelle: "Satınalma teklifini düzenledi",
   satinalmaTeklifiniDonustur: "Satınalma teklifini satış teklifine çevirdi",
   stokGirisiEkle: "Stok girişi yaptı",
   urunStokVeMaliyetGuncelle: "Ürün stok/maliyet güncelledi",
