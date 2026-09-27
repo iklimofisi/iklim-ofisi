@@ -142,7 +142,7 @@ export default async function ProjeTakipPage() {
                     <tr key={`p-${p.id}`} className="bg-slate-50/70 hover:bg-slate-100/80 transition-colors">
                       <td className="py-2 px-3 border-r border-hat">
                         <Link
-                          href={`/panel/teklifler?seciliProjeId=${p.id}&seciliMusteriId=${p.musteriId || ""}&proje=${encodeURIComponent(p.ad)}`}
+                          href={`/panel/teklifler/yeni?seciliProjeId=${p.id}&seciliMusteriId=${p.musteriId || ""}&proje=${encodeURIComponent(p.ad)}`}
                           className="bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-1 rounded text-[10px] font-bold inline-block shadow-sm"
                         >
                           + Teklif Hazırla

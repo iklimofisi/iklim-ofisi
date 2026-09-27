@@ -146,7 +146,7 @@ export default async function ProjeDetay({ params }: { params: { id: string } })
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-display font-medium text-metin">Teklifler ({proje.teklifler.length})</h2>
           <Link
-            href={`/panel/teklifler?seciliProjeId=${proje.id}&seciliMusteriId=${proje.musteriId ?? ""}&proje=${encodeURIComponent(proje.ad)}`}
+            href={`/panel/teklifler/yeni?seciliProjeId=${proje.id}&seciliMusteriId=${proje.musteriId ?? ""}&proje=${encodeURIComponent(proje.ad)}`}
             className="text-xs text-soguk-dim hover:underline"
           >
             Yeni teklif oluştururken bu projeye bağla →

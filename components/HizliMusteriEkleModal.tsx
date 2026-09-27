@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { hizliMusteriEkle } from "@/lib/actions";
 
 export default function HizliMusteriEkleModal({
-  yonlendirPath = "/panel/teklifler",
+  yonlendirPath = "/panel/teklifler/yeni",
 }: {
   yonlendirPath?: string;
 }) {

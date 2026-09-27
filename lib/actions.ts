@@ -1899,7 +1899,9 @@ export async function projeTakipNotuGuncelle(formData: FormData) {
 // TEKLİF VEYA PROJE EKRANINDAN ESNEK HIZLI MÜŞTERİ EKLEME
 export async function hizliMusteriEkle(formData: FormData) {
   await yetki("hizliMusteriEkle", formData);
-  const yonlendirPath = String(formData.get("yonlendirPath") ?? "/panel/teklifler").trim();
+  // Yalnızca panel içi adreslere geri dönülür
+  const yonlendirGirdi = String(formData.get("yonlendirPath") ?? "").trim();
+  const yonlendirPath = /^\/panel\/[\w\-/]*$/.test(yonlendirGirdi) ? yonlendirGirdi : "/panel/teklifler/yeni";
   const ad = String(formData.get("ad") ?? "").trim();
   const yetkiliAdi = String(formData.get("yetkiliAdi") ?? "").trim();
   const yetkiliTelefon = String(formData.get("yetkiliTelefon") ?? "").trim();
