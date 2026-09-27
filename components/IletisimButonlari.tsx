@@ -15,10 +15,15 @@ export function whatsappNumarasi(ham: string | null | undefined): string | null 
   return r.length >= 11 && r.length <= 15 ? r : null;
 }
 
+// Alana birden fazla numara yazılmış olabilir ("05419219223-05333157264"):
+// aranacak numara olarak İLKİ alınır.
 function telefonLinki(ham: string | null | undefined): string | null {
   if (!ham || ham.trim() === ORNEK_TELEFON) return null;
-  const temiz = ham.replace(/[^\d+]/g, "");
-  return temiz.replace(/\D/g, "").length >= 10 ? `tel:${temiz}` : null;
+  const sade = ham.replace(/[\s().]/g, "");
+  const ilk = sade.split(/[^\d+]+/).find((p) => p.replace(/\D/g, "").length >= 10);
+  if (ilk) return `tel:${ilk}`;
+  const rakamlar = ham.replace(/\D/g, "");
+  return rakamlar.length >= 10 && rakamlar.length <= 13 ? `tel:${rakamlar}` : null;
 }
 
 export default function IletisimButonlari({

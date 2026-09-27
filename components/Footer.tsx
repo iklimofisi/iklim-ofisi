@@ -1,6 +1,7 @@
 import { getSirketAyarlari } from "@/lib/sirket";
 import Link from "next/link";
 import IletisimButonlari from "@/components/IletisimButonlari";
+import { IsletmeYapisalVerisi } from "@/components/YapisalVeri";
 
 export default async function Footer() {
   const sirket = await getSirketAyarlari();
@@ -50,6 +51,7 @@ export default async function Footer() {
       </div>
 
       <IletisimButonlari telefon={sirket.telefon} whatsapp={sirket.whatsapp} />
+      <IsletmeYapisalVerisi sirket={sirket} />
     </footer>
   );
 }

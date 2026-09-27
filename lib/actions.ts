@@ -2,13 +2,13 @@
 
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { girisZorunlu } from "@/lib/oturum";
 import { islemKaydet } from "@/lib/islem-kaydi";
 import { paraBirimiDogrula, type ParaBirimi } from "@/lib/para";
 import { epostaGonder } from "@/lib/eposta";
-import { getSirketAyarlari } from "@/lib/sirket";
+import { getSirketAyarlari, SIRKET_ETIKETI } from "@/lib/sirket";
 import { teklifPdfOlustur } from "@/lib/pdf-olustur";
 import { musteriToplami } from "@/lib/teklif-hesap";
 import { sablonGrubu } from "@/lib/sablon";
@@ -653,6 +653,8 @@ export async function sirketAyarlariGuncelle(formData: FormData) {
     });
   }
 
+  // Önbellekteki şirket bilgilerini hemen yenile (sitede ve panelde anında görünsün)
+  revalidateTag(SIRKET_ETIKETI);
   revalidatePath("/panel/ayarlar/sirket");
   revalidatePath("/panel/ayarlar");
   revalidatePath("/panel/teklifler");

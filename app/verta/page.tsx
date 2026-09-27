@@ -3,6 +3,7 @@ import Footer from "@/components/Footer";
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
+import { JsonLd, SITE } from "@/components/YapisalVeri";
 
 export const dynamic = "force-dynamic";
 
@@ -131,6 +132,22 @@ export default function VertaPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased selection:bg-teal-700 selection:text-white">
       <Header />
+      <JsonLd
+        veri={{
+          "@context": "https://schema.org",
+          "@graph": MODELLER.map((m) => ({
+            "@type": "Product",
+            "@id": `${SITE}/verta#${m.id}`,
+            name: m.ad,
+            brand: { "@type": "Brand", name: "VERTA" },
+            category: "Profesyonel konveksiyonel fırın",
+            description: `${m.kisa}. ${m.one.join(". ")}.`,
+            image: `${SITE}${m.gorsel}`,
+            url: `${SITE}/verta#${m.id}`,
+            additionalProperty: m.ozellikler.map(([ad, deger]) => ({ "@type": "PropertyValue", name: ad, value: deger })),
+          })),
+        }}
+      />
 
       <main>
         {/* 1. HERO */}

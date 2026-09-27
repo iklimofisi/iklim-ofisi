@@ -7,11 +7,11 @@ const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
 export const metadata: Metadata = {
   title: {
-    default: "İklim Ofisi Mühendislik — VRF & Mekanik Tesisat Çözümleri",
+    default: "İklim Ofisi Mühendislik — İstanbul VRF, Klima & Mekanik Tesisat",
     template: "%s | İklim Ofisi Mühendislik",
   },
   description:
-    "Konut, ofis, otel ve endüstriyel tesislerde VRF merkezi iklimlendirme, ısı pompası, havalandırma, endüstriyel mutfak egzozu ve mekanik tesisat çözümleri. Ücretsiz keşif ve projelendirme.",
+    "İstanbul'da konut, ofis, otel ve endüstriyel tesisler için VRF merkezi iklimlendirme, klima, ısı pompası, havalandırma, endüstriyel mutfak egzozu ve mekanik tesisat. Ücretsiz keşif ve projelendirme.",
   keywords: [
     "VRF Klima",
     "İklimlendirme",

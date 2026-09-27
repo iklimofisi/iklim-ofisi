@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   description:
     "İklim Ofisi tarafından tamamlanan otel, plaza, konut ve endüstriyel iklimlendirme referans projeleri.",
   alternates: { canonical: "/referanslar" },
+  // Referans listesi dolana kadar Google'da listelenmesin (boş sayfa sıralamaya zarar verir).
+  // Referanslar eklenince bu satır kaldırılır ve sayfa site haritasına geri eklenir.
+  robots: { index: false, follow: true },
 };
 
 export default async function ReferanslarPage() {

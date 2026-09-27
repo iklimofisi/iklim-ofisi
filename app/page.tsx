@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
@@ -6,6 +7,11 @@ import UrunSlider from "@/components/UrunSlider";
 import { getSirketAyarlari } from "@/lib/sirket";
 
 export const dynamic = "force-dynamic";
+
+// www.iklimofisi.com ve iklimofisi.com aynı sayfayı gösterdiği için Google'a asıl adres bildirilir
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 export default async function Home() {
   const sirket = await getSirketAyarlari();
