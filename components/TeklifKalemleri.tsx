@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import UrunArama from "@/components/UrunArama";
+import { toplamaGoreDagit, tutarOku } from "@/lib/toplam-dagit";
 
 export type Satir = {
   key: number | string;
@@ -77,6 +78,23 @@ export default function TeklifKalemleri({
   const [topluIskontoOrani, setTopluIskontoOrani] = useState("");
   const [yeniBolumAdi, setYeniBolumAdi] = useState("");
   const [seciliParaBirimi, setSeciliParaBirimi] = useState<string>(paraBirimi || "TRY");
+
+  // Pazarlık sonrası toplam: birim fiyatları hedef toplama göre dağıtma
+  const [hedefMetin, setHedefMetin] = useState("");
+  const [tamSayi, setTamSayi] = useState(false);
+  const [dagitimOncesi, setDagitimOncesi] = useState<Satir[] | null>(null);
+  const [dagitimMesaji, setDagitimMesaji] = useState<{ tip: "ok" | "uyari" | "hata"; metin: string } | null>(null);
+  const dagitimSonrasi = useRef<Satir[] | null>(null);
+
+  // Ayarlamadan sonra kalemlerde elle değişiklik yapılırsa "Geri Al" kalkar
+  // (yoksa geri almak sonradan yapılan düzeltmeleri de silerdi).
+  useEffect(() => {
+    if (dagitimSonrasi.current && satirlar !== dagitimSonrasi.current) {
+      dagitimSonrasi.current = null;
+      setDagitimOncesi(null);
+      setDagitimMesaji(null);
+    }
+  }, [satirlar]);
 
   // DİNANMİK PARA BİRİMİ SİMGESİ (EUR -> €, USD -> $, TRY -> ₺)
   useEffect(() => {
@@ -257,6 +275,60 @@ export default function TeklifKalemleri({
         iskontoYuzde: "0",
       }))
     );
+  };
+
+  // TOPLAMI HEDEF TUTARA GÖRE AYARLA (birim fiyatlar aynı oranda değişir)
+  const toplamaGoreAyarla = () => {
+    const hedef = tutarOku(hedefMetin);
+    if (hedef === null || hedef <= 0) {
+      setDagitimMesaji({ tip: "hata", metin: "Geçerli bir toplam yazın. Örn: 7000 veya 7.000,50" });
+      return;
+    }
+    // Açıklaması boş satırlar kaydedilmez; toplam şaşmasın diye önce uyar
+    if (satirlar.some((s) => !(s.aciklama ?? "").trim() && parseSayi(s.birimFiyat) !== 0)) {
+      setDagitimMesaji({ tip: "hata", metin: "Açıklaması boş ama fiyatı olan kalem var. Önce açıklamasını yazın ya da satırı silin." });
+      return;
+    }
+    const sonuc = toplamaGoreDagit(
+      satirlar.map((s) => ({
+        adet: parseSayi(s.adet),
+        birimFiyat: parseSayi(s.birimFiyat),
+        iskontoYuzde: parseSayi(s.iskontoYuzde),
+      })),
+      hedef,
+      tamSayi
+    );
+    if (!sonuc.ok) {
+      setDagitimMesaji({ tip: "hata", metin: sonuc.hata });
+      return;
+    }
+    const yeni = satirlar.map((s, i) => ({
+      ...s,
+      birimFiyat: String(sonuc.satirlar[i].birimFiyat),
+      iskontoYuzde: String(sonuc.satirlar[i].iskontoYuzde),
+    }));
+    dagitimSonrasi.current = yeni;
+    setDagitimOncesi(satirlar);
+    setSatirlar(yeni);
+    const oran = Math.abs(sonuc.oranYuzde).toLocaleString("tr-TR", { maximumFractionDigits: 2 });
+    const yon = sonuc.oranYuzde < 0 ? "düşürüldü" : "artırıldı";
+    const ozet = `${formatPara(sonuc.eskiToplam)} ${sembol} → ${formatPara(sonuc.yeniToplam)} ${sembol}. Birim fiyatlar yaklaşık %${oran} ${yon}.`;
+    if (sonuc.kalanFark !== 0) {
+      setDagitimMesaji({
+        tip: "uyari",
+        metin: `${ozet} Tam tutmadı, ${formatPara(Math.abs(sonuc.kalanFark))} ${sembol} fark kaldı: 1 adetlik kalem olmadığı için kuruş farkı kapatılamadı. Bir kalemin fiyatını elle düzeltebilirsiniz.`,
+      });
+    } else {
+      setDagitimMesaji({ tip: "ok", metin: `${ozet} Kaydetmeyi unutmayın.` });
+    }
+  };
+
+  const dagitimiGeriAl = () => {
+    if (!dagitimOncesi) return;
+    dagitimSonrasi.current = null;
+    setSatirlar(dagitimOncesi);
+    setDagitimOncesi(null);
+    setDagitimMesaji({ tip: "ok", metin: "Eski fiyatlara geri dönüldü." });
   };
 
   // Yeni Bölüm Ekle
@@ -552,6 +624,71 @@ export default function TeklifKalemleri({
           <div className="text-base font-bold text-soguk-dim">
             KDV Hariç Net Toplam: <span className="font-mono text-lg text-metin">{formatPara(canlıOzet.netToplam)} {sembol}</span>
           </div>
+        </div>
+
+        {/* PAZARLIK: TOPLAMI YAZ, BİRİM FİYATLAR OTOMATİK AYARLANSIN */}
+        <div className="w-full border-t border-hat pt-3 mt-1">
+          <p className="text-sm font-semibold text-metin mb-0.5">🤝 Anlaşılan toplamı yazın, birim fiyatlar otomatik ayarlansın</p>
+          <p className="text-[11px] text-metin/60 mb-2">
+            Örn: teklif 7.130 {sembol}, masada 7.000 {sembol} anlaşıldı → 7000 yazıp &quot;Toplamı Ayarla&quot;ya basın. Tüm birim fiyatlar aynı
+            oranda değişir, kuruş farkı tek kalemde kapatılır; teklifteki toplam tam olarak yazdığınız tutar olur. İskontolar birim
+            fiyata katılır (müşteri belgesinde zaten net fiyat görünür).
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <input
+                type="text"
+                inputMode="decimal"
+                value={hedefMetin}
+                onChange={(e) => setHedefMetin(e.target.value)}
+                onKeyDown={(e) => {
+                  // Enter formu göndermesin, sadece ayarlama yapsın
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    toplamaGoreAyarla();
+                  }
+                }}
+                placeholder={formatPara(Math.round(canlıOzet.netToplam))}
+                aria-label="Anlaşılan toplam"
+                className="focus-ring w-40 border border-hat rounded-md pl-3 pr-7 py-1.5 text-sm bg-white text-right font-mono font-semibold"
+              />
+              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-metin/50">{sembol}</span>
+            </div>
+            <label className="flex items-center gap-1.5 text-xs text-metin/70 cursor-pointer select-none">
+              <input type="checkbox" checked={tamSayi} onChange={(e) => setTamSayi(e.target.checked)} />
+              Birim fiyatları kuruşsuz yap
+            </label>
+            <button
+              type="button"
+              onClick={toplamaGoreAyarla}
+              className="focus-ring text-sm bg-soguk text-white px-4 py-1.5 rounded-md font-medium hover:bg-soguk-dim transition-colors"
+            >
+              Toplamı Ayarla
+            </button>
+            {dagitimOncesi && (
+              <button
+                type="button"
+                onClick={dagitimiGeriAl}
+                className="focus-ring text-xs bg-white border border-hat text-metin/80 px-3 py-1.5 rounded-md hover:bg-slate-50"
+              >
+                ↶ Geri Al
+              </button>
+            )}
+          </div>
+          {dagitimMesaji && (
+            <p
+              role="status"
+              className={`mt-2 text-xs rounded-md px-3 py-2 border ${
+                dagitimMesaji.tip === "ok"
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                  : dagitimMesaji.tip === "uyari"
+                  ? "bg-amber-50 border-amber-200 text-amber-800"
+                  : "bg-red-50 border-red-200 text-red-700"
+              }`}
+            >
+              {dagitimMesaji.metin}
+            </p>
+          )}
         </div>
       </div>
 
