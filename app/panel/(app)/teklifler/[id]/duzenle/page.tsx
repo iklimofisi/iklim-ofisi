@@ -4,6 +4,7 @@ import { teklifGuncelle } from "@/lib/actions";
 import TeklifKalemleri from "@/components/TeklifKalemleri";
 import MusteriYetkiliSecici from "@/components/MusteriYetkiliSecici";
 import Link from "next/link";
+import SablonSecici from "@/components/SablonSecici";
 
 export const dynamic = "force-dynamic";
 
@@ -174,25 +175,7 @@ export default async function TeklifDuzenle({
           </span>
         </label>
 
-        {sablonlar.length > 0 && (
-          <div className="border-t border-hat pt-4 mt-4 mb-4">
-            <p className="text-xs font-medium text-metin/60 mb-2">Bu teklifte hangi bölümler görünsün?</p>
-            <div className="flex flex-wrap gap-x-6 gap-y-2">
-              {sablonlar.map((s) => (
-                <label key={s.id} className="flex items-center gap-2 text-sm text-metin/80">
-                  <input
-                    type="checkbox"
-                    name="sablonIds"
-                    value={s.id}
-                    defaultChecked={seciliSablonIdleri.has(s.id)}
-                    className="accent-soguk"
-                  />
-                  {s.baslik}
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
+        <SablonSecici sablonlar={sablonlar} seciliIdler={[...seciliSablonIdleri]} />
 
         <div className="flex items-center justify-end border-t border-hat pt-4">
           <button

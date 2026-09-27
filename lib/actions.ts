@@ -11,6 +11,7 @@ import { epostaGonder } from "@/lib/eposta";
 import { getSirketAyarlari } from "@/lib/sirket";
 import { teklifPdfOlustur } from "@/lib/pdf-olustur";
 import { musteriToplami } from "@/lib/teklif-hesap";
+import { sablonGrubu } from "@/lib/sablon";
 import { randomUUID } from "crypto";
 
 // --- Yetki kontrolü + işlem kaydı ---
@@ -199,7 +200,8 @@ export async function teklifEkle(formData: FormData) {
   const kdvDahil = String(formData.get("kdvDurumu") ?? "haric") === "dahil";
   const gecerlilikGunu = parseSayi(formData.get("gecerlilikGunu")) || 15;
   const birimFiyatGoster = formData.get("birimFiyatGoster") !== "hayir";
-  const sablonIds = formData.getAll("sablonIds") as string[];
+  // Not grubunda "— Bu teklifte olmasın —" seçilirse boş değer gelir; atılır
+  const sablonIds = [...new Set((formData.getAll("sablonIds") as string[]).filter((x) => typeof x === "string" && x))];
   const kalemler = kalemleriOku(formData);
 
   if (!musteriId || !baslik || kalemler.length === 0) return;
@@ -258,7 +260,8 @@ export async function teklifGuncelle(formData: FormData) {
   const kdvDahil = String(formData.get("kdvDurumu") ?? "haric") === "dahil";
   const gecerlilikGunu = parseSayi(formData.get("gecerlilikGunu")) || 15;
   const birimFiyatGoster = formData.get("birimFiyatGoster") !== "hayir";
-  const sablonIds = formData.getAll("sablonIds") as string[];
+  // Not grubunda "— Bu teklifte olmasın —" seçilirse boş değer gelir; atılır
+  const sablonIds = [...new Set((formData.getAll("sablonIds") as string[]).filter((x) => typeof x === "string" && x))];
   const kalemler = kalemleriOku(formData);
 
   if (!teklifId || !musteriId || !baslik || kalemler.length === 0) return;
@@ -655,37 +658,54 @@ export async function sirketAyarlariGuncelle(formData: FormData) {
   revalidatePath("/panel/teklifler");
   revalidatePath("/panel");
   revalidatePath("/", "layout");
+
+  // Formun bulunduğu sayfaya "kaydedildi" bildirimiyle geri dön
+  const donus = String(formData.get("donus") ?? "");
+  redirect(`${donus === "/panel/ayarlar/sirket" ? donus : "/panel/ayarlar"}?mesaj=sirket-kaydedildi`);
 }
 
-// --- Ayarlar (Teklif Şablonları) ---
+// --- Ayarlar (Teklif Şablonları / Teklif Notları) ---
+// baslik     → yalnızca panelde görünen ad/kod (örn. "Ödeme Koşulları (Ç-9)")
+// grupBaslik → müşteriye giden başlık (örn. "Ödeme Koşulları"); boş bırakılırsa
+//              adın sonundaki parantezli kod atılarak otomatik bulunur.
 
 export async function sablonEkle(formData: FormData) {
   await yetki("sablonEkle", formData);
   const baslik = String(formData.get("baslik") ?? "").trim();
+  const grupGirdi = String(formData.get("grupBaslik") ?? "").trim();
   const icerik = String(formData.get("icerik") ?? "").trim();
   const sira = parseSayi(formData.get("sira"));
   if (!baslik) return;
 
-  await prisma.teklifSablon.create({ data: { baslik, icerik, sira } });
+  const grupBaslik = sablonGrubu({ baslik, grupBaslik: grupGirdi });
+  await prisma.teklifSablon.create({ data: { baslik, grupBaslik, icerik, sira } });
   revalidatePath("/panel/ayarlar");
+  revalidatePath("/panel/teklifler");
+  redirect("/panel/ayarlar?mesaj=sablon-eklendi#teklif-notlari");
 }
 
 export async function sablonGuncelle(formData: FormData) {
   await yetki("sablonGuncelle", formData);
   const id = String(formData.get("id") ?? "");
   const baslik = String(formData.get("baslik") ?? "").trim();
+  const grupGirdi = String(formData.get("grupBaslik") ?? "").trim();
   const icerik = String(formData.get("icerik") ?? "").trim();
   const sira = parseSayi(formData.get("sira"));
   if (!id || !baslik) return;
 
-  await prisma.teklifSablon.update({ where: { id }, data: { baslik, icerik, sira } });
+  const grupBaslik = sablonGrubu({ baslik, grupBaslik: grupGirdi });
+  await prisma.teklifSablon.update({ where: { id }, data: { baslik, grupBaslik, icerik, sira } });
   revalidatePath("/panel/ayarlar");
+  revalidatePath("/panel/teklifler");
+  redirect(`/panel/ayarlar?mesaj=sablon-guncellendi#sablon-${id}`);
 }
 
 export async function sablonSil(id: string) {
   await yetki("sablonSil", { id });
   await prisma.teklifSablon.delete({ where: { id } });
   revalidatePath("/panel/ayarlar");
+  revalidatePath("/panel/teklifler");
+  redirect("/panel/ayarlar?mesaj=sablon-silindi#teklif-notlari");
 }
 
 // --- Kullanıcılar ---
@@ -1716,6 +1736,8 @@ export async function teklifMusteriyeEpostaGonder(formData: FormData) {
         olusturanKullanici: true,
         // İlk hazırlanma tarihinin doğru bulunması için (PDF'te bu tarih gösterilir)
         revizyonlar: { select: { tarih: true } },
+        // Teklif notları PDF'in sonuna grup başlıklarıyla eklenir
+        sablonlar: { orderBy: { sira: "asc" } },
       },
     }),
     getSirketAyarlari(),

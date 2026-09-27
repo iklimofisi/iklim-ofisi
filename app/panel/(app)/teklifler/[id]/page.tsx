@@ -8,6 +8,7 @@ import TeklifDurumSecici from "@/components/TeklifDurumSecici";
 import { getSirketAyarlari } from "@/lib/sirket";
 import TeklifEpostaGonderModal from "@/components/TeklifEpostaGonderModal"; // MODAL İMPORT EDİLDİ
 import { musteriToplami, ilkHazirlanmaTarihi, musteriTeklifTarihi, kosulCumlesi, tarihYaz } from "@/lib/teklif-hesap";
+import { sablonlariGrupla } from "@/lib/sablon";
 
 export const dynamic = "force-dynamic";
 
@@ -290,10 +291,15 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
 
         {teklif.sablonlar.length > 0 && (
           <div className="grid sm:grid-cols-2 gap-x-10 gap-y-8 mb-12 text-sm">
-            {teklif.sablonlar.map((s) => (
-              <div key={s.id}>
-                <p className="font-medium text-metin mb-2">{s.baslik}</p>
-                <p className="text-metin/60 leading-relaxed whitespace-pre-line">{s.icerik}</p>
+            {/* Müşteriye yalnızca grup başlığı gider ("Ödeme Koşulları"); not adı/kodu ("Ç-9") gösterilmez */}
+            {sablonlariGrupla(teklif.sablonlar).map((g) => (
+              <div key={g.grup}>
+                <p className="font-medium text-metin mb-2">{g.grup}</p>
+                {g.notlar.map((s) => (
+                  <p key={s.id} className="text-metin/60 leading-relaxed whitespace-pre-line [&+p]:mt-2">
+                    {s.icerik}
+                  </p>
+                ))}
               </div>
             ))}
           </div>

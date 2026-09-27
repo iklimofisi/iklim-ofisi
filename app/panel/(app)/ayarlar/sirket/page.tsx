@@ -1,6 +1,7 @@
 import { getSirketAyarlari } from "@/lib/sirket";
 import { sirketAyarlariGuncelle } from "@/lib/actions";
 import Link from "next/link";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export default async function SirketAyarlariPage() {
       </div>
 
       <form action={sirketAyarlariGuncelle} className="bg-yuzey border border-hat rounded-lg p-6 space-y-4">
+        <input type="hidden" name="donus" value="/panel/ayarlar/sirket" />
         <div>
           <label className="block text-xs font-semibold text-metin/70 mb-1">Şirket Unvanı *</label>
           <input
@@ -117,12 +119,9 @@ export default async function SirketAyarlariPage() {
         </div>
 
         <div className="flex justify-end pt-4 border-t border-hat">
-          <button
-            type="submit"
-            className="focus-ring bg-soguk text-white px-6 py-2.5 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors"
-          >
+          <KaydetButonu className="focus-ring bg-soguk text-white px-6 py-2.5 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
             Şirket Bilgilerini Kaydet
-          </button>
+          </KaydetButonu>
         </div>
       </form>
     </div>

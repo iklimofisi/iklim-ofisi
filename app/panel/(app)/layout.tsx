@@ -6,6 +6,8 @@ import { cikisYap } from "@/lib/auth-actions";
 import { suankiKullanici } from "@/lib/oturum";
 import { prisma } from "@/lib/prisma";
 import PanelMobilMenu from "@/components/PanelMobilMenu";
+import KayitBildirimi from "@/components/KayitBildirimi";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -63,6 +65,9 @@ export default async function PanelLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen flex flex-col sm:flex-row bg-zemin">
+      <Suspense fallback={null}>
+        <KayitBildirimi />
+      </Suspense>
       <PanelMobilMenu menu={menu} rozetler={rozetler} />
       <aside className="w-56 shrink-0 border-r border-hat bg-yuzey hidden sm:flex flex-col print:hidden">
         <div className="h-16 flex items-center gap-2 px-6 border-b border-hat">

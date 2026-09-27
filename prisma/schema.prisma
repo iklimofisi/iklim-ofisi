@@ -193,7 +193,8 @@ model CariHareket {
 
 model TeklifSablon {
   id        String   @id @default(cuid())
-  baslik    String
+  baslik    String   // Panelde görünen ad/kod, örn. "Ödeme Koşulları (Ç-9)"
+  grupBaslik String? // Müşteriye giden başlık, örn. "Ödeme Koşulları"
   icerik    String
   sira      Int      @default(0)
   teklifler Teklif[] @relation("TeklifSablonSecimi")

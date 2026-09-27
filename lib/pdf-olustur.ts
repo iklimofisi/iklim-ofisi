@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf";
 import { LIBERATION_SANS_NORMAL, LIBERATION_SANS_KALIN } from "@/lib/pdf-fontlari";
 import { musteriToplami, ilkHazirlanmaTarihi, musteriTeklifTarihi, kosulCumlesi } from "@/lib/teklif-hesap";
+import { sablonlariGrupla } from "@/lib/sablon";
 
 // Türkçe karakterler (ş, ğ, ı, İ, ö, ü, ç) için PDF'e gömülen yazı tipi.
 // Önceden bu harfler s, g, i... olarak değiştiriliyordu; artık olduğu gibi basılıyor.
@@ -166,6 +167,35 @@ export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer
   doc.setFontSize(8);
   doc.setTextColor(100, 116, 139);
   doc.text(kosulCumlesi(teklif), 15, y + 12, { maxWidth: 180 });
+  y += 22;
+
+  // 6. Teklif notları — müşteriye yalnızca grup başlığı ("Ödeme Koşulları") ve metin gider
+  const gruplar = sablonlariGrupla((teklif.sablonlar ?? []) as { baslik: string; grupBaslik?: string | null; icerik: string }[]);
+  for (const g of gruplar) {
+    const satirlar: string[] = doc.splitTextToSize(metin(g.notlar.map((n) => n.icerik).join("\n\n")), 180);
+    // Başlık ile metnin ilk satırları ayrı sayfalara düşmesin
+    if (y + 12 > 282) {
+      doc.addPage();
+      y = 20;
+    }
+    doc.setFont(YAZI_TIPI, "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(15, 23, 42);
+    doc.text(metin(g.grup), 15, y);
+    y += 5;
+    doc.setFont(YAZI_TIPI, "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(71, 85, 105);
+    for (const satir of satirlar) {
+      if (y > 285) {
+        doc.addPage();
+        y = 20;
+      }
+      doc.text(satir, 15, y);
+      y += 3.8;
+    }
+    y += 5;
+  }
 
   const arrayBuffer = doc.output("arraybuffer");
   return Buffer.from(arrayBuffer);
