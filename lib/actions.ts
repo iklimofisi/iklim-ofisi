@@ -1775,6 +1775,7 @@ export async function teklifMusteriyeEpostaGonder(formData: FormData) {
       include: {
         musteri: true,
         yetkili: true,
+        proje: true, // PDF'te "Proje: ..." satırı (teklif sayfasıyla aynı)
         kalemler: { include: { marka: true } },
         olusturanKullanici: true,
         // İlk hazırlanma tarihinin doğru bulunması için (PDF'te bu tarih gösterilir)
