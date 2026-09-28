@@ -9,6 +9,7 @@ const links = [
   { href: "/urunler", label: "Ürünler" },
   { href: "/airnex", label: "AIRNEX Mutfak Havalandırma" },
   { href: "/verta", label: "VERTA Konveksiyonel Fırınlar" },
+  { href: "/buderus", label: "Buderus Yoğuşmalı Kazanlar" },
   { href: "/referanslar", label: "Referanslar" },
   { href: "/hesaplama", label: "Kapasite Hesaplama" },
   { href: "/blog", label: "Blog" },

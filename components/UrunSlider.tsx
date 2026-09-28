@@ -79,11 +79,11 @@ const SLAYTLAR: Slayt[] = [
     gorsel: "/slider/slider-verta-firin.jpg",
   },
   {
-    etiket: "Buderus",
-    baslik: "Isı Pompası & Kaskad Isıtma",
-    alt: "Isı pompası ve yerden ısıtma sistemi",
-    href: "/urunler",
-    cizim: "isitma",
+    etiket: "Buderus · Yoğuşmalı Kazan",
+    baslik: "Logamax plus GB272: 49–150 kW, Kaskad",
+    alt: "Duvara monte Buderus Logamax plus GB272 yoğuşmalı kazan",
+    href: "/buderus",
+    gorsel: "/buderus/gb272-slider.jpg",
   },
 ];
 

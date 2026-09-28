@@ -25,6 +25,7 @@ const urunKategorileri: {
   gorsel?: string;
   gorselAlt?: string;
   gorselBaslik?: string; // Fotoğraf yoksa kart başlığındaki büyük yazı (boşsa marka adı)
+  detay?: { href: string; etiket: string; katalog?: string }; // Ürün sayfası varsa
 }[] = [
   {
     id: "bireysel-klima",
@@ -58,6 +59,9 @@ const urunKategorileri: {
   },
   {
     id: "isi-pompasi-isitma",
+    gorsel: "/buderus/gb272-kart.jpg",
+    gorselAlt: "Buderus Logamax plus GB272 duvar tipi yoğuşmalı kazan",
+    detay: { href: "/buderus", etiket: "GB272 Ürün Detayları →", katalog: "/kataloglar/buderus-logamax-plus-gb272-katalog.pdf" },
     kategori: "VERİMLİ ISITMA & KASKAD",
     baslik: "Buderus Isıtma & Isı Pompaları",
     aciklama: "Buderus yoğuşmalı kaskad kazan sistemleri, hava/su kaynaklı ısı pompaları (85°C) ve sulu yerden ısıtma entegrasyonu.",
@@ -265,6 +269,27 @@ export default async function UrunlerPage() {
                     <p className="text-[10px] font-bold text-slate-400 font-mono">Marka: {kat.markalar}</p>
                   ) : (
                     <p className="text-[10px] font-bold text-slate-400 font-mono">Marka: Projeye uygun marka seçimi</p>
+                  )}
+                  {kat.detay && (
+                    <div className="flex gap-2">
+                      <Link
+                        href={kat.detay.href}
+                        className="flex-1 py-2.5 bg-teal-700 hover:bg-teal-800 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm"
+                      >
+                        {kat.detay.etiket}
+                      </Link>
+                      {kat.detay.katalog && (
+                        <a
+                          href={kat.detay.katalog}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download
+                          className="px-3 py-2.5 bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-800 text-center font-bold text-xs rounded-lg transition-colors"
+                        >
+                          Katalog ↓
+                        </a>
+                      )}
+                    </div>
                   )}
                   <Link
                     href="/iletisim"
