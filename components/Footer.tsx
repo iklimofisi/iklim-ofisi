@@ -2,6 +2,7 @@ import { getSirketAyarlari } from "@/lib/sirket";
 import Link from "next/link";
 import IletisimButonlari from "@/components/IletisimButonlari";
 import { IsletmeYapisalVerisi } from "@/components/YapisalVeri";
+import { ISTIRAK_METNI } from "@/lib/kurumsal";
 
 export default async function Footer() {
   const sirket = await getSirketAyarlari();
@@ -12,6 +13,7 @@ export default async function Footer() {
         <div>
           <h3 className="font-bold text-base mb-1 text-white">{sirket.unvan}</h3>
           {sirket.slogan && <p className="text-slate-400 text-xs">{sirket.slogan}</p>}
+          <p className="text-slate-500 text-xs mt-3 leading-relaxed">{ISTIRAK_METNI}</p>
         </div>
 
         <div>

@@ -9,6 +9,7 @@ import { getSirketAyarlari } from "@/lib/sirket";
 import TeklifEpostaGonderModal from "@/components/TeklifEpostaGonderModal"; // MODAL İMPORT EDİLDİ
 import { musteriToplami, ilkHazirlanmaTarihi, musteriTeklifTarihi, kosulCumlesi, tarihYaz } from "@/lib/teklif-hesap";
 import { sablonlariGrupla } from "@/lib/sablon";
+import { ISTIRAK_METNI } from "@/lib/kurumsal";
 
 export const dynamic = "force-dynamic";
 
@@ -155,6 +156,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
             <Image src="/logo-icon.png" alt={sirket.unvan} width={48} height={48} />
             <div>
               <p className="font-display font-bold text-lg text-metin">{sirket.unvan}</p>
+              <p className="text-[11px] text-metin/60 font-medium">{ISTIRAK_METNI}</p>
               {sirket.slogan && <p className="text-xs text-metin/60 font-medium">{sirket.slogan}</p>}
               {sirket.adres && <p className="text-xs text-metin/50 mt-1">{sirket.adres}</p>}
               <p className="text-xs text-metin/50">
