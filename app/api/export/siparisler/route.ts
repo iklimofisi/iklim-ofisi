@@ -21,7 +21,7 @@ export async function GET() {
   const siparisler = await prisma.siparis.findMany({
     include: {
       musteri: true,
-      teklif: { include: { kalemler: true } },
+      teklif: { include: { kalemler: { orderBy: [{ sira: "asc" }, { id: "asc" }] } } },
       sevkiyatlar: true,
     },
     orderBy: { olusturmaTarihi: "desc" },

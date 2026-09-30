@@ -29,7 +29,7 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
       where: { id: params.id },
       include: {
         musteri: true,
-        teklif: { include: { kalemler: true } },
+        teklif: { include: { kalemler: { orderBy: [{ sira: "asc" }, { id: "asc" }] } } },
         sevkiyatlar: { include: { teklifKalem: true }, orderBy: { tarih: "desc" } },
         teslimler: { include: { teklifKalem: true }, orderBy: { tarih: "desc" } },
       },

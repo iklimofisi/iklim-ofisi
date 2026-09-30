@@ -20,7 +20,7 @@ export default async function TeklifDuzenle({
     prisma.teklif.findUnique({
       where: { id: params.id },
       include: {
-        kalemler: { include: { _count: { select: { sevkiyatlar: true, teslimler: true } } } },
+        kalemler: { include: { _count: { select: { sevkiyatlar: true, teslimler: true } } }, orderBy: [{ sira: "asc" }, { id: "asc" }] },
         sablonlar: true,
       },
     }),

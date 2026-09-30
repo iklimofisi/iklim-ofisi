@@ -41,7 +41,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
         proje: true,
         yetkili: true,
         olusturanKullanici: true,
-        kalemler: { include: { marka: true } },
+        kalemler: { include: { marka: true }, orderBy: [{ sira: "asc" }, { id: "asc" }] },
         sablonlar: { orderBy: { sira: "asc" } },
         revizyonlar: { orderBy: { revizyonNo: "desc" } },
         siparis: true,

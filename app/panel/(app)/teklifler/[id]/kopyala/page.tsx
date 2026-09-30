@@ -22,7 +22,7 @@ export default async function TeklifKopyala({
   const [kaynak, musteriler, sablonlar, markalar, urunler, projeler] = await Promise.all([
     prisma.teklif.findUnique({
       where: { id: params.id },
-      include: { kalemler: true, sablonlar: true },
+      include: { kalemler: { orderBy: [{ sira: "asc" }, { id: "asc" }] }, sablonlar: true },
     }),
     prisma.musteri.findMany({
       orderBy: { ad: "asc" },

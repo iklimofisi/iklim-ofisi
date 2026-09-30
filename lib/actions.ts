@@ -183,8 +183,10 @@ async function yetkiliDogrula(yetkiliId: string, musteriId: string): Promise<str
 }
 
 // Kalemi veritabanına yazılacak alanlara indirger (formdaki eskiId alanı yazılmaz)
-function kalemVerisi(k: ReturnType<typeof kalemleriOku>[number]) {
+// "sira": formdaki sırası — kalemler her yerde bu sırayla listelenir
+function kalemVerisi(k: ReturnType<typeof kalemleriOku>[number], sira: number) {
   return {
+    sira,
     bolum: k.bolum,
     aciklama: k.aciklama,
     adet: k.adet,
@@ -242,7 +244,7 @@ export async function teklifEkle(formData: FormData) {
       olusturanAdi: kullanici?.ad ?? "",
       tarih: simdi,
       ilkTarih: simdi, // İlk Oluşturulma Tarihi Saklanır
-      kalemler: { create: kalemler.map(kalemVerisi) },
+      kalemler: { create: kalemler.map((k, i) => kalemVerisi(k, i)) },
       sablonlar: { connect: sablonIds.map((id) => ({ id })) },
     },
   });
@@ -276,7 +278,7 @@ export async function teklifGuncelle(formData: FormData) {
   const mevcut = await prisma.teklif.findUnique({
     where: { id: teklifId },
     include: {
-      kalemler: { include: { _count: { select: { sevkiyatlar: true, teslimler: true } } } },
+      kalemler: { include: { _count: { select: { sevkiyatlar: true, teslimler: true } } }, orderBy: [{ sira: "asc" }, { id: "asc" }] },
       sablonlar: true,
     },
   });
@@ -290,11 +292,11 @@ export async function teklifGuncelle(formData: FormData) {
 
   // Formdan gelen satırlara yeni ID ver; eski kalemden gelenleri eşleştir
   const kullanilanEskiIdler = new Set<string>();
-  const yeniSatirlar = kalemler.map((k) => {
+  const yeniSatirlar = kalemler.map((k, sira) => {
     const eskiId =
       k.eskiId && mevcutKalemIdleri.has(k.eskiId) && !kullanilanEskiIdler.has(k.eskiId) ? k.eskiId : null;
     if (eskiId) kullanilanEskiIdler.add(eskiId);
-    return { yeniId: randomUUID(), eskiId, veri: kalemVerisi(k) };
+    return { yeniId: randomUUID(), eskiId, veri: kalemVerisi(k, sira) };
   });
 
   // Kaydı olan bir kalem formdan kaldırıldıysa dur: veriyi silmeyiz
@@ -1116,7 +1118,8 @@ export async function satinalmaTeklifiniDonustur(formData: FormData) {
       kaynakSatinalmaTeklifiId: satinalmaTeklifiId,
       ...(fiyatsizVar ? { birimFiyatGoster: false } : {}),
       kalemler: {
-        create: kalemler.map((k) => ({
+        create: kalemler.map((k, sira) => ({
+          sira,
           aciklama: k.aciklama,
           adet: k.adet,
           birimFiyat: k.birimFiyat,
@@ -1776,7 +1779,7 @@ export async function teklifMusteriyeEpostaGonder(formData: FormData) {
         musteri: true,
         yetkili: true,
         proje: true, // PDF'te "Proje: ..." satırı (teklif sayfasıyla aynı)
-        kalemler: { include: { marka: true } },
+        kalemler: { include: { marka: true }, orderBy: [{ sira: "asc" }, { id: "asc" }] },
         olusturanKullanici: true,
         // İlk hazırlanma tarihinin doğru bulunması için (PDF'te bu tarih gösterilir)
         revizyonlar: { select: { tarih: true } },

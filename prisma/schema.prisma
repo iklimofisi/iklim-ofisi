@@ -121,6 +121,7 @@ model TeklifKalem {
   iskontoYuzde Float           @default(0)
   markaId      String?
   marka        Marka?          @relation(fields: [markaId], references: [id])
+  sira         Int             @default(0) // Teklifteki sırası (formdaki sıra; 0'dan başlar)
   sevkiyatlar  SevkiyatKaydi[]
   teslimler    TeslimKaydi[]
 }

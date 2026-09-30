@@ -20,7 +20,7 @@ export async function GET() {
           teklifler: {
             include: {
               musteri: true,
-              kalemler: { include: { marka: true } },
+              kalemler: { include: { marka: true }, orderBy: [{ sira: "asc" }, { id: "asc" }] },
               olusturanKullanici: true,
             },
             orderBy: { tarih: "desc" },
@@ -33,7 +33,7 @@ export async function GET() {
         include: {
           musteri: true,
           olusturanKullanici: true,
-          kalemler: { include: { marka: true } },
+          kalemler: { include: { marka: true }, orderBy: [{ sira: "asc" }, { id: "asc" }] },
         },
         orderBy: { tarih: "desc" },
       }),

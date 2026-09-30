@@ -33,6 +33,19 @@ const parseSayi = (val: string | number | undefined): number => {
   return parseFloat(clean) || 0;
 };
 
+// Satırları bölümlerine göre bitişik hâle getirir (bölümler ilk göründükleri
+// sırayla, bölüm içindeki sıra korunur). Ekrandaki sıra = kaydedilen sıra olur;
+// "Sıra" kutusundaki numara da ekranda görünen sırayla birebir aynı olur.
+function bolumlereGoreDiz(liste: Satir[]): Satir[] {
+  const gruplar = new Map<string, Satir[]>();
+  for (const s of liste) {
+    const b = s.bolum || "Genel Kalemler";
+    if (!gruplar.has(b)) gruplar.set(b, []);
+    gruplar.get(b)!.push(s);
+  }
+  return Array.from(gruplar.values()).flat();
+}
+
 // Fiyat Formatlayıcı
 const formatPara = (val: number) => {
   return val.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -52,7 +65,7 @@ export default function TeklifKalemleri({
   // State: Tüm kalemler
   const [satirlar, setSatirlar] = useState<Satir[]>(() => {
     if (baslangic && baslangic.length > 0) {
-      return baslangic.map((s, idx) => ({
+      return bolumlereGoreDiz(baslangic.map((s, idx) => ({
         key: s.key ?? idx,
         id: s.id,
         bolum: s.bolum || "VRF Sistemleri",
@@ -61,7 +74,7 @@ export default function TeklifKalemleri({
         birimFiyat: String(s.birimFiyat ?? 0),
         iskontoYuzde: String(s.iskontoYuzde ?? 0),
         markaId: s.markaId ?? "",
-      }));
+      })));
     }
     return [
       {
@@ -146,7 +159,7 @@ export default function TeklifKalemleri({
         .filter((k) => k.aciklama);
 
       if (yeniKalemler.length > 0) {
-        setSatirlar(yeniKalemler);
+        setSatirlar(bolumlereGoreDiz(yeniKalemler));
       } else {
         alert("Excel'de uygun sütun başlıkları (Açıklama, Adet, Birim Fiyat) bulunamadı.");
       }
@@ -191,7 +204,7 @@ export default function TeklifKalemleri({
       const temp = clone[orjinalIndex];
       clone[orjinalIndex] = clone[orjinalIndex - 1];
       clone[orjinalIndex - 1] = temp;
-      return clone;
+      return bolumlereGoreDiz(clone);
     });
   };
 
@@ -202,7 +215,7 @@ export default function TeklifKalemleri({
       const temp = clone[orjinalIndex];
       clone[orjinalIndex] = clone[orjinalIndex + 1];
       clone[orjinalIndex + 1] = temp;
-      return clone;
+      return bolumlereGoreDiz(clone);
     });
   };
 
@@ -213,7 +226,7 @@ export default function TeklifKalemleri({
       const clone = [...prev];
       const [movedItem] = clone.splice(currentIndex, 1);
       clone.splice(newIndex, 0, movedItem);
-      return clone;
+      return bolumlereGoreDiz(clone);
     });
   };
 
@@ -225,19 +238,22 @@ export default function TeklifKalemleri({
   };
 
   // Yeni Satır Ekle
+  // Yeni satır kendi bölümünün sonuna eklenir (listenin en sonuna değil)
   const satirEkle = (bolumAdi: string = "Genel Kalemler") => {
-    setSatirlar((prev) => [
-      ...prev,
-      {
-        key: Date.now() + Math.random(),
-        bolum: bolumAdi,
-        aciklama: "",
-        adet: "1",
-        birimFiyat: "0",
-        iskontoYuzde: topluIskontoOrani || "0",
-        markaId: "",
-      },
-    ]);
+    setSatirlar((prev) =>
+      bolumlereGoreDiz([
+        ...prev,
+        {
+          key: Date.now() + Math.random(),
+          bolum: bolumAdi,
+          aciklama: "",
+          adet: "1",
+          birimFiyat: "0",
+          iskontoYuzde: topluIskontoOrani || "0",
+          markaId: "",
+        },
+      ])
+    );
   };
 
   // Satır Sil
