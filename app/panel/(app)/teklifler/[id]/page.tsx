@@ -33,7 +33,7 @@ function kurumsalTeklifKodu(teklifNo: number, tarih: Date) {
 }
 
 export default async function TeklifDetay({ params }: { params: { id: string } }) {
-  const [teklif, sirket] = await Promise.all([
+  const [teklif, sirket, sozlesme] = await Promise.all([
     prisma.teklif.findUnique({
       where: { id: params.id },
       include: {
@@ -48,6 +48,8 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
       },
     }),
     getSirketAyarlari(),
+    // Sözleşme taslağı (ayrı sorgu: tablo henüz yoksa teklif sayfası yine açılır)
+    prisma.sozlesme.findUnique({ where: { teklifId: params.id }, select: { id: true } }).catch(() => null),
   ]);
 
   if (!teklif) notFound();
@@ -118,7 +120,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
         </div>
       </div>
 
-      <div className="flex items-center justify-between mb-4 print:hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4 print:hidden">
         <p className="text-xs text-metin/50">
           Rev. {teklif.revizyonNo} · Hazırlayan: {hazirlayanAd} · İlk hazırlanma: {tarihYaz(ilkTarih)}
           {teklif.revizyonNo > 1 && ` · Son revizyon: ${tarihYaz(teklif.tarih)}`}
@@ -136,6 +138,15 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
             </>
           )}
         </p>
+        <div className="flex items-center gap-3 ml-auto">
+        {(teklif.durum === "ONAYLANDI" || sozlesme) && (
+          <Link
+            href={`/panel/teklifler/${teklif.id}/sozlesme`}
+            className="focus-ring text-sm bg-soguk text-white px-4 py-2 rounded-md font-medium hover:bg-soguk-dim transition-colors"
+          >
+            📄 {sozlesme ? "Sözleşme Taslağı" : "Sözleşme Taslağı Hazırla"}
+          </Link>
+        )}
         {teklif.durum === "ONAYLANDI" && !teklif.siparis && (
           <Link
             href={`/panel/teklifler/${teklif.id}/siparis-talebi`}
@@ -152,6 +163,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
             {teklif.siparis.durum === "ONAY_BEKLIYOR" ? "Sipariş talebini görüntüle (onay bekliyor)" : "Siparişi görüntüle"} →
           </Link>
         )}
+        </div>
       </div>
 
       <div className="bg-yuzey border border-hat rounded-lg p-8 sm:p-12 print:border-0 print:p-0">

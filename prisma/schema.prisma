@@ -108,6 +108,36 @@ model Teklif {
   revizyonlar              TeklifRevizyon[]
   siparis                  Siparis?
   kesifler                 KesifFormu[]
+  sozlesme                 Sozlesme?
+}
+
+// Onaylanan tekliften hazırlanan, müşteriye imzalatılacak sözleşme taslağı.
+// Kalemler ve maddeler oluşturulurken kopyalanır (JSON metni olarak saklanır);
+// teklif sonradan değişse de sözleşme değişmez.
+model Sozlesme {
+  id               String   @id @default(cuid())
+  teklif           Teklif   @relation(fields: [teklifId], references: [id], onDelete: Cascade)
+  teklifId         String   @unique
+  baslik           String   @default("SATIŞ VE MONTAJ SÖZLEŞMESİ")
+  sozlesmeTarihi   DateTime @default(now())
+  paraBirimi       String   @default("TRY") // Sözleşme bedelinin para birimi
+  kur              Float    @default(1)     // Teklif para birimi → sözleşme para birimi
+  kdvOrani         Float    @default(20)
+  kdvDahil         Boolean  @default(false)
+  birimFiyatGoster Boolean  @default(true)
+  isverenUnvan     String
+  isverenAdres     String?
+  isverenVergi     String?
+  isverenTelefon   String?
+  isverenYetkili   String?
+  isinKonusu       String
+  isYeri           String?
+  kalemler         String   // JSON: [{bolum, aciklama, adet, birimFiyat}] (teklif para biriminde)
+  maddeler         String   // JSON: [{baslik, icerik}]
+  durum            String   @default("TASLAK")
+  olusturanAdi     String   @default("")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model TeklifKalem {

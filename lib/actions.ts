@@ -16,7 +16,8 @@ function htmlKacir(m: string) {
 import { getSirketAyarlari, SIRKET_ETIKETI } from "@/lib/sirket";
 import { teklifPdfOlustur } from "@/lib/pdf-olustur";
 import { musteriToplami } from "@/lib/teklif-hesap";
-import { sablonGrubu } from "@/lib/sablon";
+import { sablonGrubu, sablonlariGrupla } from "@/lib/sablon";
+import { tekliftenKalemler, maddeleriOku, STANDART_MADDELER, PARA_BIRIMLERI } from "@/lib/sozlesme";
 import { tutarOku } from "@/lib/toplam-dagit";
 import { donusumKalemleri } from "@/lib/satinalma-hesap";
 import { randomUUID } from "crypto";
@@ -373,7 +374,10 @@ export async function teklifDurumGuncelle(teklifId: string, durum: "BEKLEMEDE" |
 }
 
 export async function teklifSil(teklifId: string) {
-  await yetki("teklifSil", { teklifId });
+  const silen = await yetki("teklifSil", { teklifId });
+  // Teklife bağlı sözleşme taslağı da silinir; önce kopyası işlem geçmişine yazılır
+  const sozlesme = await prisma.sozlesme.findUnique({ where: { teklifId }, select: { id: true } }).catch(() => null);
+  if (sozlesme) await islemKaydet(silen, "sozlesmeSil", { id: sozlesme.id, teklifId });
   const siparis = await prisma.siparis.findUnique({
     where: { teklifId },
     select: { id: true },
@@ -2053,4 +2057,140 @@ export async function epostaTestiGonder(formData: FormData) {
   });
   revalidatePath("/panel/ayarlar");
   redirect(`/panel/ayarlar?mesaj=${s.basarili ? "eposta-test-ok" : "eposta-test-hata"}#eposta`);
+}
+
+// --- SÖZLEŞME TASLAĞI ---
+// Onaylanan tekliften sözleşme taslağı oluşturur. Kalemler ve seçilen teklif
+// notları KOPYALANIR; sonrasında sözleşme ekranından serbestçe düzenlenir.
+export async function sozlesmeOlustur(formData: FormData) {
+  const kullanici = await yetki("sozlesmeOlustur", formData);
+  const teklifId = String(formData.get("teklifId") ?? "");
+  if (!teklifId) return;
+
+  const mevcut = await prisma.sozlesme.findUnique({ where: { teklifId }, select: { id: true } });
+  if (mevcut) redirect(`/panel/teklifler/${teklifId}/sozlesme`);
+
+  const teklif = await prisma.teklif.findUnique({
+    where: { id: teklifId },
+    include: {
+      musteri: true,
+      yetkili: true,
+      proje: true,
+      kalemler: { orderBy: [{ sira: "asc" }, { id: "asc" }] },
+      sablonlar: { orderBy: { sira: "asc" } },
+    },
+  });
+  if (!teklif) return;
+
+  const pbHam = String(formData.get("paraBirimi") ?? teklif.paraBirimi);
+  const paraBirimi = (PARA_BIRIMLERI as readonly string[]).includes(pbHam) ? pbHam : teklif.paraBirimi;
+  const kurOkunan = tutarOku(String(formData.get("kur") ?? ""));
+  const kur = paraBirimi === teklif.paraBirimi ? 1 : kurOkunan && kurOkunan > 0 ? kurOkunan : 1;
+
+  // Seçilen teklif notu grupları sözleşme maddesi olur, ardından standart maddeler
+  const secilenler = new Set(formData.getAll("not").map(String));
+  const notMaddeleri = sablonlariGrupla(teklif.sablonlar)
+    .filter((g) => secilenler.has(g.grup))
+    .map((g) => ({ baslik: g.grup, icerik: g.notlar.map((n) => n.icerik).join("\n\n") }));
+
+  const m = teklif.musteri;
+  const konu = [teklif.baslik, teklif.proje?.ad && teklif.proje.ad !== teklif.baslik ? teklif.proje.ad : null]
+    .filter(Boolean)
+    .join(" – ");
+
+  await prisma.sozlesme.create({
+    data: {
+      teklifId,
+      paraBirimi,
+      kur,
+      kdvOrani: teklif.kdvOrani,
+      kdvDahil: teklif.kdvDahil,
+      birimFiyatGoster: teklif.birimFiyatGoster,
+      isverenUnvan: m.ad,
+      isverenAdres: m.faturaAdresi || null,
+      isverenVergi: m.vergiNo ? `VN: ${m.vergiNo}` : null,
+      isverenTelefon: m.telefon || teklif.yetkili?.telefon || m.yetkiliTelefon || null,
+      isverenYetkili: teklif.yetkili?.ad || m.yetkiliAdi || null,
+      isinKonusu:
+        `İşveren'e ait ${konu || "proje"} kapsamında, aşağıda Madde 3'te belirtilen ürünlerin Yüklenici tarafından ` +
+        `temini, montajı ve devreye alınması işidir.`,
+      isYeri: teklif.proje?.konum || m.sevkAdresi || null,
+      kalemler: JSON.stringify(tekliftenKalemler(teklif.kalemler)),
+      maddeler: JSON.stringify([...notMaddeleri, ...STANDART_MADDELER]),
+      olusturanAdi: kullanici?.ad ?? "",
+    },
+  });
+
+  revalidatePath(`/panel/teklifler/${teklifId}`);
+  redirect(`/panel/teklifler/${teklifId}/sozlesme?mesaj=sozlesme-olusturuldu`);
+}
+
+// Sözleşme taslağını kaydeder (başlık, taraflar, para birimi/kur, maddeler...)
+export async function sozlesmeKaydet(formData: FormData) {
+  await yetki("sozlesmeKaydet", formData);
+  const id = String(formData.get("sozlesmeId") ?? "");
+  const teklifId = String(formData.get("teklifId") ?? "");
+  if (!id || !teklifId) return;
+
+  const metin = (ad: string, uzunluk = 2000) => String(formData.get(ad) ?? "").trim().slice(0, uzunluk);
+  const bosIseNull = (v: string) => (v ? v : null);
+
+  const pbHam = metin("paraBirimi", 10);
+  const paraBirimi = (PARA_BIRIMLERI as readonly string[]).includes(pbHam) ? pbHam : "TRY";
+  const kurOkunan = tutarOku(metin("kur", 30));
+  const kdvOrani = tutarOku(metin("kdvOrani", 10));
+  const tarihHam = metin("sozlesmeTarihi", 10);
+  const tarih = /^\d{4}-\d{2}-\d{2}$/.test(tarihHam) ? new Date(`${tarihHam}T12:00:00Z`) : undefined;
+  const maddeler = maddeleriOku(metin("maddeler", 200000)).filter((x) => x.baslik.trim() || x.icerik.trim());
+
+  await prisma.sozlesme.update({
+    where: { id },
+    data: {
+      baslik: metin("baslik", 200) || "SATIŞ VE MONTAJ SÖZLEŞMESİ",
+      ...(tarih ? { sozlesmeTarihi: tarih } : {}),
+      paraBirimi,
+      kur: kurOkunan && kurOkunan > 0 ? kurOkunan : 1,
+      kdvOrani: kdvOrani !== null && kdvOrani >= 0 && kdvOrani <= 100 ? kdvOrani : 20,
+      kdvDahil: formData.get("kdvDahil") === "evet",
+      birimFiyatGoster: formData.get("birimFiyatGoster") === "evet",
+      isverenUnvan: metin("isverenUnvan", 300) || "—",
+      isverenAdres: bosIseNull(metin("isverenAdres", 500)),
+      isverenVergi: bosIseNull(metin("isverenVergi", 200)),
+      isverenTelefon: bosIseNull(metin("isverenTelefon", 100)),
+      isverenYetkili: bosIseNull(metin("isverenYetkili", 200)),
+      isinKonusu: metin("isinKonusu", 3000) || "—",
+      isYeri: bosIseNull(metin("isYeri", 500)),
+      maddeler: JSON.stringify(maddeler),
+    },
+  });
+
+  revalidatePath(`/panel/teklifler/${teklifId}/sozlesme`);
+  redirect(`/panel/teklifler/${teklifId}/sozlesme?mesaj=sozlesme-kaydedildi`);
+}
+
+// Teklif sonradan düzenlendiyse kalemleri tekliften yeniden kopyalar
+export async function sozlesmeKalemleriYenile(formData: FormData) {
+  await yetki("sozlesmeKalemleriYenile", formData);
+  const teklifId = String(formData.get("teklifId") ?? "");
+  if (!teklifId) return;
+  const teklif = await prisma.teklif.findUnique({
+    where: { id: teklifId },
+    select: { kalemler: { orderBy: [{ sira: "asc" }, { id: "asc" }] } },
+  });
+  if (!teklif) return;
+  await prisma.sozlesme.update({
+    where: { teklifId },
+    data: { kalemler: JSON.stringify(tekliftenKalemler(teklif.kalemler)) },
+  });
+  revalidatePath(`/panel/teklifler/${teklifId}/sozlesme`);
+  redirect(`/panel/teklifler/${teklifId}/sozlesme?mesaj=sozlesme-kalemler`);
+}
+
+// Sözleşme taslağını siler (kopyası işlem geçmişine yazılır). Yalnızca yönetici.
+export async function sozlesmeSil(id: string) {
+  const kullanici = await yetki("sozlesmeSil", { id });
+  if (!kullanici || kullanici.rol !== "ADMIN" || !id) return;
+  const s = await prisma.sozlesme.delete({ where: { id }, select: { teklifId: true } });
+  revalidatePath(`/panel/teklifler/${s.teklifId}`);
+  redirect(`/panel/teklifler/${s.teklifId}?mesaj=sozlesme-silindi`);
 }

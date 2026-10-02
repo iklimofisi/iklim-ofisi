@@ -14,6 +14,10 @@ const MESAJLAR: Record<string, string> = {
   "sirket-kaydedildi": "Şirket bilgileri kaydedildi.",
   kaydedildi: "Kaydedildi.",
   "eposta-gonderildi": "E-posta gönderildi.",
+  "sozlesme-olusturuldu": "Sözleşme taslağı oluşturuldu.",
+  "sozlesme-kaydedildi": "Sözleşme kaydedildi.",
+  "sozlesme-kalemler": "Kalemler tekliften yeniden alındı.",
+  "sozlesme-silindi": "Sözleşme taslağı silindi.",
   "eposta-test-ok": "Deneme e-postası gönderildi. Gelen kutunuzu (ve Spam klasörünü) kontrol edin.",
 };
 

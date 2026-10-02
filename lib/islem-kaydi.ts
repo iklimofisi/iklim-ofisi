@@ -29,6 +29,7 @@ const SILME_KAYNAKLARI: Record<string, { model: string; include?: Record<string,
   sevkiyatSil: { model: "sevkiyatKaydi" },
   teslimKaydiSil: { model: "teslimKaydi" },
   satinalmaTeklifiSil: { model: "satinalmaTeklifi", include: { kalemler: true } },
+  sozlesmeSil: { model: "sozlesme" },
   // Kalemler yeniden yazıldığı için düzenlemeden önceki hâl de saklanır
   satinalmaTeklifiGuncelle: { model: "satinalmaTeklifi", include: { kalemler: true } },
   kesifSil: { model: "kesifFormu" },
