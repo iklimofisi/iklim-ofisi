@@ -37,4 +37,13 @@ body {
   body {
     background: white;
   }
+  /* Bölünmemesi gereken bloklar (teklif notları, imza alanı) */
+  .break-inside-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .break-after-avoid {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
 }

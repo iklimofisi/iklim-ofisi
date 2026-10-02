@@ -333,8 +333,9 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
           <div className="grid sm:grid-cols-2 gap-x-10 gap-y-8 mb-12 text-sm">
             {/* Müşteriye yalnızca grup başlığı gider ("Ödeme Koşulları"); not adı/kodu ("Ç-9") gösterilmez */}
             {sablonlariGrupla(teklif.sablonlar).map((g) => (
-              <div key={g.grup}>
-                <p className="font-medium text-metin mb-2">{g.grup}</p>
+              // Yazdırırken başlık ile açıklaması ayrı sayfalara bölünmesin
+              <div key={g.grup} className="break-inside-avoid">
+                <p className="font-medium text-metin mb-2 break-after-avoid">{g.grup}</p>
                 {g.notlar.map((s) => (
                   <p key={s.id} className="text-metin/60 leading-relaxed whitespace-pre-line [&+p]:mt-2">
                     {s.icerik}
@@ -346,7 +347,8 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
         )}
 
         {/* İMZA / KAŞE ALANI VE TEKLİFİ HAZIRLAYAN & MÜŞTERİ ONAYI */}
-        <div className="grid sm:grid-cols-2 gap-10 pt-10 border-t border-hat text-sm">
+        {/* Yazdırırken imza alanı bütün olarak aynı sayfada kalır */}
+        <div className="grid sm:grid-cols-2 gap-10 pt-10 border-t border-hat text-sm break-inside-avoid">
           {/* TEKLİFİ HAZIRLAYAN */}
           <div>
             <p className="text-xs font-semibold text-metin/50 uppercase tracking-wider mb-2">
