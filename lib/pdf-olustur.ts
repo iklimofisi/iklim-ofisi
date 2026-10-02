@@ -309,11 +309,12 @@ export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer
       if (i < kalemler.length - 1) cizgi(SOL, y, SAG, y);
     });
 
-    if (bolumToplamiGoster) {
+    // Tek kalemli bölümde bölüm toplamı satır tutarıyla aynı; tekrar yazılmaz
+    if (bolumToplamiGoster && kalemler.length > 1) {
       if (yerAc(9)) tabloBasligi();
       cizgi(X_ADET - 20, y, SAG, y, METIN_40, 0.3);
       yazi(8, true, SOGUK_DIM);
-      doc.text(`${metin(bolumAdi)} Toplamı`, X_BIRIM, y + 4.8, { align: "right" });
+      doc.text(`${metin(bolumAdi)} toplamı`, X_BIRIM, y + 4.8, { align: "right" });
       yazi(8.5, true, METIN);
       doc.text(paraYaz(bolumTutari.get(bolumAdi) ?? 0, pb), X_TUTAR, y + 4.8, { align: "right" });
       y += 9;

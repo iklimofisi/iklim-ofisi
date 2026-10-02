@@ -218,16 +218,28 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
           </div>
         </div>
 
-        {/* KALEMLER TABLOSU */}
-        <table className="w-full text-sm mb-8">
+        {/* KALEMLER TABLOSU
+            Sabit sütun genişlikleri: tutarlar tek satırda kalır, sağa hizalı ve
+            alt alta düzgün okunur. Rakamlar açıklamanın ilk satırıyla aynı hizada. */}
+        <table className="w-full table-fixed text-sm mb-8 tabular-nums">
+          <colgroup>
+            <col />
+            <col className="w-14" />
+            {teklif.birimFiyatGoster && (
+              <>
+                <col className="w-32" />
+                <col className="w-32" />
+              </>
+            )}
+          </colgroup>
           <thead>
-            <tr className="text-left text-xs text-metin/50 border-b border-hat">
-              <th className="py-2 font-medium">Açıklama</th>
-              <th className="py-2 font-medium text-right">Adet</th>
+            <tr className="text-xs text-metin/50 border-b-2 border-metin/20">
+              <th className="py-2 pr-4 font-medium text-left">Açıklama</th>
+              <th className="py-2 font-medium text-right whitespace-nowrap">Adet</th>
               {teklif.birimFiyatGoster && (
                 <>
-                  <th className="py-2 font-medium text-right">Birim Fiyat</th>
-                  <th className="py-2 font-medium text-right">Tutar</th>
+                  <th className="py-2 font-medium text-right whitespace-nowrap">Birim Fiyat</th>
+                  <th className="py-2 font-medium text-right whitespace-nowrap">Tutar</th>
                 </>
               )}
             </tr>
@@ -235,9 +247,12 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
           <tbody>
             {Object.entries(gruplanmisKalemler).map(([bolumAdi, kalemler]) => (
               <React.Fragment key={bolumAdi}>
-                <tr className="bg-soguk-light/30 border-b border-hat font-semibold text-xs text-soguk-dim">
-                  <td colSpan={teklif.birimFiyatGoster ? 4 : 2} className="py-2 px-1">
-                    📂 {bolumAdi}
+                <tr className="break-inside-avoid">
+                  <td
+                    colSpan={teklif.birimFiyatGoster ? 4 : 2}
+                    className="pt-5 pb-1.5 text-xs font-bold uppercase tracking-wider text-soguk-dim border-b border-soguk/40"
+                  >
+                    {bolumAdi}
                   </td>
                 </tr>
 
@@ -246,42 +261,39 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
                   const satirTutar = k.adet * netBirimFiyat;
 
                   return (
-                    <tr key={k.id} className="border-b border-hat last:border-0">
-                      <td className="py-3 text-metin">
-                        <div className="flex items-center gap-2 pl-2">
+                    <tr key={k.id} className="border-b border-hat align-top break-inside-avoid">
+                      <td className="py-2 pr-4 text-metin leading-snug">
+                        <div className="flex items-start gap-2">
                           {k.marka?.logo && (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={`/api/marka/${k.marka.id}/logo`}
                               alt={k.marka.ad}
-                              className="h-6 w-auto max-w-[60px] object-contain shrink-0"
+                              className="h-5 w-auto max-w-[56px] object-contain shrink-0 mt-px"
                             />
                           )}
-                          <span>{k.aciklama}</span>
+                          <span className="break-words min-w-0">{k.aciklama}</span>
                         </div>
                       </td>
-                      <td className="py-3 text-right font-mono text-metin/70">{k.adet}</td>
-                      
+                      <td className="py-2 text-right text-metin/70 whitespace-nowrap">{k.adet}</td>
                       {teklif.birimFiyatGoster && (
                         <>
-                          <td className="py-3 text-right font-mono text-metin/70">
-                            {paraFormat(netBirimFiyat, pb)}
-                          </td>
-                          <td className="py-3 text-right font-mono text-metin">
-                            {paraFormat(satirTutar, pb)}
-                          </td>
+                          <td className="py-2 text-right text-metin/70 whitespace-nowrap">{paraFormat(netBirimFiyat, pb)}</td>
+                          <td className="py-2 text-right text-metin whitespace-nowrap">{paraFormat(satirTutar, pb)}</td>
                         </>
                       )}
                     </tr>
                   );
                 })}
 
-                {bolumToplamiGoster && (
-                  <tr className="border-t border-metin/30">
-                    <td colSpan={3} className="py-2 pr-2 text-right text-xs font-semibold text-soguk-dim">
-                      {bolumAdi} Toplamı
+                {/* Bölüm toplamı: yalnızca birden fazla kalemli bölümlerde
+                    (tek kalemde satır tutarıyla aynı olacağı için tekrar yazılmaz) */}
+                {bolumToplamiGoster && kalemler.length > 1 && (
+                  <tr className="break-inside-avoid">
+                    <td colSpan={3} className="pt-1.5 pb-1 pr-4 text-right text-xs text-metin/60">
+                      {bolumAdi} toplamı
                     </td>
-                    <td className="py-2 text-right font-mono text-sm font-semibold text-metin whitespace-nowrap">
+                    <td className="pt-1.5 pb-1 text-right font-semibold text-metin whitespace-nowrap">
                       {paraFormat(bolumTutari.get(bolumAdi) ?? 0, pb)}
                     </td>
                   </tr>
@@ -297,9 +309,9 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
             {bolumToplamiGoster && (
               <div className="mb-2 space-y-1">
                 {bolumler.map((b) => (
-                  <div key={b.bolum} className="flex justify-between gap-6 text-metin/70">
+                  <div key={b.bolum} className="flex justify-between gap-6 text-metin/70 text-xs tabular-nums">
                     <span>{b.bolum}</span>
-                    <span className="font-mono whitespace-nowrap">{paraFormat(b.tutar, pb)}</span>
+                    <span className="whitespace-nowrap">{paraFormat(b.tutar, pb)}</span>
                   </div>
                 ))}
               </div>
