@@ -7,7 +7,7 @@ import YazdirButon from "@/components/YazdirButon";
 import TeklifDurumSecici from "@/components/TeklifDurumSecici";
 import { getSirketAyarlari } from "@/lib/sirket";
 import TeklifEpostaGonderModal from "@/components/TeklifEpostaGonderModal"; // MODAL İMPORT EDİLDİ
-import { musteriToplami, ilkHazirlanmaTarihi, musteriTeklifTarihi, kosulCumlesi, tarihYaz } from "@/lib/teklif-hesap";
+import { musteriToplami, ilkHazirlanmaTarihi, musteriTeklifTarihi, kosulCumlesi, tarihYaz, bolumToplamlari } from "@/lib/teklif-hesap";
 import { sablonlariGrupla } from "@/lib/sablon";
 import { ISTIRAK_METNI } from "@/lib/kurumsal";
 
@@ -55,6 +55,11 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
   const pb = teklif.paraBirimi;
   // Müşteriye tek satır toplam gösterilir: "10.250,00 € + KDV" (KDV dahil tekliflerde "(KDV dahil)")
   const toplam = musteriToplami(teklif);
+  // Birden fazla bölüm varsa her bölümün altında "… Toplamı" satırı ve genel
+  // toplamın üstünde bölüm özeti gösterilir (birim fiyatlar gizliyse gösterilmez)
+  const bolumler = bolumToplamlari(teklif.kalemler);
+  const bolumToplamiGoster = teklif.birimFiyatGoster && bolumler.length > 1;
+  const bolumTutari = new Map(bolumler.map((b) => [b.bolum, b.tutar]));
   const ilkTarih = ilkHazirlanmaTarihi(teklif);
 
   // Teklifin muhatabı: seçilen yetkili, yoksa müşterinin ana yetkilisi
@@ -270,6 +275,17 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
                     </tr>
                   );
                 })}
+
+                {bolumToplamiGoster && (
+                  <tr className="border-t border-metin/30">
+                    <td colSpan={3} className="py-2 pr-2 text-right text-xs font-semibold text-soguk-dim">
+                      {bolumAdi} Toplamı
+                    </td>
+                    <td className="py-2 text-right font-mono text-sm font-semibold text-metin whitespace-nowrap">
+                      {paraFormat(bolumTutari.get(bolumAdi) ?? 0, pb)}
+                    </td>
+                  </tr>
+                )}
               </React.Fragment>
             ))}
           </tbody>
@@ -278,6 +294,16 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
         {/* DİP TOPLAM */}
         <div className="flex justify-end mb-12">
           <div className="w-full sm:w-auto sm:min-w-[18rem] text-sm">
+            {bolumToplamiGoster && (
+              <div className="mb-2 space-y-1">
+                {bolumler.map((b) => (
+                  <div key={b.bolum} className="flex justify-between gap-6 text-metin/70">
+                    <span>{b.bolum}</span>
+                    <span className="font-mono whitespace-nowrap">{paraFormat(b.tutar, pb)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex justify-between gap-6 text-metin font-semibold text-lg border-t-2 border-metin/80 pt-2">
               <span>Genel Toplam</span>
               <span className="font-mono whitespace-nowrap">

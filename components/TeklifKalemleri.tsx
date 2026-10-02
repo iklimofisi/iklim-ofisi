@@ -535,6 +535,16 @@ export default function TeklifKalemleri({
           <div className="flex justify-between items-center border-b border-hat pb-2">
             <span className="font-semibold text-xs text-soguk-dim uppercase tracking-wider flex items-center gap-1.5">
               <span>📌</span> Bölüm: <strong className="text-metin">{bolumAdi}</strong>
+              <span className="normal-case tracking-normal font-mono text-metin/70 ml-2">
+                Bölüm toplamı:{" "}
+                {formatPara(
+                  satirlarGrubu.reduce(
+                    (a, { item: s }) => a + parseSayi(s.adet) * parseSayi(s.birimFiyat) * (1 - parseSayi(s.iskontoYuzde) / 100),
+                    0
+                  )
+                )}{" "}
+                {sembol}
+              </span>
             </span>
             <button
               type="button"

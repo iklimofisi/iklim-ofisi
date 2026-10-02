@@ -74,3 +74,17 @@ export function kosulCumlesi(teklif: { kdvDahil: boolean; gecerlilikGunu: number
 export function tarihYaz(d: Date) {
   return new Date(d).toISOString().slice(0, 10);
 }
+
+// BÖLÜM TOPLAMLARI — teklif sayfası, yazdırma ve PDF aynı hesabı kullanır.
+// Bölüm toplamı = o bölümdeki satır tutarlarının toplamı (iskonto sonrası,
+// genel toplamla aynı esasta: KDV hariç teklifte KDV hariç, KDV dahilde dahil).
+// Böylece bölüm toplamlarının toplamı her zaman Genel Toplam'a eşittir.
+// Sıra: bölümler kalemlerde ilk göründükleri sırayla.
+export function bolumToplamlari(kalemler: (KalemHesap & { bolum?: string | null })[]) {
+  const m = new Map<string, number>();
+  for (const k of kalemler) {
+    const b = k.bolum || "Genel Kalemler";
+    m.set(b, (m.get(b) ?? 0) + k.adet * k.birimFiyat * (1 - (k.iskontoYuzde || 0) / 100));
+  }
+  return Array.from(m, ([bolum, tutar]) => ({ bolum, tutar }));
+}

@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf";
 import { LIBERATION_SANS_NORMAL, LIBERATION_SANS_KALIN } from "@/lib/pdf-fontlari";
 import { PDF_LOGO_JPEG_BASE64, PDF_LOGO_ORAN } from "@/lib/pdf-logo";
-import { musteriToplami, ilkHazirlanmaTarihi, musteriTeklifTarihi, kosulCumlesi } from "@/lib/teklif-hesap";
+import { musteriToplami, ilkHazirlanmaTarihi, musteriTeklifTarihi, kosulCumlesi, bolumToplamlari } from "@/lib/teklif-hesap";
 import { sablonlariGrupla } from "@/lib/sablon";
 import { ISTIRAK_METNI } from "@/lib/kurumsal";
 
@@ -261,6 +261,11 @@ export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer
     bolumler.get(b)!.push(k);
   }
 
+  // Birden fazla bölüm varsa bölüm toplamları (teklif sayfasıyla aynı kural)
+  const bolumOzet = bolumToplamlari(teklif.kalemler ?? []);
+  const bolumToplamiGoster = fiyatli && bolumOzet.length > 1;
+  const bolumTutari = new Map(bolumOzet.map((b) => [b.bolum, b.tutar]));
+
   for (const [bolumAdi, kalemler] of bolumler) {
     // Bölüm başlığı en az bir kalemle aynı sayfada olsun
     if (yerAc(16)) tabloBasligi();
@@ -303,6 +308,16 @@ export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer
       // Bölümün son satırında çizgi yok (sayfadaki last:border-0 gibi)
       if (i < kalemler.length - 1) cizgi(SOL, y, SAG, y);
     });
+
+    if (bolumToplamiGoster) {
+      if (yerAc(9)) tabloBasligi();
+      cizgi(X_ADET - 20, y, SAG, y, METIN_40, 0.3);
+      yazi(8, true, SOGUK_DIM);
+      doc.text(`${metin(bolumAdi)} Toplamı`, X_BIRIM, y + 4.8, { align: "right" });
+      yazi(8.5, true, METIN);
+      doc.text(paraYaz(bolumTutari.get(bolumAdi) ?? 0, pb), X_TUTAR, y + 4.8, { align: "right" });
+      y += 9;
+    }
   }
   y += 8;
 
@@ -310,6 +325,17 @@ export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer
   // 5. GENEL TOPLAM — "Genel Toplam   10.250,00 € + KDV"
   // ---------------------------------------------------------------------------
   const toplam = musteriToplami(teklif);
+  if (bolumToplamiGoster) {
+    // Genel toplamın üstünde bölüm özeti
+    yerAc(bolumOzet.length * 5 + 26);
+    yazi(8.5, false, METIN_70);
+    for (const b of bolumOzet) {
+      doc.text(metin(b.bolum), SAG - 78, y);
+      doc.text(paraYaz(b.tutar, pb), SAG, y, { align: "right" });
+      y += 5;
+    }
+    y += 1;
+  }
   yerAc(24);
   const tutarMetni = `${paraYaz(toplam.tutar, pb)} ${toplam.ek}`;
   yazi(12, true, METIN);
