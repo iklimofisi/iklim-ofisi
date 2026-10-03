@@ -20,6 +20,7 @@ const ISLEM_ADI: Record<string, string> = {
   teklifGuncelle: "Teklif güncelledi (revizyon)",
   teklifDurumGuncelle: "Teklif durumu değiştirdi",
   teklifSil: "Teklif sildi",
+  teklifKayitHatasi: "Teklif kaydı BAŞARISIZ",
   sozlesmeOlustur: "Sözleşme taslağı oluşturdu",
   sozlesmeKaydet: "Sözleşme taslağını düzenledi",
   sozlesmeKalemleriYenile: "Sözleşme kalemlerini tekliften yeniledi",
@@ -293,7 +294,7 @@ export default async function IslemGecmisiSayfasi({
           const veri = veriAc(k.veri);
           const baglanti = kayitBaglantisi(k.islem, veri);
           const silme = k.islem.endsWith("Sil");
-          const hatali = k.islem === "girisBasarisiz" || k.islem === "epostaHatasi";
+          const hatali = k.islem === "girisBasarisiz" || k.islem === "epostaHatasi" || k.islem === "teklifKayitHatasi";
           const ozet = kisaOzet(veri);
           return (
             <details key={k.id} className="group px-5 py-3">

@@ -14,6 +14,8 @@ const MESAJLAR: Record<string, string> = {
   "sirket-kaydedildi": "Şirket bilgileri kaydedildi.",
   kaydedildi: "Kaydedildi.",
   "eposta-gonderildi": "E-posta gönderildi.",
+  "teklif-olusturuldu": "Teklif kaydedildi.",
+  "teklif-guncellendi": "Teklif güncellendi.",
   "sozlesme-olusturuldu": "Sözleşme taslağı oluşturuldu.",
   "sozlesme-kaydedildi": "Sözleşme kaydedildi.",
   "sozlesme-kalemler": "Kalemler tekliften yeniden alındı.",
@@ -25,6 +27,8 @@ const MESAJLAR: Record<string, string> = {
 const HATALAR: Record<string, string> = {
   "eposta-hatasi": "E-posta GÖNDERİLEMEDİ. Tekrar deneyin; sürerse nedeni Ayarlar → E-posta Durumu bölümünde görünür.",
   "eposta-test-hata": "Deneme e-postası GÖNDERİLEMEDİ. Nedeni aşağıdaki listede yazıyor.",
+  "teklif-eksik": "Teklif KAYDEDİLMEDİ: müşteri, başlık veya en az bir açıklamalı kalem eksik.",
+  "teklif-kayit-hatasi": "Teklif KAYDEDİLEMEDİ. Nedeni İşlem Geçmişi'nde \"Teklif kaydı BAŞARISIZ\" satırında yazıyor.",
 };
 
 export default function KayitBildirimi() {

@@ -213,8 +213,13 @@ export async function teklifEkle(formData: FormData) {
   // Not grubunda "— Bu teklifte olmasın —" seçilirse boş değer gelir; atılır
   const sablonIds = [...new Set((formData.getAll("sablonIds") as string[]).filter((x) => typeof x === "string" && x))];
   const kalemler = kalemleriOku(formData);
+  // Hata olursa kullanıcı formun bulunduğu sayfaya geri gönderilir (sessizce kaybolmaz)
+  const formSayfasi = kopyaKaynakTeklifId ? `/panel/teklifler/${kopyaKaynakTeklifId}/kopyala` : "/panel/teklifler/yeni";
 
-  if (!musteriId || !baslik || kalemler.length === 0) return;
+  if (!musteriId || !baslik || kalemler.length === 0) {
+    await islemKaydet(kullanici, "teklifKayitHatasi", { hata: "Müşteri, başlık veya kalem eksik", baslik, musteriId, kalemSayisi: kalemler.length });
+    redirect(`${formSayfasi}?mesaj=teklif-eksik`);
+  }
 
   const simdi = new Date();
   const yetkiliId = await yetkiliDogrula(yetkiliIdHam, musteriId);
@@ -228,7 +233,10 @@ export async function teklifEkle(formData: FormData) {
     });
   }
 
-  const teklif = await prisma.teklif.create({
+  let teklif: { id: string };
+  try {
+  teklif = await prisma.teklif.create({
+    select: { id: true },
     data: {
       baslik,
       musteriId,
@@ -249,9 +257,21 @@ export async function teklifEkle(formData: FormData) {
       sablonlar: { connect: sablonIds.map((id) => ({ id })) },
     },
   });
+  } catch (hata) {
+    // Kayıt başarısızsa nedeni İşlem Geçmişi'ne yazılır ve kullanıcı uyarılır
+    console.error("[teklifEkle] kayıt hatası:", hata);
+    await islemKaydet(kullanici, "teklifKayitHatasi", {
+      hata: hata instanceof Error ? hata.message.slice(0, 1000) : String(hata),
+      baslik,
+      musteriId,
+      ...(kopyaKaynakTeklifId ? { kopyaKaynakTeklifId } : {}),
+    });
+    redirect(`${formSayfasi}?mesaj=teklif-kayit-hatasi`);
+  }
   revalidatePath("/panel/teklifler");
   revalidatePath("/panel");
-  redirect(`/panel/teklifler/${teklif.id}`);
+  if (kopyaKaynak) revalidatePath(`/panel/teklifler/${kopyaKaynak.id}`);
+  redirect(`/panel/teklifler/${teklif.id}?mesaj=teklif-olusturuldu`);
 }
 
 // TEKLİF GÜNCELLEME (SON REVİZYON TARİHİ GÜNCELLENİR, İLK TARİH KORUNUR)
@@ -259,7 +279,7 @@ export async function teklifEkle(formData: FormData) {
 // Artık bu kayıtlar silinmez; güncellenen kaleme taşınır. Sevkiyat/teslim kaydı olan bir
 // kalem formdan kaldırılmışsa güncelleme yapılmaz ve kullanıcı uyarılır.
 export async function teklifGuncelle(formData: FormData) {
-  await yetki("teklifGuncelle", formData);
+  const kullanici = await yetki("teklifGuncelle", formData);
   const teklifId = String(formData.get("teklifId") ?? "");
   const baslik = String(formData.get("baslik") ?? "").trim();
   const musteriId = String(formData.get("musteriId") ?? "");
@@ -274,7 +294,11 @@ export async function teklifGuncelle(formData: FormData) {
   const sablonIds = [...new Set((formData.getAll("sablonIds") as string[]).filter((x) => typeof x === "string" && x))];
   const kalemler = kalemleriOku(formData);
 
-  if (!teklifId || !musteriId || !baslik || kalemler.length === 0) return;
+  if (!teklifId) return;
+  if (!musteriId || !baslik || kalemler.length === 0) {
+    await islemKaydet(kullanici, "teklifKayitHatasi", { teklifId, hata: "Müşteri, başlık veya kalem eksik", kalemSayisi: kalemler.length });
+    redirect(`/panel/teklifler/${teklifId}/duzenle?mesaj=teklif-eksik`);
+  }
 
   const mevcut = await prisma.teklif.findUnique({
     where: { id: teklifId },
@@ -310,6 +334,7 @@ export async function teklifGuncelle(formData: FormData) {
 
   const tasinacaklar = yeniSatirlar.filter((s) => s.eskiId && kayitliKalemIdleri.has(s.eskiId));
 
+  try {
   await prisma.$transaction([
     // 1) Önceki hali revizyon geçmişine kaydet
     prisma.teklifRevizyon.create({
@@ -355,6 +380,15 @@ export async function teklifGuncelle(formData: FormData) {
       },
     }),
   ]);
+  } catch (hata) {
+    // İşlem bütün olarak geri alınır (teklif eski hâliyle kalır); nedeni kaydedilir
+    console.error("[teklifGuncelle] kayıt hatası:", hata);
+    await islemKaydet(kullanici, "teklifKayitHatasi", {
+      teklifId,
+      hata: hata instanceof Error ? hata.message.slice(0, 1000) : String(hata),
+    });
+    redirect(`/panel/teklifler/${teklifId}/duzenle?mesaj=teklif-kayit-hatasi`);
+  }
 
   revalidatePath("/panel/teklifler");
   revalidatePath(`/panel/teklifler/${teklifId}`);
@@ -362,7 +396,7 @@ export async function teklifGuncelle(formData: FormData) {
   revalidatePath("/panel/proje-takip");
   revalidatePath(`/panel/musteriler/${musteriId}`);
   if (mevcut.musteriId !== musteriId) revalidatePath(`/panel/musteriler/${mevcut.musteriId}`);
-  redirect(`/panel/teklifler/${teklifId}`);
+  redirect(`/panel/teklifler/${teklifId}?mesaj=teklif-guncellendi`);
 }
 
 export async function teklifDurumGuncelle(teklifId: string, durum: "BEKLEMEDE" | "ONAYLANDI" | "REDDEDILDI") {

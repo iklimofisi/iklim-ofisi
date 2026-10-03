@@ -180,6 +180,7 @@ export default async function TeklifDuzenle({
 
         <div className="flex items-center justify-end border-t border-hat pt-4">
           <KaydetButonu
+            basari={null}
             className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors"
           >
             Değişiklikleri Kaydet

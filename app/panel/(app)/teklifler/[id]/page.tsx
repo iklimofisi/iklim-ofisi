@@ -33,7 +33,7 @@ function kurumsalTeklifKodu(teklifNo: number, tarih: Date) {
 }
 
 export default async function TeklifDetay({ params }: { params: { id: string } }) {
-  const [teklif, sirket, sozlesme] = await Promise.all([
+  const [teklif, sirket, sozlesme, kopyalar] = await Promise.all([
     prisma.teklif.findUnique({
       where: { id: params.id },
       include: {
@@ -50,6 +50,12 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
     getSirketAyarlari(),
     // Sözleşme taslağı (ayrı sorgu: tablo henüz yoksa teklif sayfası yine açılır)
     prisma.sozlesme.findUnique({ where: { teklifId: params.id }, select: { id: true } }).catch(() => null),
+    // Bu tekliften kopyalanarak oluşturulan teklifler (yalnızca panelde gösterilir)
+    prisma.teklif.findMany({
+      where: { kopyaKaynakTeklifId: params.id },
+      select: { id: true, teklifNo: true, baslik: true, musteri: { select: { ad: true } } },
+      orderBy: { teklifNo: "asc" },
+    }),
   ]);
 
   if (!teklif) notFound();
@@ -119,6 +125,20 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
           <YazdirButon />
         </div>
       </div>
+
+      {kopyalar.length > 0 && (
+        <div className="mb-3 text-xs text-metin/60 bg-soguk-light/40 border border-hat rounded-md px-3 py-2 print:hidden">
+          <span className="font-semibold text-metin/70">Bu tekliften kopyalananlar:</span>{" "}
+          {kopyalar.map((k, i) => (
+            <span key={k.id}>
+              {i > 0 && " · "}
+              <Link href={`/panel/teklifler/${k.id}`} className="text-soguk-dim hover:underline">
+                TKL-{String(k.teklifNo).padStart(4, "0")} {k.baslik} ({k.musteri.ad})
+              </Link>
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4 print:hidden">
         <p className="text-xs text-metin/50">

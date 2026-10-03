@@ -146,7 +146,7 @@ export default async function YeniTeklifSayfasi({
         <SablonSecici sablonlar={sablonlar} seciliIdler={[]} varsayilanIlk />
 
         <div className="flex items-center justify-end border-t border-hat pt-4">
-          <KaydetButonu>Teklifi Kaydet</KaydetButonu>
+          <KaydetButonu basari={null}>Teklifi Kaydet</KaydetButonu>
         </div>
       </form>
 
