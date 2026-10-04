@@ -4,6 +4,7 @@ import SilButon from "@/components/SilButon";
 import Link from "next/link";
 import { MusteriListesiSaglayici, TalepDonustur } from "@/components/TalepDonusturFormu";
 import KaydetButonu from "@/components/KaydetButonu";
+import HizliAramaListesi from "@/components/HizliAramaListesi";
 
 // Telefonu karşılaştırmak için son 10 hane (0532..., +90532... aynı sayılır)
 const telAnahtar = (t: string | null | undefined) => {
@@ -98,10 +99,17 @@ export default async function TaleplerSayfasi({
       )}
 
       <MusteriListesiSaglayici musteriler={musteriSecenekleri}>
-      <div className="space-y-3">
-        {talepler.map((t) => (
+      <HizliAramaListesi
+        yerTutucu="Hızlı ara: ad, telefon, e-posta, mesaj…"
+        bosMetin="Henüz web sitesinden gelen bir talep yok."
+        birim="talep"
+        satirlar={talepler.map((t) => ({
+          id: t.id,
+          aramaMetni: [t.ad, t.telefon, t.email, t.mesaj, t.dosyaAdi, t.tarih.toISOString().slice(0, 10), t.okundu ? "" : "okunmamış yeni"]
+            .filter(Boolean)
+            .join(" "),
+          icerik: (
           <div
-            key={t.id}
             className={`bg-yuzey border rounded-lg p-5 ${t.okundu ? "border-hat" : "border-soguk"}`}
           >
             <div className="flex items-start justify-between gap-3 mb-3">
@@ -161,11 +169,9 @@ export default async function TaleplerSayfasi({
               />
             )}
           </div>
-        ))}
-        {talepler.length === 0 && (
-          <p className="text-sm text-metin/50">Henüz web sitesinden gelen bir talep yok.</p>
-        )}
-      </div>
+          ),
+        }))}
+      />
       </MusteriListesiSaglayici>
     </div>
   );

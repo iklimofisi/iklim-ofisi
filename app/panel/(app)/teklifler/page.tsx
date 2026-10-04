@@ -82,10 +82,10 @@ export default async function TekliflerSayfasi({
     return true;
   });
 
-  const filtreVar = Object.values(searchParams).some(Boolean);
-  const disaAktarQuery = new URLSearchParams(
-    Object.entries(searchParams).filter(([, v]) => v) as [string, string][]
-  ).toString();
+  // "s" (sayfa) ve "ara" (hızlı arama) listenin kendi parametreleridir; filtre sayılmaz
+  const filtreler = Object.entries(searchParams).filter(([k, v]) => v && !["s", "ara", "mesaj", "basarili"].includes(k)) as [string, string][];
+  const filtreVar = filtreler.length > 0;
+  const disaAktarQuery = new URLSearchParams(filtreler).toString();
 
 
   return (

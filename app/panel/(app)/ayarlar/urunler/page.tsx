@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { urunEkle, urunSil } from "@/lib/actions";
 import { paraFormat } from "@/lib/para";
 import SilButon from "@/components/SilButon";
+import HizliAramaListesi from "@/components/HizliAramaListesi";
 import UrunExcelYukle from "@/components/UrunExcelYukle";
 import Link from "next/link";
 import KaydetButonu from "@/components/KaydetButonu";
@@ -82,38 +83,43 @@ export default async function UrunlerSayfasi() {
         <p className="text-sm text-metin/60">{urunler.length} ürün</p>
       </div>
 
-      <div className="bg-yuzey border border-hat rounded-lg overflow-hidden overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs text-metin/50 border-b border-hat">
-              <th className="px-5 py-3 font-medium">Kod</th>
-              <th className="px-5 py-3 font-medium">Ürün Adı</th>
-              <th className="px-5 py-3 font-medium">Marka</th>
-              <th className="px-5 py-3 font-medium">Birim</th>
-              <th className="px-5 py-3 font-medium text-right">Liste Fiyatı</th>
-              <th className="px-5 py-3 font-medium text-right">İşlem</th>
-            </tr>
-          </thead>
-          <tbody>
-            {urunler.map((u) => (
-              <tr key={u.id} className="border-b border-hat last:border-0">
-                <td className="px-5 py-3 font-mono text-metin/50 whitespace-nowrap">{u.kod ?? "—"}</td>
-                <td className="px-5 py-3 text-metin whitespace-nowrap">{u.ad}</td>
-                <td className="px-5 py-3 text-metin/60 whitespace-nowrap">{u.marka?.ad ?? "—"}</td>
-                <td className="px-5 py-3 text-metin/60 whitespace-nowrap">{u.birim}</td>
-                <td className="px-5 py-3 text-right font-mono text-metin whitespace-nowrap">{paraFormat(u.listeFiyati, u.paraBirimi)}</td>
-                <td className="px-5 py-3 text-right">
-                  <SilButon id={u.id} action={urunSil} onayMesaji={`${u.ad} ürününü silmek istediğine emin misin?`} />
-                </td>
-              </tr>
-            ))}
-            {urunler.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-5 py-6 text-center text-metin/50">Henüz ürün eklenmedi.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      {/* Ürün kataloğu: sayfa başına 20 ürün; arama tüm katalogda yapılır */}
+      <div className="overflow-x-auto">
+        <div className="min-w-[44rem]">
+          <HizliAramaListesi
+            yerTutucu="Hızlı ara: ürün kodu, adı, marka…"
+            bosMetin="Henüz ürün eklenmedi."
+            birim="ürün"
+            sayfaBasina={20}
+            bosluk="bg-yuzey border border-hat rounded-b-lg divide-y divide-hat"
+            baslik={
+              <div className="grid grid-cols-[6rem_1fr_7rem_4rem_8rem_2.5rem] gap-3 items-center px-5 py-3 text-xs text-metin/50 font-medium bg-yuzey border border-b-0 border-hat rounded-t-lg">
+                <span>Kod</span>
+                <span>Ürün Adı</span>
+                <span>Marka</span>
+                <span>Birim</span>
+                <span className="text-right">Liste Fiyatı</span>
+                <span className="text-right">İşlem</span>
+              </div>
+            }
+            satirlar={urunler.map((u) => ({
+              id: u.id,
+              aramaMetni: [u.kod, u.ad, u.marka?.ad, u.birim, u.paraBirimi].filter(Boolean).join(" "),
+              icerik: (
+                <div className="grid grid-cols-[6rem_1fr_7rem_4rem_8rem_2.5rem] gap-3 items-center px-5 py-3 text-sm">
+                  <span className="font-mono text-metin/50 truncate">{u.kod ?? "—"}</span>
+                  <span className="text-metin break-words">{u.ad}</span>
+                  <span className="text-metin/60 truncate">{u.marka?.ad ?? "—"}</span>
+                  <span className="text-metin/60">{u.birim}</span>
+                  <span className="text-right font-mono text-metin whitespace-nowrap">{paraFormat(u.listeFiyati, u.paraBirimi)}</span>
+                  <span className="text-right">
+                    <SilButon id={u.id} action={urunSil} onayMesaji={`${u.ad} ürününü silmek istediğine emin misin?`} />
+                  </span>
+                </div>
+              ),
+            }))}
+          />
+        </div>
       </div>
     </div>
   );

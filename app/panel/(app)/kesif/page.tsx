@@ -3,6 +3,7 @@ import { kesifEkle, kesifSil } from "@/lib/actions";
 import SilButon from "@/components/SilButon";
 import Link from "next/link";
 import KaydetButonu from "@/components/KaydetButonu";
+import HizliAramaListesi from "@/components/HizliAramaListesi";
 
 export const dynamic = "force-dynamic";
 
@@ -62,9 +63,17 @@ export default async function KesifSayfasi() {
         </KaydetButonu>
       </form>
 
-      <div className="space-y-3">
-        {kesifler.map((k) => (
-          <div key={k.id} className="bg-yuzey border border-hat rounded-lg p-4 flex items-center justify-between gap-3">
+      <HizliAramaListesi
+        yerTutucu="Hızlı ara: müşteri, adres, telefon, notlar, kaydeden…"
+        bosMetin="Henüz keşif kaydı yok."
+        birim="keşif"
+        satirlar={kesifler.map((k) => ({
+          id: k.id,
+          aramaMetni: [k.musteriAdi, k.telefon, k.adres, k.mevcutSistem, k.notlar, k.olusturanAdi, k.tarih.toISOString().slice(0, 10)]
+            .filter(Boolean)
+            .join(" "),
+          icerik: (
+          <div className="bg-yuzey border border-hat rounded-lg p-4 flex items-center justify-between gap-3">
             <Link href={`/panel/kesif/${k.id}`} className="focus-ring min-w-0">
               <p className="font-medium text-metin text-sm hover:text-soguk-dim transition-colors truncate">{k.musteriAdi}</p>
               <p className="text-xs text-metin/50">
@@ -75,11 +84,9 @@ export default async function KesifSayfasi() {
             </Link>
             <SilButon id={k.id} action={kesifSil} onayMesaji="Bu keşif kaydını silmek istediğine emin misin?" />
           </div>
-        ))}
-        {kesifler.length === 0 && (
-          <p className="text-sm text-metin/50">Henüz keşif kaydı yok.</p>
-        )}
-      </div>
+          ),
+        }))}
+      />
     </div>
   );
 }
