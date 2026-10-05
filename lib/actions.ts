@@ -1698,6 +1698,8 @@ export async function ziyaretEkle(formData: FormData) {
       hatirlatmaTarihi: hatirlatmaTarihiStr ? new Date(hatirlatmaTarihiStr) : null,
       hatirlatmaNotu: hatirlatmaNotu || null,
       olusturanAdi: ziyaretiYapan || kullanici?.ad || "",
+      // Hatırlatma e-postası, kaydı giren (giriş yapmış) kullanıcının adresine gider
+      olusturanKullaniciId: kullanici?.id ?? null,
     },
   });
 

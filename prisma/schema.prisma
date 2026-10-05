@@ -411,6 +411,7 @@ model Ziyaret {
   hatirlatmaNotu   String?
   hatirlatmaTamam  Boolean   @default(false)
   olusturanAdi     String    @default("")
+  olusturanKullaniciId String? // Kaydı giren panel kullanıcısı (hatırlatma e-postası bu kişiye gider)
   tur              String    @default("ZIYARET") // ZIYARET | TELEFON | WHATSAPP | EPOSTA | DIGER
   teklifId         String?
   teklif           Teklif?   @relation(fields: [teklifId], references: [id], onDelete: SetNull)

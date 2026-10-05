@@ -11,7 +11,8 @@ import { gorusmeTuru, teklifNoYaz } from "@/lib/gorusme";
 // Güvenlik: yalnızca Vercel'in gizli anahtarıyla (CRON_SECRET) ya da panele
 // yönetici olarak giriş yapmış biri çalıştırabilir.
 //
-// Kime gider: hatırlatmayı içeren görüşmeyi / ziyareti "yapan" kişiye (panel kullanıcısının
+// Kime gider: kaydı panelde giren kullanıcının e-postasına (05.10.2026'dan sonraki
+// kayıtlar). Daha eski kayıtlarda: görüşmeyi "yapan" kişiye (panel kullanıcısının
 // adıyla eşleşirse onun e-postasına). Eşleşmezse şirket bildirim adresine.
 // Aynı gün ikinci kez çalışırsa (Vercel bazen tekrar dener) yeniden göndermez.
 // -----------------------------------------------------------------------------
@@ -72,7 +73,7 @@ export async function GET(req: NextRequest) {
       },
       orderBy: { hatirlatmaTarihi: "asc" },
     }),
-    prisma.kullanici.findMany({ select: { ad: true, email: true } }),
+    prisma.kullanici.findMany({ select: { id: true, ad: true, email: true } }),
   ]);
 
   if (hatirlatmalar.length === 0) {
@@ -82,7 +83,9 @@ export async function GET(req: NextRequest) {
   // Kişiye göre grupla ("" = eşleşmeyenler → bildirim adresi)
   const gruplar = new Map<string, { ad: string; email: string | null; liste: typeof hatirlatmalar }>();
   for (const h of hatirlatmalar) {
-    const kul = kullanicilar.find((k) => normalAd(k.ad) === normalAd(h.olusturanAdi));
+    const kul =
+      (h.olusturanKullaniciId ? kullanicilar.find((k) => k.id === h.olusturanKullaniciId) : undefined) ??
+      kullanicilar.find((k) => normalAd(k.ad) === normalAd(h.olusturanAdi));
     const anahtar = kul?.email ?? "";
     if (!gruplar.has(anahtar)) gruplar.set(anahtar, { ad: kul?.ad ?? "Ekip", email: kul?.email ?? null, liste: [] });
     gruplar.get(anahtar)!.liste.push(h);
