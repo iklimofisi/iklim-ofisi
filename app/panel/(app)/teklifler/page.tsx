@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { teklifSil } from "@/lib/actions";
 import TeklifDurumSecici from "@/components/TeklifDurumSecici";
 import SilButon from "@/components/SilButon";
+import TeklifOnizleButon from "@/components/TeklifOnizleButon";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -228,12 +229,21 @@ export default async function TekliflerSayfasi({
                     )}
                   </div>
                 </Link>
-                <div className="text-right flex items-center gap-3 shrink-0">
+                <div className="text-right flex flex-wrap items-center justify-end gap-x-3 gap-y-1 shrink-0">
                   <div>
                     <p className="font-mono text-metin font-bold">{paraFormat(toplam, t.paraBirimi)}</p>
                     <p className="text-[10px] text-metin/40">KDV hariç</p>
                   </div>
                   <TeklifDurumSecici teklifId={t.id} mevcutDurum={t.durum} />
+                  <TeklifOnizleButon teklifId={t.id} baslik={`${teklifNoFormat(t.teklifNo)} ${t.baslik || ""}`.trim()} />
+                  <a
+                    href={`/panel/teklifler/${t.id}?yazdir=1`}
+                    target="_blank"
+                    rel="noopener"
+                    className="focus-ring text-xs text-metin/40 hover:text-soguk-dim font-medium"
+                  >
+                    Yazdır
+                  </a>
                   <Link href={`/panel/teklifler/${t.id}/duzenle`} className="focus-ring text-xs text-metin/40 hover:text-soguk-dim font-medium">
                     Düzenle
                   </Link>

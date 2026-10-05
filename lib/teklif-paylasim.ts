@@ -42,6 +42,11 @@ export async function paylasilanTeklif(anahtar: string) {
   return paylasim ? { paylasimId: paylasim.id, teklif: paylasim.teklif } : null;
 }
 
+// Panel içi önizleme / PDF için (giriş kontrolü çağıran yerde yapılır)
+export async function belgeTeklifi(id: string) {
+  return prisma.teklif.findUnique({ where: { id }, select: BELGE_ALANLARI });
+}
+
 // Link önizlemesi yapan botlar (WhatsApp, Telegram...) "görüntülendi" sayılmaz
 export function onizlemeBotuMu(ua: string | null) {
   return /whatsapp|facebookexternalhit|facebot|telegrambot|slackbot|twitterbot|linkedinbot|discordbot|skypeuripreview|googlebot|bingbot|bot\b|crawler|spider|preview/i.test(

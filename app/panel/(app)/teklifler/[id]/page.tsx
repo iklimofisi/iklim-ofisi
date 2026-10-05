@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import React from "react";
 import YazdirButon from "@/components/YazdirButon";
+import OtomatikYazdir from "@/components/OtomatikYazdir";
 import TeklifDurumSecici from "@/components/TeklifDurumSecici";
 import { getSirketAyarlari } from "@/lib/sirket";
 import TeklifEpostaGonderModal from "@/components/TeklifEpostaGonderModal"; // MODAL İMPORT EDİLDİ
@@ -116,6 +117,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
 
   return (
     <div>
+      <OtomatikYazdir />
       {/* ÜST BUTONLAR VE MAİL GÖNDERME MODALI BURAYA YERLEŞTİRİLDİ */}
       <div className="flex items-center justify-between gap-3 mb-6 print:hidden">
         <Link href="/panel/teklifler" className="focus-ring shrink-0 whitespace-nowrap text-sm text-metin/60 hover:text-metin">
