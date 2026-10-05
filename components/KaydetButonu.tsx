@@ -11,11 +11,15 @@ export default function KaydetButonu({
   bekleme = "Kaydediliyor…",
   basari = "Kaydedildi.",
   className = "focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors",
+  name,
+  value,
 }: {
   children: React.ReactNode;
   bekleme?: string;
   basari?: string | null; // null: bildirim gösterme
   className?: string;
+  name?: string; // aynı formda birden fazla gönder düğmesi varsa hangisine basıldığını bildirir
+  value?: string;
 }) {
   const { pending } = useFormStatus();
   const oncekiBekleme = useRef(false);
@@ -26,7 +30,7 @@ export default function KaydetButonu({
   }, [pending, basari]);
 
   return (
-    <button type="submit" disabled={pending} className={`${className} disabled:opacity-60 disabled:cursor-wait`}>
+    <button type="submit" name={name} value={value} disabled={pending} className={`${className} disabled:opacity-60 disabled:cursor-wait`}>
       {pending ? bekleme : children}
     </button>
   );

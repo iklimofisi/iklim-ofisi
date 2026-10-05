@@ -194,7 +194,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
             href={`/panel/teklifler/${teklif.id}/sozlesme`}
             className="focus-ring text-sm bg-soguk text-white px-4 py-2 rounded-md font-medium hover:bg-soguk-dim transition-colors"
           >
-            📄 {sozlesme ? "Sözleşme Taslağı" : "Sözleşme Taslağı Hazırla"}
+            📄 {sozlesme ? "Sözleşmeyi Gör / Düzenle" : "Sözleşme Hazırla"}
           </Link>
         )}
         {teklif.durum === "ONAYLANDI" && !teklif.siparis && (

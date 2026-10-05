@@ -2249,6 +2249,8 @@ export async function sozlesmeKaydet(formData: FormData) {
   });
 
   revalidatePath(`/panel/teklifler/${teklifId}/sozlesme`);
+  // "Kaydet ve Teklife Dön" düğmesiyle kaydedildiyse doğrudan teklif sayfasına
+  if (formData.get("sonra") === "teklif") redirect(`/panel/teklifler/${teklifId}?mesaj=sozlesme-kaydedildi`);
   redirect(`/panel/teklifler/${teklifId}/sozlesme?mesaj=sozlesme-kaydedildi`);
 }
 

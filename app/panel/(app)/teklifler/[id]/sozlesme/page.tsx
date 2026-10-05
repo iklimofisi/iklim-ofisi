@@ -44,10 +44,13 @@ export default async function SozlesmeSayfasi({ params }: { params: { id: string
   const tklNo = `TKL-${String(teklif.teklifNo).padStart(4, "0")}`;
   const ust = (
     <div className="mb-6">
-      <Link href={`/panel/teklifler/${teklif.id}`} className="focus-ring text-sm text-metin/60 hover:text-metin">
+      <Link
+        href={`/panel/teklifler/${teklif.id}`}
+        className="focus-ring inline-block text-sm font-medium text-metin/70 border border-hat bg-white px-4 py-2 rounded-md hover:border-soguk hover:text-soguk-dim transition-colors"
+      >
         ← {tklNo} teklifine dön
       </Link>
-      <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mt-4 mb-1">Sözleşme Taslağı</p>
+      <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mt-4 mb-1">{sozlesme ? "Sözleşme" : "Sözleşme Taslağı"}</p>
       <h1 className="font-display text-2xl font-semibold text-metin">
         {teklif.musteri.ad} — {teklif.baslik || tklNo}
       </h1>
@@ -322,7 +325,17 @@ export default async function SozlesmeSayfasi({ params }: { params: { id: string
           ) : (
             <span />
           )}
-          <KaydetButonu basari={null}>Sözleşmeyi Kaydet</KaydetButonu>
+          <div className="flex flex-wrap items-center gap-3">
+            <KaydetButonu
+              basari={null}
+              name="sonra"
+              value="teklif"
+              className="focus-ring border border-soguk text-soguk-dim bg-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-light transition-colors"
+            >
+              Kaydet ve Teklife Dön
+            </KaydetButonu>
+            <KaydetButonu basari={null}>Sözleşmeyi Kaydet</KaydetButonu>
+          </div>
         </div>
       </form>
     </div>
