@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { teklifEkle } from "@/lib/actions";
 import TeklifKalemleri from "@/components/TeklifKalemleri";
+import { getTcmbKurlari } from "@/lib/kur";
 import HizliMusteriEkleModal from "@/components/HizliMusteriEkleModal"; // HIZLI MÜŞTERİ MODALI
 import MusteriYetkiliSecici from "@/components/MusteriYetkiliSecici";
 import SablonSecici from "@/components/SablonSecici";
@@ -21,7 +22,7 @@ export default async function YeniTeklifSayfasi({
     basarili?: string;
   };
 }) {
-  const [musteriler, sablonlar, markalar, urunler, projeler] = await Promise.all([
+  const [musteriler, sablonlar, markalar, urunler, projeler, kurlar] = await Promise.all([
     prisma.musteri.findMany({
       orderBy: { ad: "asc" },
       include: { yetkililer: { orderBy: { ad: "asc" }, select: { id: true, ad: true, unvan: true } } },
@@ -30,6 +31,7 @@ export default async function YeniTeklifSayfasi({
     prisma.marka.findMany({ select: { id: true, ad: true }, orderBy: { ad: "asc" } }),
     prisma.urun.findMany({ orderBy: { ad: "asc" } }),
     prisma.proje.findMany({ orderBy: { ad: "asc" } }),
+    getTcmbKurlari(), // para birimi değişince fiyat çevirme için (alınamazsa null)
   ]);
 
   const varsayilanBaslik = searchParams.proje || "";
@@ -126,6 +128,7 @@ export default async function YeniTeklifSayfasi({
         </div>
 
         <TeklifKalemleri
+          kurlar={kurlar}
           markalar={markalar.map((m) => ({ id: m.id, ad: m.ad }))}
           urunler={urunler.map((u) => ({
             id: u.id,

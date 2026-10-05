@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { teklifEkle } from "@/lib/actions";
 import TeklifKalemleri from "@/components/TeklifKalemleri";
+import { getTcmbKurlari } from "@/lib/kur";
 import MusteriYetkiliSecici from "@/components/MusteriYetkiliSecici";
 import HizliMusteriEkleModal from "@/components/HizliMusteriEkleModal";
 import Link from "next/link";
@@ -19,7 +20,7 @@ export default async function TeklifKopyala({
   params: { id: string };
   searchParams?: { seciliMusteriId?: string; basarili?: string };
 }) {
-  const [kaynak, musteriler, sablonlar, markalar, urunler, projeler] = await Promise.all([
+  const [kaynak, musteriler, sablonlar, markalar, urunler, projeler, kurlar] = await Promise.all([
     prisma.teklif.findUnique({
       where: { id: params.id },
       include: { kalemler: { orderBy: [{ sira: "asc" }, { id: "asc" }] }, sablonlar: true },
@@ -32,6 +33,7 @@ export default async function TeklifKopyala({
     prisma.marka.findMany({ orderBy: { ad: "asc" } }),
     prisma.urun.findMany({ orderBy: { ad: "asc" } }),
     prisma.proje.findMany({ orderBy: { ad: "asc" } }),
+    getTcmbKurlari(), // para birimi değişince fiyat çevirme için (alınamazsa null)
   ]);
 
   if (!kaynak) notFound();
@@ -120,6 +122,7 @@ export default async function TeklifKopyala({
         </div>
 
         <TeklifKalemleri
+          kurlar={kurlar}
           markalar={markalar.map((m) => ({ id: m.id, ad: m.ad }))}
           urunler={urunler.map((u) => ({
             id: u.id,

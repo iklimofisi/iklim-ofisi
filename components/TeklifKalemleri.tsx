@@ -56,11 +56,13 @@ export default function TeklifKalemleri({
   markalar,
   urunler,
   paraBirimi = "TRY",
+  kurlar = null,
 }: {
   baslangic?: Satir[];
   markalar?: { id: string; ad: string }[];
   urunler?: Urun[];
   paraBirimi?: string;
+  kurlar?: { tarih: string; USD: number; EUR: number } | null; // TCMB efektif satış (1 birim = ? TL)
 }) {
   // State: Tüm kalemler
   const [satirlar, setSatirlar] = useState<Satir[]>(() => {
@@ -124,9 +126,67 @@ export default function TeklifKalemleri({
     const handler = () => setSeciliParaBirimi(selectEl.value);
     selectEl.addEventListener("change", handler);
     setSeciliParaBirimi(selectEl.value); // Açılışta oku
+    setFiyatPb(selectEl.value); // fiyatlar açılışta bu para biriminde
 
     return () => selectEl.removeEventListener("change", handler);
   }, []);
+
+  // --- PARA BİRİMİ DEĞİŞİNCE FİYATLARI KURLA ÇEVİRME ---
+  // fiyatPb: kalemlerdeki fiyatların şu an hangi para biriminde olduğu.
+  // Yukarıdan para birimi değiştirilince fiyatlar kendiliğinden DEĞİŞMEZ; çevirme
+  // önerisi çıkar ("Fiyatları çevir" / "Sadece para birimini değiştir").
+  const [fiyatPb, setFiyatPb] = useState<string | null>(null);
+  const [oranMetin, setOranMetin] = useState("");
+  const [kurOncesi, setKurOncesi] = useState<{ satirlar: Satir[]; pb: string } | null>(null);
+  const [kurMesaji, setKurMesaji] = useState<string | null>(null);
+  const fiyatliSatirVar = satirlar.some((s) => parseSayi(s.birimFiyat) > 0);
+  const tlKarsiligi = (pb: string) => (pb === "TRY" ? 1 : kurlar ? (pb === "USD" ? kurlar.USD : pb === "EUR" ? kurlar.EUR : null) : null);
+  const cevirmeBekliyor = fiyatPb !== null && fiyatPb !== seciliParaBirimi && fiyatliSatirVar;
+
+  useEffect(() => {
+    if (fiyatPb === null || fiyatPb === seciliParaBirimi) return;
+    // Fiyat girilmemişse çevrilecek bir şey yok: yalnızca para birimi değişir
+    if (!fiyatliSatirVar) {
+      setFiyatPb(seciliParaBirimi);
+      return;
+    }
+    const a = tlKarsiligi(fiyatPb), b = tlKarsiligi(seciliParaBirimi);
+    // 7 anlamlı basamak: TL→EUR gibi küçük oranlarda da hassasiyet kaybolmaz
+    setOranMetin(a && b ? String(Number((a / b).toPrecision(7))).replace(".", ",") : "");
+    setKurMesaji(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fiyatPb, seciliParaBirimi]);
+
+  const fiyatlariCevir = () => {
+    if (!fiyatPb) return;
+    const oran = tutarOku(oranMetin);
+    if (!oran || oran <= 0) {
+      setKurMesaji("Geçerli bir kur yazın.");
+      return;
+    }
+    const yeni = satirlar.map((s) => {
+      const f = parseSayi(s.birimFiyat);
+      return f > 0 ? { ...s, birimFiyat: String(Math.round(f * oran * 100) / 100) } : s;
+    });
+    setKurOncesi({ satirlar, pb: fiyatPb });
+    setSatirlar(yeni);
+    setFiyatPb(seciliParaBirimi);
+    setKurMesaji(
+      `Fiyatlar ${fiyatPb} → ${seciliParaBirimi} çevrildi (1 ${fiyatPb} = ${oranMetin} ${seciliParaBirimi}). Kaydetmeyi unutmayın.`
+    );
+  };
+
+  const kurCevirmesiniGeriAl = () => {
+    if (!kurOncesi) return;
+    setSatirlar(kurOncesi.satirlar);
+    // Para birimi seçimini de eski hâline getir
+    const sec = kokRef.current?.closest("form")?.querySelector<HTMLSelectElement>('select[name="paraBirimi"]');
+    if (sec) sec.value = kurOncesi.pb;
+    setSeciliParaBirimi(kurOncesi.pb);
+    setFiyatPb(kurOncesi.pb);
+    setKurOncesi(null);
+    setKurMesaji("Çevirme geri alındı; fiyatlar ve para birimi eski hâline döndü.");
+  };
 
   const sembol = useMemo(() => {
     if (seciliParaBirimi === "EUR") return "€";
@@ -458,6 +518,71 @@ export default function TeklifKalemleri({
 
   return (
     <div ref={kokRef} className="space-y-4 mb-6">
+      {/* PARA BİRİMİ DEĞİŞTİ → FİYATLARI ÇEVİRME ÖNERİSİ */}
+      {cevirmeBekliyor && fiyatPb && (
+        <div role="alert" className="bg-amber-50 border border-amber-300 rounded-md p-4 space-y-3">
+          <p className="text-sm font-semibold text-amber-900">
+            Para birimi {fiyatPb} → {seciliParaBirimi} değişti. Kalem fiyatları da çevrilsin mi?
+          </p>
+          <p className="text-xs text-amber-800">
+            {tlKarsiligi(fiyatPb) && tlKarsiligi(seciliParaBirimi)
+              ? `TCMB efektif satış kurları (${kurlar?.tarih}): ${[
+                  kurlar && `1 USD = ${kurlar.USD.toLocaleString("tr-TR", { maximumFractionDigits: 4 })} TL`,
+                  kurlar && `1 EUR = ${kurlar.EUR.toLocaleString("tr-TR", { maximumFractionDigits: 4 })} TL`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}. Oranı değiştirebilirsiniz.`
+              : "TCMB kurları şu an alınamadı; çevirme oranını elle yazın."}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="text-sm text-amber-900">
+              1 {fiyatPb} =
+              <input
+                value={oranMetin}
+                onChange={(e) => setOranMetin(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    fiyatlariCevir();
+                  }
+                }}
+                inputMode="decimal"
+                aria-label="Çevirme kuru"
+                className="focus-ring mx-2 w-32 border border-amber-300 rounded-md px-2 py-1 text-sm font-mono bg-white text-right"
+              />
+              {seciliParaBirimi}
+            </label>
+            <button
+              type="button"
+              onClick={fiyatlariCevir}
+              className="focus-ring text-sm bg-soguk text-white px-4 py-1.5 rounded-md font-medium hover:bg-soguk-dim"
+            >
+              Fiyatları çevir
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFiyatPb(seciliParaBirimi);
+                setKurMesaji(null);
+              }}
+              className="focus-ring text-sm bg-white border border-amber-300 text-amber-900 px-4 py-1.5 rounded-md hover:bg-amber-100"
+            >
+              Hayır, sadece para birimini değiştir
+            </button>
+          </div>
+        </div>
+      )}
+      {kurMesaji && !cevirmeBekliyor && (
+        <div role="status" className="flex flex-wrap items-center gap-3 text-xs bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-md px-3 py-2">
+          <span className="flex-1">{kurMesaji}</span>
+          {kurOncesi && (
+            <button type="button" onClick={kurCevirmesiniGeriAl} className="focus-ring underline font-medium">
+              ↶ Geri al
+            </button>
+          )}
+        </div>
+      )}
+
       {/* 📥 EXCEL'DEN KALEM İTHAL ETME PANELI */}
       <div className="bg-emerald-50 border border-emerald-300 rounded-md p-3 flex flex-wrap items-center justify-between gap-3 shadow-sm">
         <div className="text-xs text-emerald-900">

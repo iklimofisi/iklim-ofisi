@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { teklifGuncelle } from "@/lib/actions";
 import TeklifKalemleri from "@/components/TeklifKalemleri";
+import { getTcmbKurlari } from "@/lib/kur";
 import MusteriYetkiliSecici from "@/components/MusteriYetkiliSecici";
 import Link from "next/link";
 import SablonSecici from "@/components/SablonSecici";
@@ -16,7 +17,7 @@ export default async function TeklifDuzenle({
   params: { id: string };
   searchParams?: { hata?: string; adet?: string };
 }) {
-  const [teklif, musteriler, sablonlar, markalar, urunler, projeler] = await Promise.all([
+  const [teklif, musteriler, sablonlar, markalar, urunler, projeler, kurlar] = await Promise.all([
     prisma.teklif.findUnique({
       where: { id: params.id },
       include: {
@@ -32,6 +33,7 @@ export default async function TeklifDuzenle({
     prisma.marka.findMany({ orderBy: { ad: "asc" } }),
     prisma.urun.findMany({ orderBy: { ad: "asc" } }),
     prisma.proje.findMany({ orderBy: { ad: "asc" } }),
+    getTcmbKurlari(), // para birimi değişince fiyat çevirme için (alınamazsa null)
   ]);
 
   if (!teklif) notFound();
@@ -138,6 +140,7 @@ export default async function TeklifDuzenle({
         </div>
 
         <TeklifKalemleri
+          kurlar={kurlar}
           markalar={markalar.map((m) => ({ id: m.id, ad: m.ad }))}
           urunler={urunler.map((u) => ({
             id: u.id,
