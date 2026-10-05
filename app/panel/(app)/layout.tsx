@@ -22,7 +22,7 @@ const menuTemel = [
   { href: "/panel/talepler", label: "Web Talepleri" },
   { href: "/panel/musteriler", label: "Müşteriler" },
   { href: "/panel/projeler", label: "Projeler" },
-  { href: "/panel/ziyaretler", label: "Ziyaretler" },
+  { href: "/panel/ziyaretler", label: "Görüşmeler & Ziyaretler" },
   { href: "/panel/teklifler", label: "Teklifler" },
   { href: "/panel/kesif", label: "Keşif" },
   { href: "/panel/siparisler", label: "Siparişler" },

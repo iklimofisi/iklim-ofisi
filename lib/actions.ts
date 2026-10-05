@@ -20,7 +20,8 @@ import { sablonGrubu, sablonlariGrupla } from "@/lib/sablon";
 import { tekliftenKalemler, maddeleriOku, STANDART_MADDELER, PARA_BIRIMLERI } from "@/lib/sozlesme";
 import { tutarOku } from "@/lib/toplam-dagit";
 import { donusumKalemleri } from "@/lib/satinalma-hesap";
-import { randomUUID } from "crypto";
+import { randomUUID, randomBytes } from "crypto";
+import { gecerliTur } from "@/lib/gorusme";
 
 // --- Yetki kontrolü + işlem kaydı ---
 // Her sunucu işleminin ilk satırında çağrılır: giriş yapılmamışsa işlem yapılmaz
@@ -1664,11 +1665,23 @@ export async function ziyaretEkle(formData: FormData) {
   const hatirlatmaNotu = String(formData.get("hatirlatmaNotu") ?? "").trim();
   const ziyaretiYapan = String(formData.get("ziyaretiYapan") ?? "").trim();
   const donus = String(formData.get("donus") ?? "");
-  if (!not || (!musteriId && !projeId)) return;
+  const tur = gecerliTur(formData.get("tur"));
+  let teklifId = String(formData.get("teklifId") ?? "");
+  let projeIdSon = projeId;
+  // Teklife bağlı görüşme: müşteri / proje tekliften alınır (teklif yoksa bağlantı kurulmaz)
+  if (teklifId) {
+    const teklif = await prisma.teklif.findUnique({ where: { id: teklifId }, select: { musteriId: true, projeId: true } });
+    if (!teklif) teklifId = "";
+    else {
+      musteriId = musteriId || teklif.musteriId;
+      projeIdSon = projeIdSon || teklif.projeId || "";
+    }
+  }
+  if (!not || (!musteriId && !projeIdSon)) return;
 
   // Proje seçilip müşteri seçilmediyse müşteri projeden otomatik bağlanır
-  if (projeId && !musteriId) {
-    const proje = await prisma.proje.findUnique({ where: { id: projeId }, select: { musteriId: true } });
+  if (projeIdSon && !musteriId) {
+    const proje = await prisma.proje.findUnique({ where: { id: projeIdSon }, select: { musteriId: true } });
     if (proje?.musteriId) musteriId = proje.musteriId;
   }
 
@@ -1677,7 +1690,9 @@ export async function ziyaretEkle(formData: FormData) {
   await prisma.ziyaret.create({
     data: {
       musteriId: musteriId || null,
-      projeId: projeId || null,
+      projeId: projeIdSon || null,
+      teklifId: teklifId || null,
+      tur,
       tarih,
       not,
       hatirlatmaTarihi: hatirlatmaTarihiStr ? new Date(hatirlatmaTarihiStr) : null,
@@ -1687,7 +1702,8 @@ export async function ziyaretEkle(formData: FormData) {
   });
 
   if (musteriId) revalidatePath(`/panel/musteriler/${musteriId}`);
-  if (projeId) revalidatePath(`/panel/projeler/${projeId}`);
+  if (projeIdSon) revalidatePath(`/panel/projeler/${projeIdSon}`);
+  if (teklifId) revalidatePath(`/panel/teklifler/${teklifId}`);
   revalidatePath("/panel/ziyaretler");
   revalidatePath("/panel");
 
@@ -1699,7 +1715,10 @@ export async function ziyaretEkle(formData: FormData) {
 
 export async function ziyaretHatirlatmaTamamlandi(id: string) {
   await yetki("ziyaretHatirlatmaTamamlandi", { id });
-  await prisma.ziyaret.update({ where: { id }, data: { hatirlatmaTamam: true } });
+  const ziyaret = await prisma.ziyaret.update({ where: { id }, data: { hatirlatmaTamam: true } });
+  if (ziyaret.musteriId) revalidatePath(`/panel/musteriler/${ziyaret.musteriId}`);
+  if (ziyaret.projeId) revalidatePath(`/panel/projeler/${ziyaret.projeId}`);
+  if (ziyaret.teklifId) revalidatePath(`/panel/teklifler/${ziyaret.teklifId}`);
   revalidatePath("/panel/ziyaretler");
   revalidatePath("/panel");
 }
@@ -1709,6 +1728,7 @@ export async function ziyaretSil(id: string) {
   const ziyaret = await prisma.ziyaret.delete({ where: { id } });
   if (ziyaret.musteriId) revalidatePath(`/panel/musteriler/${ziyaret.musteriId}`);
   if (ziyaret.projeId) revalidatePath(`/panel/projeler/${ziyaret.projeId}`);
+  if (ziyaret.teklifId) revalidatePath(`/panel/teklifler/${ziyaret.teklifId}`);
   revalidatePath("/panel/ziyaretler");
   revalidatePath("/panel");
 }
@@ -1796,6 +1816,34 @@ export async function musteriSil(musteriId: string) {
 
   revalidatePath("/panel/musteriler");
   redirect("/panel/musteriler");
+}
+
+// --- TEKLİF PAYLAŞIM LİNKİ (WhatsApp ile müşteriye gönderilen gizli link) ---
+// Link: iklimofisi.com/t/<anahtar>. Anahtar 24 karakterlik rastgele bir metindir,
+// tahmin edilemez. İptal edilince kayıt silinir ve link artık açılmaz.
+export async function teklifPaylasimOlustur(formData: FormData) {
+  const giren = await yetki("teklifPaylasimOlustur", formData);
+  const teklifId = String(formData.get("teklifId") ?? "");
+  if (!teklifId) return;
+  const teklif = await prisma.teklif.findUnique({ where: { id: teklifId }, select: { id: true } });
+  if (!teklif) return;
+  const mevcut = await prisma.teklifPaylasim.findUnique({ where: { teklifId } });
+  if (!mevcut) {
+    await prisma.teklifPaylasim.create({
+      data: { teklifId, anahtar: randomBytes(18).toString("base64url"), olusturanAdi: giren?.ad ?? "" },
+    });
+  }
+  revalidatePath(`/panel/teklifler/${teklifId}`);
+  redirect(`/panel/teklifler/${teklifId}?mesaj=paylasim-olusturuldu#whatsapp`);
+}
+
+export async function teklifPaylasimIptal(formData: FormData) {
+  await yetki("teklifPaylasimIptal", formData);
+  const teklifId = String(formData.get("teklifId") ?? "");
+  if (!teklifId) return;
+  await prisma.teklifPaylasim.deleteMany({ where: { teklifId } });
+  revalidatePath(`/panel/teklifler/${teklifId}`);
+  redirect(`/panel/teklifler/${teklifId}?mesaj=paylasim-iptal#whatsapp`);
 }
 
 // MÜŞTERİYE TEKLİF E-POSTASI GÖNDERME

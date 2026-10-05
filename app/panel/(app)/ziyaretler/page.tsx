@@ -6,6 +6,7 @@ import { suankiKullanici } from "@/lib/oturum";
 import ZiyaretKayitFormu from "@/components/ZiyaretKayitFormu";
 import ZiyaretListesi from "@/components/ZiyaretListesi";
 import KaydetButonu from "@/components/KaydetButonu";
+import { teklifNoYaz } from "@/lib/gorusme";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +83,7 @@ export default async function ZiyaretlerSayfasi({ searchParams = {} }: { searchP
       include: {
         musteri: { select: { id: true, ad: true } },
         proje: { select: { id: true, ad: true } },
+        teklif: { select: { id: true, teklifNo: true } },
       },
       orderBy: { tarih: "desc" },
     }),
@@ -91,7 +93,7 @@ export default async function ZiyaretlerSayfasi({ searchParams = {} }: { searchP
     prisma.ziyaret.findMany({ distinct: ["olusturanAdi"], select: { olusturanAdi: true } }),
     prisma.ziyaret.findMany({
       where: { hatirlatmaTamam: false, hatirlatmaTarihi: { not: null, lte: new Date(`${bugun}T23:59:59.999Z`) } },
-      include: { musteri: { select: { id: true, ad: true } }, proje: { select: { id: true, ad: true } } },
+      include: { musteri: { select: { id: true, ad: true } }, proje: { select: { id: true, ad: true } }, teklif: { select: { id: true, teklifNo: true } } },
       orderBy: { hatirlatmaTarihi: "asc" },
     }),
   ]);
@@ -157,17 +159,17 @@ export default async function ZiyaretlerSayfasi({ searchParams = {} }: { searchP
   return (
     <div>
       <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Panel</p>
-      <h1 className="font-display text-2xl font-semibold text-metin mb-8">Ziyaretler</h1>
+      <h1 className="font-display text-2xl font-semibold text-metin mb-8">Görüşmeler & Ziyaretler</h1>
 
       {searchParams.eklendi && (
         <div className="bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-md p-3 text-xs font-semibold mb-6">
-          ✓ Ziyaret kaydedildi. Takvimde işaretlendi.
+          ✓ Görüşme kaydedildi. Takvimde işaretlendi.
         </div>
       )}
 
       {/* YENİ ZİYARET */}
       <details id="ziyaret-ekle" open={formAcik || ziyaretler.length === 0} className="bg-yuzey border border-hat rounded-lg mb-8 scroll-mt-6">
-        <summary className="cursor-pointer select-none px-5 py-3 text-sm font-semibold text-soguk-dim">+ Yeni Ziyaret Ekle</summary>
+        <summary className="cursor-pointer select-none px-5 py-3 text-sm font-semibold text-soguk-dim">+ Yeni Görüşme / Ziyaret Ekle</summary>
         <ZiyaretKayitFormu
           musteriler={musteriler}
           projeler={projeler}
@@ -196,6 +198,9 @@ export default async function ZiyaretlerSayfasi({ searchParams = {} }: { searchP
                     )}
                     {z.proje && (
                       <> · <Link href={`/panel/projeler/${z.proje.id}`} className="text-soguk-dim hover:underline">{z.proje.ad}</Link></>
+                    )}
+                    {z.teklif && (
+                      <> · <Link href={`/panel/teklifler/${z.teklif.id}`} className="text-soguk-dim hover:underline font-mono">{teklifNoYaz(z.teklif.teklifNo)}</Link></>
                     )}
                   </p>
                 </div>
@@ -389,7 +394,7 @@ export default async function ZiyaretlerSayfasi({ searchParams = {} }: { searchP
 
       {/* LİSTE */}
       <h2 className="font-display font-medium text-metin mb-3">
-        {filtreVar ? "Filtrelenen Ziyaretler" : "Tüm Ziyaretler"} ({liste.length})
+        {filtreVar ? "Filtrelenen Kayıtlar" : "Tüm Görüşmeler & Ziyaretler"} ({liste.length})
       </h2>
       {liste.length === 0 ? (
         <p className="text-sm text-metin/50">{filtreVar ? "Bu filtreye uyan ziyaret yok." : "Henüz ziyaret kaydı yok."}</p>

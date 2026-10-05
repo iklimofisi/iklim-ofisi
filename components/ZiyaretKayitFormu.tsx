@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { ziyaretEkle } from "@/lib/actions";
 import KaydetButonu from "@/components/KaydetButonu";
+import HatirlatmaSecici from "@/components/HatirlatmaSecici";
+import { GORUSME_TURLERI } from "@/lib/gorusme";
 
 type Musteri = { id: string; ad: string };
 type Proje = { id: string; ad: string; musteriId: string | null };
@@ -29,7 +31,7 @@ export default function ZiyaretKayitFormu({
 }) {
   const [musteriId, setMusteriId] = useState(varsayilanMusteriId);
   const [projeId, setProjeId] = useState(varsayilanProjeId);
-  const [hatirlatmaAcik, setHatirlatmaAcik] = useState(false);
+  const [tur, setTur] = useState("ZIYARET");
 
   const gorunenProjeler = musteriId ? projeler.filter((p) => p.musteriId === musteriId) : projeler;
   const musteriAd = (id: string | null) => musteriler.find((m) => m.id === id)?.ad;
@@ -37,10 +39,28 @@ export default function ZiyaretKayitFormu({
   return (
     <form action={ziyaretEkle} className="p-5 pt-2 space-y-3">
       <input type="hidden" name="donus" value="ziyaretler" />
+      <input type="hidden" name="tur" value={tur} />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-metin/60 mr-1">Görüşme Türü:</span>
+        {GORUSME_TURLERI.map((t) => (
+          <button
+            key={t.kod}
+            type="button"
+            onClick={() => setTur(t.kod)}
+            aria-pressed={tur === t.kod}
+            className={`focus-ring text-xs px-3 py-1.5 rounded-full border transition-colors ${
+              tur === t.kod ? "bg-soguk text-white border-soguk" : "bg-white border-hat text-metin/70 hover:border-soguk"
+            }`}
+          >
+            {t.simge} {t.ad}
+          </button>
+        ))}
+      </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div>
-          <label className="block text-xs font-medium text-metin/60 mb-1">Ziyaret Tarihi *</label>
+          <label className="block text-xs font-medium text-metin/60 mb-1">Tarih *</label>
           <input
             name="tarih"
             type="date"
@@ -50,7 +70,7 @@ export default function ZiyaretKayitFormu({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-metin/60 mb-1">Ziyareti Yapan</label>
+          <label className="block text-xs font-medium text-metin/60 mb-1">Görüşen</label>
           <select
             name="ziyaretiYapan"
             defaultValue={varsayilanYapan}
@@ -114,7 +134,7 @@ export default function ZiyaretKayitFormu({
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-metin/60 mb-1">Ziyaret Notu *</label>
+        <label className="block text-xs font-medium text-metin/60 mb-1">Görüşme Notu *</label>
         <textarea
           name="not"
           required
@@ -124,43 +144,13 @@ export default function ZiyaretKayitFormu({
         />
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-metin/80">
-        <input
-          type="checkbox"
-          checked={hatirlatmaAcik}
-          onChange={(e) => setHatirlatmaAcik(e.target.checked)}
-          className="accent-soguk"
-        />
-        Belirli bir tarihte hatırlatma kur
-      </label>
-
-      {hatirlatmaAcik && (
-        <div className="grid sm:grid-cols-2 gap-3 bg-sicak-light rounded-md p-3">
-          <div>
-            <label className="block text-xs font-medium text-sicak-dim mb-1">Hatırlatma Tarihi</label>
-            <input
-              name="hatirlatmaTarihi"
-              type="date"
-              required
-              className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-sicak-dim mb-1">Hatırlatma Notu (opsiyonel)</label>
-            <input
-              name="hatirlatmaNotu"
-              placeholder="örn. teklif takibi için ara"
-              className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white"
-            />
-          </div>
-        </div>
-      )}
+      <HatirlatmaSecici />
 
       <div className="flex justify-end">
-        <KaydetButonu basari="Ziyaret kaydedildi."
+        <KaydetButonu basari="Görüşme kaydedildi."
           className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors"
         >
-          Ziyareti Kaydet
+          Kaydet
         </KaydetButonu>
       </div>
     </form>

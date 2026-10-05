@@ -28,7 +28,7 @@ export default async function ProjeDetay({ params }: { params: { id: string } })
       include: {
         musteri: true,
         teklifler: { include: { musteri: true, kalemler: true }, orderBy: { tarih: "desc" } },
-        ziyaretler: { orderBy: { tarih: "desc" }, include: { musteri: { select: { id: true, ad: true } } } },
+        ziyaretler: { orderBy: { tarih: "desc" }, include: { musteri: { select: { id: true, ad: true } }, teklif: { select: { id: true, teklifNo: true } } } },
       },
     }),
     prisma.musteri.findMany({ orderBy: { ad: "asc" } }),
@@ -175,7 +175,7 @@ export default async function ProjeDetay({ params }: { params: { id: string } })
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-display font-medium text-metin">Ziyaretler ({proje.ziyaretler.length})</h2>
+          <h2 className="font-display font-medium text-metin">Görüşmeler & Ziyaretler ({proje.ziyaretler.length})</h2>
           <Link
             href={`/panel/ziyaretler?yeniProje=${proje.id}${proje.musteriId ? `&yeniMusteri=${proje.musteriId}` : ""}#ziyaret-ekle`}
             className="focus-ring text-xs bg-soguk text-white px-3 py-1.5 rounded-md font-medium hover:bg-soguk-dim transition-colors"

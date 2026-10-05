@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { suankiKullanici } from "@/lib/oturum";
 import { epostaGonder } from "@/lib/eposta";
+import { gorusmeTuru, teklifNoYaz } from "@/lib/gorusme";
 
 // -----------------------------------------------------------------------------
 // ZİYARET HATIRLATMALARI — HER SABAH E-POSTA
@@ -10,7 +11,7 @@ import { epostaGonder } from "@/lib/eposta";
 // Güvenlik: yalnızca Vercel'in gizli anahtarıyla (CRON_SECRET) ya da panele
 // yönetici olarak giriş yapmış biri çalıştırabilir.
 //
-// Kime gider: hatırlatmayı içeren ziyareti "yapan" kişiye (panel kullanıcısının
+// Kime gider: hatırlatmayı içeren görüşmeyi / ziyareti "yapan" kişiye (panel kullanıcısının
 // adıyla eşleşirse onun e-postasına). Eşleşmezse şirket bildirim adresine.
 // Aynı gün ikinci kez çalışırsa (Vercel bazen tekrar dener) yeniden göndermez.
 // -----------------------------------------------------------------------------
@@ -64,7 +65,11 @@ export async function GET(req: NextRequest) {
   const [hatirlatmalar, kullanicilar] = await Promise.all([
     prisma.ziyaret.findMany({
       where: { hatirlatmaTamam: false, hatirlatmaTarihi: { lte: bugunSinir, not: null } },
-      include: { musteri: { select: { id: true, ad: true } }, proje: { select: { id: true, ad: true } } },
+      include: {
+        musteri: { select: { id: true, ad: true } },
+        proje: { select: { id: true, ad: true } },
+        teklif: { select: { id: true, teklifNo: true, baslik: true } },
+      },
       orderBy: { hatirlatmaTarihi: "asc" },
     }),
     prisma.kullanici.findMany({ select: { ad: true, email: true } }),
@@ -90,8 +95,14 @@ export async function GET(req: NextRequest) {
       .map((h) => {
         const gecikti = h.hatirlatmaTarihi! < bugunSinir;
         const kimle = [h.musteri?.ad, h.proje?.ad].filter(Boolean).map((x) => htmlGuvenli(x!)).join(" · ") || "—";
-        const link = h.musteri
-          ? `${PANEL_ADRESI}/panel/musteriler/${h.musteri.id}`
+        const tur = gorusmeTuru(h.tur);
+        const teklifSatiri = h.teklif
+          ? `<br/><span style="color:#64748b;font-size:12px">Teklif: ${teklifNoYaz(h.teklif.teklifNo)}${h.teklif.baslik ? ` — ${htmlGuvenli(h.teklif.baslik)}` : ""}</span>`
+          : "";
+        const link = h.teklif
+          ? `${PANEL_ADRESI}/panel/teklifler/${h.teklif.id}#gorusmeler`
+          : h.musteri
+          ? `${PANEL_ADRESI}/panel/musteriler/${h.musteri.id}#gorusmeler`
           : h.proje
           ? `${PANEL_ADRESI}/panel/projeler/${h.proje.id}`
           : `${PANEL_ADRESI}/panel/ziyaretler`;
@@ -102,8 +113,9 @@ export async function GET(req: NextRequest) {
               ${trTarih(h.hatirlatmaTarihi!)}${gecikti ? "<br/><small>gecikti</small>" : ""}
             </td>
             <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0">
-              <b>${kimle}</b>${kimYapti}<br/>
+              <b>${kimle}</b>${kimYapti}${teklifSatiri}<br/>
               ${htmlGuvenli(h.hatirlatmaNotu || h.not).replace(/\n/g, "<br/>")}
+              ${h.hatirlatmaNotu && h.hatirlatmaNotu !== h.not ? `<br/><span style="color:#64748b;font-size:12px">${tur.ad} notu: ${htmlGuvenli(h.not).replace(/\n/g, "<br/>")}</span>` : ""}
               <br/><a href="${link}" style="color:#0f766e;font-size:12px">Panelde aç →</a>
             </td>
           </tr>`;
@@ -116,7 +128,7 @@ export async function GET(req: NextRequest) {
         <p>Merhaba ${htmlGuvenli(g.ad)}, bugün veya daha önce için kurduğunuz ve henüz tamamlanmamış hatırlatmalar:</p>
         <table style="width:100%;border-collapse:collapse;font-size:14px">${satirlar}</table>
         <p style="margin-top:20px">
-          <a href="${PANEL_ADRESI}/panel/ziyaretler" style="background:#0f766e;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:13px">Ziyaretler sayfasını aç</a>
+          <a href="${PANEL_ADRESI}/panel/ziyaretler" style="background:#0f766e;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:13px">Görüşmeler sayfasını aç</a>
         </p>
         <p style="font-size:11px;color:#94a3b8">Hatırlatmayı panelde “Tamamlandı” olarak işaretlediğinizde bu listeden çıkar.</p>
       </div>`;

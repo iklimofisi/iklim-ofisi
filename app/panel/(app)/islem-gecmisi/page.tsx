@@ -25,6 +25,8 @@ const ISLEM_ADI: Record<string, string> = {
   sozlesmeKaydet: "Sözleşme taslağını düzenledi",
   sozlesmeKalemleriYenile: "Sözleşme kalemlerini tekliften yeniledi",
   sozlesmeSil: "Sözleşme taslağını sildi",
+  teklifPaylasimOlustur: "Teklif linki oluşturdu (WhatsApp)",
+  teklifPaylasimIptal: "Teklif linkini iptal etti",
   teklifTakipNotuGuncelle: "Teklif takip notu yazdı",
   teklifMusteriyeEpostaGonder: "Teklifi müşteriye e-postaladı",
   tekliflerExcelImport: "Excel'den teklif aktardı",
@@ -80,9 +82,9 @@ const ISLEM_ADI: Record<string, string> = {
   projeGuncelle: "Proje güncelledi",
   projeSil: "Proje sildi",
   projeTakipNotuGuncelle: "Proje takip notu yazdı",
-  ziyaretEkle: "Ziyaret kaydı ekledi",
+  ziyaretEkle: "Görüşme / ziyaret notu ekledi",
   ziyaretHatirlatmaTamamlandi: "Hatırlatmayı tamamladı",
-  ziyaretSil: "Ziyaret kaydı sildi",
+  ziyaretSil: "Görüşme / ziyaret notu sildi",
 };
 
 const SAYFA_BOYUTU = 50;

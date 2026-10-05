@@ -10,6 +10,10 @@ import TeklifEpostaGonderModal from "@/components/TeklifEpostaGonderModal"; // M
 import { musteriToplami, ilkHazirlanmaTarihi, musteriTeklifTarihi, kosulCumlesi, tarihYaz, bolumToplamlari } from "@/lib/teklif-hesap";
 import { sablonlariGrupla } from "@/lib/sablon";
 import { ISTIRAK_METNI } from "@/lib/kurumsal";
+import TeklifWhatsapp from "@/components/TeklifWhatsapp";
+import GorusmeFormu from "@/components/GorusmeFormu";
+import ZiyaretListesi from "@/components/ZiyaretListesi";
+import { PAYLASIM_TABANI } from "@/lib/teklif-paylasim";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +29,17 @@ const belgeTarihi = (d: Date) =>
     new Date(d)
   );
 
+// Panel içi bilgi: 05.10.2026 14:32 (Türkiye saati)
+const saatliTarih = (d: Date) =>
+  new Intl.DateTimeFormat("tr-TR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Istanbul",
+  }).format(new Date(d));
+
 // Kurumsal ERP Teklif Kodlama Formatı: IKL-2026-00019
 function kurumsalTeklifKodu(teklifNo: number, tarih: Date) {
   const yil = new Date(tarih).getFullYear();
@@ -33,7 +48,7 @@ function kurumsalTeklifKodu(teklifNo: number, tarih: Date) {
 }
 
 export default async function TeklifDetay({ params }: { params: { id: string } }) {
-  const [teklif, sirket, sozlesme, kopyalar] = await Promise.all([
+  const [teklif, sirket, sozlesme, kopyalar, paylasim, gorusmeler] = await Promise.all([
     prisma.teklif.findUnique({
       where: { id: params.id },
       include: {
@@ -56,6 +71,15 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
       select: { id: true, teklifNo: true, baslik: true, musteri: { select: { ad: true } } },
       orderBy: { teklifNo: "asc" },
     }),
+    // WhatsApp linki ve görüşme notları (ayrı sorgu: tablo/sütun henüz yoksa teklif sayfası yine açılır)
+    prisma.teklifPaylasim.findUnique({ where: { teklifId: params.id } }).catch(() => null),
+    prisma.ziyaret
+      .findMany({
+        where: { teklifId: params.id },
+        orderBy: { tarih: "desc" },
+        include: { proje: { select: { id: true, ad: true } } },
+      })
+      .catch(() => null),
   ]);
 
   if (!teklif) notFound();
@@ -93,12 +117,18 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
   return (
     <div>
       {/* ÜST BUTONLAR VE MAİL GÖNDERME MODALI BURAYA YERLEŞTİRİLDİ */}
-      <div className="flex items-center justify-between mb-6 print:hidden">
-        <Link href="/panel/teklifler" className="focus-ring text-sm text-metin/60 hover:text-metin">
+      <div className="flex items-center justify-between gap-3 mb-6 print:hidden">
+        <Link href="/panel/teklifler" className="focus-ring shrink-0 whitespace-nowrap text-sm text-metin/60 hover:text-metin">
           ← Tekliflere dön
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <TeklifDurumSecici teklifId={teklif.id} mevcutDurum={teklif.durum} />
+          <a
+            href="#whatsapp"
+            className="focus-ring text-sm font-medium text-[#178a45] border border-[#1fa855]/50 px-4 py-2 rounded-md hover:bg-[#1fa855]/10 transition-colors"
+          >
+            💬 WhatsApp
+          </a>
           
           {/* ✉️ MÜŞTERİYE E-POSTA İLE TEKLİF GÖNDERME BUTONU */}
           <TeklifEpostaGonderModal
@@ -405,6 +435,33 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
           </div>
         </div>
       </div>
+
+      {/* --- YALNIZCA PANELDE (yazdırmada görünmez) --- */}
+      <section id="whatsapp" className="mt-8 bg-yuzey border border-hat rounded-lg p-5 scroll-mt-6 print:hidden">
+        <h2 className="font-display font-medium text-metin mb-3">💬 WhatsApp ile Müşteriye Gönder</h2>
+        <TeklifWhatsapp
+          key={paylasim?.anahtar ?? "yok"}
+          teklifId={teklif.id}
+          link={paylasim ? PAYLASIM_TABANI + paylasim.anahtar : null}
+          telefon={yetkiliTelefon || teklif.musteri.telefon || ""}
+          hitapAd={yetkiliAd || teklif.musteri.ad}
+          teklifKodu={`TKL-${String(teklif.teklifNo).padStart(4, "0")}`}
+          firma={sirket.unvan}
+          goruntulenme={paylasim?.goruntulenme ?? 0}
+          sonGoruntulenme={paylasim?.sonGoruntulenme ? saatliTarih(paylasim.sonGoruntulenme) : null}
+          olusturma={paylasim ? saatliTarih(paylasim.createdAt) : null}
+        />
+      </section>
+
+      <section id="gorusmeler" className="mt-6 scroll-mt-6 print:hidden">
+        <h2 className="font-display font-medium text-metin mb-3">
+          📞 Bu Teklifle İlgili Görüşmeler{gorusmeler ? ` (${gorusmeler.length})` : ""}
+        </h2>
+        <div className="mb-4">
+          <GorusmeFormu musteriId={teklif.musteriId} projeId={teklif.projeId} teklifId={teklif.id} />
+        </div>
+        {gorusmeler && <ZiyaretListesi ziyaretler={gorusmeler} bosMetin="Bu teklif için henüz görüşme notu yok." />}
+      </section>
     </div>
   );
 }

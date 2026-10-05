@@ -109,6 +109,21 @@ model Teklif {
   siparis                  Siparis?
   kesifler                 KesifFormu[]
   sozlesme                 Sozlesme?
+  paylasim                 TeklifPaylasim?   // WhatsApp / müşteri linki
+  gorusmeler               Ziyaret[]         // Bu teklifle ilgili görüşme notları
+}
+
+// Teklifin müşteriye gönderilen gizli linki (iklimofisi.com/t/<anahtar>).
+// Link iptal edilince satır silinir; yeniden oluşturulursa YENİ anahtar üretilir.
+model TeklifPaylasim {
+  id              String    @id @default(cuid())
+  teklif          Teklif    @relation(fields: [teklifId], references: [id], onDelete: Cascade)
+  teklifId        String    @unique
+  anahtar         String    @unique
+  olusturanAdi    String    @default("")
+  createdAt       DateTime  @default(now())
+  goruntulenme    Int       @default(0)
+  sonGoruntulenme DateTime?
 }
 
 // Onaylanan tekliften hazırlanan, müşteriye imzalatılacak sözleşme taslağı.
@@ -396,6 +411,11 @@ model Ziyaret {
   hatirlatmaNotu   String?
   hatirlatmaTamam  Boolean   @default(false)
   olusturanAdi     String    @default("")
+  tur              String    @default("ZIYARET") // ZIYARET | TELEFON | WHATSAPP | EPOSTA | DIGER
+  teklifId         String?
+  teklif           Teklif?   @relation(fields: [teklifId], references: [id], onDelete: SetNull)
+
+  @@index([teklifId])
 }
 
 model SirketAyarlari {

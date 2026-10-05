@@ -20,6 +20,8 @@ const MESAJLAR: Record<string, string> = {
   "sozlesme-kaydedildi": "Sözleşme kaydedildi.",
   "sozlesme-kalemler": "Kalemler tekliften yeniden alındı.",
   "sozlesme-silindi": "Sözleşme taslağı silindi.",
+  "paylasim-olusturuldu": "Teklif linki oluşturuldu. Şimdi WhatsApp ile gönderebilirsiniz.",
+  "paylasim-iptal": "Teklif linki iptal edildi; eski link artık açılmaz.",
   "eposta-test-ok": "Deneme e-postası gönderildi. Gelen kutunuzu (ve Spam klasörünü) kontrol edin.",
 };
 

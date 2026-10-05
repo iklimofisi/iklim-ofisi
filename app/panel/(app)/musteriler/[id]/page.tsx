@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { musteriGuncelle, musteriYetkiliEkle, musteriYetkiliGuncelle, musteriYetkiliSil } from "@/lib/actions";
 import ZiyaretListesi from "@/components/ZiyaretListesi";
+import GorusmeFormu from "@/components/GorusmeFormu";
 import SilButon from "@/components/SilButon";
 import { teklifToplamlari, tarihYaz } from "@/lib/teklif-hesap";
 import KaydetButonu from "@/components/KaydetButonu";
@@ -39,7 +40,7 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
     include: {
       cariHareketler: { orderBy: { tarih: "desc" } },
       teklifler: { include: { kalemler: true }, orderBy: { tarih: "desc" } },
-      ziyaretler: { orderBy: { tarih: "desc" }, include: { proje: { select: { id: true, ad: true } } } },
+      ziyaretler: { orderBy: { tarih: "desc" }, include: { proje: { select: { id: true, ad: true } }, teklif: { select: { id: true, teklifNo: true } } } },
       yetkililer: { orderBy: { ad: "asc" } },
       // Projeler ekranındaki bilgiler: durum, konum, kaynak, değer, bağlı teklifler ve ziyaretler
       projeler: {
@@ -69,6 +70,12 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
         <div>
           <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Müşteri</p>
           <h1 className="font-display text-2xl font-semibold text-metin">{musteri.ad}</h1>
+          <a
+            href="#gorusmeler"
+            className="focus-ring inline-block mt-2 text-xs text-soguk-dim border border-soguk/40 bg-soguk-light rounded-full px-3 py-1 hover:border-soguk"
+          >
+            📞 Görüşme notu / hatırlatma ekle
+          </a>
         </div>
         <div className="bg-yuzey border border-hat rounded-lg px-5 py-3 text-right shrink-0">
           <p className="text-xs text-metin/50">Cari Bakiye</p>
@@ -363,15 +370,18 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
         </div>
       </div>
 
-      <div className="mt-10">
+      <div id="gorusmeler" className="mt-10 scroll-mt-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-display font-medium text-metin">Ziyaretler ({musteri.ziyaretler.length})</h2>
+          <h2 className="font-display font-medium text-metin">Görüşmeler & Ziyaretler ({musteri.ziyaretler.length})</h2>
           <Link
             href={`/panel/ziyaretler?yeniMusteri=${musteri.id}#ziyaret-ekle`}
-            className="focus-ring text-xs bg-soguk text-white px-3 py-1.5 rounded-md font-medium hover:bg-soguk-dim transition-colors"
+            className="focus-ring text-xs text-soguk-dim hover:underline"
           >
-            + Ziyaret Ekle
+            Ayrıntılı kayıt (proje seçerek) →
           </Link>
+        </div>
+        <div className="mb-4">
+          <GorusmeFormu musteriId={musteri.id} />
         </div>
         <ZiyaretListesi ziyaretler={musteri.ziyaretler} />
       </div>
