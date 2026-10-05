@@ -9,7 +9,7 @@
 
 import { unstable_cache } from "next/cache";
 
-export type TcmbKurlari = { tarih: string; USD: number; EUR: number };
+export type TcmbKurlari = { tarih: string; USD: number; EUR: number; GBP?: number };
 
 const KAYNAK = "https://www.tcmb.gov.tr/kurlar/today.xml";
 
@@ -35,7 +35,8 @@ export function tcmbXmlCoz(xml: string): TcmbKurlari | null {
   const eur = kurAyikla(xml, "EUR");
   const tarih = xml.match(/<Tarih_Date[^>]*Tarih="([^"]+)"/)?.[1] ?? "";
   if (!usd || !eur) return null;
-  return { tarih, USD: usd, EUR: eur };
+  const gbp = kurAyikla(xml, "GBP");
+  return { tarih, USD: usd, EUR: eur, ...(gbp ? { GBP: gbp } : {}) };
 }
 
 const onbellekli = unstable_cache(
@@ -50,10 +51,15 @@ const onbellekli = unstable_cache(
   { revalidate: 3600 }
 );
 
+// TCMB'ye ulaşılamadıysa 5 dakika boyunca yeniden denenmez (sayfalar beklemesin)
+let sonHata = 0;
+
 export async function getTcmbKurlari(): Promise<TcmbKurlari | null> {
+  if (Date.now() - sonHata < 5 * 60 * 1000) return null;
   try {
     return await onbellekli();
   } catch (hata) {
+    sonHata = Date.now();
     console.warn("[kur] TCMB kurları alınamadı:", hata instanceof Error ? hata.message : hata);
     return null;
   }

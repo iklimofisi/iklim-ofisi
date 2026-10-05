@@ -7,6 +7,7 @@ import { suankiKullanici } from "@/lib/oturum";
 import { prisma } from "@/lib/prisma";
 import PanelMobilMenu from "@/components/PanelMobilMenu";
 import KayitBildirimi from "@/components/KayitBildirimi";
+import KurGostergesi from "@/components/KurGostergesi";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
@@ -78,7 +79,11 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             </span>
           </Link>
         </div>
-        <nav className="flex-1 px-3 py-6 space-y-1">
+        {/* DÖVİZ KURLARI (üzerine gelince açılır) */}
+        <div className="px-3 pt-4">
+          <KurGostergesi />
+        </div>
+        <nav className="flex-1 px-3 pt-4 pb-6 space-y-1">
           {menu.map((m) => (
             <Link
               key={m.href}

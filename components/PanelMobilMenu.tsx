@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { cikisYap } from "@/lib/auth-actions";
+import KurGostergesi from "@/components/KurGostergesi";
 
 export default function PanelMobilMenu({
   menu,
@@ -20,6 +21,10 @@ export default function PanelMobilMenu({
         <Image src="/logo-icon.png" alt="İklim Ofisi" width={24} height={24} />
         <span>İklim <span className="text-soguk">Ofisi</span></span>
       </Link>
+
+      <div className="ml-auto mr-2">
+        <KurGostergesi yon="alt" />
+      </div>
 
       <button
         type="button"
