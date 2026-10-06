@@ -1,3 +1,4 @@
+import { durumFiltresi } from "@/lib/teklif-durum";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { suankiKullanici } from "@/lib/oturum";
@@ -21,6 +22,8 @@ export async function GET(req: NextRequest) {
   const musteri = sp.get("musteri");
   const proje = sp.get("proje");
   const no = sp.get("no");
+  const durum = sp.get("durum");
+  const hazirlayan = sp.get("hazirlayan");
   const baslangic = sp.get("baslangic");
   const bitis = sp.get("bitis");
   const min = sp.get("min") ? Number(sp.get("min")) : null;
@@ -31,6 +34,8 @@ export async function GET(req: NextRequest) {
       ...(musteri ? { musteriId: musteri } : {}),
       ...(proje ? { baslik: { contains: proje, mode: "insensitive" } } : {}),
       ...(no ? { teklifNo: Number(no) || -1 } : {}),
+      ...durumFiltresi(durum),
+      ...(hazirlayan ? { olusturanKullaniciId: hazirlayan } : {}),
       ...(baslangic || bitis
         ? {
             tarih: {

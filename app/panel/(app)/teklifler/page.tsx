@@ -7,7 +7,7 @@ import HizliAramaListesi from "@/components/HizliAramaListesi";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { teklifToplamlari, ilkHazirlanmaTarihi, tarihYaz } from "@/lib/teklif-hesap";
-import { RED_NEDENLERI, redNedeniAdi } from "@/lib/teklif-durum";
+import { RED_NEDENLERI, redNedeniAdi, DURUM_FILTRELERI, durumFiltresi } from "@/lib/teklif-durum";
 
 function paraFormat(n: number, paraBirimi: string = "TRY") {
   return n.toLocaleString("tr-TR", { style: "currency", currency: paraBirimi });
@@ -29,6 +29,7 @@ export default async function TekliflerSayfasi({
     max?: string;
     proje?: string;
     no?: string;
+    durum?: string;
     seciliProjeId?: string;
     seciliMusteriId?: string; // Yeni Eklenen Müşteri ID'si
     basarili?: string;
@@ -50,6 +51,7 @@ export default async function TekliflerSayfasi({
         ...(searchParams.hazirlayan ? { olusturanKullaniciId: searchParams.hazirlayan } : {}),
         ...(searchParams.proje ? { baslik: { contains: searchParams.proje, mode: "insensitive" } } : {}),
         ...(searchParams.no ? { teklifNo: Number(searchParams.no) || -1 } : {}),
+        ...durumFiltresi(searchParams.durum),
         ...(searchParams.baslangic || searchParams.bitis
           ? {
               tarih: {
@@ -175,7 +177,7 @@ export default async function TekliflerSayfasi({
             <summary className="cursor-pointer select-none px-5 py-3 text-sm font-medium text-metin/70">
               Gelişmiş filtre (tarih, tutar, hazırlayan…) {filtreVar && <span className="text-soguk-dim">(aktif)</span>}
             </summary>
-            <form method="get" className="p-5 pt-0 grid sm:grid-cols-7 gap-3 items-end">
+            <form method="get" className="p-5 pt-0 grid sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
               <div>
                 <label className="block text-xs font-medium text-metin/60 mb-1">Teklif No</label>
                 <input name="no" type="number" defaultValue={searchParams.no ?? ""} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white" placeholder="örn. 12" />
@@ -186,6 +188,16 @@ export default async function TekliflerSayfasi({
                   <option value="">Tümü</option>
                   {musteriler.map((m) => (
                     <option key={m.id} value={m.id}>{m.ad}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-soguk-dim mb-1">Teklif Durumu</label>
+                <select name="durum" defaultValue={searchParams.durum ?? ""} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
+                  <option value="">Tümü</option>
+                  {DURUM_FILTRELERI.map((d) => (
+                    <option key={d.kod} value={d.kod}>{d.ad}</option>
                   ))}
                 </select>
               </div>
@@ -222,7 +234,7 @@ export default async function TekliflerSayfasi({
                   <input name="max" type="number" defaultValue={searchParams.max ?? ""} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white" />
                 </div>
               </div>
-              <div className="sm:col-span-7 flex gap-3">
+              <div className="sm:col-span-2 lg:col-span-4 flex gap-3">
                 <button type="submit" className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
                   Filtrele
                 </button>
