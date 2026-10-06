@@ -27,6 +27,8 @@ const ISLEM_ADI: Record<string, string> = {
   sozlesmeSil: "Sözleşme taslağını sildi",
   teklifPaylasimOlustur: "Teklif linki oluşturdu (WhatsApp)",
   teklifPaylasimIptal: "Teklif linkini iptal etti",
+  teklifReddet: "Teklifi reddedildi yaptı (neden seçti)",
+  teklifMusteriOnayi: "✅ Müşteri teklifi linkten ONAYLADI",
   teklifTakipNotuGuncelle: "Teklif takip notu yazdı",
   teklifMusteriyeEpostaGonder: "Teklifi müşteriye e-postaladı",
   tekliflerExcelImport: "Excel'den teklif aktardı",

@@ -15,6 +15,7 @@ import TeklifWhatsapp from "@/components/TeklifWhatsapp";
 import GorusmeFormu from "@/components/GorusmeFormu";
 import ZiyaretListesi from "@/components/ZiyaretListesi";
 import { PAYLASIM_TABANI } from "@/lib/teklif-paylasim";
+import { redNedeniAdi } from "@/lib/teklif-durum";
 
 export const dynamic = "force-dynamic";
 
@@ -169,6 +170,33 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
               </Link>
             </span>
           ))}
+        </div>
+      )}
+
+      {/* MÜŞTERİ LİNKTEN ONAYLADIYSA */}
+      {teklif.musteriOnayTarihi && teklif.durum === "ONAYLANDI" && (
+        <div className="mb-3 text-sm bg-emerald-50 text-emerald-900 border border-emerald-200 rounded-md px-4 py-3 print:hidden">
+          <p>
+            ✅ <b>Müşteri linkten onayladı:</b> {teklif.musteriOnayAdi} · {saatliTarih(teklif.musteriOnayTarihi)}
+            {teklif.musteriOnayRevizyon != null && ` · Rev. ${teklif.musteriOnayRevizyon}`}
+            {teklif.musteriOnayTutar && ` · ${teklif.musteriOnayTutar}`}
+          </p>
+          {teklif.musteriOnayNotu && <p className="mt-1 whitespace-pre-line">Müşteri notu: {teklif.musteriOnayNotu}</p>}
+          {teklif.musteriOnayRevizyon != null && teklif.revizyonNo > teklif.musteriOnayRevizyon && (
+            <p className="mt-1 font-semibold text-sicak-dim">
+              ⚠ Teklif onaydan sonra değiştirildi (şu an Rev. {teklif.revizyonNo}). Müşterinin onayladığı Rev. {teklif.musteriOnayRevizyon}.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* RED NEDENİ */}
+      {teklif.durum === "REDDEDILDI" && teklif.redNedeni && (
+        <div className="mb-3 text-sm bg-sicak-light text-sicak-dim border border-sicak/30 rounded-md px-4 py-3 print:hidden">
+          ❌ <b>Reddedildi:</b> {redNedeniAdi(teklif.redNedeni)}
+          {teklif.redRakip && ` · İşi alan: ${teklif.redRakip}`}
+          {teklif.redTarihi && ` · ${saatliTarih(teklif.redTarihi)}`}
+          {teklif.redAciklama && <p className="mt-1 whitespace-pre-line text-metin/70">{teklif.redAciklama}</p>}
         </div>
       )}
 

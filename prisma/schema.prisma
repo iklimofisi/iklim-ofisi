@@ -111,6 +111,18 @@ model Teklif {
   sozlesme                 Sozlesme?
   paylasim                 TeklifPaylasim?   // WhatsApp / müşteri linki
   gorusmeler               Ziyaret[]         // Bu teklifle ilgili görüşme notları
+  // Red nedeni (teklif "Reddedildi" yapılırken sorulur)
+  redNedeni                String?           // FIYAT | RAKIP | IPTAL | ERTELENDI | CEVAPSIZ | TEKNIK | DIGER
+  redRakip                 String?           // İşi alan firma (biliniyorsa)
+  redAciklama              String?
+  redTarihi                DateTime?
+  // Müşterinin teklif linkinden verdiği onay
+  musteriOnayAdi           String?
+  musteriOnayNotu          String?
+  musteriOnayTarihi        DateTime?
+  musteriOnayRevizyon      Int?              // Onaylandığı andaki revizyon no
+  musteriOnayTutar         String?           // Onaylandığı andaki genel toplam (yazıyla: "64.000,00 $ + KDV")
+  musteriOnayIp            String?
 }
 
 // Teklifin müşteriye gönderilen gizli linki (iklimofisi.com/t/<anahtar>).

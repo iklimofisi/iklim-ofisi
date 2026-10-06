@@ -7,6 +7,7 @@ import HizliAramaListesi from "@/components/HizliAramaListesi";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { teklifToplamlari, ilkHazirlanmaTarihi, tarihYaz } from "@/lib/teklif-hesap";
+import { RED_NEDENLERI, redNedeniAdi } from "@/lib/teklif-durum";
 
 function paraFormat(n: number, paraBirimi: string = "TRY") {
   return n.toLocaleString("tr-TR", { style: "currency", currency: paraBirimi });
@@ -88,6 +89,14 @@ export default async function TekliflerSayfasi({
   const filtreVar = filtreler.length > 0;
   const disaAktarQuery = new URLSearchParams(filtreler).toString();
 
+  // Kaybedilen tekliflerin nedenleri (filtreye uyan teklifler içinden)
+  const redler = teklifler.filter((t) => t.durum === "REDDEDILDI" && t.redNedeni);
+  const redDagilimi = RED_NEDENLERI.map((n) => ({ ...n, adet: redler.filter((t) => t.redNedeni === n.kod).length })).filter((n) => n.adet > 0);
+  const rakipler = Array.from(
+    redler.reduce((m, t) => (t.redRakip ? m.set(t.redRakip.trim(), (m.get(t.redRakip.trim()) ?? 0) + 1) : m), new Map<string, number>())
+  ).sort((a, b) => b[1] - a[1]);
+  const musteriOnaylari = teklifler.filter((t) => t.musteriOnayTarihi).length;
+
 
   return (
     <div>
@@ -112,6 +121,49 @@ export default async function TekliflerSayfasi({
         </div>
       </div>
 
+
+      {/* KAYBEDİLEN TEKLİFLERİN NEDENLERİ */}
+      {redDagilimi.length > 0 && (
+        <details className="bg-yuzey border border-hat rounded-lg mb-4">
+          <summary className="cursor-pointer select-none px-5 py-3 text-sm font-medium text-metin/70">
+            📉 Kaybedilen teklifler: neden? <span className="text-metin/40">({redler.length} teklif{filtreVar ? ", filtreye göre" : ""})</span>
+            {musteriOnaylari > 0 && <span className="ml-3 text-emerald-700">· ✅ {musteriOnaylari} teklif müşteri tarafından linkten onaylandı</span>}
+          </summary>
+          <div className="px-5 pb-5 grid sm:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              {redDagilimi.map((n) => (
+                <div key={n.kod}>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-metin/80">{n.ad}</span>
+                    <span className="font-mono text-metin/60">
+                      {n.adet} · %{Math.round((n.adet / redler.length) * 100)}
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-zemin overflow-hidden">
+                    <div className="h-full bg-sicak rounded-full" style={{ width: `${(n.adet / redler.length) * 100}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-metin/60 mb-2">İşi alan firmalar</p>
+              {rakipler.length === 0 ? (
+                <p className="text-xs text-metin/40">Henüz rakip firma yazılmamış.</p>
+              ) : (
+                <ul className="text-xs space-y-1">
+                  {rakipler.slice(0, 8).map(([ad, adet]) => (
+                    <li key={ad} className="flex justify-between border-b border-hat/60 py-1">
+                      <span className="text-metin/80">{ad}</span>
+                      <span className="font-mono text-metin/60">{adet}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="text-[11px] text-metin/40 mt-3">Teklif durumunu &quot;Reddedildi&quot; yaparken seçilen nedenlerden hesaplanır.</p>
+            </div>
+          </div>
+        </details>
+      )}
 
       {/* TEKLİFLER LİSTESİ — yazdıkça anında süzülür */}
       <HizliAramaListesi
@@ -195,6 +247,8 @@ export default async function TekliflerSayfasi({
             t.proje?.ad,
             hazirlayanPersonel,
             t.yetkili?.ad || t.musteri.yetkiliAdi,
+            t.durum === "REDDEDILDI" ? redNedeniAdi(t.redNedeni) : null,
+            t.durum === "REDDEDILDI" ? t.redRakip : null,
           ]
             .filter(Boolean)
             .join(" ");
@@ -224,6 +278,15 @@ export default async function TekliflerSayfasi({
                     </span>
 
                     {t.siparis && <span className="text-emerald-700 font-bold">· Siparişe dönüştürüldü</span>}
+                    {t.durum === "ONAYLANDI" && t.musteriOnayTarihi && (
+                      <span className="text-emerald-700 font-semibold">· ✅ Müşteri linkten onayladı</span>
+                    )}
+                    {t.durum === "REDDEDILDI" && t.redNedeni && (
+                      <span className="text-sicak-dim font-semibold">
+                        · ❌ {redNedeniAdi(t.redNedeni)}
+                        {t.redRakip && ` (${t.redRakip})`}
+                      </span>
+                    )}
                     {t.kopyaKaynakTeklifNo && (
                       <span className="text-metin/40 italic">· TKL-{String(t.kopyaKaynakTeklifNo).padStart(4, "0")} kopyası</span>
                     )}

@@ -32,7 +32,7 @@ export default function TeklifWhatsapp({
 }) {
   const [tel, setTel] = useState(telefon);
   const [mesaj, setMesaj] = useState(
-    `Merhaba ${hitapAd},\n\n${firma} olarak hazırladığımız ${teklifKodu} numaralı fiyat teklifimizi aşağıdaki bağlantıdan inceleyebilirsiniz:\n${link ?? "[link]"}\n\nSorularınız için bize her zaman ulaşabilirsiniz.\nİyi çalışmalar dileriz.`
+    `Merhaba ${hitapAd},\n\n${firma} olarak hazırladığımız ${teklifKodu} numaralı fiyat teklifimizi aşağıdaki bağlantıdan inceleyebilir, uygun bulursanız aynı sayfadan onaylayabilirsiniz:\n${link ?? "[link]"}\n\nSorularınız için bize her zaman ulaşabilirsiniz.\nİyi çalışmalar dileriz.`
   );
 
   if (!link) {

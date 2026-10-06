@@ -22,6 +22,7 @@ import { tutarOku } from "@/lib/toplam-dagit";
 import { donusumKalemleri } from "@/lib/satinalma-hesap";
 import { randomUUID, randomBytes } from "crypto";
 import { gecerliTur } from "@/lib/gorusme";
+import { gecerliRedNedeni } from "@/lib/teklif-durum";
 
 // --- Yetki kontrolü + işlem kaydı ---
 // Her sunucu işleminin ilk satırında çağrılır: giriş yapılmamışsa işlem yapılmaz
@@ -403,6 +404,26 @@ export async function teklifGuncelle(formData: FormData) {
 export async function teklifDurumGuncelle(teklifId: string, durum: "BEKLEMEDE" | "ONAYLANDI" | "REDDEDILDI") {
   await yetki("teklifDurumGuncelle", { teklifId, durum });
   await prisma.teklif.update({ where: { id: teklifId }, data: { durum } });
+  revalidatePath("/panel/teklifler");
+  revalidatePath(`/panel/teklifler/${teklifId}`);
+  revalidatePath("/panel");
+}
+
+// Teklifi "Reddedildi" yapar ve nedenini kaydeder (durum seçicide açılan pencereden)
+export async function teklifReddet(teklifId: string, bilgi: { neden: string; rakip?: string; aciklama?: string }) {
+  await yetki("teklifReddet", { teklifId, ...bilgi });
+  const neden = gecerliRedNedeni(bilgi?.neden);
+  if (!teklifId || !neden) return;
+  await prisma.teklif.update({
+    where: { id: teklifId },
+    data: {
+      durum: "REDDEDILDI",
+      redNedeni: neden,
+      redRakip: String(bilgi.rakip ?? "").trim().slice(0, 200) || null,
+      redAciklama: String(bilgi.aciklama ?? "").trim().slice(0, 2000) || null,
+      redTarihi: new Date(),
+    },
+  });
   revalidatePath("/panel/teklifler");
   revalidatePath(`/panel/teklifler/${teklifId}`);
   revalidatePath("/panel");
