@@ -64,6 +64,30 @@ function metin(str: string | null | undefined): string {
     .trim();
 }
 
+// Excel'den gelen adlardaki satır sonları, fazla boşluklar ve tek kalmış tırnaklar temizlenir:
+// '"ESF FANI\n        V=7.500 m3/h' → 'ESF FANI V=7.500 m3/h'
+function temizAd(t: string) {
+  let s = String(t ?? "").replace(/\s+/g, " ").trim();
+  for (const q of ['"', "'", "“", "”"]) {
+    if ((s.split(q).length - 1) % 2 === 1) {
+      if (s.startsWith(q)) s = s.slice(1).trim();
+      else if (s.endsWith(q)) s = s.slice(0, -1).trim();
+    }
+  }
+  if (/^["“].*["”]$/.test(s)) s = s.slice(1, -1).trim();
+  return s;
+}
+
+// Açıklamada satır sonları korunur, satır başı/sonu ve art arda boşluklar temizlenir
+function temizAciklama(t: string) {
+  return String(t ?? "")
+    .split(/\r?\n/)
+    .map((x) => x.replace(/[ \t]+/g, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 const trTarih = new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Europe/Istanbul" });
 
 const sayi = (n: number) => n.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -81,6 +105,7 @@ export function fiyatListesiPdfOlustur(
   doc.addFont("LiberationSans-Bold.ttf", YAZI_TIPI, "bold");
   doc.setProperties({ title: metin(liste.baslik), creator: metin(sirket.unvan || "İklim Ofisi") });
 
+  kalemler = kalemler.map((k) => ({ ...k, ad: temizAd(k.ad), aciklama: k.aciklama ? temizAciklama(k.aciklama) : null }));
   const sembol = paraSembolu(liste.paraBirimi);
   const unvan = metin(sirket.unvan || "İklim Ofisi");
 
@@ -256,7 +281,22 @@ export function fiyatListesiPdfOlustur(
   const KART_G = (GENISLIK - KART_ARA * (KART_SUTUN - 1)) / KART_SUTUN;
   const KART_FOTO = fotoVar ? 40 : 0;
   const KART_Y = fotoVar ? 82 : 46;
-  const kart = (k: PdfKalem, x: number, ky: number) => {
+  const KART_ACIKLAMA_SATIR = 4; // kartta açıklamanın en fazla gösterilecek satırı
+  const kartFiyatPayi = liste.fiyatGoster ? (liste.iskontoYuzde > 0 ? 14 : 11) : 3;
+  // Kartın metin bölümü (ad + marka/kod + açıklama) için gereken yükseklik
+  const kartMetinYuksekligi = (k: PdfKalem) => {
+    yazi(8.8, true, METIN);
+    let h = 3.8 * satirlar(k.ad, KART_G - 6, 10).length;
+    if (k.marka || k.kod) h += 3.4;
+    if (k.aciklama) {
+      yazi(6.8, false, METIN_60);
+      h += 0.8 + 3 * Math.min(KART_ACIKLAMA_SATIR, satirlar(k.aciklama, KART_G - 6).length);
+    }
+    return h;
+  };
+  // Standart kartta metne ayrılan yükseklik (bunu aşan kartlar sıralarıyla birlikte uzar)
+  const kartMetinAlani = KART_Y - (3 + KART_FOTO + (fotoVar ? 5 : 3.5)) - kartFiyatPayi;
+  const kart = (k: PdfKalem, x: number, ky: number, KART_Y: number) => {
     doc.setDrawColor(...HAT);
     doc.setLineWidth(0.3);
     doc.roundedRect(x, ky, KART_G, KART_Y, 2, 2, "S");
@@ -265,7 +305,7 @@ export function fiyatListesiPdfOlustur(
     const tw = KART_G - p * 2;
     let ty = ky + p + KART_FOTO + (fotoVar ? 5 : 3.5);
     yazi(8.8, true, METIN);
-    const ad = satirlar(k.ad, tw, 3);
+    const ad = satirlar(k.ad, tw, 10);
     doc.text(ad, x + p, ty);
     ty += 3.8 * ad.length;
     const alt = [k.marka, k.kod].filter(Boolean).map((v) => metin(v)).join(" · ");
@@ -274,10 +314,9 @@ export function fiyatListesiPdfOlustur(
       doc.text(satirlar(alt, tw, 1), x + p, ty + 0.3);
       ty += 3.4;
     }
-    const fiyatPayi = liste.fiyatGoster ? (liste.iskontoYuzde > 0 ? 14 : 11) : 3;
     if (k.aciklama) {
-      const kalan = ky + KART_Y - fiyatPayi - (ty + 0.8);
-      const enFazla = Math.floor(kalan / 3);
+      const kalan = ky + KART_Y - kartFiyatPayi - (ty + 0.8);
+      const enFazla = Math.min(KART_ACIKLAMA_SATIR, Math.floor((kalan + 0.05) / 3));
       if (enFazla >= 1) {
         yazi(6.8, false, METIN_60);
         doc.text(satirlar(k.aciklama, tw, enFazla), x + p, ty + 0.8);
@@ -298,7 +337,7 @@ export function fiyatListesiPdfOlustur(
     const tx = fotoVar ? SOL + LISTE_FOTO_G + 5 : SOL + 1;
     const tw = SAG - fiyatG - tx - 3;
     yazi(9.5, true, METIN);
-    const ad = satirlar(k.ad, tw, 3);
+    const ad = satirlar(k.ad, tw, 20);
     const alt = [k.marka, k.kod].filter(Boolean).map((v) => metin(v)).join(" · ");
     yazi(7.5, false, METIN_50);
     const altS = alt ? satirlar(alt, tw, 2) : [];
@@ -341,9 +380,13 @@ export function fiyatListesiPdfOlustur(
         bolumBasligi(ad);
       }
       for (let i = 0; i < grup.length; i += KART_SUTUN) {
-        yerAc(KART_Y);
-        for (let c = 0; c < KART_SUTUN && grup[i + c]; c++) kart(grup[i + c], SOL + c * (KART_G + KART_ARA), y);
-        y += KART_Y + KART_ARA;
+        const sira = grup.slice(i, i + KART_SUTUN);
+        // Uzun adlı / açıklamalı ürün varsa o sıradaki kartlar birlikte uzar (ad kesilmez)
+        const fazla = Math.max(0, ...sira.map(kartMetinYuksekligi)) - kartMetinAlani;
+        const h = KART_Y + Math.max(0, fazla);
+        yerAc(h);
+        sira.forEach((k, c) => kart(k, SOL + c * (KART_G + KART_ARA), y, h));
+        y += h + KART_ARA;
       }
       y += 2;
     }
