@@ -143,19 +143,70 @@ export default function FiyatListesiDuzenleyici({
 
   const guncelle = (key: number, alan: Partial<Satir>) => setSatirlar((s) => s.map((r) => (r.key === key ? { ...r, ...alan } : r)));
 
-  const katalogdanEkle = (u: KatalogUrunu) => {
-    let fiyat = u.listeFiyati;
-    let uyari: string | undefined;
-    if (u.paraBirimi !== paraBirimi) {
-      const kaynak = kurTL(u.paraBirimi);
-      const hedef = kurTL(paraBirimi);
-      if (kaynak && hedef) {
-        fiyat = Math.round(((u.listeFiyati * kaynak) / hedef) * 100) / 100;
-        uyari = `${flParaYaz(u.listeFiyati, u.paraBirimi)} TCMB efektif satış kuruyla (${kurlar?.tarih}) çevrildi`;
-      } else {
-        uyari = `Katalog fiyatı ${u.paraBirimi}; kur alınamadığı için çevrilmedi — fiyatı kontrol edin`;
-      }
+  // Katalog fiyatını liste para birimine çevirir (TCMB efektif satış)
+  const katalogFiyati = (u: KatalogUrunu): { fiyat: number; uyari?: string } => {
+    if (u.paraBirimi === paraBirimi) return { fiyat: u.listeFiyati };
+    const kaynak = kurTL(u.paraBirimi);
+    const hedef = kurTL(paraBirimi);
+    if (kaynak && hedef) {
+      return {
+        fiyat: Math.round(((u.listeFiyati * kaynak) / hedef) * 100) / 100,
+        uyari: `${flParaYaz(u.listeFiyati, u.paraBirimi)} TCMB efektif satış kuruyla (${kurlar?.tarih}) çevrildi`,
+      };
     }
+    return { fiyat: u.listeFiyati, uyari: `Katalog fiyatı ${u.paraBirimi}; kur alınamadığı için çevrilmedi — fiyatı kontrol edin` };
+  };
+
+  // --- TOPLU FİYAT GÜNCELLEME (aylık zam vb.) ---
+  const [zam, setZam] = useState("");
+  const [zamKapsam, setZamKapsam] = useState("__hepsi");
+  const [yuvarla, setYuvarla] = useState("0");
+  const [yedek, setYedek] = useState<{ satirlar: Satir[]; aciklama: string } | null>(null);
+  const bolumler = Array.from(new Set(satirlar.map((r) => r.bolum.trim()).filter(Boolean)));
+  const kapsamda = (r: Satir) => zamKapsam === "__hepsi" || r.bolum.trim() === zamKapsam;
+  // "5", "%5", "+2,5", "-5" → sayı (okunamazsa null)
+  const zamOrani = (() => {
+    let t = zam.trim().replace("%", "");
+    const eksi = t.startsWith("-");
+    t = t.replace(/^[+-]/, "");
+    const n = tutarOku(t);
+    return n === null ? null : eksi ? -n : n;
+  })();
+  const etkilenecek = satirlar.filter((r) => kapsamda(r) && sayiOku(r.fiyat) > 0).length;
+  const yuvarlaFiyat = (n: number) => {
+    const adim = Number(yuvarla);
+    return adim > 0 ? Math.max(adim, Math.round(n / adim) * adim) : Math.round(n * 100) / 100;
+  };
+  const fiyatMetni = (n: number) => String(n).replace(".", ",");
+
+  const zamUygula = () => {
+    if (zamOrani === null || zamOrani === 0 || zamOrani <= -100) return;
+    setYedek({ satirlar, aciklama: `%${zamOrani.toLocaleString("tr-TR")} ${zamOrani > 0 ? "zam" : "indirim"}` });
+    setSatirlar((s) =>
+      s.map((r) => {
+        const f = sayiOku(r.fiyat);
+        if (!kapsamda(r) || !(f > 0)) return r;
+        return { ...r, fiyat: fiyatMetni(yuvarlaFiyat(f * (1 + zamOrani / 100))), uyari: undefined };
+      })
+    );
+    setZam("");
+  };
+
+  const katalogBagli = satirlar.filter((r) => kapsamda(r) && r.urunId && urunler.some((u) => u.id === r.urunId)).length;
+  const katalogdanYenile = () => {
+    setYedek({ satirlar, aciklama: "katalog fiyatlarının yeniden alınması" });
+    setSatirlar((s) =>
+      s.map((r) => {
+        const u = r.urunId && kapsamda(r) ? urunler.find((x) => x.id === r.urunId) : undefined;
+        if (!u) return r;
+        const k = katalogFiyati(u);
+        return { ...r, fiyat: k.fiyat ? fiyatMetni(k.fiyat) : "", uyari: k.uyari };
+      })
+    );
+  };
+
+  const katalogdanEkle = (u: KatalogUrunu) => {
+    const { fiyat, uyari } = katalogFiyati(u);
     setSatirlar((s) => [
       ...s,
       {
@@ -340,6 +391,83 @@ export default function FiyatListesiDuzenleyici({
           + Katalogda olmayan ürünü elle ekle
         </button>
       </section>
+
+      {/* TOPLU FİYAT GÜNCELLEME */}
+      {satirlar.length > 0 && (
+        <section className="bg-yuzey border border-hat rounded-lg p-5 space-y-3">
+          <div>
+            <h2 className="font-display font-medium text-metin">Toplu Fiyat Güncelleme</h2>
+            <p className="text-xs text-metin/50 mt-0.5">
+              Aylık zam için fiyatları tek tek düzeltmeyin: yüzdeyi yazıp uygulayın. Önce listeyi &quot;Kopyala&quot; ile çoğaltırsanız eski ay
+              listesi de saklanır.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-4 gap-3 items-end">
+            <div>
+              <label className={etiket}>Zam % (indirim için eksi: -5)</label>
+              <input value={zam} onChange={(e) => setZam(e.target.value)} inputMode="decimal" placeholder="örn. 5 veya 2,5" className={kutu} />
+            </div>
+            <div>
+              <label className={etiket}>Hangi ürünlere</label>
+              <select value={zamKapsam} onChange={(e) => setZamKapsam(e.target.value)} className={kutu}>
+                <option value="__hepsi">Tüm liste</option>
+                {bolumler.map((b) => (
+                  <option key={b} value={b}>
+                    Bölüm: {b}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={etiket}>Yuvarlama</label>
+              <select value={yuvarla} onChange={(e) => setYuvarla(e.target.value)} className={kutu}>
+                <option value="0">Yok (kuruşlu)</option>
+                <option value="1">Tam sayıya</option>
+                <option value="5">5&apos;in katına</option>
+                <option value="10">10&apos;un katına</option>
+                <option value="50">50&apos;nin katına</option>
+                <option value="100">100&apos;ün katına</option>
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={zamUygula}
+              disabled={zamOrani === null || zamOrani === 0 || zamOrani <= -100 || etkilenecek === 0}
+              className="focus-ring bg-sicak-dim text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {zamOrani && zamOrani > -100 ? `${etkilenecek} ürüne %${zamOrani.toLocaleString("tr-TR")} uygula` : "Uygula"}
+            </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 text-xs">
+            {katalogBagli > 0 && (
+              <button
+                type="button"
+                onClick={katalogdanYenile}
+                className="focus-ring border border-soguk/40 text-soguk-dim rounded-md px-3 py-1.5 hover:bg-soguk-light"
+                title="Ürün kataloğundaki fiyatları güncellediyseniz (ör. Excel ile), listedeki fiyatları katalogdan yeniden alır"
+              >
+                ↻ Katalog fiyatlarını yeniden al ({katalogBagli} ürün)
+              </button>
+            )}
+            {yedek && (
+              <span className="flex items-center gap-2 bg-sicak-light text-sicak-dim rounded-md px-3 py-1.5">
+                Son işlem: {yedek.aciklama}.
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSatirlar(yedek.satirlar);
+                    setYedek(null);
+                  }}
+                  className="focus-ring font-semibold underline"
+                >
+                  ↶ Geri al
+                </button>
+              </span>
+            )}
+            <span className="text-metin/40">Değişiklikler &quot;Listeyi Kaydet&quot; ile kalıcı olur.</span>
+          </div>
+        </section>
+      )}
 
       {/* SATIRLAR */}
       <section className="space-y-3">
