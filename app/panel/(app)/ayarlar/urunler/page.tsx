@@ -6,6 +6,7 @@ import HizliAramaListesi from "@/components/HizliAramaListesi";
 import UrunExcelYukle from "@/components/UrunExcelYukle";
 import Link from "next/link";
 import KaydetButonu from "@/components/KaydetButonu";
+import UrunFotografi from "@/components/UrunFotografi";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export default async function UrunlerSayfasi() {
         Buraya eklediğin ürünler (örn. VRF liste fiyatların), teklif
         hazırlarken bir kalem için arama kutusuna yazıp seçebiliyorsun —
         açıklama, birim fiyat ve marka otomatik dolar, sonra istersen
-        düzenlersin.
+        düzenlersin. Ürün fotoğrafı (Foto sütunu) fiyat listelerinde kullanılır.
       </p>
 
       <UrunExcelYukle />
@@ -85,7 +86,7 @@ export default async function UrunlerSayfasi() {
 
       {/* Ürün kataloğu: sayfa başına 20 ürün; arama tüm katalogda yapılır */}
       <div className="overflow-x-auto">
-        <div className="min-w-[44rem]">
+        <div className="min-w-[48rem]">
           <HizliAramaListesi
             yerTutucu="Hızlı ara: ürün kodu, adı, marka…"
             bosMetin="Henüz ürün eklenmedi."
@@ -93,7 +94,8 @@ export default async function UrunlerSayfasi() {
             sayfaBasina={20}
             bosluk="bg-yuzey border border-hat rounded-b-lg divide-y divide-hat"
             baslik={
-              <div className="grid grid-cols-[6rem_1fr_7rem_4rem_8rem_2.5rem] gap-3 items-center px-5 py-3 text-xs text-metin/50 font-medium bg-yuzey border border-b-0 border-hat rounded-t-lg">
+              <div className="grid grid-cols-[3rem_6rem_1fr_7rem_4rem_8rem_2.5rem] gap-3 items-center px-5 py-3 text-xs text-metin/50 font-medium bg-yuzey border border-b-0 border-hat rounded-t-lg">
+                <span>Foto</span>
                 <span>Kod</span>
                 <span>Ürün Adı</span>
                 <span>Marka</span>
@@ -106,7 +108,8 @@ export default async function UrunlerSayfasi() {
               id: u.id,
               aramaMetni: [u.kod, u.ad, u.marka?.ad, u.birim, u.paraBirimi].filter(Boolean).join(" "),
               icerik: (
-                <div className="grid grid-cols-[6rem_1fr_7rem_4rem_8rem_2.5rem] gap-3 items-center px-5 py-3 text-sm">
+                <div className="grid grid-cols-[3rem_6rem_1fr_7rem_4rem_8rem_2.5rem] gap-3 items-center px-5 py-3 text-sm">
+                  <UrunFotografi urunId={u.id} gorselId={u.gorselId} ad={u.ad} />
                   <span className="font-mono text-metin/50 truncate">{u.kod ?? "—"}</span>
                   <span className="text-metin break-words">{u.ad}</span>
                   <span className="text-metin/60 truncate">{u.marka?.ad ?? "—"}</span>

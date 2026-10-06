@@ -213,6 +213,8 @@ model Urun {
   
   aciklama            String?
   createdAt           DateTime      @default(now())
+  gorselId            String?       // Ürün fotoğrafı (Gorsel tablosu) — fiyat listelerinde kullanılır
+  fiyatListesiKalemleri FiyatListesiKalem[]
 
   // STOK İLİŞKİLERİ
   stokHareketleri     StokHareket[]
@@ -220,6 +222,54 @@ model Urun {
   seriNolar           UrunSeriNo[]
 
   @@unique([kod])
+}
+
+// Yüklenen fotoğraflar (ürün ve fiyat listesi satırları). Tarayıcıda küçültülüp JPEG olarak gelir.
+model Gorsel {
+  id        String   @id @default(cuid())
+  veri      Bytes
+  tip       String   @default("image/jpeg")
+  genislik  Int      @default(0)
+  yukseklik Int      @default(0)
+  boyut     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+// Müşterilere PDF olarak gönderilen fotoğraflı fiyat listeleri
+model FiyatListesi {
+  id               String              @id @default(cuid())
+  baslik           String
+  aciklama         String?
+  paraBirimi       String              @default("TRY")
+  kdvDahil         Boolean             @default(false)
+  iskontoYuzde     Float               @default(0)
+  fiyatGoster      Boolean             @default(true)
+  duzen            String              @default("KART") // KART (2 sütun) | LISTE (satır satır)
+  gecerlilikTarihi DateTime?
+  notlar           String?
+  olusturanAdi     String              @default("")
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  kalemler         FiyatListesiKalem[]
+}
+
+model FiyatListesiKalem {
+  id       String       @id @default(cuid())
+  listeId  String
+  liste    FiyatListesi @relation(fields: [listeId], references: [id], onDelete: Cascade)
+  sira     Int          @default(0)
+  bolum    String       @default("")
+  urunId   String?      // Katalogdan eklendiyse (fotoğraf yoksa ürünün fotoğrafı kullanılır)
+  urun     Urun?        @relation(fields: [urunId], references: [id], onDelete: SetNull)
+  ad       String
+  kod      String?
+  marka    String?
+  aciklama String?
+  birim    String       @default("Adet")
+  fiyat    Float        @default(0)
+  gorselId String?      // Bu satıra özel fotoğraf
+
+  @@index([listeId])
 }
 
 model TeklifRevizyon {

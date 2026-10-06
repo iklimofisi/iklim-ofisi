@@ -25,6 +25,7 @@ const menuTemel = [
   { href: "/panel/projeler", label: "Projeler" },
   { href: "/panel/ziyaretler", label: "Görüşmeler & Ziyaretler" },
   { href: "/panel/teklifler", label: "Teklifler" },
+  { href: "/panel/fiyat-listeleri", label: "Fiyat Listeleri" },
   { href: "/panel/kesif", label: "Keşif" },
   { href: "/panel/siparisler", label: "Siparişler" },
   { href: "/panel/cari", label: "Cari Hesap" },

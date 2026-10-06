@@ -23,6 +23,7 @@ import { donusumKalemleri } from "@/lib/satinalma-hesap";
 import { randomUUID, randomBytes } from "crypto";
 import { gecerliTur } from "@/lib/gorusme";
 import { gecerliRedNedeni } from "@/lib/teklif-durum";
+import { flKalemleriOku, metinAl } from "@/lib/fiyat-listesi";
 
 // --- Yetki kontrolü + işlem kaydı ---
 // Her sunucu işleminin ilk satırında çağrılır: giriş yapılmamışsa işlem yapılmaz
@@ -1476,6 +1477,129 @@ export async function urunlerTumunuSil() {
   if (giren.rol !== "ADMIN") return;
   await prisma.urun.deleteMany({});
   revalidatePath("/panel/ayarlar/urunler");
+}
+
+// Ürün kataloğunda ürün fotoğrafı ekleme / değiştirme / kaldırma
+export async function urunGorselAyarla(urunId: string, gorselId: string | null) {
+  await yetki("urunGorselAyarla", { urunId, gorselId });
+  if (!urunId) return;
+  if (gorselId) {
+    const var_ = await prisma.gorsel.findUnique({ where: { id: gorselId }, select: { id: true } });
+    if (!var_) return;
+  }
+  await prisma.urun.update({ where: { id: urunId }, data: { gorselId: gorselId || null } });
+  revalidatePath("/panel/ayarlar/urunler");
+}
+
+// --- FİYAT LİSTELERİ ---
+export async function fiyatListesiOlustur(formData: FormData) {
+  const giren = await yetki("fiyatListesiOlustur", formData);
+  const baslik = metinAl(formData.get("baslik"), 200);
+  if (!baslik) return;
+  const liste = await prisma.fiyatListesi.create({
+    data: { baslik, paraBirimi: paraBirimiDogrula(formData.get("paraBirimi")), olusturanAdi: giren?.ad ?? "" },
+    select: { id: true },
+  });
+  revalidatePath("/panel/fiyat-listeleri");
+  redirect(`/panel/fiyat-listeleri/${liste.id}`);
+}
+
+export async function fiyatListesiKaydet(formData: FormData) {
+  await yetki("fiyatListesiKaydet", formData);
+  const id = String(formData.get("listeId") ?? "");
+  const baslik = metinAl(formData.get("baslik"), 200);
+  if (!id) return;
+  if (!baslik) redirect(`/panel/fiyat-listeleri/${id}?mesaj=fiyat-listesi-eksik`);
+
+  const kalemler = flKalemleriOku(String(formData.get("kalemler") ?? ""));
+  // Silinmiş ürün / fotoğraf bağlantıları kayda geçmesin
+  const urunIdleri = Array.from(new Set(kalemler.map((k) => k.urunId).filter(Boolean))) as string[];
+  const mevcutUrunler = new Set(
+    urunIdleri.length ? (await prisma.urun.findMany({ where: { id: { in: urunIdleri } }, select: { id: true } })).map((u) => u.id) : []
+  );
+  const iskonto = parseSayi(formData.get("iskontoYuzde"));
+  const gecerlilik = String(formData.get("gecerlilikTarihi") ?? "");
+  const duzen = String(formData.get("duzen") ?? "") === "LISTE" ? "LISTE" : "KART";
+
+  await prisma.$transaction([
+    prisma.fiyatListesi.update({
+      where: { id },
+      data: {
+        baslik,
+        aciklama: metinAl(formData.get("aciklama"), 3000) || null,
+        paraBirimi: paraBirimiDogrula(formData.get("paraBirimi")),
+        kdvDahil: formData.get("kdvDahil") === "evet",
+        iskontoYuzde: Math.min(100, Math.max(0, iskonto)),
+        fiyatGoster: formData.get("fiyatGoster") === "evet",
+        duzen,
+        gecerlilikTarihi: /^\d{4}-\d{2}-\d{2}$/.test(gecerlilik) ? new Date(`${gecerlilik}T12:00:00Z`) : null,
+        notlar: metinAl(formData.get("notlar"), 5000) || null,
+      },
+    }),
+    prisma.fiyatListesiKalem.deleteMany({ where: { listeId: id } }),
+    prisma.fiyatListesiKalem.createMany({
+      data: kalemler.map((k, sira) => ({
+        listeId: id,
+        sira,
+        bolum: k.bolum,
+        urunId: k.urunId && mevcutUrunler.has(k.urunId) ? k.urunId : null,
+        ad: k.ad,
+        kod: k.kod,
+        marka: k.marka,
+        aciklama: k.aciklama,
+        birim: k.birim,
+        fiyat: k.fiyat,
+        gorselId: k.gorselId,
+      })),
+    }),
+  ]);
+
+  revalidatePath("/panel/fiyat-listeleri");
+  revalidatePath(`/panel/fiyat-listeleri/${id}`);
+  redirect(`/panel/fiyat-listeleri/${id}?mesaj=fiyat-listesi-kaydedildi`);
+}
+
+export async function fiyatListesiKopyala(id: string) {
+  const giren = await yetki("fiyatListesiKopyala", { id });
+  const kaynak = await prisma.fiyatListesi.findUnique({ where: { id }, include: { kalemler: { orderBy: { sira: "asc" } } } });
+  if (!kaynak) return;
+  const yeni = await prisma.fiyatListesi.create({
+    data: {
+      baslik: `${kaynak.baslik} (kopya)`.slice(0, 200),
+      aciklama: kaynak.aciklama,
+      paraBirimi: kaynak.paraBirimi,
+      kdvDahil: kaynak.kdvDahil,
+      iskontoYuzde: kaynak.iskontoYuzde,
+      fiyatGoster: kaynak.fiyatGoster,
+      duzen: kaynak.duzen,
+      gecerlilikTarihi: kaynak.gecerlilikTarihi,
+      notlar: kaynak.notlar,
+      olusturanAdi: giren?.ad ?? "",
+      kalemler: {
+        create: kaynak.kalemler.map((k) => ({
+          sira: k.sira,
+          bolum: k.bolum,
+          urunId: k.urunId,
+          ad: k.ad,
+          kod: k.kod,
+          marka: k.marka,
+          aciklama: k.aciklama,
+          birim: k.birim,
+          fiyat: k.fiyat,
+          gorselId: k.gorselId,
+        })),
+      },
+    },
+    select: { id: true },
+  });
+  revalidatePath("/panel/fiyat-listeleri");
+  redirect(`/panel/fiyat-listeleri/${yeni.id}?mesaj=fiyat-listesi-kopyalandi`);
+}
+
+export async function fiyatListesiSil(id: string) {
+  await yetki("fiyatListesiSil", { id });
+  await prisma.fiyatListesi.delete({ where: { id } });
+  revalidatePath("/panel/fiyat-listeleri");
 }
 
 type UrunSatiriSonuc =

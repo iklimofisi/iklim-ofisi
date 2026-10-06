@@ -21,6 +21,8 @@ const MESAJLAR: Record<string, string> = {
   "sozlesme-kalemler": "Kalemler tekliften yeniden alındı.",
   "sozlesme-silindi": "Sözleşme taslağı silindi.",
   "paylasim-olusturuldu": "Teklif linki oluşturuldu. Şimdi WhatsApp ile gönderebilirsiniz.",
+  "fiyat-listesi-kaydedildi": "Fiyat listesi kaydedildi.",
+  "fiyat-listesi-kopyalandi": "Fiyat listesi kopyalandı. Şu an kopyayı düzenliyorsunuz.",
   "paylasim-iptal": "Teklif linki iptal edildi; eski link artık açılmaz.",
   "eposta-test-ok": "Deneme e-postası gönderildi. Gelen kutunuzu (ve Spam klasörünü) kontrol edin.",
 };
@@ -29,6 +31,7 @@ const MESAJLAR: Record<string, string> = {
 const HATALAR: Record<string, string> = {
   "eposta-hatasi": "E-posta GÖNDERİLEMEDİ. Tekrar deneyin; sürerse nedeni Ayarlar → E-posta Durumu bölümünde görünür.",
   "eposta-test-hata": "Deneme e-postası GÖNDERİLEMEDİ. Nedeni aşağıdaki listede yazıyor.",
+  "fiyat-listesi-eksik": "Fiyat listesi KAYDEDİLMEDİ: liste adı boş olamaz.",
   "teklif-eksik": "Teklif KAYDEDİLMEDİ: müşteri, başlık veya en az bir açıklamalı kalem eksik.",
   "teklif-kayit-hatasi": "Teklif KAYDEDİLEMEDİ. Nedeni İşlem Geçmişi'nde \"Teklif kaydı BAŞARISIZ\" satırında yazıyor.",
 };

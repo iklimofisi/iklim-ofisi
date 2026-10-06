@@ -30,6 +30,9 @@ const SILME_KAYNAKLARI: Record<string, { model: string; include?: Record<string,
   teslimKaydiSil: { model: "teslimKaydi" },
   satinalmaTeklifiSil: { model: "satinalmaTeklifi", include: { kalemler: true } },
   sozlesmeSil: { model: "sozlesme" },
+  fiyatListesiSil: { model: "fiyatListesi", include: { kalemler: true } },
+  // Kalemler yeniden yazıldığı için düzenlemeden önceki hâl de saklanır
+  fiyatListesiKaydet: { model: "fiyatListesi", include: { kalemler: true } },
   // Kalemler yeniden yazıldığı için düzenlemeden önceki hâl de saklanır
   satinalmaTeklifiGuncelle: { model: "satinalmaTeklifi", include: { kalemler: true } },
   kesifSil: { model: "kesifFormu" },
@@ -89,6 +92,7 @@ const HEDEF_ANAHTARLARI = [
   "kesifId",
   "urunId",
   "hareketId",
+  "listeId",
   "id",
 ];
 
