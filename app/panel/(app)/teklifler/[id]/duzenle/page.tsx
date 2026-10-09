@@ -6,6 +6,7 @@ import { getTcmbKurlari } from "@/lib/kur";
 import MusteriYetkiliSecici from "@/components/MusteriYetkiliSecici";
 import Link from "next/link";
 import SablonSecici from "@/components/SablonSecici";
+import { ozelNotlariOku } from "@/lib/sablon";
 import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
@@ -179,7 +180,7 @@ export default async function TeklifDuzenle({
           </span>
         </label>
 
-        <SablonSecici sablonlar={sablonlar} seciliIdler={[...seciliSablonIdleri]} />
+        <SablonSecici sablonlar={sablonlar} seciliIdler={[...seciliSablonIdleri]} ozelNotlar={ozelNotlariOku(teklif.ozelNotlar)} />
 
         <div className="flex items-center justify-end border-t border-hat pt-4">
           <KaydetButonu

@@ -32,6 +32,8 @@ const ISLEM_ADI: Record<string, string> = {
   fiyatListesiKopyala: "Fiyat listesini kopyaladı",
   fiyatListesiSil: "Fiyat listesini sildi",
   urunGorselAyarla: "Ürün fotoğrafını değiştirdi",
+  sablonHizliEkle: "Teklif ekranından hazır not ekledi",
+  sablonIcerikGuncelle: "Hazır not metnini güncelledi",
   teklifReddet: "Teklifi reddedildi yaptı (neden seçti)",
   teklifMusteriOnayi: "✅ Müşteri teklifi linkten ONAYLADI",
   teklifTakipNotuGuncelle: "Teklif takip notu yazdı",

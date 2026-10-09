@@ -9,7 +9,7 @@ import TeklifDurumSecici from "@/components/TeklifDurumSecici";
 import { getSirketAyarlari } from "@/lib/sirket";
 import TeklifEpostaGonderModal from "@/components/TeklifEpostaGonderModal"; // MODAL İMPORT EDİLDİ
 import { musteriToplami, ilkHazirlanmaTarihi, musteriTeklifTarihi, kosulCumlesi, tarihYaz, bolumToplamlari } from "@/lib/teklif-hesap";
-import { sablonlariGrupla } from "@/lib/sablon";
+import { sablonlariGrupla, notlariUygula } from "@/lib/sablon";
 import { ISTIRAK_METNI } from "@/lib/kurumsal";
 import TeklifWhatsapp from "@/components/TeklifWhatsapp";
 import GorusmeFormu from "@/components/GorusmeFormu";
@@ -424,7 +424,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
         {teklif.sablonlar.length > 0 && (
           <div className="grid sm:grid-cols-2 gap-x-10 gap-y-8 mb-12 text-sm">
             {/* Müşteriye yalnızca grup başlığı gider ("Ödeme Koşulları"); not adı/kodu ("Ç-9") gösterilmez */}
-            {sablonlariGrupla(teklif.sablonlar).map((g) => (
+            {sablonlariGrupla(notlariUygula(teklif.sablonlar, teklif.ozelNotlar)).map((g) => (
               // Yazdırırken başlık ile açıklaması ayrı sayfalara bölünmesin
               <div key={g.grup} className="break-inside-avoid">
                 <p className="font-medium text-metin mb-2 break-after-avoid">{g.grup}</p>

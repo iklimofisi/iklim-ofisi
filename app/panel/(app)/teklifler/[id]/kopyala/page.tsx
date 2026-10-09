@@ -7,6 +7,7 @@ import MusteriYetkiliSecici from "@/components/MusteriYetkiliSecici";
 import HizliMusteriEkleModal from "@/components/HizliMusteriEkleModal";
 import Link from "next/link";
 import SablonSecici from "@/components/SablonSecici";
+import { ozelNotlariOku } from "@/lib/sablon";
 import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
@@ -149,7 +150,7 @@ export default async function TeklifKopyala({
           <span className="font-medium text-metin">PDF Çıktısında Tüm Kalem Fiyatlarını Gizle</span>
         </label>
 
-        <SablonSecici sablonlar={sablonlar} seciliIdler={[...seciliSablonIdleri]} />
+        <SablonSecici sablonlar={sablonlar} seciliIdler={[...seciliSablonIdleri]} ozelNotlar={ozelNotlariOku(kaynak.ozelNotlar)} />
 
         <div className="flex items-center justify-end border-t border-hat pt-4">
           <KaydetButonu

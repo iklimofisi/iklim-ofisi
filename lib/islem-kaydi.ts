@@ -24,6 +24,8 @@ const SILME_KAYNAKLARI: Record<string, { model: string; include?: Record<string,
   cariHareketSil: { model: "cariHareket" },
   tedarikciHareketSil: { model: "tedarikciHareket" },
   sablonSil: { model: "teklifSablon" },
+  // Hazır not metni değişmeden önceki hâli saklanır
+  sablonIcerikGuncelle: { model: "teklifSablon" },
   kullaniciSil: { model: "kullanici" },
   siparisSil: { model: "siparis", include: { sevkiyatlar: true, teslimler: true } },
   sevkiyatSil: { model: "sevkiyatKaydi" },

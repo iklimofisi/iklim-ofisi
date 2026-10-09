@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { sozlesmeOlustur, sozlesmeKaydet, sozlesmeKalemleriYenile, sozlesmeSil } from "@/lib/actions";
-import { sablonlariGrupla } from "@/lib/sablon";
+import { sablonlariGrupla, notlariUygula } from "@/lib/sablon";
 import { suankiKullanici } from "@/lib/oturum";
 import {
   kalemleriOku,
@@ -61,7 +61,7 @@ export default async function SozlesmeSayfasi({ params }: { params: { id: string
   // HENÜZ SÖZLEŞME YOK → OLUŞTURMA
   // ---------------------------------------------------------------------------
   if (!sozlesme) {
-    const gruplar = sablonlariGrupla(teklif.sablonlar);
+    const gruplar = sablonlariGrupla(notlariUygula(teklif.sablonlar, teklif.ozelNotlar));
     return (
       <div className="max-w-3xl">
         {ust}

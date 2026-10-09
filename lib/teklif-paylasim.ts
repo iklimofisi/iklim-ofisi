@@ -33,6 +33,7 @@ const BELGE_ALANLARI = {
   olusturanKullanici: { select: { ad: true, email: true, telefon: true } },
   revizyonlar: { select: { tarih: true } },
   sablonlar: { orderBy: { sira: "asc" as const } },
+  ozelNotlar: true,
   musteriId: true,
   projeId: true,
   musteriOnayAdi: true,

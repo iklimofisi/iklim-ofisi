@@ -16,7 +16,7 @@ function htmlKacir(m: string) {
 import { getSirketAyarlari, SIRKET_ETIKETI } from "@/lib/sirket";
 import { teklifPdfOlustur } from "@/lib/pdf-olustur";
 import { musteriToplami } from "@/lib/teklif-hesap";
-import { sablonGrubu, sablonlariGrupla } from "@/lib/sablon";
+import { sablonGrubu, sablonlariGrupla, notlariUygula, ozelNotlariOku } from "@/lib/sablon";
 import { tekliftenKalemler, maddeleriOku, STANDART_MADDELER, PARA_BIRIMLERI } from "@/lib/sozlesme";
 import { tutarOku } from "@/lib/toplam-dagit";
 import { donusumKalemleri } from "@/lib/satinalma-hesap";
@@ -186,6 +186,17 @@ async function yetkiliDogrula(yetkiliId: string, musteriId: string): Promise<str
   return y && y.musteriId === musteriId ? yetkiliId : null;
 }
 
+// Formdan gelen "teklife özel not metinleri"ni okur; yalnızca seçili notlar için saklanır
+function ozelNotlarVerisi(formData: FormData, sablonIds: string[]): string | null {
+  const ham = ozelNotlariOku(String(formData.get("ozelNotlar") ?? ""));
+  const secili = new Set(sablonIds);
+  const sonuc: Record<string, string> = {};
+  for (const [id, metin] of Object.entries(ham)) {
+    if (secili.has(id)) sonuc[id] = metin.slice(0, 10000);
+  }
+  return Object.keys(sonuc).length ? JSON.stringify(sonuc) : null;
+}
+
 // Kalemi veritabanına yazılacak alanlara indirger (formdaki eskiId alanı yazılmaz)
 // "sira": formdaki sırası — kalemler her yerde bu sırayla listelenir
 function kalemVerisi(k: ReturnType<typeof kalemleriOku>[number], sira: number) {
@@ -258,6 +269,7 @@ export async function teklifEkle(formData: FormData) {
       ilkTarih: simdi, // İlk Oluşturulma Tarihi Saklanır
       kalemler: { create: kalemler.map((k, i) => kalemVerisi(k, i)) },
       sablonlar: { connect: sablonIds.map((id) => ({ id })) },
+      ozelNotlar: ozelNotlarVerisi(formData, sablonIds),
     },
   });
   } catch (hata) {
@@ -350,6 +362,8 @@ export async function teklifGuncelle(formData: FormData) {
           kdvOrani: mevcut.kdvOrani,
           kdvDahil: mevcut.kdvDahil,
           kalemler: mevcut.kalemler.map(({ _count, ...k }) => k),
+          notlar: mevcut.sablonlar.map((n) => n.id),
+          ozelNotlar: mevcut.ozelNotlar,
         }),
       },
     }),
@@ -380,6 +394,7 @@ export async function teklifGuncelle(formData: FormData) {
         tarih: new Date(), // Son Güncelleme / Revizyon Tarihi Olur
         revizyonNo: mevcut.revizyonNo + 1,
         sablonlar: { set: sablonIds.map((id) => ({ id })) },
+        ozelNotlar: ozelNotlarVerisi(formData, sablonIds),
       },
     }),
   ]);
@@ -770,6 +785,39 @@ export async function sablonGuncelle(formData: FormData) {
   revalidatePath("/panel/ayarlar");
   revalidatePath("/panel/teklifler");
   redirect(`/panel/ayarlar?mesaj=sablon-guncellendi#sablon-${id}`);
+}
+
+// --- TEKLİF EKRANINDAN HAZIR NOT İŞLEMLERİ (sayfa yenilenmeden) ---
+// Yeni hazır not ekler ve eklenen notu döndürür (teklif formunda hemen seçilir)
+export async function sablonHizliEkle(veri: { baslik: string; grupBaslik: string; icerik: string }) {
+  await yetki("sablonHizliEkle", veri);
+  const baslik = String(veri?.baslik ?? "").trim().slice(0, 200);
+  const grupGirdi = String(veri?.grupBaslik ?? "").trim().slice(0, 200);
+  const icerik = String(veri?.icerik ?? "").trim().slice(0, 10000);
+  if (!baslik || !icerik) return null;
+  const grupBaslik = sablonGrubu({ baslik, grupBaslik: grupGirdi });
+  const son = await prisma.teklifSablon.findFirst({ orderBy: { sira: "desc" }, select: { sira: true } });
+  const yeni = await prisma.teklifSablon.create({
+    data: { baslik, grupBaslik, icerik, sira: (son?.sira ?? 0) + 1 },
+    select: { id: true, baslik: true, grupBaslik: true, icerik: true },
+  });
+  revalidatePath("/panel/ayarlar");
+  return yeni;
+}
+
+// Hazır notun metnini kalıcı olarak günceller (o notu kullanan tüm tekliflerde değişir)
+export async function sablonIcerikGuncelle(id: string, icerik: string) {
+  await yetki("sablonIcerikGuncelle", { id, icerik });
+  const metin = String(icerik ?? "").trim().slice(0, 10000);
+  if (!id || !metin) return null;
+  const s = await prisma.teklifSablon.update({
+    where: { id },
+    data: { icerik: metin },
+    select: { id: true, baslik: true, grupBaslik: true, icerik: true },
+  });
+  revalidatePath("/panel/ayarlar");
+  revalidatePath("/panel/teklifler");
+  return s;
 }
 
 export async function sablonSil(id: string) {
@@ -2318,7 +2366,7 @@ export async function sozlesmeOlustur(formData: FormData) {
 
   // Seçilen teklif notu grupları sözleşme maddesi olur, ardından standart maddeler
   const secilenler = new Set(formData.getAll("not").map(String));
-  const notMaddeleri = sablonlariGrupla(teklif.sablonlar)
+  const notMaddeleri = sablonlariGrupla(notlariUygula(teklif.sablonlar, teklif.ozelNotlar))
     .filter((g) => secilenler.has(g.grup))
     .map((g) => ({ baslik: g.grup, icerik: g.notlar.map((n) => n.icerik).join("\n\n") }));
 

@@ -2,7 +2,7 @@ import { jsPDF } from "jspdf";
 import { LIBERATION_SANS_NORMAL, LIBERATION_SANS_KALIN } from "@/lib/pdf-fontlari";
 import { PDF_LOGO_JPEG_BASE64, PDF_LOGO_ORAN } from "@/lib/pdf-logo";
 import { musteriToplami, ilkHazirlanmaTarihi, musteriTeklifTarihi, kosulCumlesi, bolumToplamlari } from "@/lib/teklif-hesap";
-import { sablonlariGrupla } from "@/lib/sablon";
+import { sablonlariGrupla, notlariUygula } from "@/lib/sablon";
 import { ISTIRAK_METNI } from "@/lib/kurumsal";
 
 // -----------------------------------------------------------------------------
@@ -358,7 +358,9 @@ export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer
   // ---------------------------------------------------------------------------
   // 6. TEKLİF NOTLARI — iki sütun; müşteriye yalnızca grup başlığı gider
   // ---------------------------------------------------------------------------
-  const gruplar = sablonlariGrupla((teklif.sablonlar ?? []) as { baslik: string; grupBaslik?: string | null; icerik: string }[]);
+  const gruplar = sablonlariGrupla(
+    notlariUygula((teklif.sablonlar ?? []) as { id: string; baslik: string; grupBaslik?: string | null; icerik: string }[], teklif.ozelNotlar)
+  );
   const SUTUN_GEN = (GENISLIK - 10) / 2;
   const NOT_SATIR = 3.9;
   const notBlogu = (g: { grup: string; notlar: { icerik: string }[] }) => {

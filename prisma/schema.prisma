@@ -123,6 +123,8 @@ model Teklif {
   musteriOnayRevizyon      Int?              // Onaylandığı andaki revizyon no
   musteriOnayTutar         String?           // Onaylandığı andaki genel toplam (yazıyla: "64.000,00 $ + KDV")
   musteriOnayIp            String?
+  // Bu teklife özel düzenlenmiş not metinleri: {"<notId>": "metin"} (hazır not değişmez)
+  ozelNotlar               String?
 }
 
 // Teklifin müşteriye gönderilen gizli linki (iklimofisi.com/t/<anahtar>).
