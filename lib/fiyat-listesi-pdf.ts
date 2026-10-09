@@ -187,10 +187,12 @@ export function fiyatListesiPdfOlustur(
   yazi(12.5, true, METIN);
   doc.text(unvan, bx, sy);
   sy += 4.3;
-  yazi(7, false, METIN_60);
-  const ist: string[] = doc.splitTextToSize(ISTIRAK_METNI, 105);
-  doc.text(ist, bx, sy);
-  sy += 3.4 * ist.length + 0.4;
+  if (ISTIRAK_METNI) {
+    yazi(7, false, METIN_60);
+    const ist: string[] = doc.splitTextToSize(ISTIRAK_METNI, 105);
+    doc.text(ist, bx, sy);
+    sy += 3.4 * ist.length + 0.4;
+  }
   yazi(7.5, false, METIN_50);
   if (sirket.adres) {
     const a: string[] = doc.splitTextToSize(metin(sirket.adres), 105);

@@ -114,7 +114,7 @@ export default async function TeklifLinki({
           <Image src="/logo-icon.png" alt={sirket.unvan} width={44} height={44} />
           <div className="min-w-0">
             <p className="font-bold text-slate-800 leading-tight">{sirket.unvan}</p>
-            <p className="text-[11px] text-slate-500">{ISTIRAK_METNI}</p>
+            {ISTIRAK_METNI && <p className="text-[11px] text-slate-500">{ISTIRAK_METNI}</p>}
           </div>
         </div>
 

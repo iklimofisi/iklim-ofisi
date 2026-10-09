@@ -82,7 +82,7 @@ export default async function SozlesmeYazdir({ params }: { params: { id: string 
             <Image src="/logo-icon.png" alt={sirket.unvan} width={40} height={40} />
             <div>
               <p className="font-display font-bold text-base">{sirket.unvan}</p>
-              <p className="text-[10.5px] text-metin/60">{ISTIRAK_METNI}</p>
+              {ISTIRAK_METNI && <p className="text-[10.5px] text-metin/60">{ISTIRAK_METNI}</p>}
             </div>
           </div>
           <div className="text-right text-[11px] text-metin/70 whitespace-nowrap">

@@ -119,10 +119,12 @@ export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer
   doc.text(metin(sirket.unvan || "İklim Ofisi"), bx, sy);
   sy += 4.3;
   // Bağlı olunan şirket (teklif sayfasındaki gibi, unvanın hemen altında)
-  yazi(7, false, METIN_60);
-  const istirak: string[] = doc.splitTextToSize(ISTIRAK_METNI, 110);
-  doc.text(istirak, bx, sy);
-  sy += 3.4 * istirak.length + 0.4;
+  if (ISTIRAK_METNI) {
+    yazi(7, false, METIN_60);
+    const istirak: string[] = doc.splitTextToSize(ISTIRAK_METNI, 110);
+    doc.text(istirak, bx, sy);
+    sy += 3.4 * istirak.length + 0.4;
+  }
   if (sirket.slogan) {
     yazi(7.5, false, METIN_60);
     doc.text(metin(sirket.slogan), bx, sy);

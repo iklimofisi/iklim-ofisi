@@ -40,9 +40,11 @@ export default async function HakkimizdaPage() {
             <p className="text-base text-slate-600 leading-relaxed pt-2">
               {sirket.unvan}; iklimlendirme, VRF merkezi sistemler, ısı pompaları, havalandırma ve mekanik tesisat alanında mühendislik kökenli yönetim anlayışıyla kurulmuştur. Teorik hesabı 20 yılı aşan şantiye tecrübesiyle birleştirerek projeniz için en doğru iklimi oluşturuyoruz.
             </p>
-            <p className="text-sm font-semibold text-slate-700 border-l-4 border-teal-600 pl-4 py-1">
-              İklim Ofisi, {ISTIRAK_METNI}
-            </p>
+            {ISTIRAK_METNI && (
+              <p className="text-sm font-semibold text-slate-700 border-l-4 border-teal-600 pl-4 py-1">
+                İklim Ofisi, {ISTIRAK_METNI}
+              </p>
+            )}
           </div>
 
           {/* 2. KURUCU ORTAKLAR / YÖNETİM MİMARİSİ */}

@@ -13,7 +13,7 @@ export default async function Footer() {
         <div>
           <h3 className="font-bold text-base mb-1 text-white">{sirket.unvan}</h3>
           {sirket.slogan && <p className="text-slate-400 text-xs">{sirket.slogan}</p>}
-          <p className="text-slate-500 text-xs mt-3 leading-relaxed">{ISTIRAK_METNI}</p>
+          {ISTIRAK_METNI && <p className="text-slate-500 text-xs mt-3 leading-relaxed">{ISTIRAK_METNI}</p>}
         </div>
 
         <div>
