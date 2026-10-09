@@ -55,6 +55,15 @@ export const metadata: Metadata = {
     ],
   },
   
+  // ARAMA MOTORU DOĞRULAMA KODLARI (Google Search Console, Bing, Yandex)
+  // Kodlar Vercel → Settings → Environment Variables'a yazılır; kod değişikliği gerekmez.
+  // Tanımlı değilse sayfaya hiçbir şey eklenmez.
+  verification: {
+    ...(process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : {}),
+    ...(process.env.YANDEX_VERIFICATION ? { yandex: process.env.YANDEX_VERIFICATION } : {}),
+    ...(process.env.BING_SITE_VERIFICATION ? { other: { "msvalidate.01": process.env.BING_SITE_VERIFICATION } } : {}),
+  },
+
   // GOOGLE ROBOTS İZİNLERİ
   robots: {
     index: true,
