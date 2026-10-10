@@ -7,11 +7,11 @@ const links = [
   { href: "/hakkimizda", label: "Hakkımızda" },
   { href: "/hizmetler", label: "Hizmetler" },
   { href: "/urunler", label: "Ürünler" },
-  { href: "/airnex", label: "AIRNEX Mutfak Havalandırma" },
-  { href: "/verta", label: "VERTA Konveksiyonel Fırınlar" },
   { href: "/buderus", label: "Buderus Yoğuşmalı Kazanlar" },
   { href: "/referanslar", label: "Referanslar" },
   { href: "/hesaplama", label: "Kapasite Hesaplama" },
+  { href: "/airnex", label: "AIRNEX Mutfak Havalandırma" },
+  { href: "/verta", label: "VERTA Konveksiyonel Fırınlar" },
   { href: "/blog", label: "Blog" },
   { href: "/iletisim", label: "İletişim" },
 ];

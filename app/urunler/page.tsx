@@ -8,9 +8,9 @@ import { getSirketAyarlari } from "@/lib/sirket";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Ürünler — Mitsubishi Electric, TCL, Buderus & AIRNEX",
+  title: "Ürünler — Mitsubishi Electric, TCL VRF & Klima, Isı Pompası, Yerden Isıtma",
   description:
-    "Mitsubishi Electric ve TCL VRF ve klima sistemleri, Buderus ısıtma ve ısı pompaları, AIRNEX elektrostatik hücreli mutfak aspiratörleri, VERTA konveksiyonel fırınlar ve havalandırma ürünleri.",
+    "Mitsubishi Electric ve TCL VRF, klima ve multi klima sistemleri, Buderus ve diğer markalarda ısı pompaları, Fraenkische yerden ısıtma, Buderus yoğuşmalı kazanlar, havalandırma ile AIRNEX mutfak aspiratörleri ve VERTA fırınlar.",
   alternates: { canonical: "/urunler" },
 };
 
@@ -28,12 +28,22 @@ const urunKategorileri: {
   detay?: { href: string; etiket: string; katalog?: string }; // Ürün sayfası varsa
 }[] = [
   {
+    id: "vrf-sistemleri",
+    gorsel: "/urunler/urun-vrf.jpg",
+    gorselAlt: "TCL TMV6+ Super Serisi VRF dış ünitesi",
+    kategori: "MERKEZİ İKLİMLENDİRME",
+    baslik: "Mitsubishi Electric & TCL VRF Sistemleri",
+    aciklama: "Otel, plaza, hastane ve binalarda her odayı bağımsız iklimlendiren Mitsubishi Electric City Multi ve TCL TMV serisi VRF dış/iç ünite grupları.",
+    urunler: ["Mitsubishi Electric City Multi VRF", "TCL TMV Serisi VRF Sistemleri", "Heat Pump & Heat Recovery Dış Üniteler", "Y-Branch & Joint Bağlantı Kitleri"],
+    markalar: "Mitsubishi Electric, TCL",
+  },
+  {
     id: "bireysel-klima",
     gorsel: "/urunler/urun-bireysel-klima.jpg",
     gorselAlt: "Oturma odasında duvar tipi klima iç ünitesi",
     kategori: "BİREYSEL İKLİMLENDİRME",
-    baslik: "Mitsubishi Electric & TCL Bireysel Klimalar",
-    aciklama: "Konut ve küçük ofisler için Mitsubishi Electric ve TCL yüksek verimli Inverter duvar tipi ve multi-split klima cihazları.",
+    baslik: "Mitsubishi Electric & TCL Klima ve Multi Klima",
+    aciklama: "Konut ve ofisler için Mitsubishi Electric ve TCL yüksek verimli Inverter duvar tipi klimalar ve tek dış üniteye birden çok iç ünite bağlanan multi klima sistemleri.",
     urunler: ["Mitsubishi Electric Inverter Duvar Tipi Klimalar", "TCL Inverter Duvar Tipi Klimalar", "Multi-Split Çoklu İç Ünite Sistemleri"],
     markalar: "Mitsubishi Electric, TCL",
   },
@@ -48,24 +58,33 @@ const urunKategorileri: {
     markalar: "Mitsubishi Electric, TCL",
   },
   {
-    id: "vrf-sistemleri",
-    gorsel: "/urunler/urun-vrf.jpg",
-    gorselAlt: "TCL TMV6+ Super Serisi VRF dış ünitesi",
-    kategori: "MERKEZİ İKLİMLENDİRME",
-    baslik: "Mitsubishi Electric & TCL VRF Sistemleri",
-    aciklama: "Otel, plaza, hastane ve binalarda her odayı bağımsız iklimlendiren Mitsubishi Electric City Multi ve TCL TMV serisi VRF dış/iç ünite grupları.",
-    urunler: ["Mitsubishi Electric City Multi VRF", "TCL TMV Serisi VRF Sistemleri", "Heat Pump & Heat Recovery Dış Üniteler", "Y-Branch & Joint Bağlantı Kitleri"],
-    markalar: "Mitsubishi Electric, TCL",
+    id: "isi-pompasi",
+    gorsel: "/hizmetler/hizmet-isi-pompasi.jpg",
+    gorselAlt: "Hava kaynaklı ısı pompası dış üniteleri",
+    kategori: "ISI POMPASI",
+    baslik: "Hava Kaynaklı Isı Pompaları",
+    aciklama: "Konut, villa ve ticari yapılar için hava kaynaklı ısı pompaları. Buderus başta olmak üzere projeye en uygun markayla; yerden ısıtma, radyatör ve sıcak su entegrasyonu.",
+    urunler: ["Buderus Hava Kaynaklı Isı Pompaları", "Farklı Marka Isı Pompası Seçenekleri", "Yüksek Sıcaklık Isı Pompaları (85°C)", "Boyler ve Tampon Tank Entegrasyonu"],
+    markalar: "Buderus ve projeye uygun diğer markalar",
+  },
+  {
+    id: "yerden-isitma",
+    kategori: "YERDEN ISITMA",
+    baslik: "Fraenkische Yerden Isıtma Sistemleri",
+    aciklama: "Zeminden eşit ve konforlu ısıtma için Fraenkische yerden ısıtma boru, kolektör ve bağlantı sistemleri. Isı pompası ve yoğuşmalı kazanla birlikte projelendirilir.",
+    urunler: ["Yerden Isıtma Boruları", "Kolektör ve Dağıtım Grupları", "Oda Termostatları ve Kontrol", "Isı Pompası / Kazan Entegrasyonu"],
+    markalar: "Fraenkische",
+    gorselBaslik: "Fraenkische",
   },
   {
     id: "isi-pompasi-isitma",
     gorsel: "/buderus/gb272-kart.jpg",
     gorselAlt: "Buderus Logamax plus GB272 duvar tipi yoğuşmalı kazan",
     detay: { href: "/buderus", etiket: "GB272 Ürün Detayları →", katalog: "/kataloglar/buderus-logamax-plus-gb272-katalog.pdf" },
-    kategori: "VERİMLİ ISITMA & KASKAD",
-    baslik: "Buderus Isıtma & Isı Pompaları",
-    aciklama: "Buderus yoğuşmalı kaskad kazan sistemleri, hava/su kaynaklı ısı pompaları (85°C) ve sulu yerden ısıtma entegrasyonu.",
-    urunler: ["Buderus Duvar Tipi Yoğuşmalı Kazanlar", "Buderus Hava Kaynaklı Isı Pompaları", "Yüksek Sıcaklık Isı Pompaları (85°C)", "Merkezi Kaskad Kazan Sistemleri"],
+    kategori: "KAZAN DAİRESİ & KASKAD",
+    baslik: "Buderus Yoğuşmalı Kazanlar & Kazan Dairesi Yenileme",
+    aciklama: "Eski kazan dairelerinin yenilenmesi için Buderus duvar tipi yoğuşmalı kazanlar ve 16 kazana kadar kaskad merkezi ısıtma sistemleri.",
+    urunler: ["Buderus Logamax plus GB272 (49–150 kW)", "Merkezi Kaskad Kazan Sistemleri", "Pompa, Kollektör ve Denge Kabı Grupları"],
     markalar: "Buderus",
   },
   {
@@ -105,120 +124,14 @@ export default async function UrunlerPage() {
               MEKANİK TESİSAT & İKLİMLENDİRME ÜRÜNLERİ
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900 leading-[1.15]">
-              Mitsubishi Electric, TCL, Buderus ve AIRNEX <br />
+              Mitsubishi Electric ve TCL <br />
               <span className="text-teal-700 underline decoration-teal-300/80 decoration-4 underline-offset-8">
-                İklimlendirme Teknolojileri.
+                VRF, Klima ve Isı Pompası.
               </span>
             </h1>
             <p className="text-base text-slate-600 leading-relaxed pt-2">
-              {sirket.unvan}; Mitsubishi Electric ve TCL VRF sistemlerinden Buderus ısıtma teknolojilerine, AIRNEX mutfak havalandırma çözümlerine ve VERTA konveksiyonel fırınlara kadar projenizin tüm mekanik ürün ihtiyacını mühendislik güvencesiyle sağlar.
+              {sirket.unvan}; Mitsubishi Electric ve TCL VRF ve klima sistemlerinden ısı pompalarına, Fraenkische yerden ısıtmadan Buderus yoğuşmalı kazanlara, havalandırmadan AIRNEX mutfak aspiratörleri ve VERTA fırınlara kadar projenizin ürün ihtiyacını mühendislik güvencesiyle sağlar.
             </p>
-          </div>
-
-          {/* ÖNE ÇIKAN: AIRNEX MUTFAK HAVALANDIRMA */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm grid lg:grid-cols-2">
-            <div className="relative h-56 sm:h-72 lg:h-auto bg-slate-950">
-              <Image
-                src="/airnex/airnex-mutfak.jpg"
-                alt="AIRNEX elektrostatik hücreli aspiratör — endüstriyel mutfak uygulaması"
-                fill
-                sizes="(min-width: 1024px) 50vw, 100vw"
-                className="object-cover"
-              />
-            </div>
-            <div className="p-8 space-y-4 flex flex-col justify-center">
-              <span className="text-[11px] font-bold tracking-wider text-teal-700 uppercase">
-                MUTFAK HAVALANDIRMA · MARKAMIZ
-              </span>
-              <h2 className="text-2xl font-bold text-slate-900">AIRNEX Elektrostatik Hücreli Aspiratör</h2>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Restoran, otel ve endüstriyel mutfak egzozlarında yağ aerosolleri, duman ve ince partiküllerin kontrolü için elektrostatik filtrasyon hücreli, modüler ve servis dostu aspiratör sistemi.
-              </p>
-              <div className="space-y-2">
-                {["Ön filtre + elektrostatik hücre + fan", "Opsiyonel aktif karbon / UV koku kademesi", "Izgara, fritöz, fırın ve proses egzozları"].map((u) => (
-                  <div key={u} className="flex items-center gap-2 text-xs font-medium text-slate-700">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-600" />
-                    <span>{u}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <Link
-                  href="/airnex"
-                  className="flex-1 py-2.5 bg-teal-700 hover:bg-teal-800 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm"
-                >
-                  Ürün Detayları →
-                </Link>
-                <a
-                  href="/kataloglar/airnex-elektrostatik-hucreli-aspirator-katalog.pdf"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  download="AIRNEX-Elektrostatik-Hucreli-Aspirator-Katalogu.pdf"
-                  className="flex-1 py-2.5 bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-800 text-center font-bold text-xs rounded-lg transition-colors"
-                >
-                  Katalog (PDF) ↓
-                </a>
-                <Link
-                  href="/iletisim"
-                  className="flex-1 py-2.5 bg-slate-900 hover:bg-teal-700 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm"
-                >
-                  Fiyat Teklifi İsteyin →
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* ÖNE ÇIKAN: VERTA KONVEKSİYONEL FIRINLAR */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm grid lg:grid-cols-2">
-            <div className="relative h-56 sm:h-72 lg:h-auto lg:min-h-[20rem] bg-slate-950 lg:order-2">
-              <Image
-                src="/verta/verta-kapak.jpg"
-                alt="VERTA konveksiyonel fırın — profesyonel mutfak"
-                fill
-                sizes="(min-width: 1024px) 50vw, 100vw"
-                className="object-cover"
-              />
-            </div>
-            <div className="p-8 space-y-4 flex flex-col justify-center">
-              <span className="text-[11px] font-bold tracking-wider text-teal-700 uppercase">
-                ENDÜSTRİYEL MUTFAK · FIRINLAR
-              </span>
-              <h2 className="text-2xl font-bold text-slate-900">VERTA Konveksiyonel Fırınlar</h2>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Pastane, restoran, kafe ve oteller için 4, 6 ve 10 tepsili profesyonel konveksiyonel fırınlar. Çift yöne dönen fanlarla homojen pişirme, paslanmaz çelik gövde ve kolay temizlik.
-              </p>
-              <div className="space-y-2">
-                {["4 tepsili · 220 V, kompakt", "6 tepsili · GN 2/1, 380 V", "10 tepsili · 100 program, direkt nemlendirme"].map((u) => (
-                  <div key={u} className="flex items-center gap-2 text-xs font-medium text-slate-700">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-600" />
-                    <span>{u}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <Link
-                  href="/verta"
-                  className="flex-1 py-2.5 bg-teal-700 hover:bg-teal-800 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm"
-                >
-                  Modeller & Özellikler →
-                </Link>
-                <a
-                  href="/kataloglar/verta-firin-katalogu-iklim-ofisi.pdf"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  download="VERTA-Konveksiyonel-Firin-Katalogu.pdf"
-                  className="flex-1 py-2.5 bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-800 text-center font-bold text-xs rounded-lg transition-colors"
-                >
-                  Katalog (PDF) ↓
-                </a>
-                <Link
-                  href="/iletisim"
-                  className="flex-1 py-2.5 bg-slate-900 hover:bg-teal-700 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm"
-                >
-                  Fiyat Teklifi İsteyin →
-                </Link>
-              </div>
-            </div>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -303,11 +216,122 @@ export default async function UrunlerPage() {
             ))}
           </div>
 
+          {/* ENDÜSTRİYEL MUTFAK ÇÖZÜMLERİ (ana ürün gruplarından sonra) */}
+          <div className="pt-4">
+            <p className="text-xs font-bold tracking-widest text-teal-700 uppercase mb-2">ENDÜSTRİYEL MUTFAK ÇÖZÜMLERİ</p>
+            <h2 className="text-2xl font-bold text-slate-900">Restoran ve Otel Mutfakları İçin</h2>
+          </div>
+          {/* AIRNEX MUTFAK HAVALANDIRMA */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm grid lg:grid-cols-2">
+            <div className="relative h-56 sm:h-72 lg:h-auto bg-slate-950">
+              <Image
+                src="/airnex/airnex-mutfak.jpg"
+                alt="AIRNEX elektrostatik hücreli aspiratör — endüstriyel mutfak uygulaması"
+                fill
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className="object-cover"
+              />
+            </div>
+            <div className="p-8 space-y-4 flex flex-col justify-center">
+              <span className="text-[11px] font-bold tracking-wider text-teal-700 uppercase">
+                MUTFAK HAVALANDIRMA · MARKAMIZ
+              </span>
+              <h2 className="text-2xl font-bold text-slate-900">AIRNEX Elektrostatik Hücreli Aspiratör</h2>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Restoran, otel ve endüstriyel mutfak egzozlarında yağ aerosolleri, duman ve ince partiküllerin kontrolü için elektrostatik filtrasyon hücreli, modüler ve servis dostu aspiratör sistemi.
+              </p>
+              <div className="space-y-2">
+                {["Ön filtre + elektrostatik hücre + fan", "Opsiyonel aktif karbon / UV koku kademesi", "Izgara, fritöz, fırın ve proses egzozları"].map((u) => (
+                  <div key={u} className="flex items-center gap-2 text-xs font-medium text-slate-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-600" />
+                    <span>{u}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <Link
+                  href="/airnex"
+                  className="flex-1 py-2.5 bg-teal-700 hover:bg-teal-800 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm"
+                >
+                  Ürün Detayları →
+                </Link>
+                <a
+                  href="/kataloglar/airnex-elektrostatik-hucreli-aspirator-katalog.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download="AIRNEX-Elektrostatik-Hucreli-Aspirator-Katalogu.pdf"
+                  className="flex-1 py-2.5 bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-800 text-center font-bold text-xs rounded-lg transition-colors"
+                >
+                  Katalog (PDF) ↓
+                </a>
+                <Link
+                  href="/iletisim"
+                  className="flex-1 py-2.5 bg-slate-900 hover:bg-teal-700 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm"
+                >
+                  Fiyat Teklifi İsteyin →
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* VERTA KONVEKSİYONEL FIRINLAR */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm grid lg:grid-cols-2">
+            <div className="relative h-56 sm:h-72 lg:h-auto lg:min-h-[20rem] bg-slate-950 lg:order-2">
+              <Image
+                src="/verta/verta-kapak.jpg"
+                alt="VERTA konveksiyonel fırın — profesyonel mutfak"
+                fill
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className="object-cover"
+              />
+            </div>
+            <div className="p-8 space-y-4 flex flex-col justify-center">
+              <span className="text-[11px] font-bold tracking-wider text-teal-700 uppercase">
+                ENDÜSTRİYEL MUTFAK · FIRINLAR
+              </span>
+              <h2 className="text-2xl font-bold text-slate-900">VERTA Konveksiyonel Fırınlar</h2>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Pastane, restoran, kafe ve oteller için 4, 6 ve 10 tepsili profesyonel konveksiyonel fırınlar. Çift yöne dönen fanlarla homojen pişirme, paslanmaz çelik gövde ve kolay temizlik.
+              </p>
+              <div className="space-y-2">
+                {["4 tepsili · 220 V, kompakt", "6 tepsili · GN 2/1, 380 V", "10 tepsili · 100 program, direkt nemlendirme"].map((u) => (
+                  <div key={u} className="flex items-center gap-2 text-xs font-medium text-slate-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-600" />
+                    <span>{u}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <Link
+                  href="/verta"
+                  className="flex-1 py-2.5 bg-teal-700 hover:bg-teal-800 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm"
+                >
+                  Modeller & Özellikler →
+                </Link>
+                <a
+                  href="/kataloglar/verta-firin-katalogu-iklim-ofisi.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download="VERTA-Konveksiyonel-Firin-Katalogu.pdf"
+                  className="flex-1 py-2.5 bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-800 text-center font-bold text-xs rounded-lg transition-colors"
+                >
+                  Katalog (PDF) ↓
+                </a>
+                <Link
+                  href="/iletisim"
+                  className="flex-1 py-2.5 bg-slate-900 hover:bg-teal-700 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm"
+                >
+                  Fiyat Teklifi İsteyin →
+                </Link>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-slate-900 text-white rounded-2xl p-8 sm:p-10 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl">
             <div className="space-y-2 text-center sm:text-left">
               <h3 className="text-xl sm:text-2xl font-bold">Projeniz İçin Toplu Cihaz Fiyatı Alın</h3>
               <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
-                Mitsubishi Electric, TCL, Buderus ve AIRNEX cihaz listelerinizi gönderin, mühendislerimiz avantajlı fiyat teklifi hazırlasın.
+                VRF, klima, ısı pompası ve yerden ısıtma cihaz listelerinizi gönderin, mühendislerimiz avantajlı fiyat teklifi hazırlasın.
               </p>
             </div>
             <Link

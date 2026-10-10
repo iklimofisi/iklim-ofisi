@@ -21,19 +21,14 @@ type Slayt = {
   cizim?: Cizim;
 };
 
+// Sıra = önem sırası: VRF ve klima (Mitsubishi Electric, TCL) → ısı pompası →
+// yerden ısıtma (Fraenkische) → kazan dairesi (Buderus) → mutfak çözümleri (AIRNEX, VERTA)
 const SLAYTLAR: Slayt[] = [
   {
-    etiket: "Markamız · Mutfak Havalandırma",
-    baslik: "AIRNEX Elektrostatik Hücreli Aspiratör",
-    alt: "Endüstriyel mutfakta AIRNEX elektrostatik hücreli aspiratör",
-    href: "/airnex",
-    gorsel: "/airnex/airnex-mutfak.jpg",
-  },
-  {
-    etiket: "TCL · TMV6+ Super Serisi",
-    baslik: "Akıllı VRF Merkezi İklimlendirme",
-    alt: "TCL TMV6+ Super Serisi VRF dış ünitesi",
-    href: "/urunler",
+    etiket: "Mitsubishi Electric · TCL",
+    baslik: "VRF Merkezi İklimlendirme Sistemleri",
+    alt: "TCL VRF dış ünitesi — Mitsubishi Electric ve TCL VRF sistemleri",
+    href: "/hizmetler#vrf",
     gorsel: "/slider/slider-tcl-vrf.jpg",
   },
   {
@@ -44,10 +39,10 @@ const SLAYTLAR: Slayt[] = [
     gorsel: "/slider/slider-mitsubishi-city-multi.jpg",
   },
   {
-    etiket: "Mitsubishi Electric · İç Üniteler",
-    baslik: "Yaşam Alanları İçin Duvar Tipi Klimalar",
+    etiket: "Mitsubishi Electric · TCL",
+    baslik: "Duvar Tipi ve Multi Klimalar",
     alt: "Oturma odasında Mitsubishi Electric duvar tipi iç ünite",
-    href: "/urunler",
+    href: "/hizmetler#klima",
     gorsel: "/slider/slider-mitsubishi-duvar.jpg",
   },
   {
@@ -65,6 +60,34 @@ const SLAYTLAR: Slayt[] = [
     gorsel: "/slider/slider-tcl-kaset.jpg",
   },
   {
+    etiket: "Isı Pompası · Buderus ve Diğer Markalar",
+    baslik: "Hava Kaynaklı Isı Pompası Sistemleri",
+    alt: "Hava kaynaklı ısı pompası dış üniteleri",
+    href: "/hizmetler#isi-pompasi",
+    gorsel: "/hizmetler/hizmet-isi-pompasi.jpg",
+  },
+  {
+    etiket: "Fraenkische · Yerden Isıtma",
+    baslik: "Sulu Yerden Isıtma Sistemleri",
+    alt: "Yerden ısıtma boru serimi çizimi",
+    href: "/hizmetler#yerden-isitma",
+    cizim: "isitma",
+  },
+  {
+    etiket: "Buderus · Kazan Dairesi Yenileme",
+    baslik: "Logamax plus GB272: 49–150 kW, Kaskad",
+    alt: "Duvara monte Buderus Logamax plus GB272 yoğuşmalı kazan",
+    href: "/buderus",
+    gorsel: "/buderus/gb272-slider.jpg",
+  },
+  {
+    etiket: "AIRNEX · Mutfak Havalandırma",
+    baslik: "Elektrostatik Hücreli Aspiratör",
+    alt: "Endüstriyel mutfakta AIRNEX elektrostatik hücreli aspiratör",
+    href: "/airnex",
+    gorsel: "/airnex/airnex-mutfak.jpg",
+  },
+  {
     etiket: "AIRNEX",
     baslik: "4 Kademeli Elektrostatik Filtrasyon",
     alt: "AIRNEX çalışma prensibi: ön filtre, iyonizasyon, toplama hücresi ve fan",
@@ -77,13 +100,6 @@ const SLAYTLAR: Slayt[] = [
     alt: "Profesyonel mutfakta VERTA konveksiyonel fırın",
     href: "/verta",
     gorsel: "/slider/slider-verta-firin.jpg",
-  },
-  {
-    etiket: "Buderus · Yoğuşmalı Kazan",
-    baslik: "Logamax plus GB272: 49–150 kW, Kaskad",
-    alt: "Duvara monte Buderus Logamax plus GB272 yoğuşmalı kazan",
-    href: "/buderus",
-    gorsel: "/buderus/gb272-slider.jpg",
   },
 ];
 

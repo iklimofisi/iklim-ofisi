@@ -37,9 +37,6 @@ export default function Header() {
           <Link href="/urunler" className="hover:text-teal-700 transition-colors">
             Ürünler
           </Link>
-          <Link href="/airnex" className="hover:text-teal-700 transition-colors">
-            AIRNEX
-          </Link>
           <Link href="/referanslar" className="hover:text-teal-700 transition-colors">
             Referanslar
           </Link>

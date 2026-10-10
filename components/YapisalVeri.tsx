@@ -65,7 +65,7 @@ export function IsletmeYapisalVerisi({ sirket }: { sirket: Sirket }) {
     image: `${SITE}/og-image.png`,
     description:
       sirket.slogan ||
-      "VRF merkezi iklimlendirme, klima, ısı pompası, havalandırma, endüstriyel mutfak egzozu ve mekanik tesisat çözümleri.",
+      "VRF merkezi iklimlendirme, klima ve multi klima, ısı pompası, yerden ısıtma, kazan dairesi yenileme, havalandırma ve mekanik tesisat çözümleri.",
     ...(telefonlar[0] ? { telephone: telefonlar[0] } : {}),
     ...(sirket.email ? { email: sirket.email } : {}),
     ...(sirket.adres

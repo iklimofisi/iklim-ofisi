@@ -8,9 +8,9 @@ import { getSirketAyarlari } from "@/lib/sirket";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Hizmetlerimiz — VRF, Klima, Havalandırma & Mutfak Egzozu",
+  title: "Hizmetlerimiz — VRF, Klima, Isı Pompası & Yerden Isıtma",
   description:
-    "Mitsubishi Electric ve TCL VRF sistemleri, bireysel ve ticari klimalar, klima santrali (AHU), AIRNEX mutfak havalandırma, ısı pompası ve mekanik tesisatta anahtar teslim hizmet.",
+    "Mitsubishi Electric ve TCL VRF sistemleri, klima ve multi klima, ısı pompası (Buderus ve diğer markalar), Fraenkische yerden ısıtma, kazan dairesi yenileme, havalandırma ve mekanik tesisatta anahtar teslim hizmet.",
   alternates: { canonical: "/hizmetler" },
 };
 
@@ -29,7 +29,7 @@ export default async function HizmetlerPage() {
           <div className="max-w-3xl space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-teal-50 border border-teal-200 text-teal-800 text-xs font-semibold tracking-wider uppercase">
               <span className="w-2 h-2 rounded-full bg-teal-600" />
-              KOMPLE MEKANİK TESİSAT & İKLİMLENDİRME
+              VRF · KLİMA · ISI POMPASI · YERDEN ISITMA
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900 leading-[1.15]">
               Mekanik Tesisatın Tamamı <br />
@@ -38,121 +38,15 @@ export default async function HizmetlerPage() {
               </span>
             </h1>
             <p className="text-base text-slate-600 leading-relaxed pt-2">
-              {sirket.unvan}; konut, ofis, otel ve endüstriyel yapılarda sıhhi tesisattan klima santraline, VRF iklimlendirmeden ısı pompasına, havalandırmadan endüstriyel mutfak egzozuna kadar mühendislik standartlarında anahtar teslim mekanik çözümler sunar.
+              {sirket.unvan}; Mitsubishi Electric ve TCL VRF ve klima sistemlerinden ısı pompalarına, Fraenkische yerden ısıtmadan kazan dairesi yenilemeye, havalandırmadan endüstriyel mutfak egzozuna kadar mühendislik standartlarında anahtar teslim çözümler sunar.
             </p>
           </div>
 
           {/* MÜHENDİSLİK TEKNİK ÇİZİM KARTLARI GRİDİ */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             
-            {/* 1. KART: MEKANİK & SIHHİ TESİSAT */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500/40 transition-all duration-300 flex flex-col justify-between group">
-              <div>
-                {/* CAD Sıhhi Tesisat Şeması */}
-                <div className="h-44 w-full bg-slate-950 p-4 flex items-center justify-center relative overflow-hidden">
-                  <span className="absolute z-10 top-3 right-3 text-[10px] font-bold text-teal-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
-                    Anahtar Teslim
-                  </span>
-                  <Image
-                    src="/hizmetler/hizmet-mekanik-tesisat.jpg"
-                    alt="Mekanik tesisat dairesinde borulama ve pompa grupları"
-                    fill
-                    sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
-                    className="object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-transparent to-transparent" />
-                </div>
-
-                <div className="p-6 space-y-4">
-                  <span className="text-[11px] font-bold tracking-wider text-teal-700 uppercase block">
-                    ANAHTAR TESLİM MEKANİK TAAHHÜT
-                  </span>
-                  <h2 className="text-xl font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
-                    Mekanik & Sıhhi Tesisat
-                  </h2>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    Temiz su, pis su, yağmur hatları, yangın söndürme tesisatları, kazan daireleri ve borulama altyapılarının mühendislik standartlarında imali.
-                  </p>
-
-                  <div className="pt-3 border-t border-slate-100 space-y-2">
-                    <div className="flex items-start gap-2 text-xs text-slate-700">
-                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
-                      <span>Sıhhi tesisat (Temiz & pis su hatları)</span>
-                    </div>
-                    <div className="flex items-start gap-2 text-xs text-slate-700">
-                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
-                      <span>Merkezi kazan dairesi ve kaskad ısıtma</span>
-                    </div>
-                    <div className="flex items-start gap-2 text-xs text-slate-700">
-                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
-                      <span>Yangın tesisatı ve hidrofor sistemleri</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 pt-0">
-                <Link href="/iletisim" className="block w-full py-2.5 bg-slate-900 hover:bg-teal-700 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm">
-                  Projeniz İçin Keşif & Teklif İsteyin →
-                </Link>
-              </div>
-            </div>
-
-            {/* 2. KART: KLİMA SANTRALİ & HAVALANDIRMA */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500/40 transition-all duration-300 flex flex-col justify-between group">
-              <div>
-                {/* CAD AHU Santral Şeması */}
-                <div className="h-44 w-full bg-slate-950 p-4 flex items-center justify-center relative overflow-hidden">
-                  <span className="absolute z-10 top-3 right-3 text-[10px] font-bold text-teal-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
-                    AHU & Taze Hava
-                  </span>
-                  <Image
-                    src="/hizmetler/hizmet-havalandirma.jpg"
-                    alt="Isı geri kazanımlı havalandırma cihazının kesit görünümü"
-                    fill
-                    sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
-                    className="object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-transparent to-transparent" />
-                </div>
-
-                <div className="p-6 space-y-4">
-                  <span className="text-[11px] font-bold tracking-wider text-teal-700 uppercase block">
-                    KLİMA SANTRALLERİ & İGK
-                  </span>
-                  <h2 className="text-xl font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
-                    Klima Santrali (AHU) & Havalandırma
-                  </h2>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    Fabrika, AVM, otel ve hijyenik alanlar için Isı Geri Kazanımlı Klima Santralleri (AHU), taze hava besleme ve spiro kanal imalatı.
-                  </p>
-
-                  <div className="pt-3 border-t border-slate-100 space-y-2">
-                    <div className="flex items-start gap-2 text-xs text-slate-700">
-                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
-                      <span>Klima Santrali (AHU) montajı & otomasyonu</span>
-                    </div>
-                    <div className="flex items-start gap-2 text-xs text-slate-700">
-                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
-                      <span>Isı Geri Kazanım (İGK) üniteleri</span>
-                    </div>
-                    <div className="flex items-start gap-2 text-xs text-slate-700">
-                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
-                      <span>Spiro yuvarlak ve izoleli hava kanalları</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 pt-0">
-                <Link href="/iletisim" className="block w-full py-2.5 bg-slate-900 hover:bg-teal-700 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm">
-                  Projeniz İçin Keşif & Teklif İsteyin →
-                </Link>
-              </div>
-            </div>
-
             {/* 3. KART: VRF / VRV SİSTEMLERİ */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500/40 transition-all duration-300 flex flex-col justify-between group">
+            <div id="vrf" className="scroll-mt-24 bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500/40 transition-all duration-300 flex flex-col justify-between group">
               <div>
                 {/* CAD VRF Devre Şeması */}
                 <div className="h-44 w-full bg-slate-950 p-4 flex items-center justify-center relative overflow-hidden">
@@ -204,61 +98,8 @@ export default async function HizmetlerPage() {
               </div>
             </div>
 
-            {/* 4. KART: ISI POMPASI & ISITMA */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500/40 transition-all duration-300 flex flex-col justify-between group">
-              <div>
-                {/* CAD Isı Pompası Yerden Isıtma Şeması */}
-                <div className="h-44 w-full bg-slate-950 p-4 flex items-center justify-center relative overflow-hidden">
-                  <span className="absolute z-10 top-3 right-3 text-[10px] font-bold text-amber-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
-                    A+++ Tasarruf
-                  </span>
-                  <Image
-                    src="/hizmetler/hizmet-isi-pompasi.jpg"
-                    alt="Isı pompası dış üniteleri"
-                    fill
-                    sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
-                    className="object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-transparent to-transparent" />
-                </div>
-
-                <div className="p-6 space-y-4">
-                  <span className="text-[11px] font-bold tracking-wider text-teal-700 uppercase block">
-                    YENİLENEBİLİR ISITMA
-                  </span>
-                  <h2 className="text-xl font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
-                    Isı Pompası & Isıtma
-                  </h2>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    Konut ve villalar için hava/su kaynaklı ısı pompaları (85°C), sulu yerden ısıtma tesisatları ve boyler entegrasyonu.
-                  </p>
-
-                  <div className="pt-3 border-t border-slate-100 space-y-2">
-                    <div className="flex items-start gap-2 text-xs text-slate-700">
-                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
-                      <span>Hava & su kaynaklı ısı pompaları (85°C)</span>
-                    </div>
-                    <div className="flex items-start gap-2 text-xs text-slate-700">
-                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
-                      <span>Sulu sistem yerden ısıtma projelendirme</span>
-                    </div>
-                    <div className="flex items-start gap-2 text-xs text-slate-700">
-                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
-                      <span>Kolektör grubu ve sirkülasyon pompaları</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 pt-0">
-                <Link href="/iletisim" className="block w-full py-2.5 bg-slate-900 hover:bg-teal-700 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm">
-                  Projeniz İçin Keşif & Teklif İsteyin →
-                </Link>
-              </div>
-            </div>
-
             {/* 5. KART: BİREYSEL & TİCARİ KLİMA */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500/40 transition-all duration-300 flex flex-col justify-between group">
+            <div id="klima" className="scroll-mt-24 bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500/40 transition-all duration-300 flex flex-col justify-between group">
               <div>
                 {/* CAD Split Klima Şeması */}
                 <div className="h-44 w-full bg-slate-950 p-4 flex items-center justify-center relative overflow-hidden">
@@ -277,10 +118,10 @@ export default async function HizmetlerPage() {
 
                 <div className="p-6 space-y-4">
                   <span className="text-[11px] font-bold tracking-wider text-teal-700 uppercase block">
-                    BİREYSEL & TİCARİ KLİMA
+                    KLİMA & MULTİ KLİMA
                   </span>
                   <h2 className="text-xl font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
-                    Bireysel & Ticari Klimalar
+                    Klima & Multi Klima Sistemleri
                   </h2>
                   <p className="text-xs text-slate-600 leading-relaxed">
                     Mitsubishi Electric ve TCL duvar tipi, multi-split, kaset tipi, kanallı gizli tavan, konsol ve salon tipi klimaların keşfi, kapasite hesabı ve montajı.
@@ -310,8 +151,272 @@ export default async function HizmetlerPage() {
               </div>
             </div>
 
+            {/* 4. KART: ISI POMPASI & ISITMA */}
+            <div id="isi-pompasi" className="scroll-mt-24 bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500/40 transition-all duration-300 flex flex-col justify-between group">
+              <div>
+                {/* CAD Isı Pompası Yerden Isıtma Şeması */}
+                <div className="h-44 w-full bg-slate-950 p-4 flex items-center justify-center relative overflow-hidden">
+                  <span className="absolute z-10 top-3 right-3 text-[10px] font-bold text-amber-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
+                    A+++ Tasarruf
+                  </span>
+                  <Image
+                    src="/hizmetler/hizmet-isi-pompasi.jpg"
+                    alt="Isı pompası dış üniteleri"
+                    fill
+                    sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-transparent to-transparent" />
+                </div>
+
+                <div className="p-6 space-y-4">
+                  <span className="text-[11px] font-bold tracking-wider text-teal-700 uppercase block">
+                    ISI POMPASI · BUDERUS VE DİĞER MARKALAR
+                  </span>
+                  <h2 className="text-xl font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                    Isı Pompası Sistemleri
+                  </h2>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Konut, villa ve ticari yapılar için hava kaynaklı ısı pompaları. Buderus başta olmak üzere projeye en uygun markayla; yerden ısıtma, radyatör ve boyler entegrasyonu.
+                  </p>
+
+                  <div className="pt-3 border-t border-slate-100 space-y-2">
+                    <div className="flex items-start gap-2 text-xs text-slate-700">
+                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
+                      <span>Buderus ve farklı marka ısı pompası seçenekleri</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs text-slate-700">
+                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
+                      <span>Yüksek sıcaklık (85°C) modellerle radyatörlü sistemler</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs text-slate-700">
+                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
+                      <span>Yerden ısıtma ve sıcak su (boyler) entegrasyonu</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 pt-0">
+                <Link href="/iletisim" className="block w-full py-2.5 bg-slate-900 hover:bg-teal-700 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm">
+                  Projeniz İçin Keşif & Teklif İsteyin →
+                </Link>
+              </div>
+            </div>
+
+            {/* YENİ KART: YERDEN ISITMA (FRAENKISCHE) */}
+            <div id="yerden-isitma" className="scroll-mt-24 bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500/40 transition-all duration-300 flex flex-col justify-between group">
+              <div>
+                {/* CAD Isı Pompası Yerden Isıtma Şeması */}
+                <div className="h-44 w-full bg-slate-950 p-4 flex items-center justify-center relative overflow-hidden">
+                  <span className="absolute z-10 top-3 right-3 text-[10px] font-bold text-amber-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
+                    Fraenkische
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-amber-950/40 flex items-center justify-center">
+                    <svg className="w-3/4 h-auto" viewBox="0 0 200 100" fill="none" aria-label="Yerden ısıtma boru serimi çizimi" role="img">
+                      <rect x="8" y="24" width="34" height="52" rx="4" stroke="#fbbf24" strokeWidth="2" fill="#0f172a" />
+                      <path d="M42 36h14M42 64h14" stroke="#f59e0b" strokeWidth="2" />
+                      <path d="M56 14h132v12H66v12h122v12H66v12h122v12H66v12h122" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-transparent to-transparent" />
+                </div>
+
+                <div className="p-6 space-y-4">
+                  <span className="text-[11px] font-bold tracking-wider text-teal-700 uppercase block">
+                    YERDEN ISITMA · FRAENKISCHE
+                  </span>
+                  <h2 className="text-xl font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                    Yerden Isıtma Sistemleri
+                  </h2>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Fraenkische yerden ısıtma boru ve kolektör sistemleriyle konut, villa ve ticari alanlarda zeminden eşit ve konforlu ısıtma. Isı kaybı hesabına göre boru aralığı ve devre planı.
+                  </p>
+
+                  <div className="pt-3 border-t border-slate-100 space-y-2">
+                    <div className="flex items-start gap-2 text-xs text-slate-700">
+                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
+                      <span>Fraenkische boru, kolektör ve bağlantı sistemleri</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs text-slate-700">
+                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
+                      <span>Isı kaybı hesabına göre devre ve boru aralığı</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs text-slate-700">
+                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
+                      <span>Isı pompası veya kazan ile birlikte çalışma</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 pt-0">
+                <Link href="/iletisim" className="block w-full py-2.5 bg-slate-900 hover:bg-teal-700 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm">
+                  Projeniz İçin Keşif & Teklif İsteyin →
+                </Link>
+              </div>
+            </div>
+
+            {/* YENİ KART: KAZAN DAİRESİ YENİLEME */}
+            <div id="kazan-dairesi" className="scroll-mt-24 bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500/40 transition-all duration-300 flex flex-col justify-between group">
+              <div>
+                {/* Buderus kaskad kazan dairesi görseli (dikey fotoğraf, kırpılmadan gösterilir) */}
+                <div className="h-44 w-full bg-white border-b border-slate-100 relative overflow-hidden">
+                  <span className="absolute z-10 top-3 right-3 text-[10px] font-bold text-teal-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
+                    Buderus Kaskad
+                  </span>
+                  <Image
+                    src="/buderus/gb272-kaskad.jpg"
+                    alt="Buderus Logamax plus GB272 kaskad kazan dairesi uygulaması"
+                    fill
+                    sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                    className="object-contain p-3"
+                  />
+                </div>
+
+                <div className="p-6 space-y-4">
+                  <span className="text-[11px] font-bold tracking-wider text-teal-700 uppercase block">
+                    ISITMA · YENİLEME
+                  </span>
+                  <h2 className="text-xl font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                    Kazan Dairesi Yenileme
+                  </h2>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Eski ve verimsiz kazan dairelerinin Buderus yoğuşmalı kaskad kazan sistemleriyle yenilenmesi; pompa, kollektör, denge kabı ve otomasyon dahil anahtar teslim.
+                  </p>
+
+                  <div className="pt-3 border-t border-slate-100 space-y-2">
+                    <div className="flex items-start gap-2 text-xs text-slate-700">
+                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
+                      <span>Buderus Logamax plus GB272 yoğuşmalı kaskad kazanlar</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs text-slate-700">
+                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
+                      <span>Pompa, kollektör ve denge kabı grupları</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs text-slate-700">
+                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
+                      <span>Mevcut tesisata uygun, kesintiyi en aza indiren geçiş</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 pt-0">
+                <Link href="/iletisim" className="block w-full py-2.5 bg-slate-900 hover:bg-teal-700 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm">
+                  Projeniz İçin Keşif & Teklif İsteyin →
+                </Link>
+              </div>
+            </div>
+
+            {/* 2. KART: KLİMA SANTRALİ & HAVALANDIRMA */}
+            <div id="havalandirma" className="scroll-mt-24 bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500/40 transition-all duration-300 flex flex-col justify-between group">
+              <div>
+                {/* CAD AHU Santral Şeması */}
+                <div className="h-44 w-full bg-slate-950 p-4 flex items-center justify-center relative overflow-hidden">
+                  <span className="absolute z-10 top-3 right-3 text-[10px] font-bold text-teal-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
+                    AHU & Taze Hava
+                  </span>
+                  <Image
+                    src="/hizmetler/hizmet-havalandirma.jpg"
+                    alt="Isı geri kazanımlı havalandırma cihazının kesit görünümü"
+                    fill
+                    sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-transparent to-transparent" />
+                </div>
+
+                <div className="p-6 space-y-4">
+                  <span className="text-[11px] font-bold tracking-wider text-teal-700 uppercase block">
+                    KLİMA SANTRALLERİ & İGK
+                  </span>
+                  <h2 className="text-xl font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                    Klima Santrali (AHU) & Havalandırma
+                  </h2>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Fabrika, AVM, otel ve hijyenik alanlar için Isı Geri Kazanımlı Klima Santralleri (AHU), taze hava besleme ve spiro kanal imalatı.
+                  </p>
+
+                  <div className="pt-3 border-t border-slate-100 space-y-2">
+                    <div className="flex items-start gap-2 text-xs text-slate-700">
+                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
+                      <span>Klima Santrali (AHU) montajı & otomasyonu</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs text-slate-700">
+                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
+                      <span>Isı Geri Kazanım (İGK) üniteleri</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs text-slate-700">
+                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
+                      <span>Spiro yuvarlak ve izoleli hava kanalları</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 pt-0">
+                <Link href="/iletisim" className="block w-full py-2.5 bg-slate-900 hover:bg-teal-700 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm">
+                  Projeniz İçin Keşif & Teklif İsteyin →
+                </Link>
+              </div>
+            </div>
+
+            {/* 1. KART: MEKANİK & SIHHİ TESİSAT */}
+            <div id="mekanik-tesisat" className="scroll-mt-24 bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500/40 transition-all duration-300 flex flex-col justify-between group">
+              <div>
+                {/* CAD Sıhhi Tesisat Şeması */}
+                <div className="h-44 w-full bg-slate-950 p-4 flex items-center justify-center relative overflow-hidden">
+                  <span className="absolute z-10 top-3 right-3 text-[10px] font-bold text-teal-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
+                    Anahtar Teslim
+                  </span>
+                  <Image
+                    src="/hizmetler/hizmet-mekanik-tesisat.jpg"
+                    alt="Mekanik tesisat dairesinde borulama ve pompa grupları"
+                    fill
+                    sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-transparent to-transparent" />
+                </div>
+
+                <div className="p-6 space-y-4">
+                  <span className="text-[11px] font-bold tracking-wider text-teal-700 uppercase block">
+                    ANAHTAR TESLİM MEKANİK TAAHHÜT
+                  </span>
+                  <h2 className="text-xl font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                    Mekanik & Sıhhi Tesisat
+                  </h2>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Temiz su, pis su, yağmur hatları, yangın söndürme tesisatları, kazan daireleri ve borulama altyapılarının mühendislik standartlarında imali.
+                  </p>
+
+                  <div className="pt-3 border-t border-slate-100 space-y-2">
+                    <div className="flex items-start gap-2 text-xs text-slate-700">
+                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
+                      <span>Sıhhi tesisat (Temiz & pis su hatları)</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs text-slate-700">
+                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
+                      <span>Isıtma ve soğutma borulama altyapısı</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs text-slate-700">
+                      <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
+                      <span>Yangın tesisatı ve hidrofor sistemleri</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 pt-0">
+                <Link href="/iletisim" className="block w-full py-2.5 bg-slate-900 hover:bg-teal-700 text-white text-center font-bold text-xs rounded-lg transition-colors shadow-sm">
+                  Projeniz İçin Keşif & Teklif İsteyin →
+                </Link>
+              </div>
+            </div>
+
             {/* 6. KART: MÜHENDİSLİK PROJELENDİRME */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500/40 transition-all duration-300 flex flex-col justify-between group">
+            <div id="projelendirme" className="scroll-mt-24 bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500/40 transition-all duration-300 flex flex-col justify-between group">
               <div>
                 {/* CAD Plan Çizim Şeması */}
                 <div className="h-44 w-full bg-slate-950 p-4 flex items-center justify-center relative overflow-hidden">
@@ -364,7 +469,7 @@ export default async function HizmetlerPage() {
             </div>
 
             {/* 7. KART (GENİŞ): MUTFAK HAVALANDIRMA — AIRNEX */}
-            <div className="md:col-span-2 lg:col-span-3 bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500/40 transition-all duration-300 grid lg:grid-cols-5 group">
+            <div id="mutfak-havalandirma" className="scroll-mt-24 md:col-span-2 lg:col-span-3 bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500/40 transition-all duration-300 grid lg:grid-cols-5 group">
               <div className="lg:col-span-2 relative h-56 lg:h-auto bg-slate-950">
                 <Image
                   src="/airnex/airnex-kesit.jpg"

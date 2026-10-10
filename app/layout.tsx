@@ -11,12 +11,17 @@ export const metadata: Metadata = {
     template: "%s | İklim Ofisi Mühendislik",
   },
   description:
-    "İstanbul'da konut, ofis, otel ve endüstriyel tesisler için VRF merkezi iklimlendirme, klima, ısı pompası, havalandırma, endüstriyel mutfak egzozu ve mekanik tesisat. Ücretsiz keşif ve projelendirme.",
+    "İstanbul'da konut, ofis, otel ve endüstriyel tesisler için Mitsubishi Electric ve TCL VRF sistemleri, klima ve multi klima, ısı pompası, Fraenkische yerden ısıtma, kazan dairesi yenileme, havalandırma ve mekanik tesisat. Ücretsiz keşif ve projelendirme.",
   keywords: [
     "VRF Klima",
     "İklimlendirme",
     "Mekanik Tesisat",
+    "Multi Klima",
     "Isı Pompası",
+    "Yerden Isıtma",
+    "Fraenkische Yerden Isıtma",
+    "Kazan Dairesi Yenileme",
+    "Buderus Isı Pompası",
     "Endüstriyel Havalandırma",
     "Mitsubishi Electric VRF",
     "TCL VRF",
@@ -38,9 +43,9 @@ export const metadata: Metadata = {
 
   // WHATSAPP, LINKEDIN & SOSYAL MEDYA PAYLAŞIM KARTI (OPEN GRAPH)
   openGraph: {
-    title: "İklim Ofisi Mühendislik — VRF & Mekanik Tesisat Çözümleri",
+    title: "İklim Ofisi Mühendislik — VRF, Klima, Isı Pompası & Yerden Isıtma",
     description:
-      "Konut ve endüstriyel projeleriniz için A+++ verimli iklimlendirme ve havalandırma sistemleri. 24 saatte ücretsiz keşif imkanı.",
+      "Mitsubishi Electric ve TCL VRF, klima ve multi klima; ısı pompası, Fraenkische yerden ısıtma ve kazan dairesi yenileme. 24 saatte ücretsiz keşif imkanı.",
     url: "https://iklimofisi.com",
     siteName: "İklim Ofisi Mühendislik",
     locale: "tr_TR",
