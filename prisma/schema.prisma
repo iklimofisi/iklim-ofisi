@@ -50,6 +50,7 @@ model Musteri {
   ziyaretler     Ziyaret[]
   yetkililer     MusteriYetkili[] // YENİ: Birden fazla müşteri yetkilisi
   isiHesaplari   IsiHesap[]       // Isı pompası hesapları
+  klimaHesaplari KlimaHesap[]     // Klima / VRF hesapları
 }
 
 // YENİ: Müşteriye bağlı ek yetkililer (ana yetkili Musteri.yetkiliAdi alanında durmaya devam eder)
@@ -127,6 +128,7 @@ model Teklif {
   // Bu teklife özel düzenlenmiş not metinleri: {"<notId>": "metin"} (hazır not değişmez)
   ozelNotlar               String?
   isiHesaplari             IsiHesap[]        // Bu teklife aktarılan ısı pompası hesapları
+  klimaHesaplari           KlimaHesap[]      // Bu teklife aktarılan klima / VRF hesapları
 }
 
 // Teklifin müşteriye gönderilen gizli linki (iklimofisi.com/t/<anahtar>).
@@ -653,6 +655,25 @@ model IsiHesap {
   il                   String   @default("İstanbul")
   veri                 String   @default("{}")
   toplamKw             Float    @default(0)
+  teklifId             String?
+  teklif               Teklif?  @relation(fields: [teklifId], references: [id], onDelete: SetNull)
+  olusturanKullaniciId String?
+  olusturanAdi         String   @default("")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([musteriId])
+}
+
+// Kaydedilen klima / multi split / VRF hesabı (girdiler JSON metni)
+model KlimaHesap {
+  id                   String   @id @default(cuid())
+  ad                   String
+  musteriId            String?
+  musteri              Musteri? @relation(fields: [musteriId], references: [id], onDelete: SetNull)
+  il                   String   @default("İstanbul")
+  veri                 String   @default("{}")
+  toplamKw             Float    @default(0) // toplam soğutma yükü
   teklifId             String?
   teklif               Teklif?  @relation(fields: [teklifId], references: [id], onDelete: SetNull)
   olusturanKullaniciId String?

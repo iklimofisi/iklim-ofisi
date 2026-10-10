@@ -220,7 +220,7 @@ function brutAlan(e: Eleman, o: Oda): number {
 // ---------------------------------------------------------------------------
 // 1. ODA ISI KAYBI
 // ---------------------------------------------------------------------------
-function odaIsiKaybi(o: Oda, v: HesapVerisi, disT: number) {
+export function odaIsiKaybi(o: Oda, v: Pick<HesapVerisi, "isiKoprusu" | "yonArtirimi" | "isinmaArtirimi">, disT: number) {
   const ti = o.sicaklik;
   const yerdenli = o.isitici === "YERDEN" || o.isitici === "YERDEN_RADYATOR";
   // Aynı yöndeki pencere/kapı alanları o yöndeki dış duvardan düşülür

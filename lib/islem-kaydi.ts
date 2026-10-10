@@ -48,6 +48,9 @@ const SILME_KAYNAKLARI: Record<string, { model: string; include?: Record<string,
   isiHesapKaydet: { model: "isiHesap" },
   isiPompasiModeliSil: { model: "isiPompasiModeli" },
   isiPompasiModeliKaydet: { model: "isiPompasiModeli" },
+  klimaHesapSil: { model: "klimaHesap" },
+  // Girdiler her kayıtta yeniden yazıldığı için önceki hâl de saklanır
+  klimaHesapKaydet: { model: "klimaHesap" },
 };
 
 // Dosya içeriklerini (PDF, Excel, logo...) kayda koymaz; yalnızca boyutunu yazar.

@@ -33,7 +33,7 @@ export const RENK = {
   beyaz: "#ffffff",
 };
 
-class Kalem {
+export class Kalem {
   ogeler: Oge[] = [];
   cizgi(x1: number, y1: number, x2: number, y2: number, renk = RENK.cizgi, k = 0.5, kesik = false) {
     this.ogeler.push({ t: "cizgi", x1, y1, x2, y2, renk, k, kesik });

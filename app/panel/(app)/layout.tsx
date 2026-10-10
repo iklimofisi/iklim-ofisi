@@ -27,6 +27,7 @@ const menuTemel = [
   { href: "/panel/teklifler", label: "Teklifler" },
   { href: "/panel/fiyat-listeleri", label: "Fiyat Listeleri" },
   { href: "/panel/isi-hesabi", label: "Isı Pompası Hesabı" },
+  { href: "/panel/klima-hesabi", label: "Klima & VRF Hesabı" },
   { href: "/panel/kesif", label: "Keşif" },
   { href: "/panel/siparisler", label: "Siparişler" },
   { href: "/panel/cari", label: "Cari Hesap" },

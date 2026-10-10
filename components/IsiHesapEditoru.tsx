@@ -63,11 +63,11 @@ const SEKMELER: [Sekme, string][] = [
   ["malzeme", "5 · Malzeme & Teklif"],
 ];
 
-const girdi = "focus-ring w-full border border-hat rounded-md px-2.5 py-1.5 text-sm bg-white";
-const etiket = "block text-[11px] font-medium text-metin/60 mb-1";
+export const girdi = "focus-ring w-full border border-hat rounded-md px-2.5 py-1.5 text-sm bg-white";
+export const etiket = "block text-[11px] font-medium text-metin/60 mb-1";
 
 // Ondalık virgül kabul eden sayı alanı (yazarken ara değerleri bozmaz)
-function SayiAlani({
+export function SayiAlani({
   deger,
   onChange,
   min,
@@ -126,7 +126,7 @@ function SayiAlani({
   );
 }
 
-function Alan({ ad, children, className = "" }: { ad: string; children: React.ReactNode; className?: string }) {
+export function Alan({ ad, children, className = "" }: { ad: string; children: React.ReactNode; className?: string }) {
   return (
     <label className={`block ${className}`}>
       <span className={etiket}>{ad}</span>
@@ -135,7 +135,7 @@ function Alan({ ad, children, className = "" }: { ad: string; children: React.Re
   );
 }
 
-function Kart({ baslik, children, aciklama }: { baslik: string; children: React.ReactNode; aciklama?: string }) {
+export function Kart({ baslik, children, aciklama }: { baslik: string; children: React.ReactNode; aciklama?: string }) {
   return (
     <section className="bg-yuzey border border-hat rounded-lg p-4 sm:p-5">
       <h2 className="font-display font-semibold text-metin text-sm mb-1">{baslik}</h2>
@@ -428,7 +428,7 @@ export default function IsiHesapEditoru({ hesap, musteriler, modeller }: Props) 
   );
 }
 
-function Ozet({ ad, deger, alt, vurgu }: { ad: string; deger: string; alt?: string; vurgu?: boolean }) {
+export function Ozet({ ad, deger, alt, vurgu }: { ad: string; deger: string; alt?: string; vurgu?: boolean }) {
   return (
     <div className={`rounded-md px-3 py-2 ${vurgu ? "bg-sicak/10" : "bg-soguk/5"} min-w-0`}>
       <p className="text-[10px] uppercase tracking-wide text-metin/50 truncate">{ad}</p>
@@ -675,7 +675,7 @@ function OdaEkle({ ekle }: { ekle: (tip: OdaTipi) => void }) {
   );
 }
 
-const ELEMAN_DUGMELERI: [ElemanTuru, string][] = [
+export const ELEMAN_DUGMELERI: [ElemanTuru, string][] = [
   ["DIS_DUVAR", "+ Dış duvar"],
   ["PENCERE", "+ Pencere"],
   ["DIS_KAPI", "+ Dış kapı"],
@@ -895,7 +895,7 @@ function OdaDuzenleyici({
   );
 }
 
-function ElemanSatiri({
+export function ElemanSatiri({
   e,
   oda,
   kayip,
@@ -1083,7 +1083,7 @@ function OdaSonucKarti({ s, veri }: { s: OdaSonucu; veri: HesapVerisi }) {
 // =============================================================================
 // 3. SONUÇLAR
 // =============================================================================
-function Tablo({ basliklar, satirlar, sagdan = [] }: { basliklar: string[]; satirlar: (string | number)[][]; sagdan?: number[] }) {
+export function Tablo({ basliklar, satirlar, sagdan = [] }: { basliklar: string[]; satirlar: (string | number)[][]; sagdan?: number[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
