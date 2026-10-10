@@ -23,6 +23,8 @@ const MESAJLAR: Record<string, string> = {
   "paylasim-olusturuldu": "Teklif linki oluşturuldu. Şimdi WhatsApp ile gönderebilirsiniz.",
   "fiyat-listesi-kaydedildi": "Fiyat listesi kaydedildi.",
   "fiyat-listesi-kopyalandi": "Fiyat listesi kopyalandı. Şu an kopyayı düzenliyorsunuz.",
+  "isi-hesap-kopyalandi": "Hesap kopyalandı. Şu an kopyayı düzenliyorsunuz.",
+  "isi-hesap-teklif": "Isı pompası hesabından teklif taslağı oluşturuldu. Fiyatları girip kaydedin.",
   "paylasim-iptal": "Teklif linki iptal edildi; eski link artık açılmaz.",
   "eposta-test-ok": "Deneme e-postası gönderildi. Gelen kutunuzu (ve Spam klasörünü) kontrol edin.",
 };
@@ -32,6 +34,9 @@ const HATALAR: Record<string, string> = {
   "eposta-hatasi": "E-posta GÖNDERİLEMEDİ. Tekrar deneyin; sürerse nedeni Ayarlar → E-posta Durumu bölümünde görünür.",
   "eposta-test-hata": "Deneme e-postası GÖNDERİLEMEDİ. Nedeni aşağıdaki listede yazıyor.",
   "fiyat-listesi-eksik": "Fiyat listesi KAYDEDİLMEDİ: liste adı boş olamaz.",
+  "isi-hesap-eksik": "Hesap OLUŞTURULMADI: hesap adı boş olamaz.",
+  "isi-hesap-teklif-eksik": "Teklif OLUŞTURULMADI: müşteri ve teklif başlığı seçilmeli, hesapta en az bir oda olmalı.",
+  "isi-modeli-eksik": "Model KAYDEDİLMEDİ: marka, model ve üç kapasite değeri (A7/W35, A-7/W35, A-7/W55) zorunludur.",
   "teklif-eksik": "Teklif KAYDEDİLMEDİ: müşteri, başlık veya en az bir açıklamalı kalem eksik.",
   "teklif-kayit-hatasi": "Teklif KAYDEDİLEMEDİ. Nedeni İşlem Geçmişi'nde \"Teklif kaydı BAŞARISIZ\" satırında yazıyor.",
 };

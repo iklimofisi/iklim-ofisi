@@ -49,6 +49,7 @@ model Musteri {
   projeler       Proje[]
   ziyaretler     Ziyaret[]
   yetkililer     MusteriYetkili[] // YENİ: Birden fazla müşteri yetkilisi
+  isiHesaplari   IsiHesap[]       // Isı pompası hesapları
 }
 
 // YENİ: Müşteriye bağlı ek yetkililer (ana yetkili Musteri.yetkiliAdi alanında durmaya devam eder)
@@ -125,6 +126,7 @@ model Teklif {
   musteriOnayIp            String?
   // Bu teklife özel düzenlenmiş not metinleri: {"<notId>": "metin"} (hazır not değişmez)
   ozelNotlar               String?
+  isiHesaplari             IsiHesap[]        // Bu teklife aktarılan ısı pompası hesapları
 }
 
 // Teklifin müşteriye gönderilen gizli linki (iklimofisi.com/t/<anahtar>).
@@ -222,6 +224,7 @@ model Urun {
   stokHareketleri     StokHareket[]
   depoStoklar         DepoStok[]
   seriNolar           UrunSeriNo[]
+  isiPompasiModelleri IsiPompasiModeli[]
 
   @@unique([kod])
 }
@@ -615,4 +618,47 @@ enum SeriNoDurum {
   REZERVE
   SATILDI
   SERVISDE
+}
+
+// -----------------------------------------------------------------------------
+// ISI POMPASI HESABI
+// -----------------------------------------------------------------------------
+
+// Hesapta model önerisi için ısı pompası kataloğu (kapasiteler kW)
+model IsiPompasiModeli {
+  id             String   @id @default(cuid())
+  marka          String
+  model          String
+  kapA7W35       Float    @default(0) // A7/W35 ısıtma kapasitesi
+  kapAm7W35      Float    @default(0) // A-7/W35
+  kapAm7W55      Float    @default(0) // A-7/W55
+  kapAm15W35     Float? // A-15/W35 (biliniyorsa)
+  minDisSicaklik Float    @default(-20) // çalışma alt sınırı °C
+  maksCikis      Float    @default(60) // en yüksek çıkış suyu °C
+  yedekIsiticiKw Float    @default(0) // dahili elektrikli ısıtıcı
+  urunId         String? // ürün kataloğundaki karşılığı (teklife fiyatıyla aktarılır)
+  urun           Urun?    @relation(fields: [urunId], references: [id], onDelete: SetNull)
+  aciklama       String?
+  aktif          Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// Kaydedilen ısı pompası / radyatör / yerden ısıtma hesabı (girdiler JSON metni)
+model IsiHesap {
+  id                   String   @id @default(cuid())
+  ad                   String
+  musteriId            String?
+  musteri              Musteri? @relation(fields: [musteriId], references: [id], onDelete: SetNull)
+  il                   String   @default("İstanbul")
+  veri                 String   @default("{}")
+  toplamKw             Float    @default(0)
+  teklifId             String?
+  teklif               Teklif?  @relation(fields: [teklifId], references: [id], onDelete: SetNull)
+  olusturanKullaniciId String?
+  olusturanAdi         String   @default("")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([musteriId])
 }

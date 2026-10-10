@@ -43,6 +43,11 @@ const SILME_KAYNAKLARI: Record<string, { model: string; include?: Record<string,
   urunSil: { model: "urun" },
   projeSil: { model: "proje" },
   ziyaretSil: { model: "ziyaret" },
+  isiHesapSil: { model: "isiHesap" },
+  // Girdiler her kayıtta yeniden yazıldığı için önceki hâl de saklanır
+  isiHesapKaydet: { model: "isiHesap" },
+  isiPompasiModeliSil: { model: "isiPompasiModeli" },
+  isiPompasiModeliKaydet: { model: "isiPompasiModeli" },
 };
 
 // Dosya içeriklerini (PDF, Excel, logo...) kayda koymaz; yalnızca boyutunu yazar.
