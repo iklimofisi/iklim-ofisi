@@ -207,19 +207,18 @@ export default async function HizmetlerPage() {
             {/* YENİ KART: YERDEN ISITMA (FRAENKISCHE) */}
             <div id="yerden-isitma" className="scroll-mt-24 bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500/40 transition-all duration-300 flex flex-col justify-between group">
               <div>
-                {/* CAD Isı Pompası Yerden Isıtma Şeması */}
-                <div className="h-44 w-full bg-slate-950 p-4 flex items-center justify-center relative overflow-hidden">
+                {/* Fraenkische yerden ısıtma borusu fotoğrafı */}
+                <div className="h-44 w-full bg-slate-100 relative overflow-hidden">
                   <span className="absolute z-10 top-3 right-3 text-[10px] font-bold text-amber-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-md">
                     Fraenkische
                   </span>
-                  <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-amber-950/40 flex items-center justify-center">
-                    <svg className="w-3/4 h-auto" viewBox="0 0 200 100" fill="none" aria-label="Yerden ısıtma boru serimi çizimi" role="img">
-                      <rect x="8" y="24" width="34" height="52" rx="4" stroke="#fbbf24" strokeWidth="2" fill="#0f172a" />
-                      <path d="M42 36h14M42 64h14" stroke="#f59e0b" strokeWidth="2" />
-                      <path d="M56 14h132v12H66v12h122v12H66v12h122v12H66v12h122" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </div>
-                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-transparent to-transparent" />
+                  <Image
+                    src="/yerden-isitma/fraenkische-boru-kart.jpg"
+                    alt="Fraenkische yerden ısıtma borusu kangalı"
+                    fill
+                    sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                    className="object-cover"
+                  />
                 </div>
 
                 <div className="p-6 space-y-4">

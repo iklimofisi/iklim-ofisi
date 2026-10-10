@@ -69,9 +69,9 @@ const SLAYTLAR: Slayt[] = [
   {
     etiket: "Fraenkische · Yerden Isıtma",
     baslik: "Sulu Yerden Isıtma Sistemleri",
-    alt: "Yerden ısıtma boru serimi çizimi",
+    alt: "Fraenkische yerden ısıtma borusu kangalı",
     href: "/hizmetler#yerden-isitma",
-    cizim: "isitma",
+    gorsel: "/yerden-isitma/fraenkische-boru-slider.jpg",
   },
   {
     etiket: "Buderus · Kazan Dairesi Yenileme",

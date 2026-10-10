@@ -69,12 +69,13 @@ const urunKategorileri: {
   },
   {
     id: "yerden-isitma",
+    gorsel: "/yerden-isitma/fraenkische-boru-kart.jpg",
+    gorselAlt: "Fraenkische yerden ısıtma borusu kangalı",
     kategori: "YERDEN ISITMA",
     baslik: "Fraenkische Yerden Isıtma Sistemleri",
     aciklama: "Zeminden eşit ve konforlu ısıtma için Fraenkische yerden ısıtma boru, kolektör ve bağlantı sistemleri. Isı pompası ve yoğuşmalı kazanla birlikte projelendirilir.",
     urunler: ["Yerden Isıtma Boruları", "Kolektör ve Dağıtım Grupları", "Oda Termostatları ve Kontrol", "Isı Pompası / Kazan Entegrasyonu"],
     markalar: "Fraenkische",
-    gorselBaslik: "Fraenkische",
   },
   {
     id: "isi-pompasi-isitma",
