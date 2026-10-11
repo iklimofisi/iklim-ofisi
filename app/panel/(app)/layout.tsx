@@ -6,6 +6,7 @@ import { cikisYap } from "@/lib/auth-actions";
 import { suankiKullanici } from "@/lib/oturum";
 import { prisma } from "@/lib/prisma";
 import PanelMobilMenu from "@/components/PanelMobilMenu";
+import PanelYanMenu, { type MenuGrubu } from "@/components/PanelYanMenu";
 import KayitBildirimi from "@/components/KayitBildirimi";
 import KurGostergesi from "@/components/KurGostergesi";
 import { Suspense } from "react";
@@ -14,26 +15,50 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-// "Profilim & Şifre" MENÜ DİZİSİNE EKLENDİ
-const menuTemel = [
-  { href: "/panel", label: "Özet" },
-  { href: "/panel/proje-takip", label: "📊 Proje Takip (Excel)" }, // YENİ EKLENDİ
-  { href: "/panel/stok", label: "Stok & Envanter" },
-  { href: "/panel/genel-cari", label: "Genel Finans & Çekler" },
-  { href: "/panel/talepler", label: "Web Talepleri" },
-  { href: "/panel/musteriler", label: "Müşteriler" },
-  { href: "/panel/projeler", label: "Projeler" },
-  { href: "/panel/ziyaretler", label: "Görüşmeler & Ziyaretler" },
-  { href: "/panel/teklifler", label: "Teklifler" },
-  { href: "/panel/fiyat-listeleri", label: "Fiyat Listeleri" },
-  { href: "/panel/isi-hesabi", label: "Isı Pompası Hesabı" },
-  { href: "/panel/klima-hesabi", label: "Klima & VRF Hesabı" },
-  { href: "/panel/kesif", label: "Keşif" },
-  { href: "/panel/siparisler", label: "Siparişler" },
-  { href: "/panel/cari", label: "Cari Hesap" },
-  { href: "/panel/satinalma", label: "Satınalma" },
+// MENÜ GRUPLARI — sol menü açılır gruplar hâlinde gösterilir (bulunulan sayfanın grubu açık durur).
+// Sayfa adresleri değişmedi; yalnızca menüdeki yerleri gruplandı.
+const menuGruplari: MenuGrubu[] = [
+  { baslik: null, ogeler: [{ href: "/panel", label: "Özet" }] },
+  {
+    baslik: "Satış & Müşteri",
+    ogeler: [
+      { href: "/panel/talepler", label: "Web Talepleri" },
+      { href: "/panel/musteriler", label: "Müşteriler" },
+      { href: "/panel/ziyaretler", label: "Görüşmeler & Ziyaretler" },
+      { href: "/panel/projeler", label: "Projeler" },
+      { href: "/panel/proje-takip", label: "📊 Proje Takip (Excel)" },
+      { href: "/panel/kesif", label: "Keşif" },
+      { href: "/panel/teklifler", label: "Teklifler" },
+      { href: "/panel/fiyat-listeleri", label: "Fiyat Listeleri" },
+    ],
+  },
+  {
+    baslik: "Mühendislik Hesapları",
+    ogeler: [
+      { href: "/panel/isi-hesabi", label: "Isı Pompası Hesabı" },
+      { href: "/panel/klima-hesabi", label: "Klima & VRF Hesabı" },
+      { href: "/panel/havalandirma-hesabi", label: "Havalandırma Hesabı" },
+    ],
+  },
+  {
+    baslik: "Operasyon",
+    ogeler: [
+      { href: "/panel/siparisler", label: "Siparişler" },
+      { href: "/panel/satinalma", label: "Satınalma" },
+      { href: "/panel/stok", label: "Stok & Envanter" },
+    ],
+  },
+  {
+    baslik: "Finans",
+    ogeler: [
+      { href: "/panel/cari", label: "Cari Hesap" },
+      { href: "/panel/genel-cari", label: "Genel Finans & Çekler" },
+    ],
+  },
+];
+const yonetimTemel = [
   { href: "/panel/ayarlar", label: "Ayarlar" },
-  { href: "/panel/profil", label: "Profilim & Şifre" }, // <--- MENÜYE EKLENDİ
+  { href: "/panel/profil", label: "Profilim & Şifre" },
 ];
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
@@ -58,21 +83,23 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     "/panel/projeler": takiptekiProjeSayisi,
   };
 
-  const menu =
-    kullanici.rol === "ADMIN"
-      ? [
-          ...menuTemel,
-          { href: "/panel/kullanicilar", label: "Kullanıcılar" },
-          { href: "/panel/islem-gecmisi", label: "İşlem Geçmişi" },
-        ]
-      : menuTemel;
+  const gruplar: MenuGrubu[] = [
+    ...menuGruplari,
+    {
+      baslik: "Yönetim",
+      ogeler:
+        kullanici.rol === "ADMIN"
+          ? [...yonetimTemel, { href: "/panel/kullanicilar", label: "Kullanıcılar" }, { href: "/panel/islem-gecmisi", label: "İşlem Geçmişi" }]
+          : yonetimTemel,
+    },
+  ];
 
   return (
     <div className="min-h-screen flex flex-col sm:flex-row bg-zemin">
       <Suspense fallback={null}>
         <KayitBildirimi />
       </Suspense>
-      <PanelMobilMenu menu={menu} rozetler={rozetler} />
+      <PanelMobilMenu gruplar={gruplar} rozetler={rozetler} />
       <aside className="w-56 shrink-0 border-r border-hat bg-yuzey hidden sm:flex flex-col print:hidden">
         <div className="h-16 flex items-center gap-2 px-6 border-b border-hat">
           <Link href="/" className="flex items-center gap-2 focus-ring">
@@ -86,22 +113,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         <div className="px-3 pt-4">
           <KurGostergesi />
         </div>
-        <nav className="flex-1 px-3 pt-4 pb-6 space-y-1">
-          {menu.map((m) => (
-            <Link
-              key={m.href}
-              href={m.href}
-              className="focus-ring flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium text-metin/75 hover:bg-soguk-light hover:text-soguk-dim transition-colors"
-            >
-              {m.label}
-              {rozetler[m.href] && rozetler[m.href] > 0 ? (
-                <span className="text-xs bg-sicak text-white rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                  {rozetler[m.href]}
-                </span>
-              ) : null}
-            </Link>
-          ))}
-        </nav>
+        <PanelYanMenu gruplar={gruplar} rozetler={rozetler} />
 
         {/* SOL EN ALT KULLANICI BİLGİSİ VE PROFİLİM LİNKİ */}
         <div className="p-4 border-t border-hat space-y-2">

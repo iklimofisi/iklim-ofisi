@@ -27,6 +27,8 @@ const MESAJLAR: Record<string, string> = {
   "isi-hesap-teklif": "Isı pompası hesabından teklif taslağı oluşturuldu. Fiyatları girip kaydedin.",
   "klima-hesap-kopyalandi": "Hesap kopyalandı. Şu an kopyayı düzenliyorsunuz.",
   "klima-hesap-teklif": "Klima / VRF hesabından teklif taslağı oluşturuldu. Fiyatları girip kaydedin.",
+  "havalandirma-hesap-kopyalandi": "Hesap kopyalandı. Şu an kopyayı düzenliyorsunuz.",
+  "havalandirma-hesap-teklif": "Havalandırma hesabından teklif taslağı oluşturuldu. Fiyatları girip kaydedin.",
   "paylasim-iptal": "Teklif linki iptal edildi; eski link artık açılmaz.",
   "eposta-test-ok": "Deneme e-postası gönderildi. Gelen kutunuzu (ve Spam klasörünü) kontrol edin.",
 };
@@ -40,6 +42,8 @@ const HATALAR: Record<string, string> = {
   "isi-hesap-teklif-eksik": "Teklif OLUŞTURULMADI: müşteri ve teklif başlığı seçilmeli, hesapta en az bir oda olmalı.",
   "klima-hesap-eksik": "Hesap OLUŞTURULMADI: hesap adı boş olamaz.",
   "klima-hesap-teklif-eksik": "Teklif OLUŞTURULMADI: müşteri ve teklif başlığı seçilmeli, hesapta klimalanan en az bir oda olmalı.",
+  "havalandirma-hesap-eksik": "Hesap OLUŞTURULMADI: hesap adı boş olamaz.",
+  "havalandirma-hesap-teklif-eksik": "Teklif OLUŞTURULMADI: müşteri ve teklif başlığı seçilmeli, hesapta en az bir santral ve mahal olmalı.",
   "isi-modeli-eksik": "Model KAYDEDİLMEDİ: marka, model ve üç kapasite değeri (A7/W35, A-7/W35, A-7/W55) zorunludur.",
   "teklif-eksik": "Teklif KAYDEDİLMEDİ: müşteri, başlık veya en az bir açıklamalı kalem eksik.",
   "teklif-kayit-hatasi": "Teklif KAYDEDİLEMEDİ. Nedeni İşlem Geçmişi'nde \"Teklif kaydı BAŞARISIZ\" satırında yazıyor.",

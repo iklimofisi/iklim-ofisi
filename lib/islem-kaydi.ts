@@ -51,6 +51,9 @@ const SILME_KAYNAKLARI: Record<string, { model: string; include?: Record<string,
   klimaHesapSil: { model: "klimaHesap" },
   // Girdiler her kayıtta yeniden yazıldığı için önceki hâl de saklanır
   klimaHesapKaydet: { model: "klimaHesap" },
+  havalandirmaHesapSil: { model: "havalandirmaHesap" },
+  // Girdiler her kayıtta yeniden yazıldığı için önceki hâl de saklanır
+  havalandirmaHesapKaydet: { model: "havalandirmaHesap" },
 };
 
 // Dosya içeriklerini (PDF, Excel, logo...) kayda koymaz; yalnızca boyutunu yazar.
