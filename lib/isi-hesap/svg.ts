@@ -23,8 +23,10 @@ export function cizimSvg(c: Cizim, baslik = "Çizim"): string {
       p.push(`<circle cx="${s(o.x)}" cy="${s(o.y)}" r="${s(o.r)}" fill="${o.dolgu ?? "none"}" stroke="${o.renk}" stroke-width="${o.k}"/>`);
     } else {
       const anchor = o.hiza === "orta" ? "middle" : o.hiza === "sag" ? "end" : "start";
+      // Tıklanabilir ölçü / oda adı (panelde düzenleme için); PDF'te kullanılmaz
+      const ek = o.etiket ? ` data-dz="${kac(o.etiket)}" class="dz"` : o.git ? ` data-git="${kac(o.git)}" class="dz-git"` : "";
       p.push(
-        `<text x="${s(o.x)}" y="${s(o.y)}" font-size="${o.b}" fill="${o.renk}" text-anchor="${anchor}"${o.kalin ? ` font-weight="700"` : ""}>${kac(o.m)}</text>`
+        `<text x="${s(o.x)}" y="${s(o.y)}" font-size="${o.b}" fill="${o.renk}" text-anchor="${anchor}"${o.kalin ? ` font-weight="700"` : ""}${ek}>${kac(o.m)}</text>`
       );
     }
   }

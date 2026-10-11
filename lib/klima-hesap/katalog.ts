@@ -215,7 +215,7 @@ export const IC_UNITE_TIPLERI = {
     aciklama: "Yüksek tavanlı ve büyük hacimler, uzun kanal; jet nozul / girdaplı difüzörle yaşam bölgesine üfleme.",
   },
   TAVAN: {
-    ad: "Tavan askılı",
+    ad: "Tavan askılı (tavan altı, açık montaj)",
     kisa: "Tavan askılı",
     h0: 2.2,
     vrf: [3.6, 4.5, 5.6, 7.1, 9.0, 11.2, 14.0],
@@ -231,7 +231,8 @@ export const IC_UNITE_TIPLERI = {
     asmaTavan: "GEREKMEZ",
     yasamBolgesi: false,
     debiKw: 200,
-    aciklama: "Asma tavanı olmayan mağaza, restoran, atölye; uzun atış.",
+    aciklama:
+      "Asma tavan olmayan yerde tavana çıplak asılan, gövdesi görünen yassı ünite; havayı tavan boyunca yatay üfler (8–12 m atış). Mağaza, restoran, atölye, showroom gibi geniş alanlar için; küçük odada duvar tipi daha uygundur.",
   },
   KONSOL: {
     ad: "Döşeme / konsol tipi",

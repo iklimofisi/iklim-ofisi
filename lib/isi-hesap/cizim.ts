@@ -17,7 +17,9 @@ export type Oge =
   | { t: "yol"; n: [number, number][]; renk: string; k: number; kesik?: boolean; kapali?: boolean; dolgu?: string }
   | { t: "dortgen"; x: number; y: number; w: number; h: number; renk: string; k: number; dolgu?: string; r?: number; kesik?: boolean }
   | { t: "daire"; x: number; y: number; r: number; renk: string; k: number; dolgu?: string }
-  | { t: "yazi"; x: number; y: number; m: string; b: number; renk: string; hiza?: Hiza; kalin?: boolean };
+  | { t: "yazi"; x: number; y: number; m: string; b: number; renk: string; hiza?: Hiza; kalin?: boolean; etiket?: string; git?: string };
+// etiket: panelde tıklanıp değeri değiştirilebilen ölçü (ör. "brans|<odaId>"); git: tıklanınca açılacak oda id'si.
+// PDF bu alanları yok sayar.
 
 export type Cizim = { w: number; h: number; ogeler: Oge[] };
 
@@ -47,8 +49,8 @@ export class Kalem {
   daire(x: number, y: number, r: number, renk = RENK.cizgi, k = 0.5, dolgu?: string) {
     this.ogeler.push({ t: "daire", x, y, r, renk, k, dolgu });
   }
-  yazi(x: number, y: number, m: string, b = 3, ek: { renk?: string; hiza?: Hiza; kalin?: boolean } = {}) {
-    this.ogeler.push({ t: "yazi", x, y, m, b, renk: ek.renk ?? RENK.cizgi, hiza: ek.hiza ?? "sol", kalin: ek.kalin });
+  yazi(x: number, y: number, m: string, b = 3, ek: { renk?: string; hiza?: Hiza; kalin?: boolean; etiket?: string; git?: string } = {}) {
+    this.ogeler.push({ t: "yazi", x, y, m, b, renk: ek.renk ?? RENK.cizgi, hiza: ek.hiza ?? "sol", kalin: ek.kalin, ...(ek.etiket ? { etiket: ek.etiket } : {}), ...(ek.git ? { git: ek.git } : {}) });
   }
   nokta(x: number, y: number, renk: string) {
     this.daire(x, y, 0.9, renk, 0.3, renk);

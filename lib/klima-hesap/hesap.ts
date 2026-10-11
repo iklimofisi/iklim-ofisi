@@ -110,6 +110,9 @@ export type BoruParcasi = {
   gaz: number;
   sivi: number;
   basma?: number; // 3 borulu sistemde basma gazı hattı
+  etiket?: string; // panelde düzenlenebilen girdi ("anaHat|1", "hat|<odaId>", "brans|<odaId>")
+  hatKismi?: number; // son ünitede: uzunluğun ana hat (gövde) kısmı
+  hatEtiket?: string;
 };
 
 export type UniteBaglantisi = {
@@ -120,6 +123,7 @@ export type UniteBaglantisi = {
   bransman: number | null; // bağlı olduğu branşman no
   uzaklik: number; // dış üniteden gerçek boru uzunluğu
   kot: number;
+  sira: number; // odadaki kaçıncı ünite (0 = ilk)
 };
 
 export type SistemSonucu = {
@@ -133,6 +137,7 @@ export type SistemSonucu = {
   isitmaYuku: number; // kW
   disKw: number | null;
   disIsitmaKw: number | null;
+  disKot: number; // m
   oran: number | null; // %
   sogutmaDuzeltilmis: number | null; // kW
   isitmaDuzeltilmis: number | null; // kW
@@ -362,7 +367,7 @@ function sistemHesapla(s: Sistem, odalarHam: KlimaOda[], odalar: KlimaOdaSonucu[
   const tanim = SISTEM_TIPLERI[s.tip];
   const uy: string[] = [];
   // Her iç ünite ayrı bir bağlantıdır (oda sırası = ana hat üzerindeki sıra)
-  type U = { odaId: string; oda: string; tipAdi: string; kw: number; hat: number; brans: number; kot: number; tip: IcUniteTipi };
+  type U = { odaId: string; oda: string; tipAdi: string; kw: number; hat: number; brans: number; kot: number; tip: IcUniteTipi; sira: number };
   const uniteler: U[] = [];
   for (const o of odalarHam) {
     const r = odalar.find((x) => x.id === o.id)!;
@@ -376,6 +381,7 @@ function sistemHesapla(s: Sistem, odalarHam: KlimaOda[], odalar: KlimaOdaSonucu[
         brans: o.bransMesafe,
         kot: o.kot,
         tip: r.unite!.tip,
+        sira: i,
       });
   }
   const icToplam = uniteler.reduce((t, u) => t + u.kw, 0);
@@ -392,33 +398,50 @@ function sistemHesapla(s: Sistem, odalarHam: KlimaOda[], odalar: KlimaOdaSonucu[
     for (const u of uniteler) {
       const c = capSec(SPLIT_CAPLARI, u.kw);
       const L = Math.max(0.5, u.brans);
-      parcalar.push({ ad: `${u.oda} hattı`, tur: "BRANS", uzunluk: L, kw: u.kw, gaz: c.gaz, sivi: c.sivi });
-      baglantilar.push({ odaId: u.odaId, oda: u.oda, tipAdi: u.tipAdi, kw: u.kw, bransman: null, uzaklik: L, kot: u.kot });
+      parcalar.push({ ad: `${u.oda} hattı`, tur: "BRANS", uzunluk: L, kw: u.kw, gaz: c.gaz, sivi: c.sivi, etiket: `brans|${u.odaId}` });
+      baglantilar.push({ odaId: u.odaId, oda: u.oda, tipAdi: u.tipAdi, kw: u.kw, bransman: null, uzaklik: L, kot: u.kot, sira: u.sira });
     }
   } else {
     // Zincir: Dış ünite —ana hat— B1 — B2 — … — B(n-1); her Bj'den u(j-1) ayrılır, son ünite B(n-1)'den
-    parcalar.push({ ad: "Ana hat (dış ünite → " + (n > 1 ? "B1)" : "iç ünite)"), tur: "ANA", uzunluk: s.anaHat, kw: icToplam, gaz: 0, sivi: 0 });
+    parcalar.push({ ad: "Ana hat (dış ünite → " + (n > 1 ? "B1)" : "iç ünite)"), tur: "ANA", uzunluk: s.anaHat, kw: icToplam, gaz: 0, sivi: 0, etiket: `anaHat|${s.no}` });
     let yol = s.anaHat;
     for (let j = 1; j <= n - 1; j++) {
       const asagi = r1(uniteler.slice(j - 1).reduce((t, u) => t + u.kw, 0) * 100) / 100;
       bransmanlar.push({ no: j, kw: asagi, ad: (BRANSMAN_KADEMELERI.find((b) => asagi <= b.maksKw + 1e-9) ?? BRANSMAN_KADEMELERI[BRANSMAN_KADEMELERI.length - 1]).ad });
       const u = uniteler[j - 1];
       const c = capSec(IC_UNITE_CAPLARI, u.kw);
-      parcalar.push({ ad: `B${j} → ${u.oda}`, tur: "BRANS", uzunluk: u.brans, kw: u.kw, gaz: c.gaz, sivi: c.sivi });
-      baglantilar.push({ odaId: u.odaId, oda: u.oda, tipAdi: u.tipAdi, kw: u.kw, bransman: j, uzaklik: yol + u.brans, kot: u.kot });
+      parcalar.push({ ad: `B${j} → ${u.oda}`, tur: "BRANS", uzunluk: u.brans, kw: u.kw, gaz: c.gaz, sivi: c.sivi, etiket: `brans|${u.odaId}` });
+      baglantilar.push({ odaId: u.odaId, oda: u.oda, tipAdi: u.tipAdi, kw: u.kw, bransman: j, uzaklik: yol + u.brans, kot: u.kot, sira: u.sira });
       if (j < n - 1) {
         const sonraki = uniteler[j];
         const asagi2 = r1(uniteler.slice(j).reduce((t, x) => t + x.kw, 0) * 100) / 100;
         const ch = capSec(VRF_HAT_CAPLARI, asagi2);
-        parcalar.push({ ad: `B${j} → B${j + 1}`, tur: "HAT", uzunluk: sonraki.hat, kw: asagi2, gaz: ch.gaz, sivi: ch.sivi });
+        parcalar.push({
+          ad: `B${j} → B${j + 1}`,
+          tur: "HAT",
+          uzunluk: sonraki.hat,
+          kw: asagi2,
+          gaz: ch.gaz,
+          sivi: ch.sivi,
+          ...(sonraki.sira === 0 ? { etiket: `hat|${sonraki.odaId}` } : {}),
+        });
         yol += sonraki.hat;
       }
     }
     const son = uniteler[n - 1];
     const cs = capSec(IC_UNITE_CAPLARI, son.kw);
     const sonUzunluk = n > 1 ? son.hat + son.brans : son.brans;
-    parcalar.push({ ad: n > 1 ? `B${n - 1} → ${son.oda}` : `${son.oda} bağlantısı`, tur: "BRANS", uzunluk: sonUzunluk, kw: son.kw, gaz: cs.gaz, sivi: cs.sivi });
-    baglantilar.push({ odaId: son.odaId, oda: son.oda, tipAdi: son.tipAdi, kw: son.kw, bransman: n > 1 ? n - 1 : null, uzaklik: yol + sonUzunluk, kot: son.kot });
+    parcalar.push({
+      ad: n > 1 ? `B${n - 1} → ${son.oda}` : `${son.oda} bağlantısı`,
+      tur: "BRANS",
+      uzunluk: sonUzunluk,
+      kw: son.kw,
+      gaz: cs.gaz,
+      sivi: cs.sivi,
+      etiket: `brans|${son.odaId}`,
+      ...(n > 1 ? { hatKismi: son.hat, ...(son.sira === 0 ? { hatEtiket: `hat|${son.odaId}` } : {}) } : {}),
+    });
+    baglantilar.push({ odaId: son.odaId, oda: son.oda, tipAdi: son.tipAdi, kw: son.kw, bransman: n > 1 ? n - 1 : null, uzaklik: yol + sonUzunluk, kot: son.kot, sira: son.sira });
   }
   const toplamBoru = parcalar.reduce((t, x) => t + x.uzunluk, 0);
   const enUzak = Math.max(0, ...baglantilar.map((b) => b.uzaklik));
@@ -571,6 +594,7 @@ function sistemHesapla(s: Sistem, odalarHam: KlimaOda[], odalar: KlimaOdaSonucu[
     isitmaYuku: isiYuk,
     disKw: secim?.C ?? null,
     disIsitmaKw: secim ? secim.C * ISITMA_ORANI : null,
+    disKot: s.disKot,
     oran: secim?.oran ?? null,
     sogutmaDuzeltilmis: secim?.sog ?? null,
     isitmaDuzeltilmis: secim?.isi ?? null,

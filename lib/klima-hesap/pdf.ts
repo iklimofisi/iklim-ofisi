@@ -8,7 +8,7 @@ import type { KlimaSonucu } from "./hesap";
 import type { KlimaVerisi } from "./tipler";
 import { AKISKANLAR, IC_UNITE_TIPLERI, borAdi } from "./katalog";
 import { HRV_VERIM } from "./hesap";
-import { boruSemasi } from "./cizim";
+import { boruSemasi, kotSemasi } from "./cizim";
 
 // -----------------------------------------------------------------------------
 // KLİMA / VRF SİSTEM HESABI — PDF RAPORU
@@ -472,9 +472,19 @@ export function klimaHesapPdfOlustur(
   // BORU ŞEMALARI
   for (const x of s.sistemler) {
     yeniSayfa();
-    const c = boruSemasi(x, bilgi.baslik);
+    const c = boruSemasi(x, bilgi.baslik, v.katYuksekligi);
     const w = Math.min(180, (262 * c.w) / c.h);
     cizimBas(c, SOL + (180 - w) / 2, 12, w);
+    // Düşey (kat / kot) şeması: sığarsa aynı sayfaya, sığmazsa yeni sayfaya
+    const d = kotSemasi(x, bilgi.baslik, v.katYuksekligi);
+    let yy = 12 + (w * c.h) / c.w + 6;
+    const dw0 = 180;
+    if (yy + (dw0 * d.h) / d.w > 280) {
+      yeniSayfa();
+      yy = 12;
+    }
+    const dw = Math.min(180, ((280 - yy) * d.w) / d.h);
+    cizimBas(d, SOL + (180 - dw) / 2, yy, dw);
   }
 
   // SAYFA ALTLIĞI

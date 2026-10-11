@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useContext, useEffect, useMemo, useState, useTransition } from "react";
+import { useContext, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { klimaHesapKaydet, klimaHesapTeklifeAktar } from "@/lib/klima-hesap-actions";
 import { bildirimGoster } from "@/lib/bildirim";
 import { SayiAlani, Alan, Kart, Ozet, ElemanSatiri, Tablo, ELEMAN_DUGMELERI, girdi, Rehber, YardimBaglami, YardimDugmesi, useYardimDurumu } from "@/components/IsiHesapEditoru";
@@ -13,7 +13,7 @@ import { GOLGELER, IC_UNITE_TIPLERI, SISTEM_TIPLERI, AKISKANLAR, VRF_TIPLERI, bo
 import { MEKANLAR, MEKAN_GRUPLARI, TAVAN_TIPLERI, TAZE_HAVA_DUZENLERI, type MekanTipi, type TavanTipi, type TazeHavaDuzeni } from "@/lib/klima-hesap/mekanlar";
 import { kapasiteListesi, uygunsuzluk } from "@/lib/klima-hesap/oneri";
 import { klimaHesapla, sy, type KlimaSonucu, type KlimaOdaSonucu } from "@/lib/klima-hesap/hesap";
-import { boruSemasi } from "@/lib/klima-hesap/cizim";
+import { boruSemasi, kotSemasi, katAdi } from "@/lib/klima-hesap/cizim";
 import { cizimSvg } from "@/lib/isi-hesap/svg";
 import type { Eleman } from "@/lib/isi-hesap/tipler";
 
@@ -187,6 +187,7 @@ export default function KlimaHesapEditoru({ hesap, musteriler }: Props) {
                     </span>
                     <span className="block text-[11px] text-metin/45">
                       {sy(o.en * o.boy)} m² · {o.klima ? (o.sistem > 0 ? `Sistem ${o.sistem}` : "Split") : "klimasız"}
+                      {katAdi(o.kot, veri.katYuksekligi) ? ` · ${katAdi(o.kot, veri.katYuksekligi)}` : ""}
                       {os?.unite && ` · ${os.unite.adet > 1 ? os.unite.adet + "×" : ""}${sy(os.unite.kw)} kW`}
                       {os && os.uyarilar.length > 0 && <span className="text-sicak-dim"> · ⚠ {os.uyarilar.length}</span>}
                     </span>
@@ -265,7 +266,20 @@ export default function KlimaHesapEditoru({ hesap, musteriler }: Props) {
       )}
 
       {sekme === "sonuclar" && <SonuclarSekmesi s={sonuc} veri={veri} />}
-      {sekme === "sema" && <SemaSekmesi s={sonuc} ad={ad} />}
+      {sekme === "sema" && (
+        <SemaSekmesi
+          s={sonuc}
+          ad={ad}
+          veri={veri}
+          guncelle={guncelle}
+          odaGuncelle={odaGuncelle}
+          odayaGit={(id) => {
+            setSeciliOda(id);
+            setSekme("odalar");
+            window.scrollTo({ top: 0 });
+          }}
+        />
+      )}
       {sekme === "malzeme" && (
         <MalzemeSekmesi s={sonuc} hesapId={hesap.id} ad={ad} musteriId={musteriId} musteriler={musteriler} degisti={degisti} teklif={hesap.teklif} kaydet={() => kaydet()} kaydediliyor={kaydediliyor} />
       )}
@@ -345,6 +359,9 @@ function ProjeSekmesi({ veri, guncelle }: { veri: KlimaVerisi; guncelle: (p: Par
           <Alan ad="Dış ünite eşzamanlılık %" ipucu="Bütün odaların aynı anda en yüksek yükte olmama payı. Konut 80–90 · ofis 90–100 · tek mekân 100.">
             <SayiAlani deger={veri.eszamanlilik} min={50} maks={100} onChange={(n) => n !== null && guncelle({ eszamanlilik: n })} />
           </Alan>
+          <Alan ad="Kat yüksekliği (m)" ipucu="Döşemeden döşemeye kat yüksekliği. Odada kat seçince kot = kat × bu değer yazılır; şemalarda kat adı buna göre gösterilir.">
+            <SayiAlani deger={veri.katYuksekligi} min={2.4} maks={8} onChange={(n) => n !== null && guncelle({ katYuksekligi: n })} />
+          </Alan>
           <Alan ad="Isı köprüsü ek U" ipucu="Mantolu yeni bina 0,05 · normal 0,10 · yalıtımsız 0,15.">
             <select value={veri.isiKoprusu} onChange={(e) => guncelle({ isiKoprusu: Number(e.target.value) })} className={girdi}>
               {ISI_KOPRUSU.map((k) => (
@@ -389,6 +406,27 @@ function ProjeSekmesi({ veri, guncelle }: { veri: KlimaVerisi; guncelle: (p: Par
                 <Alan ad="Dış ünite kotu (m)" className="w-28">
                   <SayiAlani deger={s.disKot} min={-50} maks={300} onChange={(n) => n !== null && sistemGuncelle(s.no, { disKot: n })} />
                 </Alan>
+                <div className="flex gap-1 pb-0.5">
+                  <button
+                    type="button"
+                    title="Dış ünite zeminde (kot 0)"
+                    onClick={() => sistemGuncelle(s.no, { disKot: 0 })}
+                    className="focus-ring text-[11px] border border-hat rounded px-2 py-1 text-metin/60 hover:border-soguk"
+                  >
+                    Zemin
+                  </button>
+                  <button
+                    type="button"
+                    title="Dış ünite çatıda: bu sisteme bağlı en üst odanın kotu + 1 kat"
+                    onClick={() => {
+                      const kotlar = veri.odalar.filter((o) => o.klima && o.sistem === s.no).map((o) => o.kot);
+                      sistemGuncelle(s.no, { disKot: Math.round(((kotlar.length ? Math.max(...kotlar) : 0) + veri.katYuksekligi) * 100) / 100 });
+                    }}
+                    className="focus-ring text-[11px] border border-hat rounded px-2 py-1 text-metin/60 hover:border-soguk"
+                  >
+                    Çatı
+                  </button>
+                </div>
                 <Alan ad="Dış ünite kW (boş = oto)" className="w-32">
                   <SayiAlani deger={s.disKwElle || null} bosOlabilir min={0} maks={500} onChange={(n) => sistemGuncelle(s.no, { disKwElle: n ?? 0 })} />
                 </Alan>
@@ -517,6 +555,10 @@ function OdaDuzenleyici({
   const sTuru = sistem ? sistem.tip : "SPLIT";
   const tipListesi = (Object.keys(IC_UNITE_TIPLERI) as IcUniteTipi[]).filter((t) => t !== "TAZE_HAVA" && kapasiteListesi(t, sTuru).length > 0);
   const gecerliTip: IcUniteTipi = sonuc?.oneri?.tip ?? (oda.uniteTipi === "OTOMATIK" ? "DUVAR" : oda.uniteTipi);
+  const katNo = (() => {
+    const n = Math.round(oda.kot / veri.katYuksekligi);
+    return Math.abs(oda.kot - n * veri.katYuksekligi) < 0.01 && n >= -3 && n <= 30 ? n : null;
+  })();
   const kapasiteler = kapasiteListesi(gecerliTip, sTuru);
   const oneri = sonuc?.oneri ?? null;
   const kanalliMi = oneri ? oneri.esp !== null : false;
@@ -650,7 +692,14 @@ function OdaDuzenleyici({
                 ))}
               </select>
             </Alan>
-            <Alan ad="İç ünite tipi" ipucu="Otomatik önerilir. &quot;uygun değil&quot; yazan tipler bu mekâna uymaz (seçerseniz uyarı verir).">
+            <Alan
+              ad="İç ünite tipi"
+              ipucu={
+                <>
+                  <strong>{IC_UNITE_TIPLERI[gecerliTip].kisa}:</strong> {IC_UNITE_TIPLERI[gecerliTip].aciklama} &quot;uygun değil&quot; yazan tipler bu mekâna uymaz.
+                </>
+              }
+            >
               <select value={oda.uniteTipi} onChange={(e) => guncelle({ uniteTipi: e.target.value as UniteSecimi, uniteKw: 0 })} className={girdi}>
                 <option value="OTOMATIK">Otomatik{oneri ? ` (öneri: ${IC_UNITE_TIPLERI[oneri.onerilen].kisa})` : ""}</option>
                 {tipListesi.map((t) => (
@@ -688,7 +737,21 @@ function OdaDuzenleyici({
                 </Alan>
               </>
             )}
-            <Alan ad="Kat kotu (m, zemin = 0)" ipucu="İç ünitenin zeminden yüksekliği (ör. 2. kat ≈ 6 m). Dış / iç ünite kot farkı kontrolü için.">
+            <Alan ad="Kat" ipucu={`Seçince kot = kat × ${sy(veri.katYuksekligi)} m yazılır (kat yüksekliği Proje sekmesinde).`}>
+              <select
+                value={katNo === null ? "ELLE" : String(katNo)}
+                onChange={(e) => e.target.value !== "ELLE" && guncelle({ kot: Math.round(Number(e.target.value) * veri.katYuksekligi * 100) / 100 })}
+                className={girdi}
+              >
+                {katNo === null && <option value="ELLE">Elle kot ({sy(oda.kot)} m)</option>}
+                {Array.from({ length: 34 }, (_, i) => i - 3).map((n) => (
+                  <option key={n} value={n}>
+                    {n === 0 ? "Zemin kat" : n > 0 ? `${n}. kat` : `${-n}. bodrum`} ({sy(n * veri.katYuksekligi)} m)
+                  </option>
+                ))}
+              </select>
+            </Alan>
+            <Alan ad="Kat kotu (m, zemin = 0)" ipucu="Kat döşemesinin zeminden yüksekliği; ara kat / asma kat gibi durumlarda elle yazın. Kot farkı kontrolleri bundan yapılır.">
               <SayiAlani deger={oda.kot} min={-50} maks={300} onChange={(n) => n !== null && guncelle({ kot: n })} />
             </Alan>
             {kanalliMi && (
@@ -790,6 +853,9 @@ function OneriKarti({ oneri, sistemTipi }: { oneri: NonNullable<KlimaOdaSonucu["
           {!vrf && sistemTipi !== "MULTI" ? " · bağımsız split" : ""}
         </p>
       </div>
+      <p className="text-[11px] text-metin/60 mb-2">
+        <strong>Bu ünite nedir?</strong> {u.aciklama}
+      </p>
       <ul className="text-xs text-metin/75 space-y-1">
         {oneri.gerekce.map((g, i) => (
           <li key={i}>✓ {g}</li>
@@ -907,23 +973,182 @@ function SonuclarSekmesi({ s, veri }: { s: KlimaSonucu; veri: KlimaVerisi }) {
 // =============================================================================
 // 4. BORU ŞEMALARI
 // =============================================================================
-function SemaSekmesi({ s, ad }: { s: KlimaSonucu; ad: string }) {
-  const svgler = useMemo(() => s.sistemler.map((x) => ({ no: x.no, svg: cizimSvg(boruSemasi(x, ad || "Klima / VRF projesi"), `${x.ad} boru şeması`) })), [s, ad]);
-  if (!svgler.length) return <p className="text-sm text-metin/50">Sisteme bağlı oda yok (yalnız bağımsız split klimalar için boru şeması çizilmez).</p>;
+type DuzenHedef = { anahtar: string; ad: string; aciklama: string; deger: number; min: number; maks: number; odaId: string | null; x: number; y: number };
+
+function SemaSekmesi({
+  s,
+  ad,
+  veri,
+  guncelle,
+  odaGuncelle,
+  odayaGit,
+}: {
+  s: KlimaSonucu;
+  ad: string;
+  veri: KlimaVerisi;
+  guncelle: (p: Partial<KlimaVerisi>) => void;
+  odaGuncelle: (id: string, p: Partial<KlimaOda>) => void;
+  odayaGit: (id: string) => void;
+}) {
+  const [duzen, setDuzen] = useState<DuzenHedef | null>(null);
+  const [metin, setMetin] = useState("");
+  const kap = useRef<HTMLDivElement>(null);
+  const baslik = ad || "Klima / VRF projesi";
+  const cizimler = useMemo(
+    () =>
+      s.sistemler.map((x) => ({
+        x,
+        boru: cizimSvg(boruSemasi(x, baslik, veri.katYuksekligi), `${x.ad} boru şeması`),
+        kot: cizimSvg(kotSemasi(x, baslik, veri.katYuksekligi), `${x.ad} düşey şema`),
+      })),
+    [s, baslik, veri.katYuksekligi]
+  );
+
+  // Tıklanan ölçünün hangi girdiye bağlı olduğu
+  const hedef = (anahtar: string): Omit<DuzenHedef, "x" | "y" | "anahtar"> | null => {
+    const [tur, id] = anahtar.split("|");
+    if (tur === "anaHat" || tur === "disKot") {
+      const sis = veri.sistemler.find((x) => String(x.no) === id);
+      if (!sis) return null;
+      return tur === "anaHat"
+        ? { ad: `${sis.ad} — ana hat (m)`, aciklama: "Dış üniteden ilk branşmana boru uzunluğu (tek yön).", deger: sis.anaHat, min: 0, maks: 500, odaId: null }
+        : { ad: `${sis.ad} — dış ünite kotu (m)`, aciklama: "Zemine göre yükseklik: çatıdaysa bina yüksekliği, bodrumdaysa eksi.", deger: sis.disKot, min: -50, maks: 300, odaId: null };
+    }
+    const oda = veri.odalar.find((o) => o.id === id);
+    if (!oda) return null;
+    const multi = veri.sistemler.find((x) => x.no === oda.sistem)?.tip === "MULTI";
+    if (tur === "hat") return { ad: `${oda.ad} — önceki branşmandan ana hat (m)`, aciklama: "Listede bir önceki odanın branşmanından bu odanın branşmanına gövde borusu.", deger: oda.hatMesafe, min: 0, maks: 300, odaId: id };
+    if (tur === "brans")
+      return {
+        ad: `${oda.ad} — ${multi ? "dış üniteden iç üniteye" : "branşmandan iç üniteye"} (m)`,
+        aciklama: multi ? "Multi split'te her iç ünite dış üniteden ayrı hatla bağlanır." : "Y branşman kitinden iç üniteye boru uzunluğu.",
+        deger: oda.bransMesafe,
+        min: 0,
+        maks: 100,
+        odaId: id,
+      };
+    if (tur === "kot") return { ad: `${oda.ad} — kat kotu (m)`, aciklama: `Zemin = 0. Kat yüksekliği ${sy(veri.katYuksekligi)} m (ör. 2. kat = ${sy(2 * veri.katYuksekligi)} m).`, deger: oda.kot, min: -50, maks: 300, odaId: id };
+    return null;
+  };
+
+  const uygula = () => {
+    if (!duzen) return;
+    const n = parseFloat(metin.replace(",", ".").trim());
+    if (!Number.isFinite(n)) return;
+    const x = Math.round(Math.min(duzen.maks, Math.max(duzen.min, n)) * 100) / 100;
+    const [tur, id] = duzen.anahtar.split("|");
+    if (tur === "anaHat") guncelle({ sistemler: veri.sistemler.map((v) => (String(v.no) === id ? { ...v, anaHat: x } : v)) });
+    else if (tur === "disKot") guncelle({ sistemler: veri.sistemler.map((v) => (String(v.no) === id ? { ...v, disKot: x } : v)) });
+    else if (tur === "hat") odaGuncelle(id, { hatMesafe: x });
+    else if (tur === "brans") odaGuncelle(id, { bransMesafe: x });
+    else if (tur === "kot") odaGuncelle(id, { kot: x });
+    setDuzen(null);
+  };
+
+  const tikla = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = (e.target as Element).closest("[data-dz],[data-git]");
+    if (!el || !kap.current) {
+      setDuzen(null);
+      return;
+    }
+    const git = el.getAttribute("data-git");
+    if (git) {
+      odayaGit(git);
+      return;
+    }
+    const anahtar = el.getAttribute("data-dz") ?? "";
+    const b = hedef(anahtar);
+    if (!b) return;
+    const r = el.getBoundingClientRect();
+    const k = kap.current.getBoundingClientRect();
+    setDuzen({ ...b, anahtar, x: Math.max(0, Math.min(r.left - k.left, k.width - 290)), y: r.bottom - k.top + 6 });
+    setMetin(String(b.deger).replace(".", ","));
+  };
+
+  if (!cizimler.length) return <p className="text-sm text-metin/50">Sisteme bağlı oda yok (yalnız bağımsız split klimalar için boru şeması çizilmez).</p>;
   return (
     <div className="space-y-5">
+      <style>{`.sema-kap .dz{cursor:pointer;text-decoration:underline;text-decoration-style:dotted}.sema-kap .dz:hover{fill:#d9480f}.sema-kap .dz-git{cursor:pointer}.sema-kap .dz-git:hover{fill:#1864ab;text-decoration:underline}`}</style>
       <Rehber
-        baslik="Boru şeması"
+        baslik="Boru şeması ve düşey şema"
         adimlar={[
-          <>Her VRF / multi sistem için dış üniteden iç ünitelere boru hattı, branşman kitleri (B1, B2…), her parçanın uzunluğu ve çapları (Ø gaz / Ø sıvı mm) çizilir. 3 borulu sistemde emme / basma / sıvı ve BS kutuları gösterilir.</>,
-          <>Şema ölçekli değildir; sıra ve çaplar Odalar sekmesindeki oda sırası ve mesafelerden gelir. Değiştirmek için oda sırasını ↑ ↓ ile, mesafeleri oda ekranında düzeltin.</>,
+          <>Her VRF / multi sistem için iki çizim çıkar: <strong>boru şeması</strong> (dış ünite, ana hat, branşman kitleri B1, B2…, her parçanın çapı ve uzunluğu) ve <strong>düşey şema</strong> (dış ünite ve iç ünitelerin hangi katta olduğu, kot farkları ve sınırları).</>,
+          <><strong>Mavi yazılı ölçüler tıklanabilir:</strong> üzerine tıklayıp yeni değeri yazın (Enter). Değer odanın / sistemin girdisine yazılır; Odalar sekmesindeki alan da aynı anda değişir, çaplar ve kontroller yeniden hesaplanır.</>,
+          <>Oda adına tıklarsanız o odanın düzenleme ekranı açılır. Odaların ana hat üzerindeki sırası Odalar sekmesindeki listenin sırasıdır (↑ ↓ ile değişir).</>,
+          <>Düşey şemadaki ölçü okları: <span className="text-[#2b8a3e] font-semibold">yeşil</span> sınır içinde, <span className="text-[#c92a2a] font-semibold">kırmızı</span> sınır aşılmış (dış ünite – iç ünite ve iç üniteler arası kot farkı).</>,
         ]}
       />
-      {svgler.map((x) => (
-        <div key={x.no} className="bg-white border border-hat rounded-lg p-2 overflow-x-auto">
-          <div className="min-w-[44rem]" dangerouslySetInnerHTML={{ __html: x.svg }} />
-        </div>
-      ))}
+      <div ref={kap} className="sema-kap relative space-y-5" onClick={tikla}>
+        {cizimler.map(({ x, boru, kot }) => (
+          <div key={x.no} className="space-y-3">
+            <div className="bg-white border border-hat rounded-lg p-2 overflow-x-auto">
+              <div className="min-w-[44rem]" dangerouslySetInnerHTML={{ __html: boru }} />
+            </div>
+            <div className="bg-white border border-hat rounded-lg p-2 overflow-x-auto">
+              <div className="min-w-[44rem]" dangerouslySetInnerHTML={{ __html: kot }} />
+            </div>
+            <div className="bg-yuzey border border-hat rounded-lg p-3">
+              <p className="text-xs font-semibold text-metin mb-2">{x.ad} — kontroller</p>
+              <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1 text-xs">
+                {x.kontroller.map((k, i) => (
+                  <p key={i} className={k.uygun ? "text-metin/70" : "text-sicak-dim font-medium"}>
+                    {k.uygun ? "✓" : "✕"} {k.ad}: {k.deger} <span className="text-metin/45">(sınır {k.sinir})</span>
+                  </p>
+                ))}
+              </div>
+              {x.uyarilar.length > 0 && (
+                <ul className="text-xs text-sicak-dim space-y-1 mt-2">
+                  {x.uyarilar.map((u, i) => (
+                    <li key={i}>⚠ {u}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        ))}
+        {duzen && (
+          <div
+            className="absolute z-30 w-[280px] bg-white border border-soguk rounded-lg shadow-lg p-3"
+            style={{ left: duzen.x, top: duzen.y }}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-label={duzen.ad}
+          >
+            <p className="text-xs font-semibold text-metin mb-1">{duzen.ad}</p>
+            <p className="text-[11px] text-metin/55 mb-2">{duzen.aciklama}</p>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                uygula();
+              }}
+              className="flex gap-2"
+            >
+              <input
+                autoFocus
+                inputMode="decimal"
+                value={metin}
+                onChange={(e) => setMetin(e.target.value)}
+                onKeyDown={(e) => e.key === "Escape" && setDuzen(null)}
+                aria-label={duzen.ad}
+                className={`${girdi} flex-1`}
+              />
+              <button type="submit" className="focus-ring bg-soguk text-white px-3 rounded-md text-sm font-medium hover:bg-soguk-dim">
+                Tamam
+              </button>
+            </form>
+            <div className="flex justify-between mt-2">
+              <button type="button" onClick={() => setDuzen(null)} className="focus-ring text-[11px] text-metin/50 hover:text-metin">
+                Vazgeç (Esc)
+              </button>
+              {duzen.odaId && (
+                <button type="button" onClick={() => odayaGit(duzen.odaId!)} className="focus-ring text-[11px] text-soguk-dim hover:underline">
+                  Odayı aç →
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -62,6 +62,7 @@ export type KlimaVerisi = {
   eszamanlilik: number; // % (dış ünite seçiminde odaların toplam yüküne uygulanır)
   akiskan: Akiskan;
   hrvTipi: HrvTipi;
+  katYuksekligi: number; // m — kat kotu ↔ kat numarası dönüşümü (döşemeden döşemeye)
   sistemler: Sistem[];
   odalar: KlimaOda[];
 };
@@ -158,6 +159,7 @@ export function varsayilanKlimaVerisi(il = "İstanbul"): KlimaVerisi {
     eszamanlilik: 90,
     akiskan: "R410A",
     hrvTipi: "PLAKALI",
+    katYuksekligi: 3,
     sistemler: [yeniSistem(1, "VRF")],
     odalar: [],
   };
@@ -256,6 +258,7 @@ export function klimaVeriOku(ham: unknown): KlimaVerisi {
     eszamanlilik: sayi(obj.eszamanlilik, 90, 50, 100),
     akiskan: secim(obj.akiskan, Object.keys(AKISKANLAR) as Akiskan[], "R410A"),
     hrvTipi: secim(obj.hrvTipi, ["PLAKALI", "ENTALPI"] as const, "PLAKALI"),
+    katYuksekligi: sayi(obj.katYuksekligi, 3, 2.4, 8),
     sistemler: tekil.length ? tekil : [yeniSistem(1)],
     odalar,
   };

@@ -72,7 +72,8 @@ function tercihSirasi(o: KlimaOda): IcUniteTipi[] {
   } else if (o.mekan === "OTEL_ODA" || o.mekan === "HASTA_ODASI") l = asma ? ["KANALLI_INCE", "DUVAR", "KASET_KUCUK"] : ["DUVAR", "KONSOL"];
   else if (plaka) l = A <= 30 ? ["KASET_KUCUK", "KASET", "KANALLI_INCE"] : ["KASET", "KASET_KUCUK", "KANALLI"];
   else if (asma) l = o.sessiz ? ["KANALLI", "KANALLI_INCE", "KASET"] : ["KASET", "KANALLI", "KANALLI_INCE"];
-  else l = ["TAVAN", "DUVAR", "KONSOL", "KANALLI_YUKSEK"];
+  // Asma tavan yok: küçük odada duvar tipi (ekonomik, sessiz); geniş alanda tavan askılı (uzun atış)
+  else l = A <= 40 && derinlik <= 8 ? ["DUVAR", "TAVAN", "KONSOL"] : ["TAVAN", "DUVAR", "KONSOL", "KANALLI_YUKSEK"];
   // Dar-uzun mekânda cephe boyunca tek yön kaset
   if (asma && oran > 2.5 && h <= 3.2 && !l.includes("KASET_TEK")) l.splice(1, 0, "KASET_TEK");
   // Kalanlar yedek sırada
@@ -254,7 +255,18 @@ export function uniteOner(
   if (mk.ozel === "MUTFAK_TICARI") ekler.push("Davlumbaz egzozu kadar telafi havası (taze hava) sistemi");
   if (h > 6 && yuk.isitmaW > 0) ekler.push("Isıtmada tabakalaşmayı önlemek için tavan tipi destratifikasyon fanı ya da yerden ısıtma");
 
-  const alternatifler = uygunlarGevsek.filter((t) => t !== tip).slice(0, 3);
+  // Alternatifler: yalnız bu yüke ve mekâna makul olan tipler (en küçük kademesi ihtiyacın çok üstünde olan,
+  // ya da normal tavanlı küçük mekânda yüksek statik kanallı gibi aşırı çözümler gösterilmez)
+  const alternatifler = uygunlarGevsek
+    .filter((t) => t !== tip)
+    .filter((t) => {
+      const l = kapasiteListesi(t, s);
+      if (!l.length || l[0] > gerekliKw * 2 + 1) return false;
+      if (t === "KANALLI_YUKSEK" && h <= 4.5 && A < 80) return false;
+      if (t === "SALON" && A < 80) return false;
+      return true;
+    })
+    .slice(0, 3);
   return {
     tip,
     onerilen,
