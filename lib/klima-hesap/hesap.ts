@@ -46,7 +46,7 @@ import {
 } from "./katalog";
 import type { KlimaVerisi, KlimaOda, Sistem } from "./tipler";
 import { MEKANLAR, TAVAN_TIPLERI, TAZE_HAVA_DUZENLERI } from "./mekanlar";
-import { uniteOner, type UniteOnerisi } from "./oneri";
+import { uniteOner, etkinKanalTuru, type UniteOnerisi } from "./oneri";
 
 // Isı geri kazanım verimleri (duyulur / gizli)
 export const HRV_VERIM = { PLAKALI: { s: 0.75, l: 0 }, ENTALPI: { s: 0.7, l: 0.6 } } as const;
@@ -686,19 +686,30 @@ function malzemeListesi(s: KlimaSonucu, v: KlimaVerisi): KlimaMalzeme[] {
   let jet = 0;
   let donus = 0;
   let kanalM2 = 0;
+  let acikKanalM2 = 0;
+  let tekstilM = 0;
+  let kasetKasa = 0;
   let esnek = 0;
   for (const o of s.odalar) {
     const on = o.oneri;
     if (!o.klima || !on) continue;
     const ham = v.odalar.find((x) => x.id === o.id);
-    if (on.esp !== null && on.tip !== "DOSEME_GIZLI") {
+    if (on.esp !== null && on.tip !== "DOSEME_GIZLI" && ham) {
+      const tur = etkinKanalTuru(ham);
       plenum += on.adet;
       donus += on.adet;
-      if (o.yukseklik > 4.5) jet += on.menfez ?? 0;
-      else difuzor += on.menfez ?? 0;
-      kanalM2 += (on.kanal ?? 0) * 1.6 * on.adet;
-      esnek += (on.menfez ?? 0) * 1.5;
+      if (tur === "TEKSTIL") tekstilM += (on.kanal ?? 0) * on.adet;
+      else {
+        if (o.yukseklik > 4.5) jet += on.menfez ?? 0;
+        else difuzor += on.menfez ?? 0;
+        if (tur === "ACIK") acikKanalM2 += (on.kanal ?? 0) * 1.6 * on.adet;
+        else {
+          kanalM2 += (on.kanal ?? 0) * 1.6 * on.adet;
+          esnek += (on.menfez ?? 0) * 1.5;
+        }
+      }
     }
+    if (ham?.tavanTipi === "ACIK" && IC_UNITE_TIPLERI[on.tip].montaj === "GOMME") kasetKasa += on.adet;
     if (ham?.tazeHava === "HRV" && o.tazeDebi > 0) {
       const n = Math.ceil(o.tazeDebi / 2000);
       const kademe = HRV_KADEMELERI.find((k) => k >= o.tazeDebi / n) ?? 2000;
@@ -709,7 +720,10 @@ function malzemeListesi(s: KlimaSonucu, v: KlimaVerisi): KlimaMalzeme[] {
   ek(H, "Girdaplı / lineer difüzör (damperli)", difuzor);
   ek(H, "Jet nozul (uzun atışlı, ayarlanabilir) — yüksek tavanlı mekanlar", jet);
   ek(H, "Dönüş menfezi (filtreli)", donus);
-  ek(H, "Galvaniz hava kanalı + ısı / ses yalıtımı", Math.ceil(kanalM2), "m²");
+  ek(H, "Galvaniz hava kanalı + ısı / ses yalıtımı (asma tavan içi)", Math.ceil(kanalM2), "m²");
+  ek(H, "Görünür dekoratif spiral kanal (çift cidarlı yalıtımlı, boyalı) + askı seti", Math.ceil(acikKanalM2), "m²");
+  ek(H, "Tekstil (kumaş) hava kanalı, mikro delikli / nozullu + askı rayı", Math.ceil(tekstilM), "m");
+  ek(H, "Kaset açık montaj kasası / dekoratif çerçeve + tij askı seti", kasetKasa, "Set");
   ek(H, "Esnek kanal (yalıtımlı) Ø200", Math.ceil(esnek), "m");
   for (const [k, n] of [...hrvGrup.entries()].sort((a, b) => a[0] - b[0])) ek(H, `Isı geri kazanımlı havalandırma cihazı ${k} m³/h (${v.hrvTipi === "ENTALPI" ? "entalpi" : "plakalı"} eşanjör)`, n);
   const sunucular = s.odalar.filter((o) => o.klima && o.unite && MEKANLAR[v.odalar.find((x) => x.id === o.id)?.mekan ?? "DIGER"].ozel === "SUNUCU");

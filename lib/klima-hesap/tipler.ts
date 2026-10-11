@@ -11,6 +11,13 @@ import { MEKANLAR, mekanOdaTipinden, TAVAN_TIPLERI, TAZE_HAVA_DUZENLERI, type Me
 
 export type UniteSecimi = IcUniteTipi | "OTOMATIK";
 export type HrvTipi = "PLAKALI" | "ENTALPI";
+export type KanalTuru = "OTO" | "GIZLI" | "ACIK" | "TEKSTIL";
+export const KANAL_TURLERI: Record<KanalTuru, string> = {
+  OTO: "Otomatik (tavana göre)",
+  GIZLI: "Asma tavan içinde gizli galvaniz kanal",
+  ACIK: "Açık / dekoratif kanal (spiral galvaniz, boyalı)",
+  TEKSTIL: "Tekstil (kumaş) kanal",
+};
 
 export type KlimaOda = Oda & {
   mekan: MekanTipi;
@@ -19,6 +26,8 @@ export type KlimaOda = Oda & {
   sessiz: boolean; // gürültüye duyarlı mekân (yatak, toplantı, sınıf…)
   kanalUzunluk: number; // m — kanallı ünitede en uzak menfeze kanal (0 = otomatik)
   filtre: "STANDART" | "F7";
+  // Kanallı ünitede kanal: OTO = asma tavan varsa gizli, yoksa açık (görünür dekoratif) kanal
+  kanalTuru: KanalTuru;
   klima: boolean; // bu oda klimalanıyor mu
   kisi: number;
   aydinlatma: number; // W/m²
@@ -118,6 +127,7 @@ export function klimaOdasi(mekan: MekanTipi = "KONUT_SALON", ek: Partial<KlimaOd
     sessiz: d.sessiz,
     kanalUzunluk: 0,
     filtre: "STANDART",
+    kanalTuru: "OTO",
     klima: !KLIMASIZ.includes(mekan),
     kisi: d.kisi,
     aydinlatma: d.aydinlatma,
@@ -221,10 +231,11 @@ export function klimaVeriOku(ham: unknown): KlimaVerisi {
       sessiz: typeof h.sessiz === "boolean" ? h.sessiz : d.sessiz,
       kanalUzunluk: sayi(h.kanalUzunluk, 0, 0, 200),
       filtre: secim(h.filtre, ["STANDART", "F7"] as const, "STANDART"),
+      kanalTuru: secim(h.kanalTuru, ["OTO", "GIZLI", "ACIK", "TEKSTIL"] as const, "OTO"),
       klima: typeof h.klima === "boolean" ? h.klima : d.klima,
       kisi: Math.round(sayi(h.kisi, d.kisi, 0, 500)),
       aydinlatma: sayi(h.aydinlatma, d.aydinlatma, 0, 60),
-      cihaz: sayi(h.cihaz, d.cihaz, 0, 100000),
+      cihaz: sayi(h.cihaz, d.cihaz, 0, 500000),
       sogutmaSicaklik: sayi(h.sogutmaSicaklik, 26, 18, 30),
       golge: secim(h.golge, GOLGELER.map((g) => g.anahtar), d.golge),
       // Eski kayıtlarda tip elle seçilmişti; mekân alanı olmayan kayıtta seçim korunur

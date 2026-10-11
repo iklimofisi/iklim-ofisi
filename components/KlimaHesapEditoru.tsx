@@ -8,10 +8,11 @@ import { SayiAlani, Alan, Kart, Ozet, ElemanSatiri, Tablo, ELEMAN_DUGMELERI, gir
 import { yeniEleman, pencereMi, yeniId } from "@/lib/isi-hesap/tipler";
 import { ODA_TIPLERI, ISI_KOPRUSU, type Yon } from "@/lib/isi-hesap/katalog";
 import { ILLER, ilBul } from "@/lib/isi-hesap/iklim";
+import { KANAL_TURLERI, type KanalTuru } from "@/lib/klima-hesap/tipler";
 import { klimaOdasi, ornekKlimaDairesi, yeniSistem, mekanVarsayilanlari, type KlimaVerisi, type KlimaOda, type Sistem, type UniteSecimi, type HrvTipi } from "@/lib/klima-hesap/tipler";
 import { GOLGELER, IC_UNITE_TIPLERI, SISTEM_TIPLERI, AKISKANLAR, VRF_TIPLERI, borAdi, type IcUniteTipi, type SistemTipi, type Akiskan } from "@/lib/klima-hesap/katalog";
 import { MEKANLAR, MEKAN_GRUPLARI, TAVAN_TIPLERI, TAZE_HAVA_DUZENLERI, type MekanTipi, type TavanTipi, type TazeHavaDuzeni } from "@/lib/klima-hesap/mekanlar";
-import { kapasiteListesi, uygunsuzluk } from "@/lib/klima-hesap/oneri";
+import { kapasiteListesi, yukseklikteKapasiteler, uygunsuzluk } from "@/lib/klima-hesap/oneri";
 import { klimaHesapla, sy, type KlimaSonucu, type KlimaOdaSonucu } from "@/lib/klima-hesap/hesap";
 import { boruSemasi, kotSemasi, katAdi } from "@/lib/klima-hesap/cizim";
 import { cizimSvg } from "@/lib/isi-hesap/svg";
@@ -159,9 +160,9 @@ export default function KlimaHesapEditoru({ hesap, musteriler }: Props) {
           baslik="Odalar nasıl girilir?"
           adimlar={[
             <>Klimalanacak <strong>her mahali ayrı</strong> ekleyin: soldan <strong>mekân tipini</strong> seçip &quot;+ Oda&quot;. Mekân tipi kişi yoğunluğunu, aydınlatma ve cihaz yükünü, taze hava ihtiyacını, iç sıcaklığı ve tavan tipini otomatik doldurur.</>,
-            <><strong>Ölçüler:</strong> en × boy (m) ve tavan yüksekliği. Yükseklik iç ünite seçimini doğrudan etkiler: 3,2 m üstünde kaset / duvar tipi zorlanır, 4,5 m üstünde yüksek statik basınçlı kanallı ünite önerilir.</>,
+            <><strong>Ölçüler:</strong> en × boy (m) ve tavan yüksekliği. Yükseklik iç ünite seçimini doğrudan etkiler (üretici tablolarına göre): 4 yön kaset standart ayarda 2,7–3,2 m, yüksek tavan ayarında 3,5 m (≥ 9 kW büyük gövde 4,5 m) tavana kadar; tavan askılı ≈3,8 m. 4,5 m üstünde havayı yaşam bölgesine indirmek için yüksek statik basınçlı kanallı + uzun atışlı jet nozul (ya da tekstil kanal) önerilir.</>,
             <><strong>Kişi / aydınlatma / cihaz:</strong> biliniyorsa gerçek değeri yazın (ör. sunucu odasında cihaz gücü, restoranda kişi sayısı). Alanı değiştirdikten sonra &quot;Mekâna göre doldur&quot; ile bu değerleri yeni alana göre yeniden hesaplatabilirsiniz.</>,
-            <><strong>Tavan / taze hava / gürültü:</strong> asma tavan yoksa kaset ve gizli kanallı elenir; mekanik taze hava varsa dış hava yükü hesaba eklenir; gürültüye duyarlı mekânda (yatak, toplantı, otel) sessiz tipler öne alınır.</>,
+            <><strong>Tavan / taze hava / gürültü:</strong> açık tavanda kaset tij ve açık montaj kasasıyla, kanallı görünür dekoratif ya da tekstil kanalla kullanılır (kanal türü ünite basıncını değiştirir); mekanik taze hava varsa dış hava yükü hesaba eklenir; gürültüye duyarlı mekânda (yatak, toplantı, otel) sessiz tipler öne alınır.</>,
             <><strong>İç ünite:</strong> &quot;Otomatik&quot; bırakın; sistem tipi, adedi ve kapasiteyi seçip gerekçesini öneri kartında yazar. Kendiniz bir tip seçerseniz uygun değilse uyarır. Adet ve kapasiteyi de elle sabitleyebilirsiniz.</>,
             <><strong>Yapı elemanları:</strong> dış duvar, pencere (yönüyle — güneş yükü buna göre hesaplanır), çatı ve sıcak komşu hacimler. İki klimalı oda arasındaki iç duvarı girmeyin.</>,
             <><strong>Boru mesafeleri</strong> (VRF / multi): oda listesi sırası ana hat üzerindeki sıradır. Her odaya önceki branşmandan ana hat uzunluğunu ve branşmandan iç üniteye mesafeyi yazın; kat kotu dikey mesafe kontrolü içindir.</>,
@@ -559,7 +560,7 @@ function OdaDuzenleyici({
     const n = Math.round(oda.kot / veri.katYuksekligi);
     return Math.abs(oda.kot - n * veri.katYuksekligi) < 0.01 && n >= -3 && n <= 30 ? n : null;
   })();
-  const kapasiteler = kapasiteListesi(gecerliTip, sTuru);
+  const kapasiteler = yukseklikteKapasiteler(gecerliTip, sTuru, oda.yukseklik).length ? yukseklikteKapasiteler(gecerliTip, sTuru, oda.yukseklik) : kapasiteListesi(gecerliTip, sTuru);
   const oneri = sonuc?.oneri ?? null;
   const kanalliMi = oneri ? oneri.esp !== null : false;
   const mekanUygula = () => {
@@ -626,7 +627,7 @@ function OdaDuzenleyici({
           <Alan ad="Cihazlar (W)" ipucu="Odadaki cihazların toplam gücü: bilgisayar ~150, TV ~100, sunucu kabini 3000–10000, ticari ocak / fırın çok yüksek.">
             <SayiAlani deger={oda.cihaz} min={0} maks={500000} adim={10} onChange={(n) => n !== null && guncelle({ cihaz: n })} />
           </Alan>
-          <Alan ad="Tavan" ipucu="Asma tavan yoksa kaset ve gizli kanallı ünite önerilmez.">
+          <Alan ad="Tavan" ipucu="Açık tavanda kaset tij ile asılıp açık montaj kasasıyla, kanallı görünür dekoratif / tekstil kanalla kullanılır.">
             <select value={oda.tavanTipi} onChange={(e) => guncelle({ tavanTipi: e.target.value as TavanTipi })} className={girdi}>
               {(Object.keys(TAVAN_TIPLERI) as TavanTipi[]).map((k) => (
                 <option key={k} value={k}>
@@ -759,10 +760,22 @@ function OdaDuzenleyici({
                 <Alan ad="En uzak menfeze kanal (m, boş = oto)" ipucu="Kanallı ünitenin en uzak menfezine kanal boyu; statik basınç (Pa) buna göre çıkar.">
                   <SayiAlani deger={oda.kanalUzunluk || null} bosOlabilir min={0} maks={200} yerTutucu={oneri?.kanal ? String(oneri.kanal) : "oto"} onChange={(n) => guncelle({ kanalUzunluk: n ?? 0 })} />
                 </Alan>
-                <Alan ad="Filtre" ipucu="Hastane / temiz alan için F7; fan basıncını artırır.">
+                <Alan ad="Filtre" ipucu="Hastane / temiz alan için F7; fan basıncını ≈100 Pa artırır.">
                   <select value={oda.filtre} onChange={(e) => guncelle({ filtre: e.target.value as KlimaOda["filtre"] })} className={girdi}>
-                    <option value="STANDART">Standart (G4)</option>
-                    <option value="F7">İnce filtre (F7) +60 Pa</option>
+                    <option value="STANDART">Standart (ünite filtresi)</option>
+                    <option value="F7">İnce filtre (F7) +≈100 Pa</option>
+                  </select>
+                </Alan>
+                <Alan
+                  ad="Kanal türü"
+                  ipucu="Otomatik: asma tavan varsa gizli, yoksa görünür dekoratif kanal. Tekstil kanal ≈120 Pa kanal içi basınç ister; jet nozul yüksek tavanda atışa göre 30–150 Pa."
+                >
+                  <select value={oda.kanalTuru} onChange={(e) => guncelle({ kanalTuru: e.target.value as KanalTuru })} className={girdi}>
+                    {(Object.keys(KANAL_TURLERI) as KanalTuru[]).map((k) => (
+                      <option key={k} value={k}>
+                        {KANAL_TURLERI[k]}
+                      </option>
+                    ))}
                   </select>
                 </Alan>
               </>

@@ -59,7 +59,15 @@ export type Kullanim = keyof typeof KULLANIMLAR;
 // tavanMaks: normal montajda en yüksek tavan; tavanYuksekMod: "yüksek tavan" ayarıyla
 // atis: tipik atış mesafesi (m); kapsama: bir ünitenin karşılayabildiği alan (m², açık hacim)
 // esp: dış statik basınç aralığı (Pa, yalnız kanallı); ses: ses basınç düzeyi aralığı dB(A)
-// asmaTavan: GEREKLI (kaset, kanallı) | GEREKMEZ
+// montaj: GOMME  — kaset: asma tavana gömülür; açık tavanda tij ile asılıp açık montaj kasası /
+//                   dekoratif çerçeve ile görünür monte edilir
+//         KANAL  — kanallı: asma tavanda gizli kanal; açık tavanda görünür dekoratif (spiral) ya da tekstil kanal
+//         ACIK   — duvar, tavan askılı, konsol, salon tipi: tavan yapısından bağımsız
+//         NIS    — döşeme gizli: duvar nişi / cephe altı
+// Tavan yüksekliği sınırları üretici tablolarının ortalamasıdır: 4 yön kaset standart 2,7 m (küçük gövde) /
+// 3,2 m (≥ 9 kW büyük gövde), yüksek tavan ayarında 3,5 m / 4,5 m (Mitsubishi Electric PLFY-VEM);
+// tavan askılı 3,8 m (Daikin FXHQ). Kanallı ESP: ince 10–50 Pa, orta 30–150 Pa (Daikin FXSQ ≤150),
+// yüksek 50–250 Pa (Daikin FXMQ 50–200, Toshiba MMD ≈250).
 export type UniteTanimi = {
   ad: string;
   kisa: string;
@@ -74,7 +82,8 @@ export type UniteTanimi = {
   esp: readonly [number, number] | null;
   kanalMaks: number; // m (kanallı tiplerde önerilen en uzun kanal)
   ses: readonly [number, number];
-  asmaTavan: "GEREKLI" | "GEREKMEZ";
+  montaj: "GOMME" | "KANAL" | "ACIK" | "NIS";
+  buyukGovde?: { kwMin: number; tavanMaks: number; tavanYuksekMod: number }; // büyük kapasitede daha yüksek tavan
   yasamBolgesi: boolean; // üfleme yaşam bölgesinden (yüksek tavanda avantaj)
   debiKw: number; // m³/h / kW — tipik hava debisi (yüksek fan kademesi)
   aciklama: string;
@@ -95,7 +104,7 @@ export const IC_UNITE_TIPLERI = {
     esp: null,
     kanalMaks: 0,
     ses: [22, 42],
-    asmaTavan: "GEREKMEZ",
+    montaj: "ACIK",
     yasamBolgesi: true,
     debiKw: 210,
     aciklama: "Konut ve küçük odalar için ekonomik çözüm; asma tavan gerektirmez.",
@@ -107,17 +116,18 @@ export const IC_UNITE_TIPLERI = {
     vrf: [2.8, 3.6, 4.5, 5.6, 7.1, 8.0, 9.0, 11.2, 14.0],
     split: [3.5, 5.3, 7.0, 10.0, 14.0],
     tavanMin: 2.5,
-    tavanMaks: 3.2,
-    tavanYuksekMod: 4.2,
+    tavanMaks: 2.7,
+    tavanYuksekMod: 3.5,
+    buyukGovde: { kwMin: 9, tavanMaks: 3.2, tavanYuksekMod: 4.5 },
     atis: 4.5,
     kapsama: 60,
     esp: null,
     kanalMaks: 0,
     ses: [27, 45],
-    asmaTavan: "GEREKLI",
+    montaj: "GOMME",
     yasamBolgesi: false,
     debiKw: 190,
-    aciklama: "Açık ofis, mağaza, restoran gibi geniş alanlarda dört yöne eşit dağıtım.",
+    aciklama: "Dört yöne eşit dağıtım; açık ofis, mağaza, restoran. Asma tavana gömülür; açık tavanda tij ile asılıp açık montaj kasasıyla görünür monte edilir. Standart ayarda 2,7 m (≥ 9 kW: 3,2 m), yüksek tavan ayarında 3,5 m (≥ 9 kW: 4,5 m) tavana kadar.",
   },
   KASET_KUCUK: {
     ad: "Kaset tipi (4 yön, 60×60 kompakt)",
@@ -133,10 +143,10 @@ export const IC_UNITE_TIPLERI = {
     esp: null,
     kanalMaks: 0,
     ses: [25, 40],
-    asmaTavan: "GEREKLI",
+    montaj: "GOMME",
     yasamBolgesi: false,
     debiKw: 200,
-    aciklama: "60×60 plaka asma tavana birebir oturur; ofis ve küçük alanlar.",
+    aciklama: "60×60 plaka asma tavana birebir oturur; ofis ve küçük alanlar. Açık tavanda tij ve açık montaj kasasıyla da kullanılabilir.",
   },
   KASET_TEK: {
     ad: "Kaset tipi (tek yön / iki yön)",
@@ -152,10 +162,10 @@ export const IC_UNITE_TIPLERI = {
     esp: null,
     kanalMaks: 0,
     ses: [25, 40],
-    asmaTavan: "GEREKLI",
+    montaj: "GOMME",
     yasamBolgesi: false,
     debiKw: 200,
-    aciklama: "Cephe boyunca, koridor ve dar uzun alanlar; tek yöne güçlü atış.",
+    aciklama: "Cephe boyunca, koridor ve dar uzun alanlar; tek / iki yöne güçlü atış. Asma tavana gömülür ya da açık tavanda tij ile asılır.",
   },
   KANALLI_INCE: {
     ad: "Kanallı — düşük statik (ince)",
@@ -171,10 +181,10 @@ export const IC_UNITE_TIPLERI = {
     esp: [10, 50],
     kanalMaks: 8,
     ses: [22, 35],
-    asmaTavan: "GEREKLI",
+    montaj: "KANAL",
     yasamBolgesi: false,
     debiKw: 200,
-    aciklama: "Otel odası, konut ve yatak odaları; kısa kanal, çok sessiz, tamamen gizli.",
+    aciklama: "İnce gövdeli, düşük basınçlı (10–50 Pa); otel odası, konut, yatak odası. Kısa kanal, 1–2 menfez, çok sessiz.",
   },
   KANALLI: {
     ad: "Kanallı — orta statik",
@@ -187,13 +197,13 @@ export const IC_UNITE_TIPLERI = {
     tavanYuksekMod: 4.5,
     atis: 8,
     kapsama: 80,
-    esp: [50, 150],
+    esp: [30, 150],
     kanalMaks: 25,
     ses: [28, 42],
-    asmaTavan: "GEREKLI",
+    montaj: "KANAL",
     yasamBolgesi: false,
     debiKw: 180,
-    aciklama: "Ofis, mağaza, toplantı salonları; birden çok menfeze kanal ile dağıtım.",
+    aciklama: "Orta basınçlı (30–150 Pa); ofis, mağaza, toplantı salonu. Birden çok menfeze kanalla dağıtım; asma tavanda gizli ya da açık tavanda görünür dekoratif / tekstil kanalla. 4,5 m tavana kadar girdaplı difüzörle.",
   },
   KANALLI_YUKSEK: {
     ad: "Kanallı — yüksek statik basınçlı",
@@ -206,13 +216,13 @@ export const IC_UNITE_TIPLERI = {
     tavanYuksekMod: 15,
     atis: 15,
     kapsama: 150,
-    esp: [100, 250],
+    esp: [50, 250],
     kanalMaks: 60,
     ses: [38, 50],
-    asmaTavan: "GEREKMEZ",
+    montaj: "KANAL",
     yasamBolgesi: false,
     debiKw: 165,
-    aciklama: "Yüksek tavanlı ve büyük hacimler, uzun kanal; jet nozul / girdaplı difüzörle yaşam bölgesine üfleme.",
+    aciklama: "Yüksek basınçlı (50–250 Pa); 4,5 m üstü yüksek tavan ve büyük hacim, uzun kanal, tekstil kanal ya da uzun atışlı jet nozulla havayı yaşam bölgesine indirir.",
   },
   TAVAN: {
     ad: "Tavan askılı (tavan altı, açık montaj)",
@@ -221,14 +231,14 @@ export const IC_UNITE_TIPLERI = {
     vrf: [3.6, 4.5, 5.6, 7.1, 9.0, 11.2, 14.0],
     split: [5.3, 7.0, 10.0, 14.0],
     tavanMin: 2.5,
-    tavanMaks: 4.2,
-    tavanYuksekMod: 5.0,
+    tavanMaks: 3.8,
+    tavanYuksekMod: 4.2,
     atis: 10,
     kapsama: 70,
     esp: null,
     kanalMaks: 0,
     ses: [33, 46],
-    asmaTavan: "GEREKMEZ",
+    montaj: "ACIK",
     yasamBolgesi: false,
     debiKw: 200,
     aciklama:
@@ -248,7 +258,7 @@ export const IC_UNITE_TIPLERI = {
     esp: null,
     kanalMaks: 0,
     ses: [25, 40],
-    asmaTavan: "GEREKMEZ",
+    montaj: "ACIK",
     yasamBolgesi: true,
     debiKw: 190,
     aciklama: "Yaşam bölgesinden üfler; yüksek tavan, cephe önü, ısıtma ağırlıklı mekanlar.",
@@ -267,7 +277,7 @@ export const IC_UNITE_TIPLERI = {
     esp: [10, 50],
     kanalMaks: 3,
     ses: [25, 38],
-    asmaTavan: "GEREKMEZ",
+    montaj: "NIS",
     yasamBolgesi: true,
     debiKw: 190,
     aciklama: "Cam cephe önü, pencere altı; görünmeyen montaj.",
@@ -286,7 +296,7 @@ export const IC_UNITE_TIPLERI = {
     esp: null,
     kanalMaks: 0,
     ses: [40, 52],
-    asmaTavan: "GEREKMEZ",
+    montaj: "ACIK",
     yasamBolgesi: true,
     debiKw: 180,
     aciklama: "Bağımsız split; düğün salonu, cami, spor salonu gibi büyük hacimlerde güçlü atış.",
@@ -305,7 +315,7 @@ export const IC_UNITE_TIPLERI = {
     esp: [100, 250],
     kanalMaks: 60,
     ses: [38, 50],
-    asmaTavan: "GEREKMEZ",
+    montaj: "KANAL",
     yasamBolgesi: false,
     debiKw: 80,
     aciklama: "Yoğun taze hava ihtiyacı olan mekanlarda dış havayı şartlandırarak verir; oda yükünü almaz.",

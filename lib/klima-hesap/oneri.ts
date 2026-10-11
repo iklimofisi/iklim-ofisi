@@ -5,7 +5,7 @@
 // kapasitesini önerir; her kararın gerekçesini yazar. Kullanıcı tipi elle
 // seçerse aynı kurallarla kontrol edilir ve uygunsuzluk uyarı olarak döner.
 // -----------------------------------------------------------------------------
-import { IC_UNITE_TIPLERI, VRF_TIPLERI, type IcUniteTipi, type SistemTipi } from "./katalog";
+import { IC_UNITE_TIPLERI, VRF_TIPLERI, type IcUniteTipi, type SistemTipi, type UniteTanimi } from "./katalog";
 import { MEKANLAR } from "./mekanlar";
 import type { KlimaOda } from "./tipler";
 import { sy } from "@/lib/isi-hesap/hesap";
@@ -38,15 +38,50 @@ export function kapasiteListesi(t: IcUniteTipi, s: SistemTuru): number[] {
   return [...((VRF_TIPLERI as readonly string[]).includes(s) ? u.vrf : u.split)];
 }
 
+// Tipin bu kapasitede kullanılabildiği tavan yüksekliği (büyük gövdeli kasetler daha yükseğe çıkar)
+export function tavanSiniri(t: IcUniteTipi, kw: number): { maks: number; yuksek: number } {
+  const u: UniteTanimi = IC_UNITE_TIPLERI[t];
+  const b = u.buyukGovde;
+  if (b && kw >= b.kwMin - 1e-9) return { maks: b.tavanMaks, yuksek: b.tavanYuksekMod };
+  return { maks: u.tavanMaks, yuksek: u.tavanYuksekMod };
+}
+
+// Bu tavan yüksekliğinde (yüksek tavan ayarı dahil) kullanılabilen kapasite kademeleri
+export function yukseklikteKapasiteler(t: IcUniteTipi, s: SistemTuru, h: number): number[] {
+  return kapasiteListesi(t, s).filter((kw) => tavanSiniri(t, kw).yuksek + 1e-9 >= h);
+}
+
+// Kanallı ünitede kullanılacak kanal: OTO → asma tavan varsa gizli, yoksa görünür dekoratif kanal
+export function etkinKanalTuru(o: KlimaOda): "GIZLI" | "ACIK" | "TEKSTIL" {
+  return o.kanalTuru === "OTO" ? (o.tavanTipi === "ACIK" ? "ACIK" : "GIZLI") : o.kanalTuru;
+}
+
 // Tipin bu odaya uygun olmama nedeni (yoksa null)
 export function uygunsuzluk(t: IcUniteTipi, o: KlimaOda, s: SistemTuru): string | null {
   const u = IC_UNITE_TIPLERI[t];
   const h = o.yukseklik;
   if (t === "TAZE_HAVA") return "taze hava ünitesi oda yükünü almaz; yalnızca dış havayı şartlandırır";
   if (!kapasiteListesi(t, s).length) return (VRF_TIPLERI as readonly string[]).includes(s) ? "VRF sistemlerinde bu tip yok" : "split / multi split'te bu tip yok";
-  if (u.asmaTavan === "GEREKLI" && o.tavanTipi === "ACIK") return "asma tavan gerektirir, bu mekânda asma tavan yok";
-  if (h > u.tavanYuksekMod + 1e-9) return `en çok ${sy(u.tavanYuksekMod)} m tavan yüksekliğine kadar kullanılabilir (tavan ${sy(h)} m)`;
+  if (!yukseklikteKapasiteler(t, s, h).length) {
+    const enYuksek = Math.max(...kapasiteListesi(t, s).map((kw) => tavanSiniri(t, kw).yuksek));
+    return `üretici tablolarına göre yüksek tavan ayarıyla en çok ${sy(enYuksek)} m tavana kadar kullanılabilir (tavan ${sy(h)} m); hava yaşam bölgesine inmez`;
+  }
   if (h < u.tavanMin - 1e-9) return `en az ${sy(u.tavanMin)} m tavan yüksekliği gerekir`;
+  return null;
+}
+
+// Açık tavanda (asma tavan yok) montaj şekli
+export function montajNotu(t: IcUniteTipi, o: KlimaOda): string | null {
+  const u: UniteTanimi = IC_UNITE_TIPLERI[t];
+  if (u.montaj === "GOMME" && o.tavanTipi === "ACIK")
+    return `${u.kisa} açık tavanda tij (askı çubuğu) ile tavana asılır, gövde görünür: açık montaj kasası / dekoratif çerçeve kullanılır; drenaj ve bakır borular görünür güzergâhta düzgün toplanmalı.`;
+  if (u.montaj === "KANAL" && t !== "TAZE_HAVA") {
+    const tur = etkinKanalTuru(o);
+    if (tur === "ACIK")
+      return `${u.kisa} ünite tij ile asılır, kanal görünür dekoratif (spiral galvaniz, boyalı) yapılır. Soğutmada yüzey yoğuşmasına karşı çift cidarlı yalıtımlı spiral kanal ya da dıştan yalıtım + kaplama gerekir.`;
+    if (tur === "TEKSTIL") return "Tekstil (kumaş) kanal havayı boydan boya mikro delik / nozullarla eşit ve cereyansız dağıtır; kanal içinde ≈120 Pa basınç ister (tipik çalışma 40–400 Pa).";
+    if (o.tavanTipi === "ACIK") return "Gizli kanal seçildi ama mekânda asma tavan yok: kanal görünür kalır; açık / dekoratif kanal seçin.";
+  }
   return null;
 }
 
@@ -61,36 +96,70 @@ function tercihSirasi(o: KlimaOda): IcUniteTipi[] {
   let l: IcUniteTipi[];
   if (mk.ozel === "SUNUCU") l = ["DUVAR", "TAVAN", "KONSOL"];
   else if (mk.ozel === "MUTFAK_TICARI") l = ["TAVAN", "DUVAR"];
-  else if (mk.ozel === "IBADET") l = h > 4.5 ? ["KANALLI_YUKSEK", "SALON", "KONSOL", "DOSEME_GIZLI"] : ["KONSOL", "DUVAR", "KASET", "TAVAN"];
-  else if (h > 4.5) l = ["KANALLI_YUKSEK", "SALON", "KONSOL", "TAVAN"];
-  else if (h > 3.2)
-    l = asma ? (o.sessiz ? ["KANALLI", "KASET", "TAVAN", "KANALLI_YUKSEK"] : ["KASET", "KANALLI", "TAVAN", "KANALLI_YUKSEK"]) : ["TAVAN", "KANALLI_YUKSEK", "SALON", "KONSOL"];
+  else if (mk.ozel === "IBADET") l = h > 4.5 ? ["KANALLI_YUKSEK", "KONSOL", "SALON", "DOSEME_GIZLI"] : ["KONSOL", "KANALLI", "KASET", "DUVAR"];
+  // 4,5 m üstü: kaset (yüksek tavan ayarı ≤ 4,5 m) ve tavan askılı (≤ 3,8–4,2 m) havayı yaşam bölgesine indiremez
+  else if (h > 4.5) l = ["KANALLI_YUKSEK", "KONSOL", "SALON", "KANALLI"];
+  // 3,2–4,5 m: yüksek tavan ayarlı kaset, girdaplı difüzörlü kanallı, tavan askılı (≤ 3,8 m)
+  else if (h > 3.2) l = o.sessiz ? ["KANALLI", "KASET", "TAVAN", "KANALLI_YUKSEK"] : ["KASET", "KANALLI", "TAVAN", "KANALLI_YUKSEK"];
   else if (mk.grup === "Konut") {
     const kucuk = A <= 35 && derinlik <= 7;
     if (asma) l = kucuk ? ["KANALLI_INCE", "DUVAR", "KASET_KUCUK"] : ["KASET", "KANALLI", "KANALLI_INCE", "DUVAR"];
-    else l = kucuk ? ["DUVAR", "KONSOL"] : ["DUVAR", "TAVAN", "KONSOL"];
-  } else if (o.mekan === "OTEL_ODA" || o.mekan === "HASTA_ODASI") l = asma ? ["KANALLI_INCE", "DUVAR", "KASET_KUCUK"] : ["DUVAR", "KONSOL"];
+    else l = kucuk ? ["DUVAR", "KONSOL", "KANALLI_INCE"] : ["DUVAR", "KASET", "KANALLI", "TAVAN"];
+  } else if (o.mekan === "OTEL_ODA" || o.mekan === "HASTA_ODASI") l = asma ? ["KANALLI_INCE", "DUVAR", "KASET_KUCUK"] : ["DUVAR", "KANALLI_INCE", "KONSOL"];
   else if (plaka) l = A <= 30 ? ["KASET_KUCUK", "KASET", "KANALLI_INCE"] : ["KASET", "KASET_KUCUK", "KANALLI"];
   else if (asma) l = o.sessiz ? ["KANALLI", "KANALLI_INCE", "KASET"] : ["KASET", "KANALLI", "KANALLI_INCE"];
-  // Asma tavan yok: küçük odada duvar tipi (ekonomik, sessiz); geniş alanda tavan askılı (uzun atış)
-  else l = A <= 40 && derinlik <= 8 ? ["DUVAR", "TAVAN", "KONSOL"] : ["TAVAN", "DUVAR", "KONSOL", "KANALLI_YUKSEK"];
-  // Dar-uzun mekânda cephe boyunca tek yön kaset
-  if (asma && oran > 2.5 && h <= 3.2 && !l.includes("KASET_TEK")) l.splice(1, 0, "KASET_TEK");
+  // Açık tavan: küçük odada duvar tipi; geniş alanda açık montaj kaset, görünür / tekstil kanallı ya da tavan askılı
+  else if (A <= 40 && derinlik <= 8) l = o.sessiz ? ["DUVAR", "KANALLI_INCE", "KASET_KUCUK"] : ["DUVAR", "KASET_KUCUK", "KANALLI_INCE"];
+  else l = o.sessiz ? ["KANALLI", "KASET", "TAVAN", "DUVAR"] : ["KASET", "KANALLI", "TAVAN", "DUVAR"];
+  // Dar-uzun mekânda cephe boyunca tek / iki yön kaset
+  if (oran > 2.5 && h <= 3.2 && !l.includes("KASET_TEK") && mk.grup !== "Konut") l.splice(1, 0, "KASET_TEK");
   // Kalanlar yedek sırada
   for (const t of Object.keys(IC_UNITE_TIPLERI) as IcUniteTipi[]) if (!l.includes(t) && t !== "TAZE_HAVA") l.push(t);
   return l;
 }
 
-// Kanallı ünitede gereken dış statik basınç (Pa)
+// Kanallı ünitede gereken dış statik basınç (Pa) — mekâna göre:
+//  kanal sürtünmesi : ≈1 Pa/m düz kanal × 1,5 (dirsek, redüksiyon, damper)
+//  çıkış elemanı    : kare / lineer difüzör ≈20 Pa · girdaplı difüzör (3,2–4,5 m) ≈30 Pa ·
+//                     uzun atışlı jet nozul (4,5 m üstü) atış mesafesine göre 30–150 Pa ·
+//                     tekstil kanal iç basıncı ≈120 Pa (üretici: 40–400 Pa, çoğu sistem ~120 Pa)
+//  dönüş / plenum   : ≈15 Pa · F7 ince filtre ≈100 Pa (ortalama kirlilik)
+// Jet nozul basıncı: atış L ≈ 2,1·√Δp (DN 200–250 uzun atışlı nozul tablolarının ortalaması);
+// gereken atış = 1,4 · (tavan − 1,8 m) + 4 m (yaşam bölgesine eğik üfleme + yatay erişim).
 export function kanalBasinci(o: KlimaOda, debi: number) {
+  const h = o.yukseklik;
   const derinlik = Math.max(o.en, o.boy);
+  const tur = etkinKanalTuru(o);
   const kanal = o.kanalUzunluk > 0 ? o.kanalUzunluk : Math.round(derinlik * 0.5 + 2);
-  const jet = o.yukseklik > 4.5;
-  // Menfez başına debi: difüzör ~400 m³/h, jet nozul ~800 m³/h
-  const menfez = Math.max(1, Math.ceil(debi / (jet ? 800 : 400)));
-  // Kanal sürtünmesi ~1 Pa/m × 1,6 (dirsek, redüksiyon) + menfez 15 Pa (jet 30) + dönüş ve standart filtre 10 Pa (+F7 60 Pa)
-  const esp = Math.round(kanal * 1.0 * 1.6 + (jet ? 30 : 15) + 10 + (o.filtre === "F7" ? 60 : 0));
-  return { kanal, menfez, esp, jet };
+  const jet = h > 4.5 && tur !== "TEKSTIL";
+  const girdapli = h > 3.2 && !jet && tur !== "TEKSTIL";
+  let terminal: number;
+  let menfez: number;
+  let terminalAd: string;
+  let atis: number | null = null;
+  if (tur === "TEKSTIL") {
+    terminal = 120;
+    menfez = 0;
+    terminalAd = "tekstil kanal iç basıncı ≈120 Pa";
+  } else if (jet) {
+    atis = Math.round((1.4 * (h - 1.8) + 4) * 10) / 10;
+    terminal = Math.round(Math.min(150, Math.max(30, Math.pow(atis / 2.1, 2))));
+    menfez = Math.max(1, Math.ceil(debi / 500));
+    terminalAd = `uzun atışlı jet nozul (≈${sy(atis)} m atış için ≈${terminal} Pa)`;
+  } else if (girdapli) {
+    terminal = 30;
+    menfez = Math.max(1, Math.ceil(debi / 450));
+    terminalAd = "girdaplı difüzör ≈30 Pa";
+  } else {
+    terminal = 20;
+    menfez = Math.max(1, Math.ceil(debi / 400));
+    terminalAd = "kare / lineer difüzör ≈20 Pa";
+  }
+  const surtunme = Math.round(kanal * 1.5);
+  const filtre = o.filtre === "F7" ? 100 : 0;
+  const esp = surtunme + terminal + 15 + filtre;
+  const detay = `kanal ${sy(kanal)} m × ≈1,5 Pa/m = ${surtunme} Pa + ${terminalAd} + dönüş / plenum 15 Pa${filtre ? " + F7 filtre ≈100 Pa" : ""}`;
+  return { kanal, menfez, esp, jet, tur, atis, detay };
 }
 
 function espSinifi(esp: number): IcUniteTipi | null {
@@ -120,12 +189,38 @@ export function uniteOner(
   const uygunlarGevsek = sira.filter((t) => !uygunsuzluk(t, o, s));
   let onerilen: IcUniteTipi = uygunlar[0] ?? uygunlarGevsek[0] ?? "DUVAR";
 
+  // Aşırı büyük seçimden kaçın: yükseklik sınırı (ör. 4 m'de yalnız ≥ 9 kW kaset) ya da kapsama alanı
+  // nedeniyle toplam kapasite ihtiyacın çok üstüne çıkıyorsa sıradaki uygun tip seçilir
+  const ihtiyacKw = Math.max(yuk.gerekenW / 1000, yuk.isitmaW > 0 ? yuk.isitmaW / 1000 / (1.12 * yuk.isitmaKatsayi) : 0);
+  const boyutla = (t: IcUniteTipi) => {
+    const l = yukseklikteKapasiteler(t, s, h).length ? yukseklikteKapasiteler(t, s, h) : kapasiteListesi(t, s);
+    if (!l.length) return { adet: 99, kw: 0, toplam: 1e9 };
+    const enB = l[l.length - 1];
+    const adet = Math.max(1, Math.ceil(ihtiyacKw / enB - 1e-9), KANALLI.includes(t) ? 1 : Math.ceil(A / IC_UNITE_TIPLERI[t].kapsama - 1e-9));
+    const kw = l.find((x) => x >= ihtiyacKw / adet - 1e-9) ?? enB;
+    return { adet, kw, toplam: adet * kw };
+  };
+  const asiri = (t: IcUniteTipi) => boyutla(t).toplam > Math.max(ihtiyacKw * 1.6, ihtiyacKw + 2.5);
+  if (o.uniteTipi === "OTOMATIK" && o.uniteAdet <= 0 && o.uniteKw <= 0 && ihtiyacKw > 0 && asiri(onerilen)) {
+    const daha = uygunlar.find((t) => t !== onerilen && !asiri(t));
+    if (daha) {
+      const b = boyutla(onerilen);
+      gerekce.push(
+        `${IC_UNITE_TIPLERI[onerilen].kisa} bu tavan / alanda ${b.adet} × ${sy(b.kw)} kW = ${sy(b.toplam)} kW olurdu, ihtiyaç ${sy(ihtiyacKw)} kW (aşırı büyük, kısa çalışıp kapanır, nem alamaz) → ${IC_UNITE_TIPLERI[daha].kisa}.`
+      );
+      onerilen = daha;
+    }
+  }
+
   if (h > 4.5) {
     gerekce.push(
-      `Tavan ${sy(h)} m: tavana monte kaset / duvar tipi ünitelerin havası yaşam bölgesine inmez, ısıtmada sıcak hava tavanda birikir (tabakalaşma). Üfleme yaşam bölgesine (yerden ≤ 3 m) yapılmalı.`
+      `Tavan ${sy(h)} m: 4 yön kasetler yüksek tavan ayarında en çok ≈4,5 m (büyük gövde), tavan askılı ≈3,8–4,2 m tavana kadar havayı yaşam bölgesine indirebilir (üretici tabloları). Daha yüksekte hava tavanda kalır, ısıtmada tabakalaşma olur; yüksek statik basınçlı kanallı ünite + uzun atışlı jet nozul / tekstil kanal ya da yaşam bölgesinden üfleyen konsol / salon tipi gerekir.`
     );
-  } else if (h > 3.2) gerekce.push(`Tavan ${sy(h)} m: standart montaj sınırının (≈3,2 m) üstünde; yüksek tavan ayarlı kaset, tavan askılı ya da kanallı tipler uygun.`);
-  if (o.tavanTipi === "ACIK") gerekce.push("Asma tavan yok: kaset ve gizli kanallı tipler elendi (açık kanal kullanılabilir).");
+  } else if (h > 3.2)
+    gerekce.push(
+      `Tavan ${sy(h)} m: standart montaj sınırının (kaset 2,7–3,2 m) üstünde. Kaset yalnız yüksek tavan ayarıyla (küçük gövde ≤ 3,5 m, ≥ 9 kW büyük gövde ≤ 4,5 m), tavan askılı ≤ 3,8 m; kanallıda girdaplı difüzör kullanılır.`
+    );
+  if (o.tavanTipi === "ACIK") gerekce.push("Açık tavan: kaset tij ve açık montaj kasasıyla, kanallı görünür dekoratif ya da tekstil kanalla kullanılabilir; tip seçimi tavan yapısıyla değil yükseklik, alan ve gürültüye göre yapıldı.");
   else if (o.tavanTipi === "ASMA_PLAKA") gerekce.push("60×60 plaka asma tavan: kaset üniteler plakaya oturur, servis kolay.");
   if (o.sessiz) gerekce.push("Gürültüye duyarlı mekân: ses düzeyi düşük tipler öne alındı.");
   if (mk.not) gerekce.push(mk.not);
@@ -140,7 +235,7 @@ export function uniteOner(
     const sirasi = ["KANALLI_INCE", "KANALLI", "KANALLI_YUKSEK"];
     if (gerekli && sirasi.indexOf(gerekli) > sirasi.indexOf(onerilen) && !uygunsuzluk(gerekli, o, s)) {
       gerekce.push(
-        `Gerekli dış statik basınç ≈ ${k.esp} Pa (kanal ${sy(k.kanal)} m, ${k.menfez} menfez${o.filtre === "F7" ? ", F7 filtre" : ""}) — ${IC_UNITE_TIPLERI[onerilen].kisa} (${IC_UNITE_TIPLERI[onerilen].esp![1]} Pa'a kadar) yetmez → ${IC_UNITE_TIPLERI[gerekli].kisa}.`
+        `Gerekli dış statik basınç ≈ ${k.esp} Pa (${k.detay}) — ${IC_UNITE_TIPLERI[onerilen].kisa} (${IC_UNITE_TIPLERI[onerilen].esp![1]} Pa'a kadar) yetmez → ${IC_UNITE_TIPLERI[gerekli].kisa}.`
       );
       onerilen = gerekli;
     }
@@ -150,7 +245,7 @@ export function uniteOner(
   // Otomatik modda: önerilen tip çok sayıda ünite gerektiriyorsa daha az ünite ile çözen uygun tip tercih edilir
   const gerekliKwOn = Math.max(yuk.gerekenW / 1000, yuk.isitmaW > 0 ? yuk.isitmaW / 1000 / (1.12 * yuk.isitmaKatsayi) : 0);
   const adetTahmini = (t: IcUniteTipi) => {
-    const l = kapasiteListesi(t, s);
+    const l = yukseklikteKapasiteler(t, s, h).length ? yukseklikteKapasiteler(t, s, h) : kapasiteListesi(t, s);
     if (!l.length) return 99;
     return Math.max(1, Math.ceil(gerekliKwOn / l[l.length - 1] - 1e-9), KANALLI.includes(t) ? 1 : Math.ceil(A / IC_UNITE_TIPLERI[t].kapsama - 1e-9));
   };
@@ -178,7 +273,11 @@ export function uniteOner(
   const u = IC_UNITE_TIPLERI[tip];
 
   // --- 3. Adet ve kapasite ---
-  const liste = kapasiteListesi(tip, s).length ? kapasiteListesi(tip, s) : kapasiteListesi("DUVAR", s);
+  const tamListe = kapasiteListesi(tip, s).length ? kapasiteListesi(tip, s) : kapasiteListesi("DUVAR", s);
+  const yListe = yukseklikteKapasiteler(tip, s, h);
+  const liste = yListe.length ? yListe : tamListe;
+  if (yListe.length && yListe.length < tamListe.length)
+    gerekce.push(`Tavan ${sy(h)} m: ${u.kisa} bu yükseklikte yalnız yüksek tavan ayarlı ${sy(yListe[0])} kW ve üstü gövdelerle kullanılabilir.`);
   const gerekliKw = Math.max(yuk.gerekenW / 1000, yuk.isitmaW > 0 ? yuk.isitmaW / 1000 / (1.12 * yuk.isitmaKatsayi) : 0);
   const enBuyuk = liste[liste.length - 1];
   let adet: number;
@@ -195,7 +294,10 @@ export function uniteOner(
   if (o.uniteKw > 0 && o.uniteKw * adet + 1e-9 < gerekliKw) uyarilar.push(`Seçilen ${adet} × ${sy(o.uniteKw)} kW yetersiz; en az ${sy(gerekliKw)} kW gerekli.`);
   if (o.uniteKw <= 0 && kw * adet + 1e-9 < gerekliKw) uyarilar.push(`${adet} × ${u.kisa} ${sy(kw)} kW yetmiyor (gerekli ${sy(gerekliKw)} kW); adet artırın.`);
   kw = Math.round(kw * 10) / 10;
-  if (u.tavanMaks < h && h <= u.tavanYuksekMod) gerekce.push(`${u.kisa} "yüksek tavan" ayarıyla devreye alınmalı (tavan ${sy(h)} m).`);
+  const ts = tavanSiniri(tip, kw);
+  if (ts.maks < h && h <= ts.yuksek) gerekce.push(`${u.kisa} "yüksek tavan" ayarıyla devreye alınmalı (standart ${sy(ts.maks)} m, yüksek ayar ${sy(ts.yuksek)} m; tavan ${sy(h)} m).`);
+  const mn = montajNotu(tip, o);
+  if (mn) (mn.startsWith("Gizli kanal seçildi") ? uyarilar : gerekce).push(mn);
   if (tip === "DUVAR" && derinlik > u.atis * 1.1) {
     if (adet < 2) uyarilar.push(`Duvar tipi atışı ≈ ${u.atis} m, mekân derinliği ${sy(derinlik)} m: uzak bölge serinlemez; karşılıklı 2 ünite ya da kaset / kanallı önerilir.`);
     else gerekce.push(`Derinlik ${sy(derinlik)} m > duvar tipi atışı ${u.atis} m: üniteler karşılıklı yerleştirilmeli.`);
@@ -213,11 +315,13 @@ export function uniteOner(
   if (KANALLI.includes(tip)) {
     kanalBilgi = kanalKontrol(tip)!;
     esp = kanalBilgi.esp;
-    menfez = tip === "DOSEME_GIZLI" ? adet : Math.max(adet, kanalBilgi.menfez);
+    menfez = tip === "DOSEME_GIZLI" ? adet : kanalBilgi.tur === "TEKSTIL" ? 0 : Math.max(adet, kanalBilgi.menfez);
     kanal = kanalBilgi.kanal;
     const aralik = u.esp!;
     if (tip !== "DOSEME_GIZLI") {
-      gerekce.push(`Kanal ≈ ${sy(kanal)} m, ${menfez} ${kanalBilgi.jet ? "jet nozul" : "difüzör / menfez"}; gerekli dış statik basınç ≈ ${esp} Pa (ünite aralığı ${aralik[0]}–${aralik[1]} Pa).`);
+      gerekce.push(
+        `Gerekli dış statik basınç ≈ ${esp} Pa = ${kanalBilgi.detay}; ünite aralığı ${aralik[0]}–${aralik[1]} Pa${menfez ? ` · ${menfez} ${kanalBilgi.jet ? "jet nozul" : "difüzör"}` : ""}.`
+      );
       if (tip === "KANALLI_YUKSEK" && esp < aralik[0] && kanalBilgi.jet)
         gerekce.push(
           `Yüksek tavanda yaşam bölgesine ulaşacak uzun atış (jet nozul) gerektiği için yüksek fan basınçlı ünite seçildi; gereken ${esp} Pa ünitenin alt sınırının altında, devreye almada fan kademesi buna göre ayarlanır.`
@@ -229,7 +333,9 @@ export function uniteOner(
         );
       }
       if (kanal > u.kanalMaks) uyarilar.push(`Kanal ${sy(kanal)} m, ${u.kisa} için önerilen en çok ${u.kanalMaks} m.`);
-      if (kanalBilgi.jet) ekler.push(`${menfez} adet jet nozul (uzun atışlı, yaşam bölgesine yönlendirilmiş)`);
+      if (kanalBilgi.jet) ekler.push(`${menfez} adet jet nozul (uzun atışlı, ≈${sy(kanalBilgi.atis ?? 0)} m atış, ısıtmada aşağı yönlendirilebilir)`);
+      if (kanalBilgi.tur === "TEKSTIL") ekler.push(`Tekstil (kumaş) kanal ≈ ${sy(kanal * adet)} m, mikro delikli / nozullu`);
+      else if (kanalBilgi.tur === "ACIK") ekler.push(`Görünür dekoratif spiral kanal ≈ ${sy(kanal * adet)} m (çift cidarlı yalıtımlı, boyalı) + askı seti`);
     }
   }
 

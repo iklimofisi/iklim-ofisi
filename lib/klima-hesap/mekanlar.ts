@@ -203,7 +203,7 @@ export function mekanOdaTipinden(t: OdaTipi): MekanTipi {
 export const TAVAN_TIPLERI: Record<TavanTipi, string> = {
   ASMA_PLAKA: "Asma tavan (60×60 plaka)",
   ASMA_ALCIPAN: "Asma tavan (alçıpan / gizli)",
-  ACIK: "Asma tavan yok (beton / çelik / ahşap)",
+  ACIK: "Asma tavan yok — açık tavan (beton / çelik / ahşap)",
 };
 
 export const TAZE_HAVA_DUZENLERI: Record<TazeHavaDuzeni, string> = {
