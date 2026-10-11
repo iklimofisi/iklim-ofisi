@@ -16,6 +16,8 @@ import {
   YERDEN_BORULARI,
   RADYATOR_TIPLERI,
   RADYATOR_YUKSEKLIKLERI,
+  RADYATOR_MONTAJLARI,
+  type RadyatorMontaj,
   type OdaTipi,
   type ElemanTuru,
   type Yon,
@@ -64,6 +66,7 @@ export type Oda = {
   radyatorTip: RadyatorTipi;
   radyatorYukseklik: RadyatorYukseklik;
   radyatorParca: number; // 0 = otomatik
+  radyatorMontaj: RadyatorMontaj;
   kaplama: string;
   kollektor: number; // 1, 2, …
   kollektorMesafe: number; // m (kollektörden odaya tek yön)
@@ -73,6 +76,7 @@ export type Oda = {
 };
 
 export type Isletme = "MONOVALENT" | "MONOENERJETIK";
+export type Havalandirma = "DOGAL" | "HRV";
 
 export type HesapVerisi = {
   surum: 1;
@@ -82,6 +86,8 @@ export type HesapVerisi = {
   isiKoprusu: number;
   yonArtirimi: boolean;
   isinmaArtirimi: number; // %
+  havalandirma: Havalandirma; // HRV: ısı geri kazanımlı mekanik havalandırma
+  hrvVerim: number; // % (HRV duyulur ısı geri kazanım verimi)
   emniyetPayi: number; // % (ısı pompası seçiminde)
   radyatorGidis: number;
   radyatorDonus: number;
@@ -194,6 +200,7 @@ export function yeniOda(tip: OdaTipi = "OTURMA", ek: Partial<Oda> = {}): Oda {
     radyatorTip: "22",
     radyatorYukseklik: 600,
     radyatorParca: 0,
+    radyatorMontaj: "ACIK",
     kaplama: tip === "BANYO" || tip === "MUTFAK" || tip === "WC" ? "SERAMIK" : "PARKE",
     kollektor: 1,
     kollektorMesafe: 5,
@@ -213,6 +220,8 @@ export function varsayilanVeri(il = "İstanbul"): HesapVerisi {
     isiKoprusu: 0.1,
     yonArtirimi: true,
     isinmaArtirimi: 0,
+    havalandirma: "DOGAL",
+    hrvVerim: 75,
     emniyetPayi: 0,
     radyatorGidis: 50,
     radyatorDonus: 40,
@@ -283,6 +292,7 @@ function odaOku(h: unknown): Oda | null {
     radyatorTip: secim(o.radyatorTip, RAD_TIP_LISTESI, "22"),
     radyatorYukseklik: (RADYATOR_YUKSEKLIKLERI as readonly number[]).includes(yuk) ? (yuk as RadyatorYukseklik) : 600,
     radyatorParca: Math.round(sayi(o.radyatorParca, 0, 0, 10)),
+    radyatorMontaj: secim(o.radyatorMontaj, Object.keys(RADYATOR_MONTAJLARI) as RadyatorMontaj[], "ACIK"),
     kaplama: secim(o.kaplama, KAPLAMA_LISTESI, varsayilan.kaplama),
     kollektor: Math.round(sayi(o.kollektor, 1, 1, 9)),
     kollektorMesafe: sayi(o.kollektorMesafe, 5, 0, 60),
@@ -315,6 +325,8 @@ export function veriOku(ham: unknown): HesapVerisi {
     isiKoprusu: sayi(obj.isiKoprusu, v.isiKoprusu, 0, 0.3),
     yonArtirimi: bool(obj.yonArtirimi, v.yonArtirimi),
     isinmaArtirimi: sayi(obj.isinmaArtirimi, 0, 0, 30),
+    havalandirma: secim(obj.havalandirma, ["DOGAL", "HRV"] as const, "DOGAL"),
+    hrvVerim: sayi(obj.hrvVerim, 75, 40, 95),
     emniyetPayi: sayi(obj.emniyetPayi, 0, 0, 30),
     radyatorGidis: sayi(obj.radyatorGidis, v.radyatorGidis, 30, 80),
     radyatorDonus: sayi(obj.radyatorDonus, v.radyatorDonus, 25, 75),

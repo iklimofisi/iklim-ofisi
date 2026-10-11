@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { isiHesapKaydet, isiHesapTeklifeAktar } from "@/lib/isi-hesap-actions";
 import { bildirimGoster } from "@/lib/bildirim";
 import {
@@ -31,6 +31,8 @@ import {
   YERDEN_BORULARI,
   RADYATOR_TIPLERI,
   RADYATOR_YUKSEKLIKLERI,
+  RADYATOR_MONTAJLARI,
+  type RadyatorMontaj,
   type OdaTipi,
   type ElemanTuru,
   type Yon,
@@ -126,11 +128,69 @@ export function SayiAlani({
   );
 }
 
-export function Alan({ ad, children, className = "" }: { ad: string; children: React.ReactNode; className?: string }) {
+// -----------------------------------------------------------------------------
+// AÇIKLAMALAR: alan altı kısa yardım metinleri ve sekme başı "nasıl doldurulur"
+// rehberleri. Üst çubuktaki düğmeyle açılıp kapanır (tarayıcıda hatırlanır).
+// -----------------------------------------------------------------------------
+export const YardimBaglami = createContext(true);
+const YARDIM_ANAHTARI = "hesap-aciklamalari";
+
+export function useYardimDurumu(): [boolean, (a: boolean) => void] {
+  const [acik, setAcik] = useState(true);
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(YARDIM_ANAHTARI) === "kapali") setAcik(false);
+    } catch {
+      /* tarayıcı depolaması kapalı olabilir */
+    }
+  }, []);
+  const degistir = (a: boolean) => {
+    setAcik(a);
+    try {
+      window.localStorage.setItem(YARDIM_ANAHTARI, a ? "acik" : "kapali");
+    } catch {
+      /* yok say */
+    }
+  };
+  return [acik, degistir];
+}
+
+export function YardimDugmesi({ acik, degistir }: { acik: boolean; degistir: (a: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => degistir(!acik)}
+      aria-pressed={acik}
+      title="Alanların altındaki açıklamaları göster / gizle"
+      className={`focus-ring text-sm border px-3 py-2 rounded-md ${acik ? "border-soguk bg-soguk/10 text-soguk-dim" : "border-hat bg-white text-metin/60 hover:border-soguk"}`}
+    >
+      ⓘ Açıklamalar {acik ? "açık" : "kapalı"}
+    </button>
+  );
+}
+
+export function Rehber({ baslik, adimlar }: { baslik: string; adimlar: React.ReactNode[] }) {
+  const acik = useContext(YardimBaglami);
+  if (!acik) return null;
+  return (
+    <details open className="bg-soguk/5 border border-soguk/20 rounded-lg px-4 py-3 mb-5 text-sm text-metin/80">
+      <summary className="cursor-pointer font-semibold text-soguk-dim select-none">{baslik}</summary>
+      <ol className="list-decimal pl-5 mt-2 space-y-1.5 text-[13px] leading-relaxed">
+        {adimlar.map((a, i) => (
+          <li key={i}>{a}</li>
+        ))}
+      </ol>
+    </details>
+  );
+}
+
+export function Alan({ ad, children, className = "", ipucu }: { ad: string; children: React.ReactNode; className?: string; ipucu?: React.ReactNode }) {
+  const yardim = useContext(YardimBaglami);
   return (
     <label className={`block ${className}`}>
       <span className={etiket}>{ad}</span>
       {children}
+      {ipucu && yardim && <span className="block text-[11px] leading-snug text-metin/50 mt-1 font-normal">{ipucu}</span>}
     </label>
   );
 }
@@ -158,6 +218,7 @@ export default function IsiHesapEditoru({ hesap, musteriler, modeller }: Props) 
   const [kayitli, setKayitli] = useState(() => JSON.stringify({ ad: hesap.ad, musteriId: hesap.musteriId, veri: hesap.veri }));
   const [hata, setHata] = useState("");
   const [kaydediliyor, baslat] = useTransition();
+  const [yardim, setYardim] = useYardimDurumu();
 
   const simdiki = JSON.stringify({ ad, musteriId, veri });
   const degisti = simdiki !== kayitli;
@@ -216,6 +277,7 @@ export default function IsiHesapEditoru({ hesap, musteriler, modeller }: Props) 
   const odaSonuc = oda ? sonuc.odalar.find((o) => o.id === oda.id) ?? null : null;
 
   return (
+    <YardimBaglami.Provider value={yardim}>
     <div className="max-w-6xl">
       {/* ÜST ÇUBUK */}
       <div className="sticky top-0 z-20 -mx-6 px-6 sm:-mx-10 sm:px-10 py-3 bg-zemin/95 backdrop-blur border-b border-hat mb-5">
@@ -239,6 +301,7 @@ export default function IsiHesapEditoru({ hesap, musteriler, modeller }: Props) 
             ))}
           </select>
           <span className={`text-xs ${degisti ? "text-sicak-dim font-medium" : "text-metin/40"}`}>{degisti ? "● Kaydedilmedi" : "✓ Kayıtlı"}</span>
+          <YardimDugmesi acik={yardim} degistir={setYardim} />
           <button
             type="button"
             onClick={pdfAc}
@@ -306,6 +369,18 @@ export default function IsiHesapEditoru({ hesap, musteriler, modeller }: Props) 
       {sekme === "proje" && <ProjeSekmesi veri={veri} guncelle={guncelle} modeller={modeller} sonuc={sonuc} ilSicaklik={il.disSicaklik} />}
 
       {sekme === "odalar" && (
+        <>
+        <Rehber
+          baslik="Odalar nasıl girilir?"
+          adimlar={[
+            <>Isıtılacak <strong>her odayı ayrı</strong> ekleyin (soldaki listeden tip seçip &quot;+ Oda&quot;). Hiç oda yoksa &quot;Örnek daire odalarını ekle&quot; ile başlayıp ölçüleri düzeltebilirsiniz.</>,
+            <><strong>Oda bilgileri:</strong> en × boy iç ölçü (m), tavan yüksekliği ve ısıtıcı tipi (radyatör / yerden ısıtma / ikisi birden). İç sıcaklık ve hava değişimi oda tipine göre kendiliğinden gelir.</>,
+            <><strong>Yapı elemanları:</strong> odanın dışarıya, toprağa ya da ısıtılmayan bir yere bakan her yüzeyini ekleyin. Dış duvar için yalnız <em>uzunluğu</em> yazın; aynı yöndeki pencere / kapı alanı duvardan kendiliğinden düşülür.</>,
+            <>İki ısıtılan oda arasındaki iç duvarları <strong>girmeyin</strong> (aynı sıcaklıkta ısı kaybı yoktur). Yalnız sıcaklığı farklı bir komşu varsa (ör. 15 °C kiler, komşu daire) &quot;Komşu hacim&quot; ekleyin.</>,
+            <>Ara katta döşeme ve tavan girilmez. En üst katta &quot;+ Çatı&quot;, zemin katta &quot;+ Toprak döşeme&quot;, altı açık (pilotis / garaj) ise &quot;+ Dışa açık döşeme&quot; ya da &quot;+ Isıtılmayan komşu&quot; ekleyin.</>,
+            <>Her oda kaydının altında anlık sonuç görünür (W, W/m², radyatör boyu ya da yerden ısıtma devresi). Konutta tipik değer 40–90 W/m²; 120 W/m² üstü yalıtımsız yapı ya da yanlış ölçü işaretidir.</>,
+          ]}
+        />
         <div className="grid lg:grid-cols-[16rem_1fr] gap-5 items-start">
           {/* Oda listesi */}
           <div className="bg-yuzey border border-hat rounded-lg p-3 lg:sticky lg:top-44">
@@ -405,6 +480,7 @@ export default function IsiHesapEditoru({ hesap, musteriler, modeller }: Props) 
             <div className="bg-yuzey border border-hat rounded-lg p-8 text-sm text-metin/60">Soldan oda ekleyin.</div>
           )}
         </div>
+        </>
       )}
 
       {sekme === "sonuclar" && <SonuclarSekmesi sonuc={sonuc} veri={veri} />}
@@ -425,6 +501,7 @@ export default function IsiHesapEditoru({ hesap, musteriler, modeller }: Props) 
         />
       )}
     </div>
+    </YardimBaglami.Provider>
   );
 }
 
@@ -457,10 +534,21 @@ function ProjeSekmesi({
   ilSicaklik: number;
 }) {
   return (
+    <>
+    <Rehber
+      baslik="Bu hesap nasıl yapılır? (sırayla)"
+      adimlar={[
+        <><strong>1 · Proje & Sistem</strong> (bu sekme): ili seçin, ısıtma sisteminin sıcaklıklarını ve sıcak su ihtiyacını belirleyin. Emin olmadığınız alanları varsayılan değerde bırakın; hepsi konut için uygun başlangıç değerleridir.</>,
+        <><strong>2 · Odalar</strong>: odaları ve her odanın dış duvar, pencere, çatı, zemin gibi yüzeylerini girin. Hesabın doğruluğu en çok buradaki ölçülere ve yalıtım bilgisine bağlıdır.</>,
+        <><strong>3 · Sonuçlar</strong>: oda oda ısı kaybı, radyatör boyları, yerden ısıtma devreleri, ısı pompası seçimi, elektrik gücü ve uyarılar. Turuncu uyarıları okuyup gerekirse girdileri düzeltin.</>,
+        <><strong>4 · Şema & Krokiler</strong>: tesisat prensip şeması ve yerden ısıtma serim krokileri. <strong>5 · Malzeme & Teklif</strong>: malzeme listesi ve tek tuşla teklif taslağı.</>,
+        <>Üstteki <strong>Kaydet</strong> ile kaydedin; <strong>PDF</strong> müşteriye verilecek raporu açar. Isı pompası önerisi için önce &quot;Isı pompası modelleri&quot; sayfasına cihaz katalog değerlerini girin.</>,
+      ]}
+    />
     <div className="grid lg:grid-cols-2 gap-5">
       <Kart baslik="Konum ve iklim" aciklama="Dış hava tasarım sıcaklığı TS 2164 tablosundan gelir; yüksek rakımlı ilçeler için elle değiştirilebilir.">
         <div className="grid sm:grid-cols-2 gap-3">
-          <Alan ad="İl">
+          <Alan ad="İl" ipucu="Binanın bulunduğu il. Kış tasarım sıcaklığı (TS 2164) ve rakım buradan gelir.">
             <select value={veri.il} onChange={(e) => guncelle({ il: e.target.value })} className={girdi}>
               {ILLER.map((i) => (
                 <option key={i.ad} value={i.ad}>
@@ -469,10 +557,13 @@ function ProjeSekmesi({
               ))}
             </select>
           </Alan>
-          <Alan ad={`Dış tasarım sıcaklığı °C (boş = ${ilSicaklik} °C)`}>
+          <Alan
+            ad={`Dış tasarım sıcaklığı °C (boş = ${ilSicaklik} °C)`}
+            ipucu="Normalde boş bırakın. Yalnız il merkezinden belirgin yüksek / soğuk bir ilçede (ör. yayla, kayak merkezi) daha düşük bir değer yazın."
+          >
             <SayiAlani deger={veri.disSicaklikElle} bosOlabilir min={-40} maks={20} onChange={(n) => guncelle({ disSicaklikElle: n })} yerTutucu={String(ilSicaklik)} />
           </Alan>
-          <Alan ad="Adres / konum" className="sm:col-span-2">
+          <Alan ad="Adres / konum" className="sm:col-span-2" ipucu="Yalnız rapora yazılır; hesaba etkisi yoktur.">
             <input value={veri.adres} maxLength={300} onChange={(e) => guncelle({ adres: e.target.value })} className={girdi} placeholder="İlçe, mahalle…" />
           </Alan>
         </div>
@@ -480,7 +571,7 @@ function ProjeSekmesi({
 
       <Kart baslik="Hesap kabulleri" aciklama="EN 12831 basitleştirilmiş yöntem. Isı pompası sürekli çalıştığı için ısınma artırımı genelde 0 alınır.">
         <div className="grid sm:grid-cols-2 gap-3">
-          <Alan ad="Isı köprüsü ek U (W/m²K)">
+          <Alan ad="Isı köprüsü ek U (W/m²K)" ipucu="Kolon, kiriş, balkon gibi yalıtımın kesildiği yerlerin ek kaybı. Mantolu yeni bina: 0,05 · normal: 0,10 · yalıtımsız eski bina: 0,15.">
             <select value={veri.isiKoprusu} onChange={(e) => guncelle({ isiKoprusu: Number(e.target.value) })} className={girdi}>
               {ISI_KOPRUSU.map((k) => (
                 <option key={k.deger} value={k.deger}>
@@ -489,25 +580,36 @@ function ProjeSekmesi({
               ))}
             </select>
           </Alan>
-          <Alan ad="Isınma (kesintili işletme) artırımı %">
+          <Alan ad="Isınma (kesintili işletme) artırımı %" ipucu="Isı pompası sürekli çalıştığı için 0 bırakın. Yalnız sistem gece tamamen kapatılacaksa %10–15 yazın.">
             <SayiAlani deger={veri.isinmaArtirimi} min={0} maks={30} onChange={(n) => guncelle({ isinmaArtirimi: n ?? 0 })} />
           </Alan>
-          <Alan ad="Isı pompası emniyet payı %">
+          <Alan ad="Isı pompası emniyet payı %" ipucu="Cihaz seçiminde ısıtma yüküne eklenen pay. Ölçüler kesinse 0–5; tahmini ölçülerle çalışılıyorsa 10. Fazlası cihazı gereksiz büyütür.">
             <SayiAlani deger={veri.emniyetPayi} min={0} maks={30} onChange={(n) => guncelle({ emniyetPayi: n ?? 0 })} />
           </Alan>
           <label className="flex items-center gap-2 text-sm text-metin/80 mt-5">
             <input type="checkbox" checked={veri.yonArtirimi} onChange={(e) => guncelle({ yonArtirimi: e.target.checked })} />
             Yön artırımı (K +%5, G −%5)
           </label>
+          <Alan ad="Havalandırma" ipucu="Evde ısı geri kazanımlı havalandırma cihazı (HRV) varsa seçin; havalandırma kaybı cihaz verimi oranında azalır ve malzeme listesine cihaz eklenir.">
+            <select value={veri.havalandirma} onChange={(e) => guncelle({ havalandirma: e.target.value as HesapVerisi["havalandirma"] })} className={girdi}>
+              <option value="DOGAL">Doğal (pencere / sızıntı)</option>
+              <option value="HRV">Isı geri kazanımlı mekanik (HRV)</option>
+            </select>
+          </Alan>
+          {veri.havalandirma === "HRV" && (
+            <Alan ad="HRV ısı geri kazanım verimi %" ipucu="Cihaz etiketindeki duyulur ısı verimi. Bilinmiyorsa 75 bırakın (plakalı eşanjör 70–80, entalpi / rotorlu 75–85).">
+              <SayiAlani deger={veri.hrvVerim} min={40} maks={95} adim={1} onChange={(n) => n !== null && guncelle({ hrvVerim: n })} />
+            </Alan>
+          )}
         </div>
       </Kart>
 
       <Kart baslik="Radyatör rejimi" aciklama="Isı pompasında 45/35 – 50/40 °C önerilir; sıcaklık düştükçe radyatör boyu uzar, verim artar.">
         <div className="grid grid-cols-2 gap-3">
-          <Alan ad="Gidiş °C">
+          <Alan ad="Gidiş °C" ipucu="Radyatörlere giden su sıcaklığı. Düşük sıcaklık = verimli ısı pompası ama daha uzun radyatör.">
             <SayiAlani deger={veri.radyatorGidis} min={30} maks={80} onChange={(n) => n !== null && guncelle({ radyatorGidis: n })} />
           </Alan>
-          <Alan ad="Dönüş °C">
+          <Alan ad="Dönüş °C" ipucu="Radyatörden dönen su; gidişten 5–10 °C düşük olmalı.">
             <SayiAlani deger={veri.radyatorDonus} min={25} maks={75} onChange={(n) => n !== null && guncelle({ radyatorDonus: n })} />
           </Alan>
         </div>
@@ -530,23 +632,30 @@ function ProjeSekmesi({
             </button>
           ))}
         </div>
+        <p className="text-[11px] text-metin/50 mt-2">
+          Yeni proje: 45/35 ya da 50/40. Mevcut radyatörler korunacaksa 55/45 ile deneyin; 70/55 yalnız karşılaştırma içindir (ısı pompası için verimsiz).
+        </p>
       </Kart>
 
       <Kart baslik="Yerden ısıtma (Fraenkische)" aciklama="Otomatik modda gidiş, en zorlu odayı karşılayacak kadar yükseltilir (en çok 55 °C). Sabit modda ısı pompası verimi için hedefte kalır.">
         <div className="grid sm:grid-cols-3 gap-3">
-          <Alan ad="Hedef gidiş °C">
+          <Alan ad="Hedef gidiş °C" ipucu="Yerden ısıtmada hedeflenen su sıcaklığı; 30–35 °C idealdir.">
             <SayiAlani deger={veri.yerdenHedefGidis} min={27} maks={55} onChange={(n) => n !== null && guncelle({ yerdenHedefGidis: n })} />
           </Alan>
-          <Alan ad="Gidiş sıcaklığı" className="sm:col-span-2">
+          <Alan
+            ad="Gidiş sıcaklığı"
+            className="sm:col-span-2"
+            ipucu="Otomatik: yükü yüksek oda karşılanana kadar sıcaklık artırılır. Sabit: sıcaklık hedefte kalır, yetmeyen odaya takviye radyatör / havlupan konur."
+          >
             <select value={veri.yerdenGidisModu} onChange={(e) => guncelle({ yerdenGidisModu: e.target.value as HesapVerisi["yerdenGidisModu"] })} className={girdi}>
               <option value="OTOMATIK">Otomatik — gerekirse en zorlu odaya göre yükselt</option>
               <option value="SABIT">Sabit — hedefte kalsın, eksik takviye radyatörle</option>
             </select>
           </Alan>
-          <Alan ad="Gidiş-dönüş farkı σ (K)">
+          <Alan ad="Gidiş-dönüş farkı σ (K)" ipucu="Yerden ısıtmada 5 K standarttır; değiştirmeyin.">
             <SayiAlani deger={veri.yerdenSigma} min={3} maks={10} onChange={(n) => n !== null && guncelle({ yerdenSigma: n })} />
           </Alan>
-          <Alan ad="Boru">
+          <Alan ad="Boru" ipucu="Konutta 16×2 mm (devre en çok ~100 m). Büyük alanlarda 17×2 / 20×2.">
             <select value={veri.yerdenBoru} onChange={(e) => guncelle({ yerdenBoru: e.target.value })} className={girdi}>
               {YERDEN_BORULARI.map((b) => (
                 <option key={b.anahtar} value={b.anahtar}>
@@ -555,7 +664,7 @@ function ProjeSekmesi({
               ))}
             </select>
           </Alan>
-          <Alan ad="En sık aralık">
+          <Alan ad="En sık aralık" ipucu="Program boruyu bundan sık döşemez; 10 cm en sık uygulamadır.">
             <select value={veri.yerdenMinAralik} onChange={(e) => guncelle({ yerdenMinAralik: Number(e.target.value), yerdenMaksAralik: Math.max(Number(e.target.value), veri.yerdenMaksAralik) })} className={girdi}>
               {[0.1, 0.15, 0.2].map((t) => (
                 <option key={t} value={t}>
@@ -564,7 +673,7 @@ function ProjeSekmesi({
               ))}
             </select>
           </Alan>
-          <Alan ad="En seyrek aralık">
+          <Alan ad="En seyrek aralık" ipucu="Yükü düşük odada en çok bu aralık kullanılır (genelde 20–25 cm).">
             <select value={veri.yerdenMaksAralik} onChange={(e) => guncelle({ yerdenMaksAralik: Math.max(veri.yerdenMinAralik, Number(e.target.value)) })} className={girdi}>
               {[0.15, 0.2, 0.25, 0.3].map((t) => (
                 <option key={t} value={t}>
@@ -573,10 +682,10 @@ function ProjeSekmesi({
               ))}
             </select>
           </Alan>
-          <Alan ad="Boru üstü şap (cm)">
+          <Alan ad="Boru üstü şap (cm)" ipucu="Borunun ÜSTÜNDEKİ şap kalınlığı; standart 4,5 cm.">
             <SayiAlani deger={veri.sapUstu * 100} min={3} maks={8} onChange={(n) => n !== null && guncelle({ sapUstu: n / 100 })} />
           </Alan>
-          <Alan ad="Şap ısı iletkenliği λ (W/mK)">
+          <Alan ad="Şap ısı iletkenliği λ (W/mK)" ipucu="Çimento şap 1,2 · anhidrit (akışkan) şap 1,6–2,0.">
             <SayiAlani deger={veri.sapLambda} min={0.8} maks={2} onChange={(n) => n !== null && guncelle({ sapLambda: n })} />
           </Alan>
         </div>
@@ -587,12 +696,13 @@ function ProjeSekmesi({
           <input type="checkbox" checked={veri.sicakSu} onChange={(e) => guncelle({ sicakSu: e.target.checked })} />
           Isı pompası boyleri de ısıtacak
         </label>
+        <p className="text-[11px] text-metin/50 -mt-2 mb-3">İşaretliyse kişi başı 0,25 kW cihaz yüküne eklenir; boyler ve 3 yollu vana malzeme listesine girer.</p>
         {veri.sicakSu && (
           <div className="grid grid-cols-2 gap-3">
-            <Alan ad="Kişi sayısı">
+            <Alan ad="Kişi sayısı" ipucu="Evde yaşayan kişi sayısı (boyler hacmi kişi başı ~50 L).">
               <SayiAlani deger={veri.kisiSayisi} min={1} maks={50} adim={1} onChange={(n) => n !== null && guncelle({ kisiSayisi: Math.round(n) })} />
             </Alan>
-            <Alan ad="Boyler sıcaklığı °C">
+            <Alan ad="Boyler sıcaklığı °C" ipucu="48–50 °C önerilir; 55 °C üstü verimi düşürür.">
               <SayiAlani deger={veri.sicakSuSicaklik} min={40} maks={65} onChange={(n) => n !== null && guncelle({ sicakSuSicaklik: n })} />
             </Alan>
           </div>
@@ -601,18 +711,21 @@ function ProjeSekmesi({
 
       <Kart baslik="Isı pompası ve hidrolik" aciklama="Monoenerjetik: en soğuk günlerde elektrikli ısıtıcı destekler (daha küçük cihaz). Monovalent: cihaz tek başına yeter.">
         <div className="grid sm:grid-cols-2 gap-3">
-          <Alan ad="İşletme">
+          <Alan
+            ad="İşletme"
+            ipucu="Monoenerjetik (en yaygın): en soğuk birkaç günde cihazın elektrikli ısıtıcısı yardım eder, cihaz küçük kalır. Monovalent: cihaz en soğuk günde de tek başına yeter (daha büyük cihaz)."
+          >
             <select value={veri.isletme} onChange={(e) => guncelle({ isletme: e.target.value as HesapVerisi["isletme"] })} className={girdi}>
               <option value="MONOENERJETIK">Monoenerjetik (ısı pompası + elektrikli ısıtıcı)</option>
               <option value="MONOVALENT">Monovalent (yalnız ısı pompası)</option>
             </select>
           </Alan>
           {veri.isletme === "MONOENERJETIK" && (
-            <Alan ad="Hedef denge noktası °C">
+            <Alan ad="Hedef denge noktası °C" ipucu="Isı pompasının tek başına yetmeyi bıraktığı dış sıcaklık; genelde tasarım sıcaklığının 3–5 °C üstü (ör. −5 °C).">
               <SayiAlani deger={veri.bivalentNokta} min={-25} maks={5} onChange={(n) => n !== null && guncelle({ bivalentNokta: n })} />
             </Alan>
           )}
-          <Alan ad="Isı pompası modeli">
+          <Alan ad="Isı pompası modeli" ipucu="Otomatik bırakılırsa kayıtlı modellerden yükü karşılayan en küçük cihaz seçilir.">
             <select value={veri.modelId} onChange={(e) => guncelle({ modelId: e.target.value })} className={girdi}>
               <option value="">Otomatik öneri (en küçük uygun)</option>
               {modeller.map((m) => (
@@ -622,7 +735,7 @@ function ProjeSekmesi({
               ))}
             </select>
           </Alan>
-          <Alan ad="Tampon tank">
+          <Alan ad="Tampon tank" ipucu="Buz çözme (defrost) ve kısa çalışmaları önler. Otomatik: kW başına ~20 L. Tek devre ve cihaz su hacmi yeterliyse Yok seçilebilir.">
             <select value={veri.tampon} onChange={(e) => guncelle({ tampon: e.target.value as HesapVerisi["tampon"] })} className={girdi}>
               <option value="OTOMATIK">Otomatik ({Math.round(sonuc.tampon.gerekli)} L üstü standart)</option>
               <option value="ELLE">Elle hacim</option>
@@ -630,14 +743,14 @@ function ProjeSekmesi({
             </select>
           </Alan>
           {veri.tampon === "ELLE" && (
-            <Alan ad="Tampon hacmi (L)">
+            <Alan ad="Tampon hacmi (L)" ipucu="Kullanılacak tankın hacmi.">
               <SayiAlani deger={veri.tamponElle} min={0} maks={5000} adim={10} onChange={(n) => n !== null && guncelle({ tamponElle: n })} />
             </Alan>
           )}
-          <Alan ad="Ana hat uzunluğu, tek yön (m)">
+          <Alan ad="Ana hat uzunluğu, tek yön (m)" ipucu="Isı pompasından kollektöre / en uzak radyatöre boru güzergâhı (yalnız gidiş). Boru çapı, su hacmi ve pompa basması buna göre çıkar.">
             <SayiAlani deger={veri.anaHatUzunluk} min={0} maks={300} onChange={(n) => n !== null && guncelle({ anaHatUzunluk: n })} />
           </Alan>
-          <Alan ad="Tesisat statik yüksekliği (m)">
+          <Alan ad="Tesisat statik yüksekliği (m)" ipucu="Genleşme tankından tesisatın en yüksek noktasına (en üst radyatör) yükseklik; tank ön basıncını belirler.">
             <SayiAlani deger={veri.statikYukseklik} min={0} maks={60} onChange={(n) => n !== null && guncelle({ statikYukseklik: n })} />
           </Alan>
         </div>
@@ -651,6 +764,7 @@ function ProjeSekmesi({
         )}
       </Kart>
     </div>
+    </>
   );
 }
 
@@ -717,10 +831,10 @@ function OdaDuzenleyici({
     <div className="space-y-4 min-w-0">
       <Kart baslik="Oda bilgileri">
         <div className="grid sm:grid-cols-4 gap-3">
-          <Alan ad="Oda adı" className="sm:col-span-2">
+          <Alan ad="Oda adı" className="sm:col-span-2" ipucu="Raporda ve krokide görünecek ad (ör. Salon, Yatak odası 1).">
             <input value={oda.ad} maxLength={80} onChange={(e) => guncelle({ ad: e.target.value })} className={girdi} />
           </Alan>
-          <Alan ad="Oda tipi">
+          <Alan ad="Oda tipi" ipucu="Seçince iç sıcaklık ve hava değişimi standart değere ayarlanır.">
             <select
               value={oda.tip}
               onChange={(e) => {
@@ -736,22 +850,26 @@ function OdaDuzenleyici({
               ))}
             </select>
           </Alan>
-          <Alan ad="İç sıcaklık °C">
+          <Alan ad="İç sıcaklık °C" ipucu="Odada istenen sıcaklık. Yaşam 20 · banyo 24 · hol 18 °C.">
             <SayiAlani deger={oda.sicaklik} min={5} maks={30} onChange={(n) => n !== null && guncelle({ sicaklik: n })} />
           </Alan>
-          <Alan ad="En (m)">
+          <Alan ad="En (m)" ipucu="Odanın iç ölçüsü (sıva yüzünden).">
             <SayiAlani deger={oda.en} min={0.3} maks={100} onChange={(n) => n !== null && guncelle({ en: n })} />
           </Alan>
-          <Alan ad="Boy (m)">
+          <Alan ad="Boy (m)" ipucu="L şeklindeki odayı alanı tutacak dikdörtgene çevirin.">
             <SayiAlani deger={oda.boy} min={0.3} maks={100} onChange={(n) => n !== null && guncelle({ boy: n })} />
           </Alan>
-          <Alan ad="Tavan yüksekliği (m)">
+          <Alan ad="Tavan yüksekliği (m)" ipucu="Döşemeden tavana. 4 m üstü radyatörlü odada tabakalaşma payı eklenir.">
             <SayiAlani deger={oda.yukseklik} min={1.8} maks={15} onChange={(n) => n !== null && guncelle({ yukseklik: n })} />
           </Alan>
-          <Alan ad="Hava değişimi n (1/h)">
+          <Alan ad="Hava değişimi n (1/h)" ipucu="Saatte odanın havasının kaç kez yenilendiği. Normal oda 0,5 · mutfak / banyo 1,5. Değiştirmeniz gerekmez.">
             <SayiAlani deger={oda.havaDegisim} min={0} maks={10} onChange={(n) => n !== null && guncelle({ havaDegisim: n })} />
           </Alan>
-          <Alan ad="Isıtıcı" className="sm:col-span-2">
+          <Alan
+            ad="Isıtıcı"
+            className="sm:col-span-2"
+            ipucu="Yerden ısıtma + takviye: yerden ısıtma yetmezse eksik kalan güç için radyatör / havlupan hesaplanır. Isıtılmıyor: oda hesaba girmez."
+          >
             <select value={oda.isitici} onChange={(e) => guncelle({ isitici: e.target.value as Isitici })} className={girdi}>
               {(Object.keys(ISITICILAR) as Isitici[]).map((k) => (
                 <option key={k} value={k}>
@@ -777,8 +895,8 @@ function OdaDuzenleyici({
         </div>
 
         {radyatorlu && (
-          <div className="grid sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-hat">
-            <Alan ad="Radyatör tipi">
+          <div className="grid sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-hat">
+            <Alan ad="Radyatör tipi" ipucu="Tip 22 (çift panel, çift kanat) en yaygın. Dar duvarda Tip 33, düşük yükte Tip 11.">
               <select value={oda.radyatorTip} onChange={(e) => guncelle({ radyatorTip: e.target.value as RadyatorTipi })} className={girdi}>
                 {(Object.keys(RADYATOR_TIPLERI) as RadyatorTipi[]).map((t) => (
                   <option key={t} value={t}>
@@ -787,7 +905,7 @@ function OdaDuzenleyici({
                 ))}
               </select>
             </Alan>
-            <Alan ad="Radyatör yüksekliği (mm)">
+            <Alan ad="Radyatör yüksekliği (mm)" ipucu="Pencere altı için genelde 600 mm; denizlik alçaksa 500 / 400.">
               <select value={oda.radyatorYukseklik} onChange={(e) => guncelle({ radyatorYukseklik: Number(e.target.value) as RadyatorYukseklik })} className={girdi}>
                 {RADYATOR_YUKSEKLIKLERI.map((h) => (
                   <option key={h} value={h}>
@@ -796,7 +914,7 @@ function OdaDuzenleyici({
                 ))}
               </select>
             </Alan>
-            <Alan ad="Parça sayısı">
+            <Alan ad="Parça sayısı" ipucu="Otomatik: en çok 2 m'lik parçalara bölünür. İki pencere varsa 2 parça seçin.">
               <select value={oda.radyatorParca} onChange={(e) => guncelle({ radyatorParca: Number(e.target.value) })} className={girdi}>
                 <option value={0}>Otomatik</option>
                 {[1, 2, 3, 4].map((n) => (
@@ -806,12 +924,21 @@ function OdaDuzenleyici({
                 ))}
               </select>
             </Alan>
+            <Alan ad="Montaj şekli" ipucu="Radyatörün önü kapatılacaksa ısı verimi düşer; program boyu buna göre uzatır.">
+              <select value={oda.radyatorMontaj} onChange={(e) => guncelle({ radyatorMontaj: e.target.value as RadyatorMontaj })} className={girdi}>
+                {(Object.keys(RADYATOR_MONTAJLARI) as RadyatorMontaj[]).map((k) => (
+                  <option key={k} value={k}>
+                    {RADYATOR_MONTAJLARI[k].ad}
+                  </option>
+                ))}
+              </select>
+            </Alan>
           </div>
         )}
 
         {yerden && (
           <div className="grid sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-hat">
-            <Alan ad="Zemin kaplaması">
+            <Alan ad="Zemin kaplaması" ipucu="Kaplama ne kadar kalınsa ısı o kadar zor geçer: seramik en iyi, halı en kötü.">
               <select value={oda.kaplama} onChange={(e) => guncelle({ kaplama: e.target.value })} className={girdi}>
                 {KAPLAMALAR.map((k) => (
                   <option key={k.anahtar} value={k.anahtar}>
@@ -820,7 +947,7 @@ function OdaDuzenleyici({
                 ))}
               </select>
             </Alan>
-            <Alan ad="Boru aralığı">
+            <Alan ad="Boru aralığı" ipucu="Otomatik bırakın: yüke göre 10–25 cm seçilir.">
               <select value={oda.aralik} onChange={(e) => guncelle({ aralik: Number(e.target.value) })} className={girdi}>
                 <option value={0}>Otomatik</option>
                 {[0.1, 0.15, 0.2, 0.25, 0.3].map((t) => (
@@ -830,19 +957,19 @@ function OdaDuzenleyici({
                 ))}
               </select>
             </Alan>
-            <Alan ad="Serim deseni">
+            <Alan ad="Serim deseni" ipucu="Salyangoz daha eşit sıcaklık verir (önerilen). Serpantin dar-uzun odalarda.">
               <select value={oda.desen} onChange={(e) => guncelle({ desen: e.target.value as Oda["desen"] })} className={girdi}>
                 <option value="SALYANGOZ">Salyangoz (spiral) — eşit yüzey sıcaklığı</option>
                 <option value="SERPANTIN">Serpantin</option>
               </select>
             </Alan>
-            <Alan ad="Kollektör no">
+            <Alan ad="Kollektör no" ipucu="Odanın bağlanacağı kollektör (her katta genelde 1 kollektör). Aynı numaralı odalar aynı dolaba gider.">
               <SayiAlani deger={oda.kollektor} min={1} maks={9} adim={1} onChange={(n) => n !== null && guncelle({ kollektor: Math.round(n) })} />
             </Alan>
-            <Alan ad="Kollektöre uzaklık (m)">
+            <Alan ad="Kollektöre uzaklık (m)" ipucu="Kollektör dolabından oda kapısına boru yolu (tek yön).">
               <SayiAlani deger={oda.kollektorMesafe} min={0} maks={60} onChange={(n) => n !== null && guncelle({ kollektorMesafe: n })} />
             </Alan>
-            <Alan ad="Boru döşenmeyen alan (m²)">
+            <Alan ad="Boru döşenmeyen alan (m²)" ipucu="Gömme dolap, mutfak dolabı, küvet, duş teknesi gibi boru konmayacak alan.">
               <SayiAlani deger={oda.haricAlan} min={0} maks={10000} onChange={(n) => n !== null && guncelle({ haricAlan: n })} />
             </Alan>
           </div>
@@ -851,7 +978,7 @@ function OdaDuzenleyici({
 
       <Kart
         baslik="Yapı elemanları"
-        aciklama="Dış duvar uzunluğu girilir; aynı yöndeki pencere / kapı alanı duvardan otomatik düşülür. Yalıtım kalınlığı girilince U değeri hesaplanır; biliniyorsa U elle yazılabilir."
+        aciklama="Dış duvar uzunluğu girilir; aynı yöndeki pencere / kapı alanı duvardan otomatik düşülür. Yalıtım kalınlığı girilince U değeri hesaplanır; biliniyorsa U elle yazılabilir. Hangi düğme ne için: Dış duvar / Pencere / Dış kapı (balkon kapısı dahil) dışa bakan yüzeyler · Çatı: en üst kat tavanı · Toprak döşeme: zemine oturan döşeme · Dışa açık döşeme: altı açık (pilotis, konsol) · Isıtılmayan komşu: çatı arası, bodrum, merdiven evi, garaj · Bodrum duvarı: toprağa gömülü duvar · Komşu hacim: sıcaklığı farklı komşu daire / oda."
       >
         <div className="space-y-2">
           {oda.elemanlar.map((e) => (
@@ -895,6 +1022,22 @@ function OdaDuzenleyici({
   );
 }
 
+// Eleman türüne göre "nasıl girilir" açıklaması (açıklamalar açıkken satırın altında görünür)
+const ELEMAN_YARDIMI: Record<ElemanTuru, string> = {
+  DIS_DUVAR:
+    "Dışa bakan duvarın UZUNLUĞUNU yazın (yükseklik boşsa oda yüksekliği). Aynı yöndeki pencere ve kapı alanı duvardan kendiliğinden düşülür. Mantolama varsa yalıtım tipini ve kalınlığını (cm) seçin.",
+  PENCERE:
+    "Pencerenin kasa dahil genişliği ve yüksekliği; aynı ölçüde birden fazla pencere varsa Adet yazın. Yönü, bulunduğu dış duvarla aynı olmalı.",
+  DIS_KAPI: "Dış kapı ya da balkon kapısı; kasa dahil ölçü. Yönü, bulunduğu dış duvarla aynı olmalı.",
+  CATI: "Yalnız en üst kat odalarında: üstü dış hava olan tavan. Oda alanı kutusu işaretliyse alan oda alanı kadar alınır. Çatı yalıtımını (taşyünü vb.) kalınlığıyla yazın.",
+  DOSEME_DIS: "Altı dış havaya açık döşeme (pilotis, çıkma, konsol). Yerden ısıtmalı odada bu döşeme alt kayıp olarak ayrıca hesaplanır.",
+  DOSEME_TOPRAK: "Zemine oturan döşeme (giriş kat, bodrum). Döşeme altı XPS yalıtımı varsa kalınlığını yazın.",
+  DUVAR_TOPRAK: "Toprağa gömülü bodrum duvarı; toprak altında kalan yüksekliği yazın.",
+  ISITILMAYAN:
+    "Isıtılmayan bir yere komşu duvar / tavan / döşeme: çatı arası, bodrum, merdiven evi, garaj. Komşu hacim tipini seçin. Odanın tabanıysa Döşeme kutusunu işaretleyin.",
+  KOMSU: "Sıcaklığı bu odadan farklı ısıtılan bir yer (komşu daire ~15 °C, kiler ~10 °C). Aynı sıcaklıktaki iç duvarları girmeyin.",
+};
+
 export function ElemanSatiri({
   e,
   oda,
@@ -913,6 +1056,7 @@ export function ElemanSatiri({
   const kesitler = KESITLER.filter((k) => k.turler.includes(e.tur));
   const yatayOlabilir = !pencere && e.tur !== "DIS_DUVAR";
   const u = elemanU({ ...e, uElle: null });
+  const yardim = useContext(YardimBaglami);
   return (
     <div className="border border-hat rounded-md p-2.5 bg-zemin/40">
       <div className="flex flex-wrap items-end gap-2">
@@ -1028,6 +1172,7 @@ export function ElemanSatiri({
           ✕
         </button>
       </div>
+      {yardim && <p className="text-[11px] leading-snug text-metin/50 mt-1.5">{ELEMAN_YARDIMI[e.tur]}</p>}
       <div className="mt-1.5">
         <input
           value={e.aciklama}
@@ -1049,7 +1194,7 @@ function OdaSonucKarti({ s, veri }: { s: OdaSonucu; veri: HesapVerisi }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
         <Ozet ad="İletim kaybı" deger={W(s.iletim)} />
         <Ozet ad="Havalandırma" deger={W(s.havalandirma)} />
-        <Ozet ad="Oda ısı yükü" deger={W(s.toplam)} vurgu />
+        <Ozet ad="Oda ısı yükü" deger={W(s.toplam)} alt={s.yukseklikDuzeltmesi > 0 ? `yükseklik payı +%${sy(s.yukseklikDuzeltmesi * 100, 1)}` : undefined} vurgu />
         <Ozet ad="Özgül yük" deger={`${sy(s.wm2, 0)} W/m²`} />
       </div>
       {y && (
@@ -1065,7 +1210,8 @@ function OdaSonucKarti({ s, veri }: { s: OdaSonucu; veri: HesapVerisi }) {
         <p className="text-sm text-metin/80 mb-3">
           <strong>{r.takviye ? "Takviye radyatör" : "Radyatör"}:</strong>{" "}
           {r.parcalar.length > 1 ? `${r.parcalar.length} × ` : ""}
-          {RADYATOR_TIPLERI[r.parcalar[0].tip].ad} {r.parcalar[0].yukseklik}×{r.parcalar[0].boy} mm → {W(r.toplamGuc)} ({veri.radyatorGidis}/{veri.radyatorDonus} °C'de 1 m = {sy(r.w1000, 0)} W, %
+          {RADYATOR_TIPLERI[r.parcalar[0].tip].ad} {r.parcalar[0].yukseklik}×{r.parcalar[0].boy} mm → {W(r.toplamGuc)} ({sy(veri.radyatorGidis, 0)}/
+          {sy(Math.min(veri.radyatorDonus, veri.radyatorGidis - 1), 0)} °C&apos;de 1 m = {sy(r.w1000, 0)} W{r.montajCarpani < 1 ? `, montaj ×${sy(r.montajCarpani, 2)}` : ""}, %
           {sy(r.fazlalik, 0)} fazla)
         </p>
       )}
@@ -1116,6 +1262,17 @@ function SonuclarSekmesi({ sonuc: s, veri }: { sonuc: HesapSonucu; veri: HesapVe
   const uyarilar = [...s.uyarilar, ...s.odalar.flatMap((o) => o.uyarilar.map((u) => `${o.ad}: ${u}`))];
   return (
     <div className="space-y-5">
+      <Rehber
+        baslik="Sonuçlar nasıl okunur?"
+        adimlar={[
+          <><strong>Uyarılar</strong> (turuncu kutu): önce bunları okuyun. Çoğu, bir girdinin eksik ya da sistemin zorlandığı yeri gösterir ve ne yapılacağını yazar.</>,
+          <><strong>Oda ısı kayıpları</strong>: her odanın en soğuk günde kaybettiği ısı (W). Toplam altta; ısı pompası yükü = odalar + yerden ısıtma alt kaybı + sıcak su payı.</>,
+          <><strong>Radyatörler</strong>: her oda için tip, yükseklik × boy (mm). &quot;Fazla %&quot; seçilen radyatörün ihtiyaçtan ne kadar büyük olduğunu gösterir (%0–30 normal).</>,
+          <><strong>Yerden ısıtma</strong>: boru aralığı, devre sayısı × uzunluk, debi (L/h — kollektör debimetresine ayarlanacak değer), basınç kaybı ve zemin yüzey sıcaklığı (yaşam alanında en çok 29 °C).</>,
+          <><strong>Isı pompası seçimi</strong>: kayıtlı modellerin tasarım günündeki gerçek kapasitesi, denge noktası ve gereken yedek ısıtıcı. Grafikte turuncu çizgi bina ihtiyacı, mavi çizgi cihaz kapasitesidir; kesiştikleri nokta denge noktasıdır.</>,
+          <><strong>Elektrik</strong>: en soğuk günde çekilecek tahmini elektrik gücü; elektrik aboneliği ve sigorta seçimi için kullanın.</>,
+        ]}
+      />
       {uyarilar.length > 0 && (
         <div className="bg-sicak/10 border border-sicak/30 rounded-lg p-4">
           <p className="text-sm font-semibold text-sicak-dim mb-2">Uyarılar ve öneriler</p>
@@ -1229,6 +1386,13 @@ function SonuclarSekmesi({ sonuc: s, veri }: { sonuc: HesapSonucu; veri: HesapVe
           </p>
         )}
         <YukGrafigi s={s} />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
+          <Ozet ad="Tahmini COP (tasarım günü)" deger={sy(s.elektrik.cop, 2)} alt={`${sy(s.disSicaklik)} °C dış / ${sy(s.pompaGidis)} °C su`} />
+          <Ozet ad="Isı pompası elektrik" deger={`${sy(s.elektrik.kompresorKw)} kW`} alt={`${sy(s.elektrik.isiPompasiIsil)} kW ısı için`} />
+          <Ozet ad="Yedek ısıtıcı" deger={s.elektrik.yedekKw > 0.05 ? `${sy(s.elektrik.yedekKw)} kW` : "—"} alt="en soğuk günde" />
+          <Ozet ad="En soğuk gün toplam elektrik" deger={`${sy(s.elektrik.toplamKw)} kW`} alt="abonelik / sigorta için" vurgu />
+        </div>
+        <p className="text-[11px] text-metin/50 mt-2">COP tipik hava kaynaklı cihaz eğrisinden tahmin edilir; kesin değer için seçilen cihazın teknik föyüne bakın.</p>
       </Kart>
 
       <Kart baslik="Sistem bileşenleri">
@@ -1243,6 +1407,7 @@ function SonuclarSekmesi({ sonuc: s, veri }: { sonuc: HesapSonucu; veri: HesapVe
             ...(s.hatlar.radyator ? [["Radyatör hattı / pompa", `${s.hatlar.radyator.ad} · ${sy(s.pompalar.radyatorDebi, 0)} L/h · ~${sy(s.pompalar.radyatorBasma)} mSS`]] : []),
             ...(s.hatlar.yerden ? [["Yerden ısıtma hattı / pompa", `${s.hatlar.yerden.ad} · ${sy(s.pompalar.yerdenDebi, 0)} L/h · ~${sy(s.pompalar.yerdenBasma)} mSS`]] : []),
             ...(s.karisimVanasiKvs ? [["Karışım vanası", `3 yollu motorlu, Kvs ${sy(s.karisimVanasiKvs)}`]] : []),
+            ...(s.havalandirmaDebisi > 0 ? [["Isı geri kazanımlı havalandırma", `~${sy(s.havalandirmaDebisi, 0)} m³/h · verim %${sy(veri.hrvVerim, 0)}`]] : []),
           ]}
         />
       </Kart>
@@ -1329,6 +1494,14 @@ function SemaSekmesi({ sonuc, veri, ad }: { sonuc: HesapSonucu; veri: HesapVeris
   );
   return (
     <div className="space-y-5">
+      <Rehber
+        baslik="Şema ve krokiler"
+        adimlar={[
+          <>Prensip şeması hesaptan otomatik çizilir: ısı pompası, boyler, tampon tank, genleşme tankı, pompalar, karışım vanası ve devreler gerçek seçilen boyutlarıyla görünür. Ölçekli değildir, bağlantı mantığını gösterir.</>,
+          <>Serim krokileri yalnız yerden ısıtmalı odalar için çıkar: boru aralığı, devre sayısı, gidiş-dönüş ve kollektör yönü. Krokiyi değiştirmek için Odalar sekmesinde ölçü, boru aralığı, desen ve boru döşenmeyen alanı değiştirin.</>,
+          <>Hepsi PDF raporunda da yer alır.</>,
+        ]}
+      />
       <div className="bg-white border border-hat rounded-lg p-2 overflow-x-auto">
         <div className="min-w-[56rem]" dangerouslySetInnerHTML={{ __html: sema }} />
       </div>
@@ -1373,7 +1546,10 @@ function MalzemeSekmesi({
   const bolumler = [...new Set(sonuc.malzemeler.map((m) => m.bolum))];
   return (
     <div className="grid lg:grid-cols-[1fr_20rem] gap-5 items-start">
-      <Kart baslik="Malzeme listesi" aciklama="Hesaptan otomatik çıkar; teklife aktarıldıktan sonra teklif ekranında düzenlenebilir.">
+      <Kart
+        baslik="Malzeme listesi"
+        aciklama="Hesaptan otomatik çıkar; burada değiştirilemez. Girdileri değiştirince liste kendiliğinden güncellenir. Teklife aktarıldıktan sonra teklif ekranında kalem ekleyip silebilir, fiyat girebilirsiniz. Boru metrajları tahminidir (güzergâh payı dahil); keşifte kontrol edin."
+      >
         {bolumler.map((b) => (
           <div key={b} className="mb-4 last:mb-0">
             <p className="text-xs font-semibold text-soguk-dim uppercase tracking-wide mb-1">{b}</p>

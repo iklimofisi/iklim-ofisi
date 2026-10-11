@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useContext, useEffect, useMemo, useState, useTransition } from "react";
 import { klimaHesapKaydet, klimaHesapTeklifeAktar } from "@/lib/klima-hesap-actions";
 import { bildirimGoster } from "@/lib/bildirim";
-import { SayiAlani, Alan, Kart, Ozet, ElemanSatiri, Tablo, ELEMAN_DUGMELERI, girdi } from "@/components/IsiHesapEditoru";
+import { SayiAlani, Alan, Kart, Ozet, ElemanSatiri, Tablo, ELEMAN_DUGMELERI, girdi, Rehber, YardimBaglami, YardimDugmesi, useYardimDurumu } from "@/components/IsiHesapEditoru";
 import { yeniEleman, pencereMi, yeniId } from "@/lib/isi-hesap/tipler";
 import { ODA_TIPLERI, ISI_KOPRUSU, type Yon } from "@/lib/isi-hesap/katalog";
 import { ILLER, ilBul } from "@/lib/isi-hesap/iklim";
@@ -45,6 +45,7 @@ export default function KlimaHesapEditoru({ hesap, musteriler }: Props) {
   const [kayitli, setKayitli] = useState(() => JSON.stringify({ ad: hesap.ad, musteriId: hesap.musteriId, veri: hesap.veri }));
   const [hata, setHata] = useState("");
   const [kaydediliyor, baslat] = useTransition();
+  const [yardim, setYardim] = useYardimDurumu();
   const simdiki = JSON.stringify({ ad, musteriId, veri });
   const degisti = simdiki !== kayitli;
   const sonuc: KlimaSonucu = useMemo(() => klimaHesapla(veri), [veri]);
@@ -96,6 +97,7 @@ export default function KlimaHesapEditoru({ hesap, musteriler }: Props) {
   const disToplam = sonuc.sistemler.reduce((t, s) => t + (s.disKw ?? 0), 0);
 
   return (
+    <YardimBaglami.Provider value={yardim}>
     <div className="max-w-6xl">
       <div className="sticky top-0 z-20 -mx-6 px-6 sm:-mx-10 sm:px-10 py-3 bg-zemin/95 backdrop-blur border-b border-hat mb-5">
         <div className="flex flex-wrap items-center gap-3">
@@ -112,6 +114,7 @@ export default function KlimaHesapEditoru({ hesap, musteriler }: Props) {
             ))}
           </select>
           <span className={`text-xs ${degisti ? "text-sicak-dim font-medium" : "text-metin/40"}`}>{degisti ? "● Kaydedilmedi" : "✓ Kayıtlı"}</span>
+          <YardimDugmesi acik={yardim} degistir={setYardim} />
           <button type="button" onClick={pdfAc} disabled={kaydediliyor} className="focus-ring text-sm font-medium border border-hat bg-white px-4 py-2 rounded-md text-metin/70 hover:border-soguk disabled:opacity-60">
             📄 PDF
           </button>
@@ -151,6 +154,19 @@ export default function KlimaHesapEditoru({ hesap, musteriler }: Props) {
       {sekme === "proje" && <ProjeSekmesi veri={veri} guncelle={guncelle} />}
 
       {sekme === "odalar" && (
+        <>
+        <Rehber
+          baslik="Odalar nasıl girilir?"
+          adimlar={[
+            <>Klimalanacak <strong>her mahali ayrı</strong> ekleyin: soldan <strong>mekân tipini</strong> seçip &quot;+ Oda&quot;. Mekân tipi kişi yoğunluğunu, aydınlatma ve cihaz yükünü, taze hava ihtiyacını, iç sıcaklığı ve tavan tipini otomatik doldurur.</>,
+            <><strong>Ölçüler:</strong> en × boy (m) ve tavan yüksekliği. Yükseklik iç ünite seçimini doğrudan etkiler: 3,2 m üstünde kaset / duvar tipi zorlanır, 4,5 m üstünde yüksek statik basınçlı kanallı ünite önerilir.</>,
+            <><strong>Kişi / aydınlatma / cihaz:</strong> biliniyorsa gerçek değeri yazın (ör. sunucu odasında cihaz gücü, restoranda kişi sayısı). Alanı değiştirdikten sonra &quot;Mekâna göre doldur&quot; ile bu değerleri yeni alana göre yeniden hesaplatabilirsiniz.</>,
+            <><strong>Tavan / taze hava / gürültü:</strong> asma tavan yoksa kaset ve gizli kanallı elenir; mekanik taze hava varsa dış hava yükü hesaba eklenir; gürültüye duyarlı mekânda (yatak, toplantı, otel) sessiz tipler öne alınır.</>,
+            <><strong>İç ünite:</strong> &quot;Otomatik&quot; bırakın; sistem tipi, adedi ve kapasiteyi seçip gerekçesini öneri kartında yazar. Kendiniz bir tip seçerseniz uygun değilse uyarır. Adet ve kapasiteyi de elle sabitleyebilirsiniz.</>,
+            <><strong>Yapı elemanları:</strong> dış duvar, pencere (yönüyle — güneş yükü buna göre hesaplanır), çatı ve sıcak komşu hacimler. İki klimalı oda arasındaki iç duvarı girmeyin.</>,
+            <><strong>Boru mesafeleri</strong> (VRF / multi): oda listesi sırası ana hat üzerindeki sıradır. Her odaya önceki branşmandan ana hat uzunluğunu ve branşmandan iç üniteye mesafeyi yazın; kat kotu dikey mesafe kontrolü içindir.</>,
+          ]}
+        />
         <div className="grid lg:grid-cols-[16rem_1fr] gap-5 items-start">
           <div className="bg-yuzey border border-hat rounded-lg p-3 lg:sticky lg:top-44">
             <div className="space-y-1 mb-3">
@@ -245,6 +261,7 @@ export default function KlimaHesapEditoru({ hesap, musteriler }: Props) {
             <div className="bg-yuzey border border-hat rounded-lg p-8 text-sm text-metin/60">Soldan oda ekleyin.</div>
           )}
         </div>
+        </>
       )}
 
       {sekme === "sonuclar" && <SonuclarSekmesi s={sonuc} veri={veri} />}
@@ -253,6 +270,7 @@ export default function KlimaHesapEditoru({ hesap, musteriler }: Props) {
         <MalzemeSekmesi s={sonuc} hesapId={hesap.id} ad={ad} musteriId={musteriId} musteriler={musteriler} degisti={degisti} teklif={hesap.teklif} kaydet={() => kaydet()} kaydediliyor={kaydediliyor} />
       )}
     </div>
+    </YardimBaglami.Provider>
   );
 }
 
@@ -263,10 +281,21 @@ function ProjeSekmesi({ veri, guncelle }: { veri: KlimaVerisi; guncelle: (p: Par
   const il = ilBul(veri.il);
   const sistemGuncelle = (no: number, p: Partial<Sistem>) => guncelle({ sistemler: veri.sistemler.map((s) => (s.no === no ? { ...s, ...p } : s)) });
   return (
+    <>
+    <Rehber
+      baslik="Bu hesap nasıl yapılır? (sırayla)"
+      adimlar={[
+        <><strong>1 · Proje & Sistemler</strong> (bu sekme): ili seçin, kabulleri kontrol edin ve aşağıdan <strong>sistem ekleyin</strong> (VRF, mini VRF, multi split…). Her bağımsız dış ünite bir sistemdir. Hiç sistem eklemezseniz bütün odalar bağımsız split klima olarak hesaplanır.</>,
+        <><strong>2 · Odalar</strong>: mahalleri mekân tipiyle ekleyin, ölçü ve yapı elemanlarını girin, her odayı bir sisteme bağlayın. İç ünite tipi otomatik önerilir.</>,
+        <><strong>3 · Sonuçlar</strong>: oda yükleri, iç üniteler, dış ünite seçimi, boru çapları, branşmanlar, mesafe ve gaz miktarı kontrolleri.</>,
+        <><strong>4 · Boru Şemaları</strong>: her sistemin soğutucu boru şeması. <strong>5 · Malzeme & Teklif</strong>: malzeme listesi ve teklif taslağı.</>,
+        <>Isı pompası hesabı yapılmış bir projeyi klima hesabına aktarabilirsiniz (yeni hesap açarken &quot;Isı pompası hesabındaki odalarla&quot; seçeneği); odalar ve duvarlar yeniden girilmez.</>,
+      ]}
+    />
     <div className="grid lg:grid-cols-2 gap-5">
       <Kart baslik="Konum ve iklim" aciklama="Yaz (kuru / yaş termometre) ve kış dış tasarım sıcaklıkları il tablosundan gelir; gerekirse elle değiştirin.">
         <div className="grid sm:grid-cols-2 gap-3">
-          <Alan ad="İl">
+          <Alan ad="İl" ipucu="Yaz ve kış tasarım sıcaklıkları bu ilden gelir.">
             <select value={veri.il} onChange={(e) => guncelle({ il: e.target.value })} className={girdi}>
               {ILLER.map((i) => (
                 <option key={i.ad} value={i.ad}>
@@ -275,19 +304,19 @@ function ProjeSekmesi({ veri, guncelle }: { veri: KlimaVerisi; guncelle: (p: Par
               ))}
             </select>
           </Alan>
-          <Alan ad="Adres / konum">
+          <Alan ad="Adres / konum" ipucu="Yalnız rapora yazılır.">
             <input value={veri.adres} maxLength={300} onChange={(e) => guncelle({ adres: e.target.value })} className={girdi} />
           </Alan>
-          <Alan ad={`Yaz kuru termometre °C (boş = ${il.yazKT})`}>
+          <Alan ad={`Yaz kuru termometre °C (boş = ${il.yazKT})`} ipucu="En sıcak gündeki dış hava sıcaklığı. Normalde boş bırakın.">
             <SayiAlani deger={veri.yazKTElle} bosOlabilir min={20} maks={50} yerTutucu={String(il.yazKT)} onChange={(n) => guncelle({ yazKTElle: n })} />
           </Alan>
-          <Alan ad={`Yaz yaş termometre °C (boş = ${il.yazYT})`}>
+          <Alan ad={`Yaz yaş termometre °C (boş = ${il.yazYT})`} ipucu="Dış havanın nemini gösterir (sahil illerinde yüksek). Normalde boş bırakın.">
             <SayiAlani deger={veri.yazYTElle} bosOlabilir min={10} maks={35} yerTutucu={String(il.yazYT)} onChange={(n) => guncelle({ yazYTElle: n })} />
           </Alan>
-          <Alan ad={`Kış dış tasarım °C (boş = ${il.disSicaklik})`}>
+          <Alan ad={`Kış dış tasarım °C (boş = ${il.disSicaklik})`} ipucu="Isıtma kontrolü için en soğuk gün sıcaklığı.">
             <SayiAlani deger={veri.disSicaklikElle} bosOlabilir min={-40} maks={20} yerTutucu={String(il.disSicaklik)} onChange={(n) => guncelle({ disSicaklikElle: n })} />
           </Alan>
-          <Alan ad="İç bağıl nem (yaz) %">
+          <Alan ad="İç bağıl nem (yaz) %" ipucu="Konfor için %50. Daha düşük yazmak nem alma yükünü artırır.">
             <SayiAlani deger={veri.icNem} min={30} maks={70} onChange={(n) => n !== null && guncelle({ icNem: n })} />
           </Alan>
         </div>
@@ -295,13 +324,13 @@ function ProjeSekmesi({ veri, guncelle }: { veri: KlimaVerisi; guncelle: (p: Par
 
       <Kart baslik="Hesap kabulleri">
         <div className="grid sm:grid-cols-2 gap-3">
-          <Alan ad="Isı geri kazanım cihazı (HRV) tipi">
+          <Alan ad="Isı geri kazanım cihazı (HRV) tipi" ipucu="Odalarda taze hava HRV seçilirse kullanılır. Entalpi tipi yazın nemi de geri kazanır (nemli iller için iyi).">
             <select value={veri.hrvTipi} onChange={(e) => guncelle({ hrvTipi: e.target.value as HrvTipi })} className={girdi}>
               <option value="PLAKALI">Plakalı eşanjör (duyulur %75)</option>
               <option value="ENTALPI">Entalpi eşanjörü (duyulur %70, nem %60)</option>
             </select>
           </Alan>
-          <Alan ad="Soğutucu akışkan">
+          <Alan ad="Soğutucu akışkan" ipucu="Cihazın gazı. Ek gaz miktarı ve EN 378 küçük oda kontrolü buna göre yapılır (VRF genelde R410A, split genelde R32).">
             <select value={veri.akiskan} onChange={(e) => guncelle({ akiskan: e.target.value as Akiskan })} className={girdi}>
               {(Object.keys(AKISKANLAR) as Akiskan[]).map((k) => (
                 <option key={k} value={k}>
@@ -310,13 +339,13 @@ function ProjeSekmesi({ veri, guncelle }: { veri: KlimaVerisi; guncelle: (p: Par
               ))}
             </select>
           </Alan>
-          <Alan ad="İç ünite emniyet payı %">
+          <Alan ad="İç ünite emniyet payı %" ipucu="İç ünite seçiminde yüke eklenen pay; genelde %10.">
             <SayiAlani deger={veri.emniyetPayi} min={0} maks={40} onChange={(n) => guncelle({ emniyetPayi: n ?? 0 })} />
           </Alan>
-          <Alan ad="Dış ünite eşzamanlılık %">
+          <Alan ad="Dış ünite eşzamanlılık %" ipucu="Bütün odaların aynı anda en yüksek yükte olmama payı. Konut 80–90 · ofis 90–100 · tek mekân 100.">
             <SayiAlani deger={veri.eszamanlilik} min={50} maks={100} onChange={(n) => n !== null && guncelle({ eszamanlilik: n })} />
           </Alan>
-          <Alan ad="Isı köprüsü ek U">
+          <Alan ad="Isı köprüsü ek U" ipucu="Mantolu yeni bina 0,05 · normal 0,10 · yalıtımsız 0,15.">
             <select value={veri.isiKoprusu} onChange={(e) => guncelle({ isiKoprusu: Number(e.target.value) })} className={girdi}>
               {ISI_KOPRUSU.map((k) => (
                 <option key={k.deger} value={k.deger}>
@@ -330,10 +359,12 @@ function ProjeSekmesi({ veri, guncelle }: { veri: KlimaVerisi; guncelle: (p: Par
             Klimalar ısıtmada da kullanılacak
           </label>
         </div>
+        <p className="text-[11px] text-metin/50 mt-2">&quot;Isıtmada da kullanılacak&quot; işaretliyse dış ünite kış tasarım sıcaklığındaki ısıtma kapasitesine göre de kontrol edilir.</p>
       </Kart>
 
       <div className="lg:col-span-2">
         <Kart baslik="Sistemler" aciklama="Her oda bir sisteme bağlanır (ya da bağımsız split klima olur). Ana hat: dış üniteden ilk branşmana boru uzunluğu. Dış ünite kotu: zemine göre (çatıda ise bina yüksekliği).">
+          <SistemYardimi />
           <div className="space-y-3">
             {veri.sistemler.map((s) => (
               <div key={s.no} className="border border-hat rounded-md p-3 bg-zemin/40 flex flex-wrap items-end gap-3">
@@ -398,6 +429,27 @@ function ProjeSekmesi({ veri, guncelle }: { veri: KlimaVerisi; guncelle: (p: Par
           </div>
         </Kart>
       </div>
+    </div>
+    </>
+  );
+}
+
+function SistemYardimi() {
+  const acik = useContext(YardimBaglami);
+  if (!acik) return null;
+  return (
+    <div className="text-[12px] leading-relaxed text-metin/65 bg-zemin/60 border border-hat rounded-md px-3 py-2 mb-3 space-y-1.5">
+      <p>
+        <strong>Hangi sistem?</strong> <em>Split</em>: her odaya ayrı dış ünite (sistem eklemeden, odada &quot;Bağımsız split&quot;). <em>Multi split</em>: tek dış üniteye
+        2–5 iç ünite, her biri dış üniteden ayrı boruyla. <em>Mini VRF</em>: küçük ofis / villa, tek fazlı, ~8–16 kW. <em>VRF</em>: büyük binalar, tek boru hattı üzerinde
+        branşmanlarla çok sayıda iç ünite. <em>VRF ısı geri kazanımlı (3 borulu)</em>: aynı anda bir mahal soğuturken diğeri ısıtabilir (otel, sunucu odası + ofis,
+        cepheleri farklı binalar); her odaya BS kutusu konur.
+      </p>
+      <p>
+        <strong>Alanlar:</strong> <em>Ana hat</em>: dış üniteden ilk branşmana boru boyu (tek yön). <em>Dış ünite kotu</em>: zemine göre yükseklik (çatıdaysa bina yüksekliği,
+        bodrumdaysa eksi). <em>Dış ünite kW</em>: boş bırakılırsa en küçük uygun kademe seçilir; belirli bir cihaz kullanılacaksa yazın. <em>Fabrika şarjı</em>: dış ünitenin
+        etiketindeki gaz miktarı (EN 378 kontrolü için). <em>En çok oran</em>: iç ünite toplamının dış üniteye oranı sınırı; üretici tablosu farklıysa yazın.
+      </p>
     </div>
   );
 }
@@ -476,10 +528,10 @@ function OdaDuzenleyici({
     <div className="space-y-4 min-w-0">
       <Kart baslik="Oda bilgileri">
         <div className="grid sm:grid-cols-4 gap-3">
-          <Alan ad="Oda adı" className="sm:col-span-2">
+          <Alan ad="Oda adı" className="sm:col-span-2" ipucu="Raporda ve boru şemasında görünür.">
             <input value={oda.ad} maxLength={80} onChange={(e) => guncelle({ ad: e.target.value })} className={girdi} />
           </Alan>
-          <Alan ad="Mekân tipi">
+          <Alan ad="Mekân tipi" ipucu="Değiştirince kişi, aydınlatma, cihaz, sıcaklık, taze hava ve tavan değerleri o mekâna göre yeniden dolar.">
             <MekanSecici
               deger={oda.mekan}
               onChange={(m) => {
@@ -505,34 +557,34 @@ function OdaDuzenleyici({
             <input type="checkbox" checked={oda.klima} onChange={(e) => guncelle({ klima: e.target.checked })} />
             Bu oda klimalanacak
           </label>
-          <Alan ad="En (m)">
+          <Alan ad="En (m)" ipucu="İç ölçü.">
             <SayiAlani deger={oda.en} min={0.3} maks={100} onChange={(n) => n !== null && guncelle({ en: n })} />
           </Alan>
-          <Alan ad="Boy (m)">
+          <Alan ad="Boy (m)" ipucu="L odayı eşdeğer dikdörtgene çevirin.">
             <SayiAlani deger={oda.boy} min={0.3} maks={100} onChange={(n) => n !== null && guncelle({ boy: n })} />
           </Alan>
-          <Alan ad="Tavan yüksekliği (m)">
+          <Alan ad="Tavan yüksekliği (m)" ipucu="Döşemeden tavana (asma tavan varsa asma tavana). Ünite tipini belirler.">
             <SayiAlani deger={oda.yukseklik} min={1.8} maks={15} onChange={(n) => n !== null && guncelle({ yukseklik: n })} />
           </Alan>
-          <Alan ad="Hava değişimi n (1/h)">
+          <Alan ad="Hava değişimi n (1/h)" ipucu="Pencere / kapı sızıntısı. Değiştirmeyin; taze hava ayrıca hesaplanır.">
             <SayiAlani deger={oda.havaDegisim} min={0} maks={10} onChange={(n) => n !== null && guncelle({ havaDegisim: n })} />
           </Alan>
-          <Alan ad="Yaz iç sıcaklık °C">
+          <Alan ad="Yaz iç sıcaklık °C" ipucu="Konfor 24–26 · sunucu odası 22–24.">
             <SayiAlani deger={oda.sogutmaSicaklik} min={18} maks={30} onChange={(n) => n !== null && guncelle({ sogutmaSicaklik: n })} />
           </Alan>
-          <Alan ad="Kış iç sıcaklık °C">
+          <Alan ad="Kış iç sıcaklık °C" ipucu="Isıtma kontrolü için.">
             <SayiAlani deger={oda.sicaklik} min={5} maks={30} onChange={(n) => n !== null && guncelle({ sicaklik: n })} />
           </Alan>
-          <Alan ad="Kişi sayısı">
+          <Alan ad="Kişi sayısı" ipucu="Aynı anda bulunan en çok kişi (restoran: masa sandalye sayısı).">
             <SayiAlani deger={oda.kisi} min={0} maks={500} adim={1} onChange={(n) => n !== null && guncelle({ kisi: Math.round(n) })} />
           </Alan>
-          <Alan ad="Aydınlatma (W/m²)">
+          <Alan ad="Aydınlatma (W/m²)" ipucu="LED ofis 8–10 · mağaza 15–25 · konut 5.">
             <SayiAlani deger={oda.aydinlatma} min={0} maks={60} onChange={(n) => n !== null && guncelle({ aydinlatma: n })} />
           </Alan>
-          <Alan ad="Cihazlar (W)">
+          <Alan ad="Cihazlar (W)" ipucu="Odadaki cihazların toplam gücü: bilgisayar ~150, TV ~100, sunucu kabini 3000–10000, ticari ocak / fırın çok yüksek.">
             <SayiAlani deger={oda.cihaz} min={0} maks={500000} adim={10} onChange={(n) => n !== null && guncelle({ cihaz: n })} />
           </Alan>
-          <Alan ad="Tavan">
+          <Alan ad="Tavan" ipucu="Asma tavan yoksa kaset ve gizli kanallı ünite önerilmez.">
             <select value={oda.tavanTipi} onChange={(e) => guncelle({ tavanTipi: e.target.value as TavanTipi })} className={girdi}>
               {(Object.keys(TAVAN_TIPLERI) as TavanTipi[]).map((k) => (
                 <option key={k} value={k}>
@@ -541,7 +593,11 @@ function OdaDuzenleyici({
               ))}
             </select>
           </Alan>
-          <Alan ad="Taze hava" className="sm:col-span-2">
+          <Alan
+            ad="Taze hava"
+            className="sm:col-span-2"
+            ipucu="Mekanik: taze hava fanı / santral dış havayı odaya basıyor, yükü klimaya biner. HRV: ısı geri kazanımlı cihaz, yükün çoğu geri kazanılır. Doğal: yalnız pencere."
+          >
             <select value={oda.tazeHava} onChange={(e) => guncelle({ tazeHava: e.target.value as TazeHavaDuzeni })} className={girdi}>
               {(Object.keys(TAZE_HAVA_DUZENLERI) as TazeHavaDuzeni[]).map((k) => (
                 <option key={k} value={k}>
@@ -554,7 +610,7 @@ function OdaDuzenleyici({
             <input type="checkbox" checked={oda.sessiz} onChange={(e) => guncelle({ sessiz: e.target.checked })} />
             Gürültüye duyarlı
           </label>
-          <Alan ad="Pencere gölgelemesi" className="sm:col-span-2">
+          <Alan ad="Pencere gölgelemesi" className="sm:col-span-2" ipucu="Camdan giren güneş ısısını azaltır; dış panjur / güneş kırıcı en etkilidir.">
             <select value={oda.golge} onChange={(e) => guncelle({ golge: e.target.value })} className={girdi}>
               {GOLGELER.map((g) => (
                 <option key={g.anahtar} value={g.anahtar}>
@@ -584,7 +640,7 @@ function OdaDuzenleyici({
 
         {oda.klima && (
           <div className="grid sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-hat">
-            <Alan ad="Sistem">
+            <Alan ad="Sistem" ipucu="Odanın bağlanacağı dış ünite. Bağımsız split: kendi dış ünitesi olur.">
               <select value={oda.sistem} onChange={(e) => guncelle({ sistem: Number(e.target.value) })} className={girdi}>
                 <option value={0}>Bağımsız split klima</option>
                 {veri.sistemler.map((s) => (
@@ -594,7 +650,7 @@ function OdaDuzenleyici({
                 ))}
               </select>
             </Alan>
-            <Alan ad="İç ünite tipi">
+            <Alan ad="İç ünite tipi" ipucu="Otomatik önerilir. &quot;uygun değil&quot; yazan tipler bu mekâna uymaz (seçerseniz uyarı verir).">
               <select value={oda.uniteTipi} onChange={(e) => guncelle({ uniteTipi: e.target.value as UniteSecimi, uniteKw: 0 })} className={girdi}>
                 <option value="OTOMATIK">Otomatik{oneri ? ` (öneri: ${IC_UNITE_TIPLERI[oneri.onerilen].kisa})` : ""}</option>
                 {tipListesi.map((t) => (
@@ -605,10 +661,10 @@ function OdaDuzenleyici({
                 ))}
               </select>
             </Alan>
-            <Alan ad="Adet (boş = otomatik)">
+            <Alan ad="Adet (boş = otomatik)" ipucu="Boşsa yük ve kapsama alanına göre hesaplanır.">
               <SayiAlani deger={oda.uniteAdet || null} bosOlabilir min={1} maks={30} adim={1} yerTutucu={oneri ? String(oneri.adet) : "oto"} onChange={(n) => guncelle({ uniteAdet: n === null ? 0 : Math.round(n) })} />
             </Alan>
-            <Alan ad="Kapasite (kW)">
+            <Alan ad="Kapasite (kW)" ipucu="Tek ünitenin gücü; otomatikte gereken en küçük kademe seçilir.">
               <select value={oda.uniteKw} onChange={(e) => guncelle({ uniteKw: Number(e.target.value) })} className={girdi}>
                 <option value={0}>Otomatik</option>
                 {kapasiteler.map((k) => (
@@ -619,28 +675,28 @@ function OdaDuzenleyici({
               </select>
             </Alan>
             {(!sistem || sistem.tip === "MULTI") ? (
-              <Alan ad={sistem ? "Dış üniteden iç üniteye boru (m)" : "Split boru uzunluğu (m)"} className="sm:col-span-2">
+              <Alan ad={sistem ? "Dış üniteden iç üniteye boru (m)" : "Split boru uzunluğu (m)"} className="sm:col-span-2" ipucu="Bakır boru güzergâh uzunluğu (tek yön); ek gaz ve kapasite kaybı buna göre.">
                 <SayiAlani deger={oda.bransMesafe} min={0} maks={100} onChange={(n) => n !== null && guncelle({ bransMesafe: n })} />
               </Alan>
             ) : (
               <>
-                <Alan ad="Önceki branşmandan ana hat (m)">
+                <Alan ad="Önceki branşmandan ana hat (m)" ipucu="Listedeki bir önceki odanın branşmanından bu odanın branşmanına boru boyu.">
                   <SayiAlani deger={oda.hatMesafe} min={0} maks={300} onChange={(n) => n !== null && guncelle({ hatMesafe: n })} />
                 </Alan>
-                <Alan ad="Branşmandan iç üniteye (m)">
+                <Alan ad="Branşmandan iç üniteye (m)" ipucu="Y branşmandan iç üniteye boru; genelde 40 m'yi geçmemeli.">
                   <SayiAlani deger={oda.bransMesafe} min={0} maks={100} onChange={(n) => n !== null && guncelle({ bransMesafe: n })} />
                 </Alan>
               </>
             )}
-            <Alan ad="Kat kotu (m, zemin = 0)">
+            <Alan ad="Kat kotu (m, zemin = 0)" ipucu="İç ünitenin zeminden yüksekliği (ör. 2. kat ≈ 6 m). Dış / iç ünite kot farkı kontrolü için.">
               <SayiAlani deger={oda.kot} min={-50} maks={300} onChange={(n) => n !== null && guncelle({ kot: n })} />
             </Alan>
             {kanalliMi && (
               <>
-                <Alan ad="En uzak menfeze kanal (m, boş = oto)">
+                <Alan ad="En uzak menfeze kanal (m, boş = oto)" ipucu="Kanallı ünitenin en uzak menfezine kanal boyu; statik basınç (Pa) buna göre çıkar.">
                   <SayiAlani deger={oda.kanalUzunluk || null} bosOlabilir min={0} maks={200} yerTutucu={oneri?.kanal ? String(oneri.kanal) : "oto"} onChange={(n) => guncelle({ kanalUzunluk: n ?? 0 })} />
                 </Alan>
-                <Alan ad="Filtre">
+                <Alan ad="Filtre" ipucu="Hastane / temiz alan için F7; fan basıncını artırır.">
                   <select value={oda.filtre} onChange={(e) => guncelle({ filtre: e.target.value as KlimaOda["filtre"] })} className={girdi}>
                     <option value="STANDART">Standart (G4)</option>
                     <option value="F7">İnce filtre (F7) +60 Pa</option>
@@ -658,7 +714,10 @@ function OdaDuzenleyici({
         )}
       </Kart>
 
-      <Kart baslik="Yapı elemanları" aciklama="Duvar, pencere (yönüyle), çatı ve komşu hacimler. Güneş yükü pencere yönüne göre hesaplanır.">
+      <Kart
+        baslik="Yapı elemanları"
+        aciklama="Duvar, pencere (yönüyle), çatı ve komşu hacimler. Güneş yükü pencere yönüne göre hesaplanır: batı ve güneybatı pencereler en yüksek yükü getirir. Dış duvar için uzunluk yazılır; aynı yöndeki pencere alanı duvardan düşülür. İki klimalı oda arasındaki iç duvarı girmeyin."
+      >
         <div className="space-y-2">
           {oda.elemanlar.map((e) => (
             <ElemanSatiri key={e.id} e={e} oda={oda} guncelle={(p) => elemanGuncelle(e.id, p)} sil={() => elemanSil(e.id)} />
@@ -764,6 +823,15 @@ function SonuclarSekmesi({ s, veri }: { s: KlimaSonucu; veri: KlimaVerisi }) {
   const uyarilar = [...s.uyarilar, ...s.odalar.flatMap((o) => o.uyarilar.map((u) => `${o.ad}: ${u}`)), ...s.sistemler.flatMap((x) => x.uyarilar.map((u) => `${x.ad}: ${u}`))];
   return (
     <div className="space-y-5">
+      <Rehber
+        baslik="Sonuçlar nasıl okunur?"
+        adimlar={[
+          <><strong>Uyarılar</strong>: önce bunları okuyun; çoğu bir sınırın aşıldığını (boru mesafesi, kot farkı, bağlantı oranı, gaz miktarı) ve ne yapılacağını yazar.</>,
+          <><strong>Oda yükleri</strong>: duyulur (sıcaklık) + gizli (nem) = soğutma yükü. Konutta 80–130 W/m², ofiste 100–150 W/m², restoran / spor salonunda daha yüksek olması normaldir.</>,
+          <><strong>Sistem tabloları</strong>: dış ünite kademesi, bağlantı oranı (%50–130 aralığı normal), dış sıcaklık ve boru uzunluğuna göre düzeltilmiş gerçek kapasite, boru çapları (gaz / sıvı, 3 borulu sistemde basma da), branşman kitleri ve ek gaz.</>,
+          <><strong>EN 378</strong>: küçük bir odada olası gaz kaçağında izin verilen miktar aşılıyorsa önlem (kaçak dedektörü, havalandırma ya da odayı ayrı sisteme alma) yazılır.</>,
+        ]}
+      />
       {uyarilar.length > 0 && (
         <div className="bg-sicak/10 border border-sicak/30 rounded-lg p-4">
           <p className="text-sm font-semibold text-sicak-dim mb-2">Uyarılar ve öneriler</p>
@@ -844,6 +912,13 @@ function SemaSekmesi({ s, ad }: { s: KlimaSonucu; ad: string }) {
   if (!svgler.length) return <p className="text-sm text-metin/50">Sisteme bağlı oda yok (yalnız bağımsız split klimalar için boru şeması çizilmez).</p>;
   return (
     <div className="space-y-5">
+      <Rehber
+        baslik="Boru şeması"
+        adimlar={[
+          <>Her VRF / multi sistem için dış üniteden iç ünitelere boru hattı, branşman kitleri (B1, B2…), her parçanın uzunluğu ve çapları (Ø gaz / Ø sıvı mm) çizilir. 3 borulu sistemde emme / basma / sıvı ve BS kutuları gösterilir.</>,
+          <>Şema ölçekli değildir; sıra ve çaplar Odalar sekmesindeki oda sırası ve mesafelerden gelir. Değiştirmek için oda sırasını ↑ ↓ ile, mesafeleri oda ekranında düzeltin.</>,
+        ]}
+      />
       {svgler.map((x) => (
         <div key={x.no} className="bg-white border border-hat rounded-lg p-2 overflow-x-auto">
           <div className="min-w-[44rem]" dangerouslySetInnerHTML={{ __html: x.svg }} />
@@ -881,7 +956,10 @@ function MalzemeSekmesi({
   const bolumler = [...new Set(s.malzemeler.map((m) => m.bolum))];
   return (
     <div className="grid lg:grid-cols-[1fr_20rem] gap-5 items-start">
-      <Kart baslik="Malzeme listesi" aciklama="Teklife aktarıldıktan sonra teklif ekranında fiyat girilir ve düzenlenir.">
+      <Kart
+        baslik="Malzeme listesi"
+        aciklama="Hesaptan otomatik çıkar (iç / dış üniteler, bakır boru çap çap metraj, branşman, gaz, drenaj, kablo, kanal ve menfezler). Teklife aktarıldıktan sonra teklif ekranında fiyat girilir ve kalem eklenip silinebilir. Metrajlar tahminidir; keşifte kontrol edin."
+      >
         {bolumler.map((b) => (
           <div key={b} className="mb-4 last:mb-0">
             <p className="text-xs font-semibold text-soguk-dim uppercase tracking-wide mb-1">{b}</p>

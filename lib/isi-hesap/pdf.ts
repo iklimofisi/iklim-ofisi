@@ -302,6 +302,12 @@ export function isiHesapPdfOlustur(
       ["Dış hava tasarım sıcaklığı", `${sy(s.disSicaklik)} °C — ${s.disSicaklikKaynak === "TS 2164" ? IL_KAYNAGI : "elle girildi"}`],
       ["Isı köprüsü ek U değeri", `${sy(v.isiKoprusu, 2)} W/m²K`],
       ["Yön artırımı / ısınma artırımı", `${v.yonArtirimi ? "uygulandı" : "uygulanmadı"} / %${sy(v.isinmaArtirimi, 0)}`],
+      [
+        "Havalandırma",
+        v.havalandirma === "HRV"
+          ? `Isı geri kazanımlı mekanik havalandırma, verim %${sy(v.hrvVerim, 0)} · cihaz debisi ~${sy(s.havalandirmaDebisi, 0)} m³/h`
+          : "Doğal havalandırma (pencere / sızıntı)",
+      ],
       ...(s.radyatorVar ? [["Radyatör rejimi", `${sy(s.radyatorRejimi.gidis)}/${sy(s.radyatorRejimi.donus)} °C (TS EN 442)`]] : []),
       ...(s.yerdenVar
         ? [
@@ -369,7 +375,8 @@ export function isiHesapPdfOlustur(
           gruplar.set(ad, (gruplar.get(ad) ?? 0) + 1);
         }
         const secim = [...gruplar.entries()].map(([a, n]) => (n > 1 ? `${n} × ${a}` : a)).join(" + ");
-        return [o.ad + (r.takviye ? " (takviye)" : ""), sy(r.gerekenGuc, 0), secim, sy(r.toplamGuc, 0), sy(r.fazlalik, 0), sy(r.w1000, 0)];
+        const montaj = r.montajCarpani < 1 ? ` (montaj x${sy(r.montajCarpani, 2)})` : "";
+        return [o.ad + (r.takviye ? " (takviye)" : ""), sy(r.gerekenGuc, 0), secim + montaj, sy(r.toplamGuc, 0), sy(r.fazlalik, 0), sy(r.w1000, 0)];
       })
     );
     paragraf(`Radyatör güçleri ${RADYATOR_KATALOG_KAYNAGI}; düşük sıcaklık düzeltmesi logaritmik sıcaklık farkı ve tip/yüksekliğe özgü n üssüyle yapılmıştır.`, 7);
@@ -534,6 +541,11 @@ export function isiHesapPdfOlustur(
   if (s.hatlar.yerden)
     bilesen.push(["Yerden ısıtma ana hattı", `${s.hatlar.yerden.ad} · ${sy(s.pompalar.yerdenDebi, 0)} L/h · ${sy(s.hatlar.yerden.hiz, 2)} m/s · pompa ~${sy(s.pompalar.yerdenBasma)} mSS`]);
   if (s.karisimVanasiKvs) bilesen.push(["Karışım vanası", `3 yollu, motorlu, Kvs ${sy(s.karisimVanasiKvs)}`]);
+  bilesen.push([
+    "Elektrik gücü (en soğuk gün, tahmini)",
+    `${sy(s.elektrik.toplamKw)} kW = ısı pompası ${sy(s.elektrik.isiPompasiIsil)} kW ısı / COP ~${sy(s.elektrik.cop, 2)} = ${sy(s.elektrik.kompresorKw)} kW${s.elektrik.yedekKw > 0.05 ? ` + elektrikli yedek ısıtıcı ${sy(s.elektrik.yedekKw)} kW` : ""}`,
+  ]);
+  if (s.havalandirmaDebisi > 0) bilesen.push(["Isı geri kazanımlı havalandırma", `~${sy(s.havalandirmaDebisi, 0)} m³/h, verim %${sy(v.hrvVerim, 0)}`]);
   tablo(
     [
       { ad: "Bileşen", w: 50 },
@@ -603,7 +615,9 @@ export function isiHesapPdfOlustur(
     [
       `Dış hava tasarım sıcaklıkları: ${IL_KAYNAGI}.`,
       "İletim kaybı: Φ = A · (U + ΔU_TB) · ΔT · (1 + yön artırımı); toprağa temaslı elemanlarda ΔT × 0,5 (TS 825), ısıtılmayan hacimlerde ΔT × b (EN 12831).",
-      "Havalandırma kaybı: Φ = 0,34 · V · n · ΔT; n en az hava değişim sayısıdır (yaşam mahalli 0,5, mutfak/banyo 1,5 1/h).",
+      "Havalandırma kaybı: Φ = 0,34 · V · n · ΔT; n en az hava değişim sayısıdır (yaşam mahalli 0,5, mutfak/banyo 1,5 1/h). Isı geri kazanımlı havalandırmada sızıntı payı (en çok 0,15 1/h) tam, kalan hava (1 − verim) oranında kayıp sayılır.",
+      "4 m üzeri tavanlı, radyatörle ısıtılan odalarda tabakalaşma için yük 0,025 · (h − 4) oranında (en çok %15) artırılır. Radyatör niş / panel / kutu içine monte edilecekse ısıl güç montaj katsayısıyla düşürülür.",
+      "Elektrik gücü tahmini: COP ≈ 0,42 · (T_gidiş + 273) / (T_gidiş − T_dış); kesin değer üretici verisinden alınmalıdır.",
       "Yerden ısıtmalı odalarda döşeme kaybı oda yüküne katılmaz; boru altından kaçan ısı (EN 1264-3) ısı pompası yüküne eklenir.",
       "Isı pompası kapasitesi katalog noktaları (A7/W35, A-7/W35, A-7/W55, varsa A-15/W35) arasında doğrusal ara değerle hesaplanır.",
       "Kullanım suyu için kişi başı 0,25 kW eklenmiştir; boyler hacmi kişi başı 50 L (50 °C) esas alınmıştır.",

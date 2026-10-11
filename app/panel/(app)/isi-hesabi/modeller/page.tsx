@@ -25,6 +25,7 @@ type Model = {
 const s = (x: number | null | undefined) => (x === null || x === undefined ? "" : String(x).replace(".", ","));
 const alan = "focus-ring w-full border border-hat rounded-md px-2.5 py-1.5 text-sm bg-white";
 const etiket = "block text-[11px] font-medium text-metin/60 mb-1";
+const ip = "block text-[11px] leading-snug text-metin/45 mt-1";
 
 function ModelFormu({ m, urunler }: { m?: Model; urunler: { id: string; ad: string; kod: string | null }[] }) {
   return (
@@ -48,30 +49,37 @@ function ModelFormu({ m, urunler }: { m?: Model; urunler: { id: string; ad: stri
       <label>
         <span className={etiket}>A7/W35 kapasite (kW) *</span>
         <input name="kapA7W35" required inputMode="decimal" defaultValue={s(m?.kapA7W35)} className={alan} />
+        <span className={ip}>Dış hava +7 °C, çıkış suyu 35 °C&apos;deki ısıtma gücü (cihazın &quot;nominal&quot; gücü).</span>
       </label>
       <label>
         <span className={etiket}>A-7/W35 kapasite (kW) *</span>
         <input name="kapAm7W35" required inputMode="decimal" defaultValue={s(m?.kapAm7W35)} className={alan} />
+        <span className={ip}>Dış hava −7 °C, su 35 °C (yerden ısıtma koşulu).</span>
       </label>
       <label>
         <span className={etiket}>A-7/W55 kapasite (kW) *</span>
         <input name="kapAm7W55" required inputMode="decimal" defaultValue={s(m?.kapAm7W55)} className={alan} />
+        <span className={ip}>Dış hava −7 °C, su 55 °C (radyatör koşulu).</span>
       </label>
       <label>
         <span className={etiket}>A-15/W35 kapasite (kW)</span>
         <input name="kapAm15W35" inputMode="decimal" defaultValue={s(m?.kapAm15W35)} placeholder="biliniyorsa" className={alan} />
+        <span className={ip}>Soğuk illerde (Erzurum, Kars…) doğruluğu artırır; yoksa boş bırakın.</span>
       </label>
       <label>
         <span className={etiket}>Çalışma alt sınırı (°C)</span>
         <input name="minDisSicaklik" inputMode="decimal" defaultValue={s(m?.minDisSicaklik ?? -20)} className={alan} />
+        <span className={ip}>Cihazın ısıtmada çalışabildiği en düşük dış sıcaklık (föyde &quot;çalışma aralığı&quot;).</span>
       </label>
       <label>
         <span className={etiket}>En yüksek çıkış suyu (°C)</span>
         <input name="maksCikis" inputMode="decimal" defaultValue={s(m?.maksCikis ?? 60)} className={alan} />
+        <span className={ip}>Cihazın verebildiği en sıcak su (R290 cihazlarda genelde 70–75 °C).</span>
       </label>
       <label>
         <span className={etiket}>Dahili elektrikli ısıtıcı (kW)</span>
         <input name="yedekIsiticiKw" inputMode="decimal" defaultValue={s(m?.yedekIsiticiKw ?? 0)} className={alan} />
+        <span className={ip}>İç ünitedeki elektrikli rezistans (yoksa 0). Yetmezse hesap uyarır.</span>
       </label>
       <label>
         <span className={etiket}>Ürün kataloğu karşılığı (teklif fiyatı)</span>
@@ -84,6 +92,7 @@ function ModelFormu({ m, urunler }: { m?: Model; urunler: { id: string; ad: stri
             </option>
           ))}
         </select>
+        <span className={ip}>Bağlanırsa teklife aktarımda fiyatı otomatik gelir.</span>
       </label>
       <label className="sm:col-span-3">
         <span className={etiket}>Not</span>
@@ -114,6 +123,15 @@ export default async function IsiPompasiModelleriSayfasi() {
         Değerleri üreticinin teknik veri tablosundan (EN 14511 kapasite, kompresör tam yükte) girin. Buderus ve çalıştığınız diğer markaları
         ekleyebilirsiniz; ürün kataloğuna bağlanan model teklife fiyatıyla aktarılır.
       </p>
+      <div className="bg-soguk/5 border border-soguk/20 rounded-lg px-4 py-3 mb-6 text-[13px] text-metin/80 max-w-3xl leading-relaxed">
+        <p className="font-semibold text-soguk-dim mb-1">Değerler nereden bulunur?</p>
+        <p>
+          Üreticinin teknik föyünde (datasheet) &quot;Isıtma kapasitesi&quot; tablosuna bakın. <strong>A</strong> dış hava (air) sıcaklığı, <strong>W</strong> çıkış suyu
+          (water) sıcaklığıdır: <strong>A7/W35</strong> = dış hava +7 °C, su 35 °C; <strong>A-7/W55</strong> = dış hava −7 °C, su 55 °C. Değer kW cinsinden ve
+          kompresör tam yükteyken (maksimum) olmalıdır; &quot;nominal / kısmi yük&quot; değeri değil. Tabloda yalnız A2/W35 varsa A-7/W35 için onun yaklaşık %85&apos;ini
+          yazabilirsiniz (tahmini).
+        </p>
+      </div>
 
       <section className="bg-yuzey border border-hat rounded-lg p-5 mb-8">
         <h2 className="font-display font-semibold text-metin text-sm mb-3">Yeni model</h2>

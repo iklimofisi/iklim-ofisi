@@ -26,6 +26,7 @@ import {
   BORU_ARALIKLARI,
   RADYATOR_TIPLERI,
   RADYATOR_BOYLARI,
+  RADYATOR_MONTAJLARI,
   ANA_BORULAR,
   BOYLER_HACIMLERI,
   TAMPON_HACIMLERI,
@@ -68,6 +69,7 @@ export type RadyatorSonucu = {
   toplamGuc: number;
   fazlalik: number; // %
   takviye: boolean;
+  montajCarpani: number; // niş / panel / kutu düzeltmesi (1 = açık montaj)
 };
 
 export type YerdenSonucu = {
@@ -110,6 +112,7 @@ export type OdaSonucu = {
   havalandirma: number;
   isinma: number;
   toplam: number; // W — odanın ısı yükü
+  yukseklikDuzeltmesi: number; // 4 m üstü tavanlarda radyatörlü odaya eklenen oran
   wm2: number;
   isitici: Oda["isitici"];
   radyator: RadyatorSonucu | null;
@@ -183,6 +186,14 @@ export type HesapSonucu = {
     pompaDebi: number;
   };
   karisimVanasiKvs: number | null;
+  elektrik: {
+    cop: number; // tasarım noktasında tahmini COP
+    isiPompasiIsil: number; // kW — tasarım noktasında ısı pompasının verdiği ısı
+    kompresorKw: number; // kW elektrik
+    yedekKw: number; // kW elektrikli yedek ısıtıcı
+    toplamKw: number; // kW — en soğuk günde çekilen elektrik
+  };
+  havalandirmaDebisi: number; // m³/h (HRV seçiliyse cihaz debisi)
   kollektorler: KollektorSonucu[];
   malzemeler: MalzemeKalemi[];
   uyarilar: string[];
@@ -220,7 +231,11 @@ function brutAlan(e: Eleman, o: Oda): number {
 // ---------------------------------------------------------------------------
 // 1. ODA ISI KAYBI
 // ---------------------------------------------------------------------------
-export function odaIsiKaybi(o: Oda, v: Pick<HesapVerisi, "isiKoprusu" | "yonArtirimi" | "isinmaArtirimi">, disT: number) {
+export function odaIsiKaybi(
+  o: Oda,
+  v: Pick<HesapVerisi, "isiKoprusu" | "yonArtirimi" | "isinmaArtirimi"> & Partial<Pick<HesapVerisi, "havalandirma" | "hrvVerim">>,
+  disT: number
+) {
   const ti = o.sicaklik;
   const yerdenli = o.isitici === "YERDEN" || o.isitici === "YERDEN_RADYATOR";
   // Aynı yöndeki pencere/kapı alanları o yöndeki dış duvardan düşülür
@@ -260,7 +275,11 @@ export function odaIsiKaybi(o: Oda, v: Pick<HesapVerisi, "isiKoprusu" | "yonArti
   const alan = o.en * o.boy;
   const hacim = alan * o.yukseklik;
   const iletim = sonuclar.reduce((t, s) => t + s.kayip, 0);
-  const havalandirma = 0.34 * hacim * o.havaDegisim * Math.max(0, ti - disT);
+  // Isı geri kazanımlı havalandırmada (HRV) yalnız sızıntı payı (en çok 0,15 1/h) tam kayıptır;
+  // mekanik hava, cihaz veriminin kalan kısmı kadar kayıp oluşturur (EN 12831 yaklaşımı)
+  const nSizinti = Math.min(o.havaDegisim, 0.15);
+  const nEtkin = v.havalandirma === "HRV" ? nSizinti + (o.havaDegisim - nSizinti) * (1 - (v.hrvVerim ?? 75) / 100) : o.havaDegisim;
+  const havalandirma = 0.34 * hacim * nEtkin * Math.max(0, ti - disT);
   const isinma = (iletim + havalandirma) * (v.isinmaArtirimi / 100);
   const toplam = Math.max(0, iletim + havalandirma + isinma);
   return { sonuclar, iletim, havalandirma, isinma, toplam, alan, hacim, uyarilar };
@@ -287,10 +306,13 @@ export function radyatorSec(
   gidis: number,
   donus: number,
   oda: number,
-  takviye: boolean
+  takviye: boolean,
+  montajCarpani = 1
 ): RadyatorSonucu {
-  const { w1000, n, dt } = radyatorGucu(tip, yukseklik, gidis, donus, oda);
-  const bos: RadyatorSonucu = { gerekenGuc: guc, w1000, n, dt, parcalar: [], toplamGuc: 0, fazlalik: 0, takviye };
+  const r = radyatorGucu(tip, yukseklik, gidis, donus, oda);
+  const { n, dt } = r;
+  const w1000 = r.w1000 * montajCarpani;
+  const bos: RadyatorSonucu = { gerekenGuc: guc, w1000, n, dt, parcalar: [], toplamGuc: 0, fazlalik: 0, takviye, montajCarpani };
   if (guc <= 0 || w1000 <= 0) return bos;
   const toplamMm = (guc / w1000) * 1000;
   let adet = parca > 0 ? parca : Math.max(1, Math.ceil(toplamMm / RADYATOR_BOYLARI.tekParcaOnerilen));
@@ -328,6 +350,13 @@ export function boruSec(debiLh: number, sicaklik: number, maksHiz = 0.7): BoruSe
 // ---------------------------------------------------------------------------
 // 4. ISI POMPASI KAPASİTESİ (katalog noktalarından ara değer)
 // ---------------------------------------------------------------------------
+// Tasarım noktasında tahmini COP: Carnot COP'sinin ~%42'si (A7/W35 ≈ 4,6 · A-7/W35 ≈ 3,1 ·
+// A-7/W55 ≈ 2,2 — piyasadaki hava kaynaklı cihazların tipik değerleri)
+export function copTahmini(dis: number, gidis: number): number {
+  const fark = Math.max(10, gidis - dis);
+  return Math.max(1.3, Math.min(6, (0.42 * (gidis + 273.15)) / fark));
+}
+
 export function pompaKapasitesi(m: PompaModeli, dis: number, gidis: number): number {
   const a = m.kapA7W35;
   const b = m.kapAm7W35;
@@ -409,7 +438,13 @@ export function sistemiHesapla(v: HesapVerisi, modeller: PompaModeli[] = []): He
   const boru = YERDEN_BORULARI.find((b) => b.anahtar === v.yerdenBoru) ?? YERDEN_BORULARI[0];
 
   // 1) Isı kayıpları
-  const odaHam = v.odalar.map((o) => ({ o, k: odaIsiKaybi(o, v, disT) }));
+  // 4 m üstü tavanlı, radyatörle ısıtılan odalarda sıcak hava tavanda birikir (tabakalaşma):
+  // ısı yüküne 0,025 · (h − 4) oranında, en çok %15 eklenir. Yerden ısıtmada gerekmez.
+  const odaHam = v.odalar.map((o) => {
+    const k = odaIsiKaybi(o, v, disT);
+    const f = o.isitici === "RADYATOR" && o.yukseklik > 4 ? Math.min(0.15, 0.025 * (o.yukseklik - 4)) : 0;
+    return { o, k: f > 0 ? { ...k, toplam: k.toplam * (1 + f) } : k, f };
+  });
 
   // 2) Yerden ısıtma
   const yerdenOdalar = odaHam.filter(({ o }) => (o.isitici === "YERDEN" || o.isitici === "YERDEN_RADYATOR") && o.en * o.boy - o.haricAlan > 0.5);
@@ -476,7 +511,7 @@ export function sistemiHesapla(v: HesapVerisi, modeller: PompaModeli[] = []): He
   const radyatorRejimi = { gidis: v.radyatorGidis, donus: Math.min(v.radyatorDonus, v.radyatorGidis - 1) };
   if (v.radyatorDonus >= v.radyatorGidis) uyarilar.push("Radyatör dönüş sıcaklığı gidişten küçük olmalı; dönüş gidiş − 1 °C alındı.");
 
-  const odalar: OdaSonucu[] = odaHam.map(({ o, k }) => {
+  const odalar: OdaSonucu[] = odaHam.map(({ o, k, f }) => {
     const uy = [...k.uyarilar];
     const banyo = ODA_TIPLERI[o.tip].banyo;
     let yerden: YerdenSonucu | null = null;
@@ -577,13 +612,17 @@ export function sistemiHesapla(v: HesapVerisi, modeller: PompaModeli[] = []): He
 
     let radyator: RadyatorSonucu | null = null;
     if (radyatorGucu > 1) {
-      radyator = radyatorSec(radyatorGucu, o.radyatorTip, o.radyatorYukseklik, o.radyatorParca, radyatorRejimi.gidis, radyatorRejimi.donus, o.sicaklik, takviye);
+      const montaj = RADYATOR_MONTAJLARI[o.radyatorMontaj]?.carpan ?? 1;
+      radyator = radyatorSec(radyatorGucu, o.radyatorTip, o.radyatorYukseklik, o.radyatorParca, radyatorRejimi.gidis, radyatorRejimi.donus, o.sicaklik, takviye, montaj);
+      if (montaj < 1) uy.push(`Radyatör montajı (${RADYATOR_MONTAJLARI[o.radyatorMontaj].ad}) için ısıl güç %${Math.round((1 - montaj) * 100)} düşük alındı; radyatör buna göre uzatıldı.`);
       if (radyator.w1000 <= 0) uy.push("Radyatör rejimi oda sıcaklığına göre geçersiz (dönüş suyu oda sıcaklığından yüksek olmalı).");
       else if (radyator.parcalar.length > 2) uy.push(`${radyator.parcalar.length} parça radyatör gerekiyor; daha yüksek / daha çok panelli tip seçmeyi düşünün.`);
       else if (radyator.fazlalik > 50 && o.radyatorTip !== "10")
         uy.push(`Radyatör gerekenden %${Math.round(radyator.fazlalik)} büyük çıktı (en kısa boy 400 mm); daha az panelli tip (Tip 11 / 10) seçilebilir.`);
     }
     if (banyo && o.isitici === "RADYATOR") uy.push("Banyoda panel radyatör yerine aynı güçte havlupan kullanılabilir.");
+    if (f > 0) uy.push(`Tavan ${sy(o.yukseklik)} m: radyatörlü yüksek hacimde sıcak hava tavanda birikir; ısı yüküne %${sy(f * 100, 1)} eklendi. Yerden ısıtma bu tür hacimlerde daha verimlidir.`);
+    if (o.yukseklik > 6 && o.isitici === "RADYATOR") uy.push("6 m üstü hacimde radyatör yerine yerden ısıtma ya da tavan tipi destratifikasyon fanı önerilir.");
 
     return {
       id: o.id,
@@ -597,6 +636,7 @@ export function sistemiHesapla(v: HesapVerisi, modeller: PompaModeli[] = []): He
       havalandirma: k.havalandirma,
       isinma: k.isinma,
       toplam: o.isitici === "YOK" ? 0 : k.toplam,
+      yukseklikDuzeltmesi: f,
       wm2: k.alan > 0 ? k.toplam / k.alan : 0,
       isitici: o.isitici,
       radyator: o.isitici === "YOK" ? null : radyator,
@@ -733,6 +773,20 @@ export function sistemiHesapla(v: HesapVerisi, modeller: PompaModeli[] = []): He
   const radyatorBasmaMbar = radyatorVar ? 100 + 20 + hatKaybi(hatRad) * 1.5 + 30 : 0;
   const karisimVanasiKvs = karisimli ? [1.6, 2.5, 4, 6.3, 10, 16, 25].find((k) => k >= yerdenDebi / 1000 / Math.sqrt(0.1)) ?? 25 : null;
 
+  // Elektrik gücü (tasarım noktası): ısı pompası payı / COP + elektrikli yedek ısıtıcı
+  const cop = copTahmini(disT, pompaGidis);
+  const yukTasarimKw = tasarimYuku / 1000;
+  const yedekKw = secilen ? secilen.yedekGerekli : 0;
+  const hpIsil = secilen ? Math.min(secilen.kapasiteTasarim, Math.max(0, yukTasarimKw - yedekKw)) : yukTasarimKw;
+  const kompresorKw = hpIsil / cop;
+  const elektrik = { cop, isiPompasiIsil: hpIsil, kompresorKw, yedekKw, toplamKw: kompresorKw + yedekKw };
+  if (elektrik.toplamKw > 7)
+    uyarilar.push(
+      `En soğuk günde çekilen elektrik ≈ ${sy(elektrik.toplamKw)} kW (ısı pompası ≈ ${sy(kompresorKw)} kW${yedekKw > 0.05 ? ` + yedek ısıtıcı ${sy(yedekKw)} kW` : ""}). Elektrik abonelik / sözleşme gücü ve sigorta seçimi buna göre yapılmalı; trifaze bağlantı gerekebilir.`
+    );
+  // Isı geri kazanımlı havalandırma cihazı debisi
+  const havalandirmaDebisi = v.havalandirma === "HRV" ? v.odalar.reduce((t, o) => t + o.en * o.boy * o.yukseklik * o.havaDegisim, 0) : 0;
+
   // 6) Malzeme listesi
   const malzemeler: MalzemeKalemi[] = [];
   const M = "Isı Pompası ve Mekanik Oda";
@@ -806,6 +860,12 @@ export function sistemiHesapla(v: HesapVerisi, modeller: PompaModeli[] = []): He
     ek(Y, "Kollektör elektrotermik aktüatör", kollektorAgizlari);
     ek(Y, "Kablolama merkezi (termostat – aktüatör)", kollektorler.length);
   }
+  if (havalandirmaDebisi > 0) {
+    const H = "Havalandırma";
+    const std = [150, 250, 350, 450, 600, 800, 1000, 1500, 2000].find((x) => x >= havalandirmaDebisi) ?? Math.ceil(havalandirmaDebisi / 100) * 100;
+    ek(H, `Isı geri kazanımlı havalandırma cihazı (HRV) ${std} m³/h, verim en az %${Math.round(v.hrvVerim)}`, 1);
+    ek(H, "Havalandırma kanalı ve menfez seti (besleme: yaşam / yatak odaları, emiş: mutfak / banyo / WC)", 1, "Set");
+  }
   ek("Montaj ve Devreye Alma", "Montaj, basınç testi, ilk dolum ve devreye alma", 1, "İş");
 
   // Genel uyarılar
@@ -852,6 +912,8 @@ export function sistemiHesapla(v: HesapVerisi, modeller: PompaModeli[] = []): He
       pompaDebi,
     },
     karisimVanasiKvs,
+    elektrik,
+    havalandirmaDebisi,
     kollektorler,
     malzemeler,
     uyarilar,

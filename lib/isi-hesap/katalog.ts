@@ -15,6 +15,11 @@ export const ODA_TIPLERI = {
   WC: { ad: "WC", sicaklik: 20, havaDegisim: 1.5, banyo: false },
   HOL: { ad: "Hol / Koridor", sicaklik: 18, havaDegisim: 0.5, banyo: false },
   OFIS: { ad: "Ofis / Çalışma", sicaklik: 20, havaDegisim: 0.5, banyo: false },
+  GIYINME: { ad: "Giyinme / vestiyer", sicaklik: 20, havaDegisim: 0.5, banyo: false },
+  CAMASIR: { ad: "Çamaşır / ütü odası", sicaklik: 18, havaDegisim: 1.0, banyo: false },
+  MERDIVEN: { ad: "İç merdiven / galeri", sicaklik: 18, havaDegisim: 0.5, banyo: false },
+  KILER: { ad: "Kiler / depo (ısıtılan)", sicaklik: 15, havaDegisim: 0.5, banyo: false },
+  MAGAZA: { ad: "Dükkân / mağaza", sicaklik: 20, havaDegisim: 1.0, banyo: false },
   DIGER: { ad: "Diğer", sicaklik: 20, havaDegisim: 0.5, banyo: false },
 } as const;
 export type OdaTipi = keyof typeof ODA_TIPLERI;
@@ -151,6 +156,16 @@ export const RADYATOR_TIPLERI = {
   "33": { ad: "Tip 33 (PKKPKP)", kisa: "PKKPKP", w7565: [1334, 1689, 2021, 2335, 3182], w9070: [1688, 2137, 2557, 2954, 4055], suLtM600: 8.7 },
 } as const;
 export type RadyatorTipi = keyof typeof RADYATOR_TIPLERI;
+
+// Radyatör montaj düzeltmesi: niş, önüne panel / ızgara ya da dekoratif kutu
+// ısı verimini düşürür (üretici montaj tabloları, tipik değerler)
+export const RADYATOR_MONTAJLARI = {
+  ACIK: { ad: "Açık duvar önü (düzeltme yok)", carpan: 1 },
+  NIS: { ad: "Pencere altı nişte / denizlik altında (−%5)", carpan: 0.95 },
+  ON_PANEL: { ad: "Önünde ızgaralı panel / perde arkası (−%12)", carpan: 0.88 },
+  KUTU: { ad: "Dekoratif kutu içinde (−%20)", carpan: 0.8 },
+} as const;
+export type RadyatorMontaj = keyof typeof RADYATOR_MONTAJLARI;
 
 export const RADYATOR_KATALOG_KAYNAGI = "TS EN 442 değerleri (Baymak Star panel radyatör kataloğu)";
 export const RADYATOR_BOYLARI = { min: 400, maks: 3000, adim: 100, tekParcaOnerilen: 2000 };
