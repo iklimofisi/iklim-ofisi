@@ -6,10 +6,12 @@ import { klimaHesapKaydet, klimaHesapTeklifeAktar } from "@/lib/klima-hesap-acti
 import { bildirimGoster } from "@/lib/bildirim";
 import { SayiAlani, Alan, Kart, Ozet, ElemanSatiri, Tablo, ELEMAN_DUGMELERI, girdi } from "@/components/IsiHesapEditoru";
 import { yeniEleman, pencereMi, yeniId } from "@/lib/isi-hesap/tipler";
-import { ODA_TIPLERI, ISI_KOPRUSU, type OdaTipi, type Yon } from "@/lib/isi-hesap/katalog";
+import { ODA_TIPLERI, ISI_KOPRUSU, type Yon } from "@/lib/isi-hesap/katalog";
 import { ILLER, ilBul } from "@/lib/isi-hesap/iklim";
-import { klimaOdasi, ornekKlimaDairesi, yeniSistem, type KlimaVerisi, type KlimaOda, type Sistem } from "@/lib/klima-hesap/tipler";
-import { GOLGELER, IC_UNITE_TIPLERI, KULLANIMLAR, SISTEM_TIPLERI, AKISKANLAR, borAdi, type IcUniteTipi, type SistemTipi, type Kullanim, type Akiskan } from "@/lib/klima-hesap/katalog";
+import { klimaOdasi, ornekKlimaDairesi, yeniSistem, mekanVarsayilanlari, type KlimaVerisi, type KlimaOda, type Sistem, type UniteSecimi, type HrvTipi } from "@/lib/klima-hesap/tipler";
+import { GOLGELER, IC_UNITE_TIPLERI, SISTEM_TIPLERI, AKISKANLAR, VRF_TIPLERI, borAdi, type IcUniteTipi, type SistemTipi, type Akiskan } from "@/lib/klima-hesap/katalog";
+import { MEKANLAR, MEKAN_GRUPLARI, TAVAN_TIPLERI, TAZE_HAVA_DUZENLERI, type MekanTipi, type TavanTipi, type TazeHavaDuzeni } from "@/lib/klima-hesap/mekanlar";
+import { kapasiteListesi, uygunsuzluk } from "@/lib/klima-hesap/oneri";
 import { klimaHesapla, sy, type KlimaSonucu, type KlimaOdaSonucu } from "@/lib/klima-hesap/hesap";
 import { boruSemasi } from "@/lib/klima-hesap/cizim";
 import { cizimSvg } from "@/lib/isi-hesap/svg";
@@ -181,6 +183,7 @@ export default function KlimaHesapEditoru({ hesap, musteriler }: Props) {
               ekle={(tip) => {
                 const son = veri.odalar.at(-1);
                 const yeni = klimaOdasi(tip, { sistem: son ? son.sistem : veri.sistemler[0]?.no ?? 0, kot: son?.kot ?? 0 });
+                yeni.ad = MEKANLAR[tip].ad;
                 setVeri((v) => ({ ...v, odalar: [...v.odalar, yeni] }));
                 setSeciliOda(yeni.id);
               }}
@@ -292,13 +295,10 @@ function ProjeSekmesi({ veri, guncelle }: { veri: KlimaVerisi; guncelle: (p: Par
 
       <Kart baslik="Hesap kabulleri">
         <div className="grid sm:grid-cols-2 gap-3">
-          <Alan ad="Kullanım (kişi ısısı, aydınlatma)">
-            <select value={veri.kullanim} onChange={(e) => guncelle({ kullanim: e.target.value as Kullanim })} className={girdi}>
-              {(Object.keys(KULLANIMLAR) as Kullanim[]).map((k) => (
-                <option key={k} value={k}>
-                  {KULLANIMLAR[k].ad}
-                </option>
-              ))}
+          <Alan ad="Isı geri kazanım cihazı (HRV) tipi">
+            <select value={veri.hrvTipi} onChange={(e) => guncelle({ hrvTipi: e.target.value as HrvTipi })} className={girdi}>
+              <option value="PLAKALI">Plakalı eşanjör (duyulur %75)</option>
+              <option value="ENTALPI">Entalpi eşanjörü (duyulur %70, nem %60)</option>
             </select>
           </Alan>
           <Alan ad="Soğutucu akışkan">
@@ -405,18 +405,32 @@ function ProjeSekmesi({ veri, guncelle }: { veri: KlimaVerisi; guncelle: (p: Par
 // =============================================================================
 // 2. ODA
 // =============================================================================
-function OdaEkleKlima({ ekle }: { ekle: (t: OdaTipi) => void }) {
-  const [tip, setTip] = useState<OdaTipi>("YATAK");
+function MekanSecici({ deger, onChange, aria }: { deger: MekanTipi; onChange: (m: MekanTipi) => void; aria?: string }) {
+  return (
+    <select value={deger} onChange={(e) => onChange(e.target.value as MekanTipi)} className={girdi} aria-label={aria}>
+      {MEKAN_GRUPLARI.map((g) => (
+        <optgroup key={g} label={g}>
+          {(Object.keys(MEKANLAR) as MekanTipi[])
+            .filter((k) => MEKANLAR[k].grup === g)
+            .map((k) => (
+              <option key={k} value={k}>
+                {MEKANLAR[k].ad}
+              </option>
+            ))}
+        </optgroup>
+      ))}
+    </select>
+  );
+}
+
+function OdaEkleKlima({ ekle }: { ekle: (t: MekanTipi) => void }) {
+  const [mekan, setMekan] = useState<MekanTipi>("KONUT_YATAK");
   return (
     <div className="flex gap-2">
-      <select value={tip} onChange={(e) => setTip(e.target.value as OdaTipi)} className={`${girdi} flex-1`} aria-label="Oda tipi">
-        {(Object.keys(ODA_TIPLERI) as OdaTipi[]).map((t) => (
-          <option key={t} value={t}>
-            {ODA_TIPLERI[t].ad}
-          </option>
-        ))}
-      </select>
-      <button type="button" onClick={() => ekle(tip)} className="focus-ring bg-soguk text-white px-3 rounded-md text-sm font-medium hover:bg-soguk-dim">
+      <div className="flex-1 min-w-0">
+        <MekanSecici deger={mekan} onChange={setMekan} aria="Mekân tipi" />
+      </div>
+      <button type="button" onClick={() => ekle(mekan)} className="focus-ring bg-soguk text-white px-3 rounded-md text-sm font-medium hover:bg-soguk-dim">
         + Oda
       </button>
     </div>
@@ -448,8 +462,16 @@ function OdaDuzenleyici({
 }) {
   const sistem = veri.sistemler.find((s) => s.no === oda.sistem);
   const kucuk = "focus-ring text-xs border border-hat rounded-md px-2.5 py-1 text-metin/60 hover:border-soguk";
-  const tipListesi = (Object.keys(IC_UNITE_TIPLERI) as IcUniteTipi[]).filter((t) => !sistem || sistem.tip === "MULTI" || IC_UNITE_TIPLERI[t].vrf.length > 0);
-  const kapasiteler = sistem && sistem.tip !== "MULTI" ? IC_UNITE_TIPLERI[oda.uniteTipi].vrf : IC_UNITE_TIPLERI[oda.uniteTipi].split;
+  const sTuru = sistem ? sistem.tip : "SPLIT";
+  const tipListesi = (Object.keys(IC_UNITE_TIPLERI) as IcUniteTipi[]).filter((t) => t !== "TAZE_HAVA" && kapasiteListesi(t, sTuru).length > 0);
+  const gecerliTip: IcUniteTipi = sonuc?.oneri?.tip ?? (oda.uniteTipi === "OTOMATIK" ? "DUVAR" : oda.uniteTipi);
+  const kapasiteler = kapasiteListesi(gecerliTip, sTuru);
+  const oneri = sonuc?.oneri ?? null;
+  const kanalliMi = oneri ? oneri.esp !== null : false;
+  const mekanUygula = () => {
+    const d = mekanVarsayilanlari(oda.mekan, oda.en * oda.boy);
+    guncelle({ kisi: d.kisi, aydinlatma: d.aydinlatma, cihaz: d.cihaz });
+  };
   return (
     <div className="space-y-4 min-w-0">
       <Kart baslik="Oda bilgileri">
@@ -457,22 +479,27 @@ function OdaDuzenleyici({
           <Alan ad="Oda adı" className="sm:col-span-2">
             <input value={oda.ad} maxLength={80} onChange={(e) => guncelle({ ad: e.target.value })} className={girdi} />
           </Alan>
-          <Alan ad="Oda tipi">
-            <select
-              value={oda.tip}
-              onChange={(e) => {
-                const t = e.target.value as OdaTipi;
-                const d = klimaOdasi(t);
-                guncelle({ tip: t, sicaklik: d.sicaklik, havaDegisim: d.havaDegisim, kisi: d.kisi, cihaz: d.cihaz });
+          <Alan ad="Mekân tipi">
+            <MekanSecici
+              deger={oda.mekan}
+              onChange={(m) => {
+                const mk = MEKANLAR[m];
+                const d = mekanVarsayilanlari(m, oda.en * oda.boy);
+                guncelle({
+                  mekan: m,
+                  tip: mk.odaTipi,
+                  havaDegisim: ODA_TIPLERI[mk.odaTipi].havaDegisim,
+                  sicaklik: d.sicaklik,
+                  sogutmaSicaklik: d.sogutmaSicaklik,
+                  kisi: d.kisi,
+                  aydinlatma: d.aydinlatma,
+                  cihaz: d.cihaz,
+                  tazeHava: d.tazeHava,
+                  sessiz: d.sessiz,
+                  tavanTipi: d.tavanTipi,
+                });
               }}
-              className={girdi}
-            >
-              {(Object.keys(ODA_TIPLERI) as OdaTipi[]).map((t) => (
-                <option key={t} value={t}>
-                  {ODA_TIPLERI[t].ad}
-                </option>
-              ))}
-            </select>
+            />
           </Alan>
           <label className="flex items-center gap-2 text-sm text-metin/80 mt-5">
             <input type="checkbox" checked={oda.klima} onChange={(e) => guncelle({ klima: e.target.checked })} />
@@ -503,8 +530,30 @@ function OdaDuzenleyici({
             <SayiAlani deger={oda.aydinlatma} min={0} maks={60} onChange={(n) => n !== null && guncelle({ aydinlatma: n })} />
           </Alan>
           <Alan ad="Cihazlar (W)">
-            <SayiAlani deger={oda.cihaz} min={0} maks={100000} adim={10} onChange={(n) => n !== null && guncelle({ cihaz: n })} />
+            <SayiAlani deger={oda.cihaz} min={0} maks={500000} adim={10} onChange={(n) => n !== null && guncelle({ cihaz: n })} />
           </Alan>
+          <Alan ad="Tavan">
+            <select value={oda.tavanTipi} onChange={(e) => guncelle({ tavanTipi: e.target.value as TavanTipi })} className={girdi}>
+              {(Object.keys(TAVAN_TIPLERI) as TavanTipi[]).map((k) => (
+                <option key={k} value={k}>
+                  {TAVAN_TIPLERI[k]}
+                </option>
+              ))}
+            </select>
+          </Alan>
+          <Alan ad="Taze hava" className="sm:col-span-2">
+            <select value={oda.tazeHava} onChange={(e) => guncelle({ tazeHava: e.target.value as TazeHavaDuzeni })} className={girdi}>
+              {(Object.keys(TAZE_HAVA_DUZENLERI) as TazeHavaDuzeni[]).map((k) => (
+                <option key={k} value={k}>
+                  {TAZE_HAVA_DUZENLERI[k]}
+                </option>
+              ))}
+            </select>
+          </Alan>
+          <label className="flex items-center gap-2 text-sm text-metin/80 mt-5">
+            <input type="checkbox" checked={oda.sessiz} onChange={(e) => guncelle({ sessiz: e.target.checked })} />
+            Gürültüye duyarlı
+          </label>
           <Alan ad="Pencere gölgelemesi" className="sm:col-span-2">
             <select value={oda.golge} onChange={(e) => guncelle({ golge: e.target.value })} className={girdi}>
               {GOLGELER.map((g) => (
@@ -515,6 +564,9 @@ function OdaDuzenleyici({
             </select>
           </Alan>
           <div className="flex flex-wrap items-end gap-2">
+            <button type="button" onClick={mekanUygula} className={kucuk} title="Kişi, aydınlatma ve cihaz değerlerini mekân tipine ve alana göre yeniden doldur">
+              Mekâna göre doldur
+            </button>
             <button type="button" onClick={() => tasi(-1)} className={kucuk} aria-label="Yukarı taşı" title="Sırayı değiştir (ana hat üzerindeki sıra)">
               ↑
             </button>
@@ -543,16 +595,18 @@ function OdaDuzenleyici({
               </select>
             </Alan>
             <Alan ad="İç ünite tipi">
-              <select value={oda.uniteTipi} onChange={(e) => guncelle({ uniteTipi: e.target.value as IcUniteTipi, uniteKw: 0 })} className={girdi}>
+              <select value={oda.uniteTipi} onChange={(e) => guncelle({ uniteTipi: e.target.value as UniteSecimi, uniteKw: 0 })} className={girdi}>
+                <option value="OTOMATIK">Otomatik{oneri ? ` (öneri: ${IC_UNITE_TIPLERI[oneri.onerilen].kisa})` : ""}</option>
                 {tipListesi.map((t) => (
                   <option key={t} value={t}>
                     {IC_UNITE_TIPLERI[t].ad}
+                    {uygunsuzluk(t, oda, sTuru) ? " — uygun değil" : ""}
                   </option>
                 ))}
               </select>
             </Alan>
-            <Alan ad="Adet">
-              <SayiAlani deger={oda.uniteAdet} min={1} maks={20} adim={1} onChange={(n) => n !== null && guncelle({ uniteAdet: Math.round(n) })} />
+            <Alan ad="Adet (boş = otomatik)">
+              <SayiAlani deger={oda.uniteAdet || null} bosOlabilir min={1} maks={30} adim={1} yerTutucu={oneri ? String(oneri.adet) : "oto"} onChange={(n) => guncelle({ uniteAdet: n === null ? 0 : Math.round(n) })} />
             </Alan>
             <Alan ad="Kapasite (kW)">
               <select value={oda.uniteKw} onChange={(e) => guncelle({ uniteKw: Number(e.target.value) })} className={girdi}>
@@ -581,8 +635,22 @@ function OdaDuzenleyici({
             <Alan ad="Kat kotu (m, zemin = 0)">
               <SayiAlani deger={oda.kot} min={-50} maks={300} onChange={(n) => n !== null && guncelle({ kot: n })} />
             </Alan>
+            {kanalliMi && (
+              <>
+                <Alan ad="En uzak menfeze kanal (m, boş = oto)">
+                  <SayiAlani deger={oda.kanalUzunluk || null} bosOlabilir min={0} maks={200} yerTutucu={oneri?.kanal ? String(oneri.kanal) : "oto"} onChange={(n) => guncelle({ kanalUzunluk: n ?? 0 })} />
+                </Alan>
+                <Alan ad="Filtre">
+                  <select value={oda.filtre} onChange={(e) => guncelle({ filtre: e.target.value as KlimaOda["filtre"] })} className={girdi}>
+                    <option value="STANDART">Standart (G4)</option>
+                    <option value="F7">İnce filtre (F7) +60 Pa</option>
+                  </select>
+                </Alan>
+              </>
+            )}
           </div>
         )}
+        {oda.klima && oneri && <OneriKarti oneri={oneri} sistemTipi={sTuru} />}
         {oda.klima && sistem && sistem.tip !== "MULTI" && (
           <p className="text-[11px] text-metin/45 mt-2">
             Odalar listedeki sırayla ana hat üzerinde dizilir (ilk oda ilk branşmanda). Sırayı soldaki ↑ ↓ düğmeleriyle değiştirin; ilk odanın ana hat mesafesi kullanılmaz.
@@ -636,14 +704,54 @@ function OdaDuzenleyici({
               {sonuc.unite.ad} — gereken {W(sonuc.gerekenSogutma)} (emniyet payı dahil)
             </p>
           )}
-          {sonuc.uyarilar.length > 0 && (
+          {sonuc.uyarilar.filter((u) => !sonuc.oneri?.uyarilar.includes(u)).length > 0 && (
             <ul className="text-xs text-sicak-dim space-y-1 mt-2">
-              {sonuc.uyarilar.map((u, i) => (
+              {sonuc.uyarilar.filter((u) => !sonuc.oneri?.uyarilar.includes(u)).map((u, i) => (
                 <li key={i}>⚠ {u}</li>
               ))}
             </ul>
           )}
         </Kart>
+      )}
+    </div>
+  );
+}
+
+function OneriKarti({ oneri, sistemTipi }: { oneri: NonNullable<KlimaOdaSonucu["oneri"]>; sistemTipi: SistemTipi | "SPLIT" }) {
+  const u = IC_UNITE_TIPLERI[oneri.tip];
+  const vrf = (VRF_TIPLERI as readonly string[]).includes(sistemTipi);
+  return (
+    <div className={`mt-4 rounded-lg border p-4 ${oneri.uyarilar.length ? "border-sicak/40 bg-sicak/5" : "border-soguk/30 bg-soguk/5"}`}>
+      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
+        <p className="text-sm font-semibold text-metin">
+          {oneri.elle ? "Seçilen" : "Önerilen"} iç ünite: {oneri.adet} × {u.ad} {sy(oneri.kw)} kW
+        </p>
+        <p className="text-xs text-metin/55">
+          {u.ses[0]}–{u.ses[1]} dB(A) · atış ≈ {u.atis} m{oneri.esp !== null ? ` · dış statik basınç ≈ ${oneri.esp} Pa` : ""} · hava ≈ {sy(oneri.havaDebisi, 0)} m³/h
+          {!vrf && sistemTipi !== "MULTI" ? " · bağımsız split" : ""}
+        </p>
+      </div>
+      <ul className="text-xs text-metin/75 space-y-1">
+        {oneri.gerekce.map((g, i) => (
+          <li key={i}>✓ {g}</li>
+        ))}
+      </ul>
+      {oneri.uyarilar.length > 0 && (
+        <ul className="text-xs text-sicak-dim space-y-1 mt-2">
+          {oneri.uyarilar.map((g, i) => (
+            <li key={i}>⚠ {g}</li>
+          ))}
+        </ul>
+      )}
+      {oneri.ekler.length > 0 && (
+        <ul className="text-xs text-soguk-dim space-y-1 mt-2">
+          {oneri.ekler.map((g, i) => (
+            <li key={i}>＋ {g}</li>
+          ))}
+        </ul>
+      )}
+      {oneri.alternatifler.length > 0 && (
+        <p className="text-[11px] text-metin/50 mt-2">Uygun diğer tipler: {oneri.alternatifler.map((t) => IC_UNITE_TIPLERI[t].kisa).join(", ")}</p>
       )}
     </div>
   );
@@ -668,14 +776,16 @@ function SonuclarSekmesi({ s, veri }: { s: KlimaSonucu; veri: KlimaVerisi }) {
       )}
       <Kart baslik="Oda yükleri ve iç üniteler">
         <Tablo
-          basliklar={["Oda", "m²", "Duyulur W", "Gizli W", "Soğutma W", "W/m²", "Isıtma W", "İç ünite", "Sistem"]}
-          sagdan={[1, 2, 3, 4, 5, 6]}
+          basliklar={["Oda", "Mekân", "m²", "Tavan m", "Duyulur W", "Gizli W", "Soğutma W", "W/m²", "Isıtma W", "İç ünite", "Sistem"]}
+          sagdan={[2, 3, 4, 5, 6, 7, 8]}
           satirlar={[
             ...s.odalar
               .filter((o) => o.klima)
               .map((o) => [
                 o.ad,
+                o.mekanAd,
                 sy(o.alan),
+                sy(o.yukseklik, 1),
                 sy(o.duyulur, 0),
                 sy(o.gizli, 0),
                 sy(o.sogutma, 0),
@@ -684,7 +794,7 @@ function SonuclarSekmesi({ s, veri }: { s: KlimaSonucu; veri: KlimaVerisi }) {
                 o.unite ? `${o.unite.adet > 1 ? o.unite.adet + " × " : ""}${o.unite.ad}` : "—",
                 o.sistem ? `S${o.sistem}` : "Split",
               ]),
-            ["Toplam", sy(s.odalar.filter((o) => o.klima).reduce((t, o) => t + o.alan, 0)), "", "", sy(s.toplamSogutma, 0), "", veri.isitmaDa ? sy(s.toplamIsitma, 0) : "—", "", ""],
+            ["Toplam", "", sy(s.odalar.filter((o) => o.klima).reduce((t, o) => t + o.alan, 0)), "", "", "", sy(s.toplamSogutma, 0), "", veri.isitmaDa ? sy(s.toplamIsitma, 0) : "—", "", ""],
           ]}
         />
       </Kart>
@@ -700,7 +810,16 @@ function SonuclarSekmesi({ s, veri }: { s: KlimaSonucu; veri: KlimaVerisi }) {
             <Ozet ad="Ek gaz" deger={`${sy(x.ekGaz, 2)} kg`} alt={`toplam ~${sy(x.toplamSarj, 1)} kg`} />
             <Ozet ad="Branşman" deger={String(x.bransmanlar.length)} />
           </div>
-          <Tablo basliklar={["Hat", "m", "kW", "Gaz", "Sıvı"]} sagdan={[1, 2]} satirlar={x.parcalar.map((p) => [p.ad, sy(p.uzunluk), sy(p.kw), borAdi(p.gaz), borAdi(p.sivi)])} />
+          <Tablo
+            basliklar={x.tip === "VRF_HR" ? ["Hat", "m", "kW", "Emme gazı", "Basma gazı", "Sıvı"] : ["Hat", "m", "kW", "Gaz", "Sıvı"]}
+            sagdan={[1, 2]}
+            satirlar={x.parcalar.map((p) =>
+              x.tip === "VRF_HR" ? [p.ad, sy(p.uzunluk), sy(p.kw), borAdi(p.gaz), p.basma ? borAdi(p.basma) : "— (BS sonrası 2 boru)", borAdi(p.sivi)] : [p.ad, sy(p.uzunluk), sy(p.kw), borAdi(p.gaz), borAdi(p.sivi)]
+            )}
+          />
+          {x.bsKutulari.length > 0 && (
+            <p className="text-xs text-metin/60 mt-2">BS kutuları: {x.bsKutulari.map((b) => `${b.oda} (${sy(b.kw)} kW)`).join(", ")}</p>
+          )}
           <div className="mt-3">
             <Tablo
               basliklar={["Kontrol", "Değer", "Sınır", "Sonuç"]}

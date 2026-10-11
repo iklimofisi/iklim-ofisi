@@ -6,7 +6,8 @@ import { IL_KAYNAGI } from "@/lib/isi-hesap/iklim";
 import type { Cizim } from "@/lib/isi-hesap/cizim";
 import type { KlimaSonucu } from "./hesap";
 import type { KlimaVerisi } from "./tipler";
-import { KULLANIMLAR, AKISKANLAR, borAdi } from "./katalog";
+import { AKISKANLAR, IC_UNITE_TIPLERI, borAdi } from "./katalog";
+import { HRV_VERIM } from "./hesap";
 import { boruSemasi } from "./cizim";
 
 // -----------------------------------------------------------------------------
@@ -257,7 +258,7 @@ export function klimaHesapPdfOlustur(
       ["Dış hava (yaz)", `${sy(s.yazKT)} °C kuru / ${sy(s.yazYT)} °C yaş termometre · nem ${sy(s.disNem, 1)} g/kg`],
       ["Dış hava (kış)", `${sy(s.disSicaklik)} °C — ${IL_KAYNAGI}`],
       ["İç ortam (yaz)", `odaya göre (varsayılan 26 °C) · %${sy(v.icNem, 0)} bağıl nem`],
-      ["Kullanım", KULLANIMLAR[v.kullanim].ad],
+      ["Taze hava / ısı geri kazanımı", `oda bazında (ASHRAE 62.1 kişi + alan debisi) · HRV ${v.hrvTipi === "ENTALPI" ? "entalpi" : "plakalı"} eşanjör, duyulur verim %${sy(HRV_VERIM[v.hrvTipi].s * 100, 0)}${HRV_VERIM[v.hrvTipi].l ? `, nem %${sy(HRV_VERIM[v.hrvTipi].l * 100, 0)}` : ""}`],
       ["Emniyet payı / eşzamanlılık", `%${sy(v.emniyetPayi, 0)} (iç ünite) / %${sy(v.eszamanlilik, 0)} (dış ünite)`],
       ["Soğutucu akışkan", AKISKANLAR[v.akiskan].ad],
       ["Isıtma", v.isitmaDa ? "Klimalar ısıtmada da kullanılıyor (dış ünite ısıtma kapasitesi kontrol edildi)" : "Yalnız soğutma"],
@@ -308,6 +309,31 @@ export function klimaHesapPdfOlustur(
   );
   paragraf(`İç ünite seçiminde soğutma yüküne %${sy(v.emniyetPayi, 0)} emniyet payı eklenmiş; ısıtmada iç ünite nominal ısıtma kapasitesi soğutmanın 1,12 katı alınmıştır.`, 7);
 
+  bolumBasligi("İç ünite seçimi ve gerekçeleri", 50);
+  for (const o of s.odalar.filter((o) => o.klima && o.oneri)) {
+    const n = o.oneri!;
+    const u = IC_UNITE_TIPLERI[n.tip];
+    altBaslik(`${o.ad} — ${o.mekanAd} · ${sy(o.alan)} m² · h ${sy(o.yukseklik, 1)} m`);
+    tablo(
+      [
+        { ad: "Değer", w: 45 },
+        { ad: "Sonuç", w: 135 },
+      ],
+      [
+        ["Tavan / taze hava", `${o.tavanAd} · ${o.tazeHavaAd}${o.tazeDebi > 0 ? ` (${sy(o.tazeDebi, 0)} m³/h)` : ""}`],
+        [n.elle ? "Seçilen ünite" : "Önerilen ünite", `${n.adet} × ${u.ad} ${sy(n.kw)} kW${n.elle && n.onerilen !== n.tip ? ` (sistem önerisi: ${IC_UNITE_TIPLERI[n.onerilen].ad})` : ""}`],
+        ["Hava", `gerekli besleme ≈ ${sy(n.havaDebisi, 0)} m³/h · ünite toplamı ≈ ${sy(n.uniteDebisi, 0)} m³/h · ${sy(n.havaDegisimi, 1)} hava değişimi/h · ${u.ses[0]}–${u.ses[1]} dB(A)`],
+        ...(n.esp !== null ? [["Kanal / statik basınç", `dış statik basınç ≈ ${n.esp} Pa${n.kanal ? ` · en uzak menfeze ≈ ${sy(n.kanal, 0)} m kanal` : ""}${n.menfez ? ` · ${n.menfez} menfez / nozul` : ""}`]] : []),
+        ...(o.yukseklikDuzeltmesi > 0 ? [["Yükseklik düzeltmesi", `ısıtma yükü +%${sy(o.yukseklikDuzeltmesi * 100, 1)}`]] : []),
+      ],
+      { boyut: 7 }
+    );
+    for (const g of n.gerekce) paragraf(`+ ${g}`, 7.2, METIN_60);
+    for (const g of n.uyarilar) paragraf(`! ${g}`, 7.2, TURUNCU);
+    for (const g of n.ekler) paragraf(`Ek ekipman: ${g}`, 7.2, SOGUK_DIM);
+    y += 1;
+  }
+
   for (const x of s.sistemler) {
     bolumBasligi(`${x.ad} — ${x.tipAdi}`, 60);
     tablo(
@@ -330,17 +356,43 @@ export function klimaHesapPdfOlustur(
       ]
     );
     altBaslik("Boru hatları");
-    tablo(
-      [
-        { ad: "Hat", w: 60 },
-        { ad: "Uzunluk m", w: 18, hiza: "sag" },
-        { ad: "Kapasite kW", w: 20, hiza: "sag" },
-        { ad: "Gaz", w: 40 },
-        { ad: "Sıvı", w: 40 },
-      ],
-      x.parcalar.map((p) => [p.ad, sy(p.uzunluk), sy(p.kw), borAdi(p.gaz), borAdi(p.sivi)]),
-      { boyut: 7 }
-    );
+    if (x.tip === "VRF_HR")
+      tablo(
+        [
+          { ad: "Hat", w: 52 },
+          { ad: "m", w: 12, hiza: "sag" },
+          { ad: "kW", w: 14, hiza: "sag" },
+          { ad: "Emme gazı", w: 34 },
+          { ad: "Basma gazı", w: 34 },
+          { ad: "Sıvı", w: 34 },
+        ],
+        x.parcalar.map((p) => [p.ad, sy(p.uzunluk), sy(p.kw), borAdi(p.gaz), p.basma ? borAdi(p.basma) : "- (BS sonrası)", borAdi(p.sivi)]),
+        { boyut: 7 }
+      );
+    else
+      tablo(
+        [
+          { ad: "Hat", w: 60 },
+          { ad: "Uzunluk m", w: 18, hiza: "sag" },
+          { ad: "Kapasite kW", w: 20, hiza: "sag" },
+          { ad: "Gaz", w: 40 },
+          { ad: "Sıvı", w: 40 },
+        ],
+        x.parcalar.map((p) => [p.ad, sy(p.uzunluk), sy(p.kw), borAdi(p.gaz), borAdi(p.sivi)]),
+        { boyut: 7 }
+      );
+    if (x.bsKutulari.length) {
+      altBaslik("BS (soğutma / ısıtma seçici) kutuları");
+      tablo(
+        [
+          { ad: "Oda", w: 70 },
+          { ad: "Kapasite", w: 30, hiza: "sag" },
+          { ad: "Kutu", w: 80 },
+        ],
+        x.bsKutulari.map((b) => [b.oda, `${sy(b.kw)} kW`, b.ad]),
+        { boyut: 7 }
+      );
+    }
     if (x.bransmanlar.length) {
       altBaslik("Branşman kitleri");
       tablo(
@@ -408,7 +460,8 @@ export function klimaHesapPdfOlustur(
     [
       "Soğutma yükü: camdan güneş kazancı Q = A · SHGF · cam katsayısı · gölgeleme katsayısı · 0,82 (ASHRAE, ~40° K, Temmuz en yüksek değerleri); opak elemanlarda Q = A · U · (dış − iç + güneş eki) eşdeğer sıcaklık farkı yaklaşımı.",
       "İç kazançlar: kişi başı duyulur / gizli ısı, aydınlatma W/m², cihaz W. Havalandırma: duyulur 0,34 · V · ΔT, gizli 0,833 · V · Δx (V: hava debisi m³/h, Δx: g/kg); dış hava nemi kuru / yaş termometreden, iç nem seçilen bağıl nemden hesaplanmıştır.",
-      "Isıtma yükü: EN 12831 basitleştirilmiş yöntem (ısı pompası hesabıyla aynı).",
+      "Isıtma yükü: EN 12831 basitleştirilmiş yöntem (ısı pompası hesabıyla aynı). 4 m üzeri tavanlarda tabaka (stratifikasyon) için ısıtma yükü 0,025 · (h − 4) oranında, en çok %15 artırılmıştır.",
+      "İç ünite seçimi: mekân tipi, tavan yüksekliği ve tavan yapısı, gürültü hassasiyeti ve oda biçimine göre uygun tip; adet kapasite ve kapsama alanından, gerekli besleme havası duyulur yükten (ΔT ≈ 11 K) hesaplanır. Kanallı ünitelerde dış statik basınç, kanal sürtünmesi (~1,6 Pa/m), menfez / nozul, filtre ve dönüş kayıplarının toplamı olarak tahmin edilir.",
       "Dış ünite: soğutma kapasitesi dış sıcaklık ve boru eşdeğer uzunluğu, ısıtma kapasitesi kış tasarım sıcaklığı ve boru uzunluğu için tipik eğrilerle düzeltilmiştir.",
       "Boru çapları, branşman kademeleri, mesafe sınırları ve ek gaz katsayıları markadan bağımsız tipik değerlerdir; uygulama öncesi seçilen cihazın üretici tablosuyla kontrol edilmelidir.",
       "EN 378 / IEC 60335-2-40: R410A için pratik sınır 0,44 kg/m³; R32 için m = 2,5 · LFL^1,25 · h0 · √A (LFL 0,307 kg/m³).",

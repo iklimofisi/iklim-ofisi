@@ -54,17 +54,262 @@ export const KULLANIMLAR = {
 } as const;
 export type Kullanim = keyof typeof KULLANIMLAR;
 
-// --- İç ünite tipleri ve standart kapasiteleri (kW, soğutma, nominal) --------
-// VRF iç ünite kademeleri (P15 … P140 karşılığı); split / multi BTU kademeleri
+// --- İç ünite tipleri -------------------------------------------------------
+// vrf / split: standart kapasite kademeleri (kW, nominal soğutma)
+// tavanMaks: normal montajda en yüksek tavan; tavanYuksekMod: "yüksek tavan" ayarıyla
+// atis: tipik atış mesafesi (m); kapsama: bir ünitenin karşılayabildiği alan (m², açık hacim)
+// esp: dış statik basınç aralığı (Pa, yalnız kanallı); ses: ses basınç düzeyi aralığı dB(A)
+// asmaTavan: GEREKLI (kaset, kanallı) | GEREKMEZ
+export type UniteTanimi = {
+  ad: string;
+  kisa: string;
+  h0: number; // EN 378 montaj yüksekliği (m)
+  vrf: readonly number[];
+  split: readonly number[];
+  tavanMin: number;
+  tavanMaks: number;
+  tavanYuksekMod: number;
+  atis: number;
+  kapsama: number;
+  esp: readonly [number, number] | null;
+  kanalMaks: number; // m (kanallı tiplerde önerilen en uzun kanal)
+  ses: readonly [number, number];
+  asmaTavan: "GEREKLI" | "GEREKMEZ";
+  yasamBolgesi: boolean; // üfleme yaşam bölgesinden (yüksek tavanda avantaj)
+  debiKw: number; // m³/h / kW — tipik hava debisi (yüksek fan kademesi)
+  aciklama: string;
+};
+
 export const IC_UNITE_TIPLERI = {
-  DUVAR: { ad: "Duvar tipi", h0: 1.8, vrf: [1.7, 2.2, 2.8, 3.6, 4.5, 5.6, 7.1], split: [2.6, 3.5, 5.3, 7.0] },
-  KASET: { ad: "Kaset tipi (4 yön)", h0: 2.2, vrf: [2.8, 3.6, 4.5, 5.6, 7.1, 8.0, 9.0, 11.2, 14.0], split: [3.5, 5.3, 7.0, 10.0, 14.0] },
-  KASET_KUCUK: { ad: "Kaset tipi (60×60)", h0: 2.2, vrf: [1.7, 2.2, 2.8, 3.6, 4.5, 5.6], split: [2.6, 3.5, 5.3] },
-  KANALLI: { ad: "Gizli tavan kanallı", h0: 2.2, vrf: [1.7, 2.2, 2.8, 3.6, 4.5, 5.6, 7.1, 8.0, 9.0, 11.2, 14.0], split: [2.6, 3.5, 5.3, 7.0, 10.0, 14.0] },
-  TAVAN: { ad: "Tavan askılı", h0: 2.2, vrf: [3.6, 4.5, 5.6, 7.1, 9.0, 11.2, 14.0], split: [5.3, 7.0, 10.0, 14.0] },
-  KONSOL: { ad: "Döşeme / konsol tipi", h0: 0.6, vrf: [2.2, 2.8, 3.6, 4.5, 5.6, 7.1], split: [2.6, 3.5, 5.3] },
-  SALON: { ad: "Salon tipi (dikili)", h0: 0.6, vrf: [], split: [7.0, 10.0, 14.0] },
-} as const;
+  DUVAR: {
+    ad: "Duvar tipi",
+    kisa: "Duvar",
+    h0: 1.8,
+    vrf: [1.7, 2.2, 2.8, 3.6, 4.5, 5.6, 7.1],
+    split: [2.6, 3.5, 5.3, 7.0],
+    tavanMin: 2.2,
+    tavanMaks: 3.2,
+    tavanYuksekMod: 3.5,
+    atis: 7,
+    kapsama: 30,
+    esp: null,
+    kanalMaks: 0,
+    ses: [22, 42],
+    asmaTavan: "GEREKMEZ",
+    yasamBolgesi: true,
+    debiKw: 210,
+    aciklama: "Konut ve küçük odalar için ekonomik çözüm; asma tavan gerektirmez.",
+  },
+  KASET: {
+    ad: "Kaset tipi (4 yön, 840×840)",
+    kisa: "Kaset 4 yön",
+    h0: 2.2,
+    vrf: [2.8, 3.6, 4.5, 5.6, 7.1, 8.0, 9.0, 11.2, 14.0],
+    split: [3.5, 5.3, 7.0, 10.0, 14.0],
+    tavanMin: 2.5,
+    tavanMaks: 3.2,
+    tavanYuksekMod: 4.2,
+    atis: 4.5,
+    kapsama: 60,
+    esp: null,
+    kanalMaks: 0,
+    ses: [27, 45],
+    asmaTavan: "GEREKLI",
+    yasamBolgesi: false,
+    debiKw: 190,
+    aciklama: "Açık ofis, mağaza, restoran gibi geniş alanlarda dört yöne eşit dağıtım.",
+  },
+  KASET_KUCUK: {
+    ad: "Kaset tipi (4 yön, 60×60 kompakt)",
+    kisa: "Kaset 60×60",
+    h0: 2.2,
+    vrf: [1.7, 2.2, 2.8, 3.6, 4.5, 5.6],
+    split: [2.6, 3.5, 5.3],
+    tavanMin: 2.4,
+    tavanMaks: 3.0,
+    tavanYuksekMod: 3.5,
+    atis: 3,
+    kapsama: 35,
+    esp: null,
+    kanalMaks: 0,
+    ses: [25, 40],
+    asmaTavan: "GEREKLI",
+    yasamBolgesi: false,
+    debiKw: 200,
+    aciklama: "60×60 plaka asma tavana birebir oturur; ofis ve küçük alanlar.",
+  },
+  KASET_TEK: {
+    ad: "Kaset tipi (tek yön / iki yön)",
+    kisa: "Kaset 1-2 yön",
+    h0: 2.2,
+    vrf: [1.7, 2.2, 2.8, 3.6, 4.5, 5.6, 7.1],
+    split: [],
+    tavanMin: 2.4,
+    tavanMaks: 3.0,
+    tavanYuksekMod: 3.5,
+    atis: 5,
+    kapsama: 25,
+    esp: null,
+    kanalMaks: 0,
+    ses: [25, 40],
+    asmaTavan: "GEREKLI",
+    yasamBolgesi: false,
+    debiKw: 200,
+    aciklama: "Cephe boyunca, koridor ve dar uzun alanlar; tek yöne güçlü atış.",
+  },
+  KANALLI_INCE: {
+    ad: "Kanallı — düşük statik (ince)",
+    kisa: "Kanallı düşük statik",
+    h0: 2.2,
+    vrf: [1.7, 2.2, 2.8, 3.6, 4.5, 5.6, 7.1],
+    split: [2.6, 3.5, 5.3, 7.0],
+    tavanMin: 2.4,
+    tavanMaks: 3.5,
+    tavanYuksekMod: 3.5,
+    atis: 6,
+    kapsama: 40,
+    esp: [10, 50],
+    kanalMaks: 8,
+    ses: [22, 35],
+    asmaTavan: "GEREKLI",
+    yasamBolgesi: false,
+    debiKw: 200,
+    aciklama: "Otel odası, konut ve yatak odaları; kısa kanal, çok sessiz, tamamen gizli.",
+  },
+  KANALLI: {
+    ad: "Kanallı — orta statik",
+    kisa: "Kanallı orta statik",
+    h0: 2.2,
+    vrf: [2.2, 2.8, 3.6, 4.5, 5.6, 7.1, 8.0, 9.0, 11.2, 14.0],
+    split: [3.5, 5.3, 7.0, 10.0, 14.0],
+    tavanMin: 2.4,
+    tavanMaks: 4.5,
+    tavanYuksekMod: 4.5,
+    atis: 8,
+    kapsama: 80,
+    esp: [50, 150],
+    kanalMaks: 25,
+    ses: [28, 42],
+    asmaTavan: "GEREKLI",
+    yasamBolgesi: false,
+    debiKw: 180,
+    aciklama: "Ofis, mağaza, toplantı salonları; birden çok menfeze kanal ile dağıtım.",
+  },
+  KANALLI_YUKSEK: {
+    ad: "Kanallı — yüksek statik basınçlı",
+    kisa: "Kanallı yüksek statik",
+    h0: 2.2,
+    vrf: [7.1, 8.0, 9.0, 11.2, 14.0, 16.0, 22.4, 28.0],
+    split: [10.0, 14.0],
+    tavanMin: 2.6,
+    tavanMaks: 15,
+    tavanYuksekMod: 15,
+    atis: 15,
+    kapsama: 150,
+    esp: [100, 250],
+    kanalMaks: 60,
+    ses: [38, 50],
+    asmaTavan: "GEREKMEZ",
+    yasamBolgesi: false,
+    debiKw: 165,
+    aciklama: "Yüksek tavanlı ve büyük hacimler, uzun kanal; jet nozul / girdaplı difüzörle yaşam bölgesine üfleme.",
+  },
+  TAVAN: {
+    ad: "Tavan askılı",
+    kisa: "Tavan askılı",
+    h0: 2.2,
+    vrf: [3.6, 4.5, 5.6, 7.1, 9.0, 11.2, 14.0],
+    split: [5.3, 7.0, 10.0, 14.0],
+    tavanMin: 2.5,
+    tavanMaks: 4.2,
+    tavanYuksekMod: 5.0,
+    atis: 10,
+    kapsama: 70,
+    esp: null,
+    kanalMaks: 0,
+    ses: [33, 46],
+    asmaTavan: "GEREKMEZ",
+    yasamBolgesi: false,
+    debiKw: 200,
+    aciklama: "Asma tavanı olmayan mağaza, restoran, atölye; uzun atış.",
+  },
+  KONSOL: {
+    ad: "Döşeme / konsol tipi",
+    kisa: "Konsol",
+    h0: 0.6,
+    vrf: [2.2, 2.8, 3.6, 4.5, 5.6, 7.1],
+    split: [2.6, 3.5, 5.3],
+    tavanMin: 2.2,
+    tavanMaks: 30,
+    tavanYuksekMod: 30,
+    atis: 6,
+    kapsama: 25,
+    esp: null,
+    kanalMaks: 0,
+    ses: [25, 40],
+    asmaTavan: "GEREKMEZ",
+    yasamBolgesi: true,
+    debiKw: 190,
+    aciklama: "Yaşam bölgesinden üfler; yüksek tavan, cephe önü, ısıtma ağırlıklı mekanlar.",
+  },
+  DOSEME_GIZLI: {
+    ad: "Döşeme gizli (niş / cephe altı)",
+    kisa: "Döşeme gizli",
+    h0: 0.6,
+    vrf: [2.2, 2.8, 3.6, 4.5, 5.6, 7.1],
+    split: [],
+    tavanMin: 2.2,
+    tavanMaks: 30,
+    tavanYuksekMod: 30,
+    atis: 5,
+    kapsama: 20,
+    esp: [10, 50],
+    kanalMaks: 3,
+    ses: [25, 38],
+    asmaTavan: "GEREKMEZ",
+    yasamBolgesi: true,
+    debiKw: 190,
+    aciklama: "Cam cephe önü, pencere altı; görünmeyen montaj.",
+  },
+  SALON: {
+    ad: "Salon tipi (dikili)",
+    kisa: "Salon tipi",
+    h0: 0.6,
+    vrf: [],
+    split: [7.0, 10.0, 14.0],
+    tavanMin: 2.4,
+    tavanMaks: 30,
+    tavanYuksekMod: 30,
+    atis: 12,
+    kapsama: 100,
+    esp: null,
+    kanalMaks: 0,
+    ses: [40, 52],
+    asmaTavan: "GEREKMEZ",
+    yasamBolgesi: true,
+    debiKw: 180,
+    aciklama: "Bağımsız split; düğün salonu, cami, spor salonu gibi büyük hacimlerde güçlü atış.",
+  },
+  TAZE_HAVA: {
+    ad: "Taze hava işleme ünitesi (VRF, %100 dış hava)",
+    kisa: "Taze hava ünitesi",
+    h0: 2.2,
+    vrf: [12.5, 14.0, 22.4, 28.0],
+    split: [],
+    tavanMin: 2.6,
+    tavanMaks: 15,
+    tavanYuksekMod: 15,
+    atis: 15,
+    kapsama: 400,
+    esp: [100, 250],
+    kanalMaks: 60,
+    ses: [38, 50],
+    asmaTavan: "GEREKMEZ",
+    yasamBolgesi: false,
+    debiKw: 80,
+    aciklama: "Yoğun taze hava ihtiyacı olan mekanlarda dış havayı şartlandırarak verir; oda yükünü almaz.",
+  },
+} as const satisfies Record<string, UniteTanimi>;
 export type IcUniteTipi = keyof typeof IC_UNITE_TIPLERI;
 
 // Split klima BTU karşılıkları (gösterim)
@@ -87,6 +332,19 @@ export const ISITMA_ORANI = 1.12;
 export const SISTEM_TIPLERI = {
   VRF: {
     ad: "VRF (modüler)",
+    dis: [22.4, 28, 33.5, 40, 45, 50, 56, 61.5, 68, 73, 78.5, 85, 90, 96, 101, 106.5, 112, 118, 124, 130, 135, 140, 145, 150, 156, 162, 168],
+    oranMin: 50,
+    oranMaks: 130,
+    maksIcUnite: 64,
+    toplamBoru: 300,
+    enUzak: 165,
+    ilkBransmandanSonra: 40,
+    kotDisUstte: 50,
+    kotDisAltta: 40,
+    kotIcIc: 15,
+  },
+  VRF_HR: {
+    ad: "VRF ısı geri kazanımlı (3 borulu)",
     dis: [22.4, 28, 33.5, 40, 45, 50, 56, 61.5, 68, 73, 78.5, 85, 90, 96, 101, 106.5, 112, 118, 124, 130, 135, 140, 145, 150, 156, 162, 168],
     oranMin: 50,
     oranMaks: 130,
@@ -128,6 +386,7 @@ export const SISTEM_TIPLERI = {
 export type SistemTipi = keyof typeof SISTEM_TIPLERI;
 // Multi split dış ünitelerinin en çok bağlanabilen oda sayısı (kademe sırasıyla)
 export const MULTI_ODA_SAYISI = [2, 3, 4, 4, 5];
+export const VRF_TIPLERI: readonly SistemTipi[] = ["VRF", "VRF_HR", "MINI_VRF"];
 
 // --- Kapasite düzeltmeleri (tipik eğriler) -----------------------------------
 // Soğutma: 35 °C dış sıcaklığın üstünde her 1 K için ~%1,1 düşüş
@@ -205,6 +464,18 @@ export const SPLIT_CAPLARI: { maksKw: number; gaz: number; sivi: number }[] = [
   { maksKw: 7.1, gaz: 15.88, sivi: 9.52 },
   { maksKw: 1e9, gaz: 15.88, sivi: 9.52 },
 ];
+// 3 borulu (ısı geri kazanımlı) sistemde basma gazı hattı: emme gazından bir kademe küçük
+export function basmaCapi(emme: number): number {
+  const i = BORULAR.findIndex((b) => Math.abs(b.cap - emme) < 0.01);
+  return i > 1 ? BORULAR[i - 1].cap : emme;
+}
+// BS (branşman seçici) kutusu kademeleri — bağlı iç ünite kapasitesine göre
+export const BS_KADEMELERI: { maksKw: number; ad: string }[] = [
+  { maksKw: 16, ad: "BS kutusu (tek port, ≤ 16 kW)" },
+  { maksKw: 28, ad: "BS kutusu (tek port, ≤ 28 kW)" },
+  { maksKw: 1e9, ad: "BS kutusu (tek port, > 28 kW)" },
+];
+
 export function capSec(tablo: { maksKw: number; gaz: number; sivi: number }[], kw: number) {
   return tablo.find((t) => kw <= t.maksKw + 1e-9) ?? tablo[tablo.length - 1];
 }

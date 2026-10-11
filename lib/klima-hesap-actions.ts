@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { girisZorunlu } from "@/lib/oturum";
 import { islemKaydet } from "@/lib/islem-kaydi";
 import { klimaVeriOku, varsayilanKlimaVerisi, ornekKlimaDairesi, klimaOdasi, type KlimaOda } from "@/lib/klima-hesap/tipler";
+import { mekanOdaTipinden } from "@/lib/klima-hesap/mekanlar";
 import { veriOku as isiVeriOku } from "@/lib/isi-hesap/tipler";
 import { klimaHesapla } from "@/lib/klima-hesap/hesap";
 import { ILLER } from "@/lib/isi-hesap/iklim";
@@ -50,8 +51,9 @@ export async function klimaHesapOlustur(formData: FormData) {
       veri.isiKoprusu = iv.isiKoprusu;
       veri.yonArtirimi = iv.yonArtirimi;
       veri.odalar = iv.odalar.map((o) => {
-        const d = klimaOdasi(o.tip);
-        const k: KlimaOda = { ...d, ...o, isitici: "RADYATOR" };
+        const d = klimaOdasi(mekanOdaTipinden(o.tip), { en: o.en, boy: o.boy });
+        // Isı pompası hesabındaki ölçü, sıcaklık ve yapı elemanları korunur
+        const k: KlimaOda = { ...d, ...o, ad: o.ad, isitici: "RADYATOR" };
         return k;
       });
       musteriId = musteriId ?? kaynak.musteriId;

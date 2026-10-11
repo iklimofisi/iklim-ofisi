@@ -7,15 +7,25 @@ import { ILLER } from "@/lib/isi-hesap/iklim";
 import { veriOku as isiVeriOku, yeniOda, yeniEleman, yeniId, type Oda } from "@/lib/isi-hesap/tipler";
 import type { OdaTipi, Yon } from "@/lib/isi-hesap/katalog";
 import { GOLGELER, IC_UNITE_TIPLERI, KULLANIMLAR, SISTEM_TIPLERI, AKISKANLAR, type IcUniteTipi, type SistemTipi, type Kullanim, type Akiskan } from "./katalog";
+import { MEKANLAR, mekanOdaTipinden, TAVAN_TIPLERI, TAZE_HAVA_DUZENLERI, type MekanTipi, type TavanTipi, type TazeHavaDuzeni } from "./mekanlar";
+
+export type UniteSecimi = IcUniteTipi | "OTOMATIK";
+export type HrvTipi = "PLAKALI" | "ENTALPI";
 
 export type KlimaOda = Oda & {
+  mekan: MekanTipi;
+  tavanTipi: TavanTipi;
+  tazeHava: TazeHavaDuzeni;
+  sessiz: boolean; // gürültüye duyarlı mekân (yatak, toplantı, sınıf…)
+  kanalUzunluk: number; // m — kanallı ünitede en uzak menfeze kanal (0 = otomatik)
+  filtre: "STANDART" | "F7";
   klima: boolean; // bu oda klimalanıyor mu
   kisi: number;
   aydinlatma: number; // W/m²
   cihaz: number; // W
   sogutmaSicaklik: number; // °C
   golge: string;
-  uniteTipi: IcUniteTipi;
+  uniteTipi: UniteSecimi; // OTOMATIK = sistem önerir
   uniteAdet: number;
   uniteKw: number; // 0 = otomatik
   sistem: number; // 0 = bağımsız split klima; 1.. = sistem no (VRF / mini VRF / multi)
@@ -51,6 +61,7 @@ export type KlimaVerisi = {
   emniyetPayi: number; // % (iç ünite seçiminde)
   eszamanlilik: number; // % (dış ünite seçiminde odaların toplam yüküne uygulanır)
   akiskan: Akiskan;
+  hrvTipi: HrvTipi;
   sistemler: Sistem[];
   odalar: KlimaOda[];
 };
@@ -70,23 +81,52 @@ function secim<T extends string>(v: unknown, izinli: readonly T[], varsayilan: T
 }
 const metin = (v: unknown, maks = 200) => (typeof v === "string" ? v.slice(0, maks) : "");
 
-const VARSAYILAN_KISI: Record<OdaTipi, number> = { OTURMA: 4, YATAK: 2, COCUK: 1, MUTFAK: 2, BANYO: 0, WC: 0, HOL: 0, OFIS: 2, DIGER: 1 };
-const VARSAYILAN_CIHAZ: Record<OdaTipi, number> = { OTURMA: 300, YATAK: 100, COCUK: 150, MUTFAK: 800, BANYO: 0, WC: 0, HOL: 0, OFIS: 300, DIGER: 100 };
-const KLIMASIZ: OdaTipi[] = ["BANYO", "WC", "HOL"];
+const KONUT_KISI: Partial<Record<MekanTipi, number>> = { KONUT_SALON: 4, KONUT_YATAK: 2, KONUT_COCUK: 1, KONUT_MUTFAK: 2, KONUT_ISLAK: 0, KONUT_HOL: 0 };
+const KLIMASIZ: MekanTipi[] = ["KONUT_ISLAK", "KONUT_HOL"];
 
-export function klimaOdasi(tip: OdaTipi = "OTURMA", ek: Partial<KlimaOda> = {}): KlimaOda {
-  const o = yeniOda(tip);
+// Mekân seçildiğinde (ya da alan değiştiğinde) önerilen kişi / cihaz / sıcaklık değerleri
+export function mekanVarsayilanlari(mekan: MekanTipi, alan: number) {
+  const mk = MEKANLAR[mekan];
+  const kisi = KONUT_KISI[mekan] ?? (mk.yogunluk >= 50 ? 0 : Math.max(1, Math.round(alan / mk.yogunluk)));
+  return {
+    kisi,
+    aydinlatma: mk.aydinlatma,
+    cihaz: Math.round(mk.ekipman * alan),
+    sogutmaSicaklik: mk.yazIc,
+    sicaklik: mk.kisIc,
+    tazeHava: mk.tazeHava,
+    sessiz: mk.sessiz,
+    tavanTipi: mk.tavanTipi,
+    yukseklik: mk.tavan,
+  };
+}
+
+export function klimaOdasi(mekan: MekanTipi = "KONUT_SALON", ek: Partial<KlimaOda> = {}): KlimaOda {
+  const mk = MEKANLAR[mekan];
+  const o = yeniOda(mk.odaTipi);
+  const en = ek.en ?? o.en;
+  const boy = ek.boy ?? o.boy;
+  const d = mekanVarsayilanlari(mekan, en * boy);
   return {
     ...o,
+    ad: mk.ad,
     isitici: "RADYATOR",
-    klima: !KLIMASIZ.includes(tip),
-    kisi: VARSAYILAN_KISI[tip],
-    aydinlatma: 8,
-    cihaz: VARSAYILAN_CIHAZ[tip],
-    sogutmaSicaklik: 26,
+    mekan,
+    tavanTipi: d.tavanTipi,
+    tazeHava: d.tazeHava,
+    sessiz: d.sessiz,
+    kanalUzunluk: 0,
+    filtre: "STANDART",
+    klima: !KLIMASIZ.includes(mekan),
+    kisi: d.kisi,
+    aydinlatma: d.aydinlatma,
+    cihaz: d.cihaz,
+    sogutmaSicaklik: d.sogutmaSicaklik,
+    sicaklik: d.sicaklik,
+    yukseklik: d.yukseklik,
     golge: "TUL",
-    uniteTipi: "DUVAR",
-    uniteAdet: 1,
+    uniteTipi: "OTOMATIK",
+    uniteAdet: 0,
     uniteKw: 0,
     sistem: 1,
     hatMesafe: 4,
@@ -117,6 +157,7 @@ export function varsayilanKlimaVerisi(il = "İstanbul"): KlimaVerisi {
     emniyetPayi: 10,
     eszamanlilik: 90,
     akiskan: "R410A",
+    hrvTipi: "PLAKALI",
     sistemler: [yeniSistem(1, "VRF")],
     odalar: [],
   };
@@ -126,11 +167,11 @@ export function ornekKlimaDairesi(): KlimaOda[] {
   const dd = (yon: Yon, en: number) => yeniEleman("DIS_DUVAR", { yon, en });
   const pn = (yon: Yon, en: number, boy = 1.5) => yeniEleman("PENCERE", { yon, en, boy });
   return [
-    klimaOdasi("OTURMA", { ad: "Salon", en: 6, boy: 4.5, uniteTipi: "KASET", hatMesafe: 3, elemanlar: [dd("G", 6), pn("G", 2.4, 2.2), dd("B", 4.5), pn("B", 1.5)] }),
-    klimaOdasi("MUTFAK", { ad: "Mutfak", en: 3.5, boy: 3, hatMesafe: 5, elemanlar: [dd("D", 3.5), pn("D", 1.2)] }),
-    klimaOdasi("YATAK", { ad: "Yatak odası", en: 4, boy: 3.5, hatMesafe: 6, elemanlar: [dd("K", 4), pn("K", 1.5)] }),
-    klimaOdasi("COCUK", { ad: "Çocuk odası", en: 3.5, boy: 3, hatMesafe: 4, elemanlar: [dd("K", 3.5), pn("K", 1.2)] }),
-    klimaOdasi("BANYO", { ad: "Banyo", en: 2.5, boy: 2, elemanlar: [dd("K", 2.5), pn("K", 0.6, 0.6)] }),
+    klimaOdasi("KONUT_SALON", { ad: "Salon", en: 6, boy: 4.5, hatMesafe: 3, elemanlar: [dd("G", 6), pn("G", 2.4, 2.2), dd("B", 4.5), pn("B", 1.5)] }),
+    klimaOdasi("KONUT_MUTFAK", { ad: "Mutfak", en: 3.5, boy: 3, hatMesafe: 5, elemanlar: [dd("D", 3.5), pn("D", 1.2)] }),
+    klimaOdasi("KONUT_YATAK", { ad: "Yatak odası", en: 4, boy: 3.5, hatMesafe: 6, elemanlar: [dd("K", 4), pn("K", 1.5)] }),
+    klimaOdasi("KONUT_COCUK", { ad: "Çocuk odası", en: 3.5, boy: 3, hatMesafe: 4, elemanlar: [dd("K", 3.5), pn("K", 1.2)] }),
+    klimaOdasi("KONUT_ISLAK", { ad: "Banyo", en: 2.5, boy: 2, elemanlar: [dd("K", 2.5), pn("K", 0.6, 0.6)] }),
   ];
 }
 
@@ -166,17 +207,27 @@ export function klimaVeriOku(ham: unknown): KlimaVerisi {
   const temel = isiVeriOku({ odalar: hamOdalar }).odalar;
   const odalar: KlimaOda[] = temel.map((o, i) => {
     const h = (hamOdalar[i] ?? {}) as Record<string, unknown>;
-    const d = klimaOdasi(o.tip);
+    // Eski kayıtlarda mekân yoktur: oda tipinden türetilir
+    const mekan = secim(h.mekan, Object.keys(MEKANLAR) as MekanTipi[], mekanOdaTipinden(o.tip));
+    const d = klimaOdasi(mekan, { en: o.en, boy: o.boy });
+    const eskiUnite = h.uniteTipi === "KANALLI" ? "KANALLI" : h.uniteTipi;
     return {
       ...o,
+      mekan,
+      tavanTipi: secim(h.tavanTipi, Object.keys(TAVAN_TIPLERI) as TavanTipi[], d.tavanTipi),
+      tazeHava: secim(h.tazeHava, Object.keys(TAZE_HAVA_DUZENLERI) as TazeHavaDuzeni[], d.tazeHava),
+      sessiz: typeof h.sessiz === "boolean" ? h.sessiz : d.sessiz,
+      kanalUzunluk: sayi(h.kanalUzunluk, 0, 0, 200),
+      filtre: secim(h.filtre, ["STANDART", "F7"] as const, "STANDART"),
       klima: typeof h.klima === "boolean" ? h.klima : d.klima,
       kisi: Math.round(sayi(h.kisi, d.kisi, 0, 500)),
       aydinlatma: sayi(h.aydinlatma, d.aydinlatma, 0, 60),
       cihaz: sayi(h.cihaz, d.cihaz, 0, 100000),
       sogutmaSicaklik: sayi(h.sogutmaSicaklik, 26, 18, 30),
       golge: secim(h.golge, GOLGELER.map((g) => g.anahtar), d.golge),
-      uniteTipi: secim(h.uniteTipi, Object.keys(IC_UNITE_TIPLERI) as IcUniteTipi[], "DUVAR"),
-      uniteAdet: Math.round(sayi(h.uniteAdet, 1, 1, 20)),
+      // Eski kayıtlarda tip elle seçilmişti; mekân alanı olmayan kayıtta seçim korunur
+      uniteTipi: secim(eskiUnite, ["OTOMATIK", ...(Object.keys(IC_UNITE_TIPLERI) as IcUniteTipi[])] as UniteSecimi[], "OTOMATIK"),
+      uniteAdet: Math.round(sayi(h.uniteAdet, 0, 0, 30)),
       uniteKw: sayi(h.uniteKw, 0, 0, 30),
       sistem: Math.round(sayi(h.sistem, 1, 0, 20)),
       hatMesafe: sayi(h.hatMesafe, 4, 0, 300),
@@ -204,6 +255,7 @@ export function klimaVeriOku(ham: unknown): KlimaVerisi {
     emniyetPayi: sayi(obj.emniyetPayi, 10, 0, 40),
     eszamanlilik: sayi(obj.eszamanlilik, 90, 50, 100),
     akiskan: secim(obj.akiskan, Object.keys(AKISKANLAR) as Akiskan[], "R410A"),
+    hrvTipi: secim(obj.hrvTipi, ["PLAKALI", "ENTALPI"] as const, "PLAKALI"),
     sistemler: tekil.length ? tekil : [yeniSistem(1)],
     odalar,
   };

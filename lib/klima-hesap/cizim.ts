@@ -8,7 +8,7 @@ import { sy } from "@/lib/isi-hesap/hesap";
 import type { SistemSonucu, BoruParcasi } from "./hesap";
 
 const BORU = "#0b7285";
-const cap = (p: BoruParcasi) => `Ø${sy(p.gaz, 2)} / Ø${sy(p.sivi, 2)}`;
+const cap = (p: BoruParcasi) => (p.basma ? `Ø${sy(p.gaz, 2)} / Ø${sy(p.basma, 2)} / Ø${sy(p.sivi, 2)}` : `Ø${sy(p.gaz, 2)} / Ø${sy(p.sivi, 2)}`);
 
 export function boruSemasi(s: SistemSonucu, baslik: string): Cizim {
   const k = new Kalem();
@@ -18,6 +18,8 @@ export function boruSemasi(s: SistemSonucu, baslik: string): Cizim {
   const Y0 = 58;
   const H = Y0 + (Math.max(1, n) - 1) * ADIM + 30;
   const multi = s.tip === "MULTI";
+  const hr = s.tip === "VRF_HR";
+  const bsGorulen = new Set<string>();
 
   k.yazi(8, 9, `SOĞUTUCU BORU ŞEMASI — ${s.ad} (${s.tipAdi})`, 4, { kalin: true });
   k.yazi(8, 15, baslik, 2.7, { renk: RENK.soluk });
@@ -90,6 +92,12 @@ export function boruSemasi(s: SistemSonucu, baslik: string): Cizim {
       const xBas = i < n - 1 ? TX + 2 : TX;
       k.cizgi(xBas, y, IX, y, BORU, 0.6);
       if (p) k.yazi((TX + IX) / 2 + 2, y - 1.5, `${cap(p)} · ${sy(p.uzunluk)} m`, 2.2, { hiza: "orta" });
+      if (hr && !bsGorulen.has(s.uniteler[i].oda)) {
+        // Isı geri kazanımlı VRF: her oda (bölge) bir BS kutusundan beslenir
+        bsGorulen.add(s.uniteler[i].oda);
+        k.dortgen(TX + 6, y - 2.6, 9, 5.2, RENK.cizgi, 0.4, { dolgu: "#ffe8cc", r: 0.6 });
+        k.yazi(TX + 10.5, y + 0.9, "BS", 2.2, { hiza: "orta", kalin: true });
+      }
       if (sonMu && n > 1) k.yazi(TX + 2.5, y + 4.2, "(son ünite, B" + (n - 1) + "'den)", 1.9, { renk: RENK.soluk });
       kutu(i);
     }
@@ -98,10 +106,15 @@ export function boruSemasi(s: SistemSonucu, baslik: string): Cizim {
   // Açıklama
   k.cizgi(8, H - 12, W - 8, H - 12, RENK.soluk, 0.3);
   k.cizgi(10, H - 7, 20, H - 7, BORU, 0.9);
-  k.yazi(22, H - 6.2, "Gaz + sıvı hat çifti (Ø gaz / Ø sıvı, mm)", 2.3);
+  k.yazi(22, H - 6.2, hr ? "BS öncesi 3 boru (Ø emme / Ø basma / Ø sıvı), BS sonrası 2 boru (mm)" : "Gaz + sıvı hat çifti (Ø gaz / Ø sıvı, mm)", 2.3);
   if (!multi) {
-    k.yol([[86, H - 7], [88, H - 9], [90, H - 7], [88, H - 5]], RENK.cizgi, 0.35, { kapali: true, dolgu: "#fff3bf" });
-    k.yazi(92, H - 6.2, "Y branşman kiti", 2.3);
+    const lx = hr ? 112 : 86;
+    k.yol([[lx, H - 7], [lx + 2, H - 9], [lx + 4, H - 7], [lx + 2, H - 5]], RENK.cizgi, 0.35, { kapali: true, dolgu: "#fff3bf" });
+    k.yazi(lx + 6, H - 6.2, "Y branşman kiti", 2.3);
+    if (hr) {
+      k.dortgen(150, H - 9.2, 7, 4.4, RENK.cizgi, 0.4, { dolgu: "#ffe8cc", r: 0.5 });
+      k.yazi(159, H - 6.2, "BS (soğ./ısıt. seçici) kutusu", 2.3);
+    }
   }
   k.yazi(W - 8, H - 2.5, "Tipik çap tablosuyla hazırlanmıştır; uygulamada üretici tablosuyla kontrol edilmelidir. Ölçekli değildir.", 2, {
     hiza: "sag",

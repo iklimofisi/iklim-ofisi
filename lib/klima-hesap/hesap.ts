@@ -22,7 +22,6 @@ import {
   CAM_GUNES,
   DUVAR_GUNES_EKI,
   CATI_GUNES_EKI,
-  KULLANIMLAR,
   IC_UNITE_TIPLERI,
   ISITMA_ORANI,
   SISTEM_TIPLERI,
@@ -35,6 +34,8 @@ import {
   SPLIT_CAPLARI,
   capSec,
   BRANSMAN_KADEMELERI,
+  BS_KADEMELERI,
+  basmaCapi,
   EK_GAZ_R410A,
   AKISKANLAR,
   FABRIKA_SARJ_KG_KW,
@@ -44,6 +45,11 @@ import {
   type SistemTipi,
 } from "./katalog";
 import type { KlimaVerisi, KlimaOda, Sistem } from "./tipler";
+import { MEKANLAR, TAVAN_TIPLERI, TAZE_HAVA_DUZENLERI } from "./mekanlar";
+import { uniteOner, type UniteOnerisi } from "./oneri";
+
+// Isı geri kazanım verimleri (duyulur / gizli)
+export const HRV_VERIM = { PLAKALI: { s: 0.75, l: 0 }, ENTALPI: { s: 0.7, l: 0.6 } } as const;
 
 export { sy };
 
@@ -86,6 +92,13 @@ export type KlimaOdaSonucu = {
   isitma: number; // W (ısı kaybı)
   wm2: number;
   unite: { tip: IcUniteTipi; tipAdi: string; kw: number; adet: number; ad: string } | null;
+  mekanAd: string;
+  yukseklik: number;
+  tavanAd: string;
+  tazeHavaAd: string;
+  tazeDebi: number; // m³/h (mekânın gerektirdiği taze hava)
+  yukseklikDuzeltmesi: number; // ısıtma yüküne uygulanan oran (0,05 = %5)
+  oneri: UniteOnerisi | null;
   uyarilar: string[];
 };
 
@@ -96,6 +109,7 @@ export type BoruParcasi = {
   kw: number; // arkasındaki kapasite
   gaz: number;
   sivi: number;
+  basma?: number; // 3 borulu sistemde basma gazı hattı
 };
 
 export type UniteBaglantisi = {
@@ -125,6 +139,8 @@ export type SistemSonucu = {
   duzeltme: { dis: number; boruSog: number; boruIsit: number; disIsit: number; leq: number };
   parcalar: BoruParcasi[];
   bransmanlar: { no: number; kw: number; ad: string }[];
+  bsKutulari: { oda: string; kw: number; ad: string }[];
+  tazeHavaToplam: number; // m³/h — mekanik taze hava alan odaların toplamı
   toplamBoru: number;
   enUzak: number;
   ilkBransmandanSonra: number;
@@ -162,7 +178,7 @@ const r1 = (x: number) => Math.round(x * 10) / 10;
 // ---------------------------------------------------------------------------
 // 1. ODA SOĞUTMA YÜKÜ
 // ---------------------------------------------------------------------------
-function odaSogutma(o: KlimaOda, v: KlimaVerisi, kt: number, dxGkg: number, isiSonuc: ReturnType<typeof odaIsiKaybi>) {
+function odaSogutma(o: KlimaOda, v: KlimaVerisi, kt: number, dxGkg: number, isiSonuc: ReturnType<typeof odaIsiKaybi>, tazeDebi: number) {
   const ts = o.sogutmaSicaklik;
   const dT = kt - ts;
   const kalemler: SogutmaKalemi[] = [];
@@ -194,25 +210,26 @@ function odaSogutma(o: KlimaOda, v: KlimaVerisi, kt: number, dxGkg: number, isiS
   kalemler.push({ ad: "Camdan güneş ışınımı", duyulur: gunes, gizli: 0 });
   kalemler.push({ ad: "Cam iletimi", duyulur: Math.max(0, camIletim), gizli: 0 });
   kalemler.push({ ad: "Duvar / çatı / döşeme", duyulur: opak, gizli: 0 });
-  const k = KULLANIMLAR[v.kullanim];
-  kalemler.push({ ad: `Kişi (${o.kisi})`, duyulur: o.kisi * k.kisiDuyulur, gizli: o.kisi * k.kisiGizli });
+  const mk = MEKANLAR[o.mekan];
+  kalemler.push({ ad: `Kişi (${o.kisi})`, duyulur: o.kisi * mk.duyulur, gizli: o.kisi * mk.gizli });
   const alan = o.en * o.boy;
   kalemler.push({ ad: "Aydınlatma", duyulur: o.aydinlatma * alan, gizli: 0 });
   kalemler.push({ ad: "Cihazlar", duyulur: o.cihaz, gizli: 0 });
-  const debi = alan * o.yukseklik * o.havaDegisim; // m³/h
-  kalemler.push({ ad: "Havalandırma / sızıntı", duyulur: Math.max(0, 0.34 * debi * dT), gizli: Math.max(0, 0.833 * debi * dxGkg) });
+  // Dış hava: sızıntı (n) ile mekanik taze havanın büyüğü; HRV'de taze hava kısmı geri kazanılır
+  const sizinti = alan * o.yukseklik * o.havaDegisim; // m³/h
+  const taze = o.tazeHava === "SIZINTI" ? 0 : tazeDebi;
+  const V = Math.max(sizinti, taze);
+  const verim = o.tazeHava === "HRV" ? HRV_VERIM[v.hrvTipi] : { s: 0, l: 0 };
+  const vDuyulur = V - taze * verim.s;
+  const vGizli = V - taze * verim.l;
+  kalemler.push({
+    ad: o.tazeHava === "SIZINTI" ? "Sızıntı / doğal havalandırma" : o.tazeHava === "HRV" ? `Taze hava ${Math.round(V)} m³/h (HRV ile)` : `Taze hava ${Math.round(V)} m³/h`,
+    duyulur: Math.max(0, 0.34 * vDuyulur * dT),
+    gizli: Math.max(0, 0.833 * vGizli * dxGkg),
+  });
   const duyulur = kalemler.reduce((t, x) => t + x.duyulur, 0);
   const gizli = kalemler.reduce((t, x) => t + x.gizli, 0);
   return { kalemler, duyulur, gizli };
-}
-
-// ---------------------------------------------------------------------------
-// 3. İÇ ÜNİTE SEÇİMİ
-// ---------------------------------------------------------------------------
-function uniteListesi(tip: IcUniteTipi, sistemTipi: SistemTipi | "SPLIT"): number[] {
-  const t = IC_UNITE_TIPLERI[tip];
-  if (sistemTipi === "VRF" || sistemTipi === "MINI_VRF") return [...(t.vrf.length ? t.vrf : t.split)];
-  return [...t.split];
 }
 
 // ---------------------------------------------------------------------------
@@ -231,43 +248,51 @@ export function klimaHesapla(v: KlimaVerisi): KlimaSonucu {
   // --- Odalar ---
   const odalar: KlimaOdaSonucu[] = v.odalar.map((o) => {
     const uy: string[] = [];
+    const mk = MEKANLAR[o.mekan];
+    const alan = o.en * o.boy;
+    const tazeDebi = (o.kisi * mk.tazeKisi + alan * mk.tazeAlan) * 3.6; // m³/h
     const isi = odaIsiKaybi({ ...o, isitici: "RADYATOR" }, v, disT);
     const xIc = nemBagil(o.sogutmaSicaklik, v.icNem, p);
     const dx = Math.max(0, (xDis - xIc) * 1000);
-    const sog = odaSogutma(o, v, kt, dx, isi);
+    const sog = odaSogutma(o, v, kt, dx, isi, tazeDebi);
     const sogutma = sog.duyulur + sog.gizli;
     const gereken = sogutma * (1 + v.emniyetPayi / 100);
-    const isitma = v.isitmaDa ? isi.toplam : 0;
-    const alan = o.en * o.boy;
+    // Isıtma: mekanik taze hava sızıntıdan fazlaysa fark eklenir; yüksek mekânda tabakalaşma düzeltmesi (EN 12831)
+    let isitma = 0;
+    let yukseklikDuzeltmesi = 0;
+    if (v.isitmaDa) {
+      const sizinti = alan * o.yukseklik * o.havaDegisim;
+      const tazeEtkin = o.tazeHava === "SIZINTI" ? 0 : tazeDebi * (o.tazeHava === "HRV" ? 1 - HRV_VERIM[v.hrvTipi].s : 1);
+      const tazeEk = 0.34 * Math.max(0, tazeEtkin - sizinti) * Math.max(0, o.sicaklik - disT);
+      yukseklikDuzeltmesi = o.yukseklik > 4 ? Math.min(0.15, 0.025 * (o.yukseklik - 4)) : 0;
+      isitma = (isi.toplam + tazeEk) * (1 + yukseklikDuzeltmesi);
+    }
 
     let unite: KlimaOdaSonucu["unite"] = null;
+    let oneri: UniteOnerisi | null = null;
     const sistem = o.sistem > 0 ? sistemTanim.get(o.sistem) : undefined;
     if (o.sistem > 0 && !sistem) uy.push(`Sistem ${o.sistem} tanımlı değil; oda bağımsız split klima olarak hesaplandı.`);
     const sTipi: SistemTipi | "SPLIT" = sistem ? sistem.tip : "SPLIT";
     if (o.klima) {
-      const liste = uniteListesi(o.uniteTipi, sTipi);
-      if (!liste.length) {
-        uy.push(`${IC_UNITE_TIPLERI[o.uniteTipi].ad} bu sistem tipinde yok; duvar tipi alındı.`);
-      }
-      const kullanilan = liste.length ? liste : uniteListesi("DUVAR", sTipi);
-      const tipAnahtar: IcUniteTipi = liste.length ? o.uniteTipi : "DUVAR";
-      const adet = Math.max(1, o.uniteAdet);
-      // Isıtmada iç ünite: VRF / multi'de dış ünite ayrıca kontrol edilir; bağımsız splitte dış sıcaklık düzeltmesi burada uygulanır
+      // Bağımsız splitte ısıtma kapasitesi dış sıcaklıkla düşer (VRF / multi'de dış ünite ayrıca kontrol edilir)
       const isitmaKatsayi = sTipi === "SPLIT" ? isitmaDisDuzeltme(disT) : 1;
-      const gerekliNominal = Math.max(gereken / 1000 / adet, isitma > 0 ? isitma / 1000 / adet / (ISITMA_ORANI * isitmaKatsayi) : 0);
-      let kw = o.uniteKw > 0 ? o.uniteKw : kullanilan.find((x) => x >= gerekliNominal - 1e-9) ?? kullanilan[kullanilan.length - 1];
-      if (o.uniteKw > 0 && o.uniteKw + 1e-9 < gerekliNominal) uy.push(`Seçilen ${sy(o.uniteKw)} kW iç ünite yetersiz; en az ${sy(gerekliNominal)} kW gerekli.`);
-      if (o.uniteKw <= 0 && kw + 1e-9 < gerekliNominal) uy.push(`En büyük ${IC_UNITE_TIPLERI[tipAnahtar].ad} (${sy(kw)} kW) yetmiyor; iç ünite adedini artırın ya da başka tip seçin.`);
-      kw = r1(kw);
-      const tipAdi = IC_UNITE_TIPLERI[tipAnahtar].ad;
-      unite = { tip: tipAnahtar, tipAdi, kw, adet, ad: sTipi === "SPLIT" || sTipi === "MULTI" ? `${tipAdi} ${btuAdi(kw)}` : `${tipAdi} ${sy(kw)} kW` };
+      oneri = uniteOner(o, sTipi, { gerekenW: gereken, duyulurW: sog.duyulur * (1 + v.emniyetPayi / 100), isitmaW: isitma, isitmaKatsayi, tazeDebi });
+      const tipAdi = IC_UNITE_TIPLERI[oneri.tip].ad;
+      unite = {
+        tip: oneri.tip,
+        tipAdi,
+        kw: oneri.kw,
+        adet: oneri.adet,
+        ad: sTipi === "SPLIT" || sTipi === "MULTI" ? `${tipAdi} ${btuAdi(oneri.kw)}` : `${tipAdi} ${sy(oneri.kw)} kW`,
+      };
+      uy.push(...oneri.uyarilar);
       if (sTipi === "SPLIT" && isitma > 0) {
-        const kap = kw * adet * ISITMA_ORANI * isitmaKatsayi * 1000;
+        const kap = oneri.kw * oneri.adet * ISITMA_ORANI * isitmaKatsayi * 1000;
         if (kap + 1 < isitma) uy.push(`Isıtmada yetersiz: ${sy(disT)} °C'de ~${sy(kap, 0)} W verir, ${sy(isitma, 0)} W gerekli.`);
         if (disT < -15) uy.push(`Dış tasarım ${sy(disT)} °C; standart split klimalar bu sıcaklıkta ısıtmada zorlanır, düşük sıcaklık (hyper heating) modeli seçilmeli.`);
       }
     }
-    if (o.klima && sog.gizli / Math.max(1, sogutma) > 0.35) uy.push("Gizli (nem) yükü yüksek; yeterli nem alma için iç ünite fan hızı düşük kademede çalıştırılmalı.");
+    if (o.klima && sog.gizli / Math.max(1, sogutma) > 0.35) uy.push("Gizli (nem) yükü yüksek; nem alma için iç ünite düşük fan kademesinde çalışmalı ya da taze hava ön şartlandırılmalı.");
     return {
       id: o.id,
       ad: o.ad,
@@ -283,6 +308,13 @@ export function klimaHesapla(v: KlimaVerisi): KlimaSonucu {
       isitma: o.klima ? isitma : 0,
       wm2: alan > 0 && o.klima ? sogutma / alan : 0,
       unite,
+      mekanAd: mk.ad,
+      yukseklik: o.yukseklik,
+      tavanAd: TAVAN_TIPLERI[o.tavanTipi],
+      tazeHavaAd: TAZE_HAVA_DUZENLERI[o.tazeHava],
+      tazeDebi: o.klima ? tazeDebi : 0,
+      yukseklikDuzeltmesi,
+      oneri,
       uyarilar: uy,
     };
   });
@@ -439,6 +471,43 @@ function sistemHesapla(s: Sistem, odalarHam: KlimaOda[], odalar: KlimaOdaSonucu[
     ana.gaz = c.gaz;
     ana.sivi = c.sivi;
   }
+  // 3 borulu (ısı geri kazanımlı) VRF: ana hat ve branşmanlar arası 3 boru, her odada BS kutusu
+  const hr = s.tip === "VRF_HR";
+  const bsKutulari: SistemSonucu["bsKutulari"] = [];
+  if (hr) {
+    for (const p of parcalar) if (p.tur !== "BRANS") p.basma = basmaCapi(p.gaz);
+    for (const o of odalarHam) {
+      const r = odalar.find((x) => x.id === o.id)!;
+      const kw = r.unite!.kw * r.unite!.adet;
+      // 28 kW üzeri bölgede BS kutusunun birden fazla portu birleştirilerek kullanılır
+      const port = Math.ceil(kw / 28 - 1e-9);
+      bsKutulari.push({
+        oda: o.ad,
+        kw,
+        ad: port > 1 ? `BS kutusu (çok portlu, ${port} port birleştirmeli, port başına ≤ 28 kW)` : (BS_KADEMELERI.find((b) => kw <= b.maksKw + 1e-9) ?? BS_KADEMELERI[1]).ad,
+      });
+    }
+  }
+  // Eşzamanlı ısıtma-soğutma ihtiyacı → ısı geri kazanımlı VRF önerisi
+  if (!hr && !multi && v.isitmaDa) {
+    const icBolge = odalarHam.filter((o) => {
+      const mk = MEKANLAR[o.mekan];
+      const disEleman = o.elemanlar.some((e) => e.tur === "DIS_DUVAR" || e.tur === "PENCERE" || e.tur === "CATI");
+      return mk.ozel === "SUNUCU" || mk.ozel === "MUTFAK_TICARI" || !disEleman || o.cihaz / Math.max(1, o.en * o.boy) > 60;
+    });
+    const cevre = odalarHam.filter((o) => !icBolge.includes(o) && (odalar.find((x) => x.id === o.id)?.isitma ?? 0) > 0);
+    if (icBolge.length && cevre.length)
+      uy.push(
+        `${icBolge.map((o) => o.ad).join(", ")} kışın da soğutma isterken ${cevre.length} oda ısıtma istiyor: eşzamanlı ısıtma-soğutma için ısı geri kazanımlı (3 borulu) VRF önerilir; iç zondan alınan ısı çevre zonlara aktarılır, enerji tüketimi düşer.`
+      );
+    else if (odalarHam.filter((o) => o.mekan === "OTEL_ODA").length >= 6)
+      uy.push("Otel odalarında misafirler aynı anda farklı mod isteyebilir; ısı geri kazanımlı (3 borulu) VRF değerlendirilmeli.");
+  }
+  const tazeHavaToplam = odalarHam.reduce((t, o) => (o.tazeHava === "SIZINTI" ? t : t + (odalar.find((x) => x.id === o.id)?.tazeDebi ?? 0)), 0);
+  if (tazeHavaToplam > 1500 && odalarHam.some((o) => o.tazeHava === "MEKANIK"))
+    uy.push(
+      `Bu sistemdeki odaların taze hava ihtiyacı ≈ ${sy(tazeHavaToplam, 0)} m³/h: dış hava yükü iç ünitelere bindirilmemeli; merkezi ısı geri kazanımlı havalandırma ya da VRF taze hava işleme ünitesi önerilir.`
+    );
 
   // --- Kontroller ---
   const kontroller: SistemSonucu["kontroller"] = [];
@@ -508,6 +577,8 @@ function sistemHesapla(s: Sistem, odalarHam: KlimaOda[], odalar: KlimaOdaSonucu[
     duzeltme: { dis: fDis, boruSog: bd.sogutma, boruIsit: bd.isitma, disIsit: fIsit, leq },
     parcalar,
     bransmanlar,
+    bsKutulari,
+    tazeHavaToplam,
     toplamBoru,
     enUzak,
     ilkBransmandanSonra,
@@ -543,7 +614,10 @@ function malzemeListesi(s: KlimaSonucu, v: KlimaVerisi): KlimaMalzeme[] {
     for (const [a, n] of gruplar) ek(B, a, n);
     if (sis.tip !== "MULTI") {
       ek(B, "Kablolu oda kumandası", sis.uniteler.length);
-      if (sis.tip === "VRF") ek(B, "Merkezi kumanda (dokunmatik)", 1);
+      if (sis.tip === "VRF" || sis.tip === "VRF_HR") ek(B, "Merkezi kumanda (dokunmatik)", 1);
+      const bsGrup = new Map<string, number>();
+      for (const b of sis.bsKutulari) bsGrup.set(b.ad, (bsGrup.get(b.ad) ?? 0) + 1);
+      for (const [a, n] of bsGrup) ek(B, `Branşman seçici ${a}`, n);
       const kitler = new Map<string, number>();
       for (const b of sis.bransmanlar) kitler.set(b.ad, (kitler.get(b.ad) ?? 0) + 1);
       for (const [a, n] of kitler) ek(B, a, n);
@@ -552,6 +626,7 @@ function malzemeListesi(s: KlimaSonucu, v: KlimaVerisi): KlimaMalzeme[] {
     for (const p of sis.parcalar) {
       capMetre.set(p.gaz, (capMetre.get(p.gaz) ?? 0) + p.uzunluk);
       capMetre.set(p.sivi, (capMetre.get(p.sivi) ?? 0) + p.uzunluk);
+      if (p.basma) capMetre.set(p.basma, (capMetre.get(p.basma) ?? 0) + p.uzunluk);
     }
     for (const [cap, L] of [...capMetre.entries()].sort((a, b) => a[0] - b[0]))
       ek(B, `Bakır boru ${borAdi(cap)} + kauçuk köpüğü yalıtım`, Math.ceil(L * 1.1), "m");
@@ -577,6 +652,46 @@ function malzemeListesi(s: KlimaSonucu, v: KlimaVerisi): KlimaMalzeme[] {
     ek(B, "Drenaj borusu", Math.ceil(uzunluk + 2 * s.splitler.length), "m");
     ek(B, "Dış ünite konsolu + titreşim takozu", s.splitler.reduce((t, o) => t + o.unite!.adet, 0), "Set");
     ek(B, "Split klima montajı (vakum ve devreye alma dahil)", s.splitler.reduce((t, o) => t + o.unite!.adet, 0), "İş");
+  }
+  // Hava dağıtımı, taze hava ve özel durum ekipmanları
+  const H = "Hava Dağıtımı ve Havalandırma";
+  const HRV_KADEMELERI = [150, 250, 350, 500, 650, 800, 1000, 1500, 2000];
+  const hrvGrup = new Map<number, number>();
+  let plenum = 0;
+  let difuzor = 0;
+  let jet = 0;
+  let donus = 0;
+  let kanalM2 = 0;
+  let esnek = 0;
+  for (const o of s.odalar) {
+    const on = o.oneri;
+    if (!o.klima || !on) continue;
+    const ham = v.odalar.find((x) => x.id === o.id);
+    if (on.esp !== null && on.tip !== "DOSEME_GIZLI") {
+      plenum += on.adet;
+      donus += on.adet;
+      if (o.yukseklik > 4.5) jet += on.menfez ?? 0;
+      else difuzor += on.menfez ?? 0;
+      kanalM2 += (on.kanal ?? 0) * 1.6 * on.adet;
+      esnek += (on.menfez ?? 0) * 1.5;
+    }
+    if (ham?.tazeHava === "HRV" && o.tazeDebi > 0) {
+      const n = Math.ceil(o.tazeDebi / 2000);
+      const kademe = HRV_KADEMELERI.find((k) => k >= o.tazeDebi / n) ?? 2000;
+      hrvGrup.set(kademe, (hrvGrup.get(kademe) ?? 0) + n);
+    }
+  }
+  ek(H, "Besleme / dönüş plenum kutusu (izoleli) — kanallı iç üniteler", plenum, "Set");
+  ek(H, "Girdaplı / lineer difüzör (damperli)", difuzor);
+  ek(H, "Jet nozul (uzun atışlı, ayarlanabilir) — yüksek tavanlı mekanlar", jet);
+  ek(H, "Dönüş menfezi (filtreli)", donus);
+  ek(H, "Galvaniz hava kanalı + ısı / ses yalıtımı", Math.ceil(kanalM2), "m²");
+  ek(H, "Esnek kanal (yalıtımlı) Ø200", Math.ceil(esnek), "m");
+  for (const [k, n] of [...hrvGrup.entries()].sort((a, b) => a[0] - b[0])) ek(H, `Isı geri kazanımlı havalandırma cihazı ${k} m³/h (${v.hrvTipi === "ENTALPI" ? "entalpi" : "plakalı"} eşanjör)`, n);
+  const sunucular = s.odalar.filter((o) => o.klima && o.unite && MEKANLAR[v.odalar.find((x) => x.id === o.id)?.mekan ?? "DIGER"].ozel === "SUNUCU");
+  for (const o of sunucular) {
+    ek(H, `Yedek (N+1) ünite — ${o.ad} (${o.unite!.ad})`, 1);
+    ek(H, `Dönüşümlü çalıştırma / alarm kontrolörü — ${o.ad}`, 1);
   }
   return m;
 }
