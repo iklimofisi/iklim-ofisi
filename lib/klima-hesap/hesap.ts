@@ -338,6 +338,11 @@ export function klimaHesapla(v: KlimaVerisi): KlimaSonucu {
 
   const toplamAlan = odalar.reduce((t, o) => t + o.alan, 0);
   if (!v.odalar.length) uyarilar.push("Henüz oda girilmedi.");
+  const elemansiz = v.odalar.filter((o) => o.klima && !o.elemanlar.length);
+  if (elemansiz.length)
+    uyarilar.push(
+      `${elemansiz.map((o) => o.ad).join(", ")}: dış duvar / pencere / çatı girilmemiş; güneş yükü ve ısı kaybı yalnız iç kazanç ve havalandırmadan hesaplandı. Oda gerçekten iç oda değilse Yapı elemanları bölümünden ekleyin.`
+    );
   if (v.odalar.length && !odalar.some((o) => o.klima)) uyarilar.push("Klimalanan oda yok (oda ekranında 'Bu oda klimalanacak' işaretleyin).");
 
   const sonuc: KlimaSonucu = {
@@ -513,15 +518,25 @@ function sistemHesapla(s: Sistem, odalarHam: KlimaOda[], odalar: KlimaOdaSonucu[
   }
   // Eşzamanlı ısıtma-soğutma ihtiyacı → ısı geri kazanımlı VRF önerisi
   if (!hr && !multi && v.isitmaDa) {
-    const icBolge = odalarHam.filter((o) => {
+    // Kış ısı dengesi: tasarım günü iç kazançları (kişi duyulur × 0,75 eşzamanlılık, aydınlatma ve cihaz × 0,8)
+    // odanın ısı kaybını aşıyorsa oda kışın da soğutma ister. Yapı elemanı girilmemiş odalar için karar verilmez
+    // (eksik veri iç zon sayılmaz); sunucu / elektrik odası ve ticari mutfak her zaman soğutma ister.
+    const kisDengesi = odalarHam.map((o) => {
       const mk = MEKANLAR[o.mekan];
-      const disEleman = o.elemanlar.some((e) => e.tur === "DIS_DUVAR" || e.tur === "PENCERE" || e.tur === "CATI");
-      return mk.ozel === "SUNUCU" || mk.ozel === "MUTFAK_TICARI" || !disEleman || o.cihaz / Math.max(1, o.en * o.boy) > 60;
+      const r = odalar.find((x) => x.id === o.id);
+      const kazanc = o.kisi * mk.duyulur * 0.75 + o.aydinlatma * o.en * o.boy * 0.8 + o.cihaz * 0.8;
+      const kayip = r?.isitma ?? 0;
+      const veriVar = o.elemanlar.length > 0;
+      const sogutmaIster = mk.ozel === "SUNUCU" || mk.ozel === "MUTFAK_TICARI" || (veriVar && kazanc > kayip * 1.1);
+      return { o, kazanc, kayip, veriVar, sogutmaIster };
     });
-    const cevre = odalarHam.filter((o) => !icBolge.includes(o) && (odalar.find((x) => x.id === o.id)?.isitma ?? 0) > 0);
+    const icBolge = kisDengesi.filter((d) => d.sogutmaIster);
+    const cevre = kisDengesi.filter((d) => !d.sogutmaIster && d.veriVar && d.kayip > d.kazanc);
     if (icBolge.length && cevre.length)
       uy.push(
-        `${icBolge.map((o) => o.ad).join(", ")} kışın da soğutma isterken ${cevre.length} oda ısıtma istiyor: eşzamanlı ısıtma-soğutma için ısı geri kazanımlı (3 borulu) VRF önerilir; iç zondan alınan ısı çevre zonlara aktarılır, enerji tüketimi düşer.`
+        `Kış tasarım gününde ${icBolge
+          .map((d) => (MEKANLAR[d.o.mekan].ozel ? `${d.o.ad} (${MEKANLAR[d.o.mekan].ad.toLocaleLowerCase("tr-TR")})` : `${d.o.ad} (iç kazanç ≈ ${sy(d.kazanc, 0)} W > ısı kaybı ≈ ${sy(d.kayip, 0)} W)`))
+          .join(", ")} soğutma isterken ${cevre.map((d) => d.o.ad).join(", ")} ısıtma istiyor: eşzamanlı ısıtma-soğutma için ısı geri kazanımlı (3 borulu) VRF değerlendirilebilir; iç zondan alınan ısı ısıtılan odalara aktarılır.`
       );
     else if (odalarHam.filter((o) => o.mekan === "OTEL_ODA").length >= 6)
       uy.push("Otel odalarında misafirler aynı anda farklı mod isteyebilir; ısı geri kazanımlı (3 borulu) VRF değerlendirilmeli.");
