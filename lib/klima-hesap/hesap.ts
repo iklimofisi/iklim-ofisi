@@ -179,6 +179,8 @@ export type KlimaSonucu = {
 };
 
 const r1 = (x: number) => Math.round(x * 10) / 10;
+// Güneş / dış hava yükü getiren yapı elemanları (bunlardan biri yoksa oda "iç oda" gibi hesaplanır)
+const DISA_ACIK = new Set<string>(["DIS_DUVAR", "PENCERE", "DIS_KAPI", "CATI", "DOSEME_DIS", "ISITILMAYAN"]);
 
 // ---------------------------------------------------------------------------
 // 1. ODA SOĞUTMA YÜKÜ
@@ -297,6 +299,12 @@ export function klimaHesapla(v: KlimaVerisi): KlimaSonucu {
         if (disT < -15) uy.push(`Dış tasarım ${sy(disT)} °C; standart split klimalar bu sıcaklıkta ısıtmada zorlanır, düşük sıcaklık (hyper heating) modeli seçilmeli.`);
       }
     }
+    if (o.klima && !o.elemanlar.some((e) => DISA_ACIK.has(e.tur)))
+      uy.push(
+        `Dış duvar / pencere / çatı girilmedi: güneş ve iletim yükü hesapta yok, yük yalnız kişi + aydınlatma + cihaz + taze havadan oluşuyor (${sy(alan ? sogutma / alan : 0, 0)} W/m²). Oda bina içinde değilse "Yapı elemanları"ndan dış duvarı ve pencereyi yönüyle girin — güneye / batıya bakan camlı bir odada yük 2 katına çıkabilir.`
+      );
+    if (o.klima && mk.minKisi && o.kisi < mk.minKisi)
+      uy.push(`${mk.ad} en az ${mk.minKisi} kişiyle hesaplanmalı (oda başına tasarım doluluğu); şu an ${o.kisi} kişi girili. "Mekâna göre doldur" ile güncelleyebilirsiniz.`);
     if (o.klima && sog.gizli / Math.max(1, sogutma) > 0.35) uy.push("Gizli (nem) yükü yüksek; nem alma için iç ünite düşük fan kademesinde çalışmalı ya da taze hava ön şartlandırılmalı.");
     return {
       id: o.id,
@@ -338,7 +346,7 @@ export function klimaHesapla(v: KlimaVerisi): KlimaSonucu {
 
   const toplamAlan = odalar.reduce((t, o) => t + o.alan, 0);
   if (!v.odalar.length) uyarilar.push("Henüz oda girilmedi.");
-  const elemansiz = v.odalar.filter((o) => o.klima && !o.elemanlar.length);
+  const elemansiz = v.odalar.filter((o) => o.klima && !o.elemanlar.some((e) => DISA_ACIK.has(e.tur)));
   if (elemansiz.length)
     uyarilar.push(
       `${elemansiz.map((o) => o.ad).join(", ")}: dış duvar / pencere / çatı girilmemiş; güneş yükü ve ısı kaybı yalnız iç kazanç ve havalandırmadan hesaplandı. Oda gerçekten iç oda değilse Yapı elemanları bölümünden ekleyin.`

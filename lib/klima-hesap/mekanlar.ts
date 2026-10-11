@@ -21,6 +21,7 @@ export type Mekan = {
   grup: string;
   odaTipi: OdaTipi; // ısı kaybı hesabındaki karşılığı (hava değişimi vb.)
   yogunluk: number;
+  minKisi?: number; // oda başına tasarım doluluğu (otel / hasta odası alanla değil yatakla dolar)
   duyulur: number;
   gizli: number;
   aydinlatma: number;
@@ -101,7 +102,8 @@ export const MEKANLAR = {
   }),
 
   // --- Konaklama ---
-  OTEL_ODA: m({ ad: "Otel odası", grup: "Konaklama", odaTipi: "YATAK", yogunluk: 12, duyulur: 65, gizli: 35, aydinlatma: 8, ekipman: 8, sessiz: true, tavanTipi: "ASMA_ALCIPAN" }),
+  // Otel odası çift kişilik tasarlanır (2 kişi, büyük odada alanla artar); TV + minibar + şarj ≈ 12 W/m²
+  OTEL_ODA: m({ ad: "Otel odası", grup: "Konaklama", odaTipi: "YATAK", yogunluk: 12, minKisi: 2, duyulur: 65, gizli: 35, aydinlatma: 8, ekipman: 12, sessiz: true, tavanTipi: "ASMA_ALCIPAN" }),
   OTEL_LOBI: m({ ad: "Otel lobisi", grup: "Konaklama", odaTipi: "DIGER", yogunluk: 5, duyulur: 70, gizli: 45, aydinlatma: 15, ekipman: 5, tavan: 5, tavanTipi: "ASMA_ALCIPAN" }),
   DUGUN_SALONU: m({ ad: "Düğün / balo salonu", grup: "Konaklama", odaTipi: "DIGER", yogunluk: 1.2, duyulur: 100, gizli: 150, aydinlatma: 15, ekipman: 10, tazeKisi: 8, tavan: 5, tavanTipi: "ASMA_ALCIPAN" }),
 
@@ -111,6 +113,7 @@ export const MEKANLAR = {
     grup: "Sağlık / eğitim",
     odaTipi: "YATAK",
     yogunluk: 10,
+    minKisi: 2,
     duyulur: 65,
     gizli: 35,
     aydinlatma: 10,

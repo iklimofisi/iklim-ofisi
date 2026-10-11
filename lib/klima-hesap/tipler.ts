@@ -97,7 +97,7 @@ const KLIMASIZ: MekanTipi[] = ["KONUT_ISLAK", "KONUT_HOL"];
 // Mekân seçildiğinde (ya da alan değiştiğinde) önerilen kişi / cihaz / sıcaklık değerleri
 export function mekanVarsayilanlari(mekan: MekanTipi, alan: number) {
   const mk = MEKANLAR[mekan];
-  const kisi = KONUT_KISI[mekan] ?? (mk.yogunluk >= 50 ? 0 : Math.max(1, Math.round(alan / mk.yogunluk)));
+  const kisi = KONUT_KISI[mekan] ?? (mk.yogunluk >= 50 ? 0 : Math.max(mk.minKisi ?? 1, Math.round(alan / mk.yogunluk)));
   return {
     kisi,
     aydinlatma: mk.aydinlatma,
