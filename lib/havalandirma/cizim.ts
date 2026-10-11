@@ -17,6 +17,7 @@ export const SANTRAL_KISA: Record<string, string> = {
   AHU_PLAKA: "Plakalı IGK santral",
   AHU_ROTOR: "Rotorlu IGK santral",
   AHU_ARA: "Ara akışkanlı IGK santral",
+  TICARI_HRV: "Kompakt IGK cihazı",
   KONUT_HRV: "Konut HRV cihazı",
   TAZE_HAVA: "Taze hava santrali",
   EGZOZ: "Egzoz fanı",

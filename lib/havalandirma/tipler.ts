@@ -63,6 +63,7 @@ export type Mahal = {
   ach: number | null; // HAVA_DEGISIMI (boş = tip varsayılanı)
   besElle: number | null; // m³/h — elle besleme (boş = hesap)
   egzElle: number | null; // m³/h — elle egzoz
+  bolge: string; // otomatik sistemde aynı bölge = aynı cihaz (ör. "Daire 1", "Zemin kat"); boş = tek bölge
   hatMesafe: number; // m — bir önceki branşmandan bu mahalin branşmanına ana kanal
   bransMesafe: number; // m — branşmandan mahale
 };
@@ -84,6 +85,7 @@ export type HavalandirmaVerisi = {
   isitmaRejimi: [number, number]; // °C gidiş / dönüş
   sogutmaRejimi: [number, number];
   kanalYukseklikMaks: number; // mm — dikdörtgen kanalda en çok yükseklik (asma tavan boşluğu)
+  otoSistem: boolean; // true: santral / fan seçimi ve mahal bağlantıları program tarafından yapılır
   santraller: Santral[];
   mahaller: Mahal[];
 };
@@ -114,13 +116,14 @@ const SANTRAL_TIP_LISTESI = Object.keys(SANTRAL_TIPLERI) as SantralTipi[];
 
 export function yeniSantral(no: number, tip: SantralTipi = "AHU_PLAKA"): Santral {
   const konut = tip === "KONUT_HRV";
+  const kompakt = konut || tip === "TICARI_HRV";
   return {
     no,
     ad: `Santral ${no}`,
     tip,
     verimElle: null,
-    anaHat: konut ? 3 : 8,
-    kanalSekli: konut || tip === "EGZOZ" ? "DAIRESEL" : "DIKDORTGEN",
+    anaHat: konut ? 3 : kompakt ? 4 : 8,
+    kanalSekli: kompakt || tip === "EGZOZ" ? "DAIRESEL" : "DIKDORTGEN",
     akustik: "OTO",
     isitici: tip !== "EGZOZ" && tip !== "OTOPARK",
     sogutucu: tip === "AHU_PLAKA" || tip === "AHU_ROTOR" || tip === "AHU_ARA",
@@ -143,8 +146,8 @@ export function yeniMahal(tip: MahalTipi = "OFIS_ACIK", ek: Partial<Mahal> = {})
     tip,
     santral: 1,
     egzozSantral: null,
-    en: tip === "OTOPARK" ? 40 : konut ? 4 : t.yontem === "ARMATUR" ? 3 : 6,
-    boy: tip === "OTOPARK" ? 30 : konut ? 3.5 : t.yontem === "ARMATUR" ? 2.5 : 5,
+    en: tip === "OTOPARK" ? 40 : konut ? 4 : tip === "WC_OZEL" ? 1.5 : t.yontem === "ARMATUR" ? 3 : 6,
+    boy: tip === "OTOPARK" ? 30 : konut ? 3.5 : tip === "WC_OZEL" ? 1.5 : t.yontem === "ARMATUR" ? 2.5 : 5,
     yukseklik: tip === "OTOPARK" ? 3 : konut ? 2.7 : teknik ? 3.5 : 2.8,
     kisi: 0,
     armatur: tip === "WC_GENEL" ? 3 : tip === "DUS_SOYUNMA" ? 2 : 1,
@@ -157,6 +160,7 @@ export function yeniMahal(tip: MahalTipi = "OFIS_ACIK", ek: Partial<Mahal> = {})
     ach: null,
     besElle: null,
     egzElle: null,
+    bolge: "",
     hatMesafe: 4,
     bransMesafe: 3,
     ...ek,
@@ -181,7 +185,8 @@ export function varsayilanVeri(il = "İstanbul"): HavalandirmaVerisi {
     isitmaRejimi: [45, 40],
     sogutmaRejimi: [7, 12],
     kanalYukseklikMaks: 400,
-    santraller: [yeniSantral(1, "AHU_PLAKA")],
+    otoSistem: true,
+    santraller: [],
     mahaller: [],
   };
 }
@@ -266,6 +271,7 @@ function mahalOku(h: unknown): Mahal | null {
     ach: bosSayi(o.ach, 0, 60),
     besElle: bosSayi(o.besElle, 0, 1000000),
     egzElle: bosSayi(o.egzElle, 0, 1000000),
+    bolge: metin(o.bolge, 40).trim(),
     hatMesafe: sayi(o.hatMesafe, 4, 0, 500),
     bransMesafe: sayi(o.bransMesafe, 3, 0, 200),
   };
@@ -307,6 +313,8 @@ export function veriOku(ham: unknown): HavalandirmaVerisi {
     isitmaRejimi: rejim(obj.isitmaRejimi, [45, 40], 20, 95),
     sogutmaRejimi: rejim(obj.sogutmaRejimi, [7, 12], 2, 25),
     kanalYukseklikMaks: Math.round(sayi(obj.kanalYukseklikMaks, 400, 150, 1500) / 50) * 50,
+    // Eski kayıtlarda alan yok: elle kurulmuş santralleri korumak için (santral listesi varsa) otomatik kapalı açılır
+    otoSistem: bool(obj.otoSistem, !Array.isArray(obj.santraller)),
     santraller,
     mahaller: Array.isArray(obj.mahaller) ? ((obj.mahaller as unknown[]).map(mahalOku).filter(Boolean) as Mahal[]).slice(0, 150) : [],
   };

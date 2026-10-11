@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { girisZorunlu } from "@/lib/oturum";
 import { islemKaydet } from "@/lib/islem-kaydi";
-import { veriOku, varsayilanVeri, ornekOfis, ornekDaire, yeniMahal, yeniSantral, mekandanMahal } from "@/lib/havalandirma/tipler";
+import { veriOku, varsayilanVeri, ornekOfis, ornekDaire, yeniMahal, mekandanMahal } from "@/lib/havalandirma/tipler";
 import { klimaVeriOku } from "@/lib/klima-hesap/tipler";
 import { havalandirmaHesapla } from "@/lib/havalandirma/hesap";
 import { ILLER } from "@/lib/isi-hesap/iklim";
@@ -37,10 +37,8 @@ export async function havalandirmaHesapOlustur(formData: FormData) {
   const veri = varsayilanVeri(il);
   const sablon = String(formData.get("sablon") ?? "");
   if (sablon === "ofis") veri.mahaller = ornekOfis();
-  if (sablon === "daire") {
-    veri.santraller = [yeniSantral(1, "KONUT_HRV")];
-    veri.mahaller = ornekDaire();
-  }
+  if (sablon === "daire") veri.mahaller = ornekDaire();
+  // Yeni hesaplarda santral / fan seçimi otomatik (varsayilanVeri.otoSistem = true)
   // Klima / VRF hesabındaki odalar mahal olarak aktarılabilir
   const kaynakId = metinAl(formData.get("kaynakKlimaHesapId"), 40);
   if (sablon === "klima" && kaynakId) {

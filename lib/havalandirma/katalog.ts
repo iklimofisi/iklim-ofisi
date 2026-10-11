@@ -34,6 +34,7 @@ export type MahalTanimi = {
   rp?: number; // L/s·kişi (ASHRAE 62.1 Tablo 6-1)
   ra?: number; // L/s·m²
   yogunluk?: number; // m² / kişi (varsayılan doluluk)
+  egzozAlanMin?: number; // L/s·m² — en az egzoz (ASHRAE 62.1 Tablo 6-4; ör. kuaför, laboratuvar)
   egzozOrani?: number; // KISI_ALAN: mahal egzozu = besleme × oran (kalan hava ıslak hacimlere aktarılır)
   minAch?: number; // en az hava değişimi (1/h)
   egzozSabit?: number; // L/s (KONUT_ISLAK)
@@ -77,7 +78,7 @@ export const MAHAL_TIPLERI = {
   SUPERMARKET: m({ ad: "Market / süpermarket", grup: "Ticari", yontem: "KISI_ALAN", rp: 3.8, ra: 0.3, yogunluk: 12.5, egzozOrani: 0.8, akustik: "STANDART" }),
   SHOWROOM: m({ ad: "Showroom / galeri", grup: "Ticari", yontem: "KISI_ALAN", rp: 3.8, ra: 0.6, yogunluk: 15, egzozOrani: 0.8, akustik: "STANDART" }),
   BANKA: m({ ad: "Banka şubesi / hizmet salonu", grup: "Ticari", yontem: "KISI_ALAN", rp: 3.8, ra: 0.3, yogunluk: 6.7, egzozOrani: 0.8, akustik: "STANDART" }),
-  KUAFOR: m({ ad: "Kuaför / güzellik salonu", grup: "Ticari", yontem: "KISI_ALAN", rp: 10, ra: 0.6, yogunluk: 4, egzozOrani: 1.1, akustik: "STANDART", not: "Kimyasal buharlar için mahal hafif negatif basınçta tutulur." }),
+  KUAFOR: m({ ad: "Kuaför / güzellik salonu", grup: "Ticari", yontem: "KISI_ALAN", rp: 10, ra: 0.6, yogunluk: 4, egzozOrani: 1.1, egzozAlanMin: 3, akustik: "STANDART" }),
   ECZANE: m({ ad: "Eczane", grup: "Ticari", yontem: "KISI_ALAN", rp: 2.5, ra: 0.9, yogunluk: 10, egzozOrani: 0.8, akustik: "STANDART" }),
 
   // --- Yeme-içme [AS], [A154]
@@ -97,7 +98,7 @@ export const MAHAL_TIPLERI = {
   AMFI: m({ ad: "Amfi / konferans dersliği", grup: "Sağlık / eğitim", yontem: "KISI_ALAN", rp: 3.8, ra: 0.3, yogunluk: 1.5, egzozOrani: 0.9, akustik: "SESSIZ" }),
   KRES: m({ ad: "Kreş / anaokulu", grup: "Sağlık / eğitim", yontem: "KISI_ALAN", rp: 5, ra: 0.9, yogunluk: 4, egzozOrani: 0.9, akustik: "SESSIZ" }),
   KUTUPHANE: m({ ad: "Kütüphane / okuma salonu", grup: "Sağlık / eğitim", yontem: "KISI_ALAN", rp: 2.5, ra: 0.6, yogunluk: 10, egzozOrani: 0.9, akustik: "SESSIZ" }),
-  LAB: m({ ad: "Laboratuvar (eğitim)", grup: "Sağlık / eğitim", yontem: "KISI_ALAN", rp: 5, ra: 0.9, yogunluk: 4, egzozOrani: 1.1, minAch: 6, akustik: "STANDART", not: "Çeker ocak egzozları ayrıca eklenmelidir; mahal negatif basınçta tutulur." }),
+  LAB: m({ ad: "Laboratuvar (eğitim)", grup: "Sağlık / eğitim", yontem: "KISI_ALAN", rp: 5, ra: 0.9, yogunluk: 4, egzozOrani: 1.1, egzozAlanMin: 5, minAch: 6, akustik: "STANDART", not: "Çeker ocak egzozları ayrıca eklenmelidir; mahal negatif basınçta tutulur." }),
   MUAYENE: m({ ad: "Muayene / poliklinik", grup: "Sağlık / eğitim", yontem: "KISI_ALAN", rp: 2.5, ra: 0.3, yogunluk: 6, egzozOrani: 1, minAch: 6, akustik: "SESSIZ", not: "ASHRAE 170: muayene odası en az 6 toplam hava değişimi. Ameliyathane / yoğun bakım bu hesapla yapılmaz." }),
   HASTA_ODASI: m({ ad: "Hasta odası", grup: "Sağlık / eğitim", yontem: "KISI_ALAN", rp: 2.5, ra: 0.3, yogunluk: 10, egzozOrani: 0, minAch: 4, akustik: "SESSIZ", not: "ASHRAE 170: hasta odası en az 4 toplam hava değişimi; egzoz banyodan." }),
 
@@ -168,7 +169,7 @@ export const PISIRME_YUKLERI: Record<PisirmeYuku, string> = {
 
 // --- Santral (hava işleme) tipleri ---------------------------------------------
 // ic: santral iç basınç kayıpları (Pa, tasarım = ortalama kirli filtre), verim: duyulur ısı geri kazanımı
-export type SantralTipi = "AHU_PLAKA" | "AHU_ROTOR" | "AHU_ARA" | "KONUT_HRV" | "TAZE_HAVA" | "EGZOZ" | "MUTFAK" | "OTOPARK";
+export type SantralTipi = "AHU_PLAKA" | "AHU_ROTOR" | "AHU_ARA" | "TICARI_HRV" | "KONUT_HRV" | "TAZE_HAVA" | "EGZOZ" | "MUTFAK" | "OTOPARK";
 export const SANTRAL_TIPLERI: Record<
   SantralTipi,
   { ad: string; besleme: boolean; egzoz: boolean; hr: boolean; verim: number; nemVerim: number; akustik: Akustik; aciklama: string }
@@ -202,6 +203,16 @@ export const SANTRAL_TIPLERI: Record<
     nemVerim: 0,
     akustik: "STANDART",
     aciklama: "Besleme ve egzoz santralleri birbirinden uzaksa; verimi düşüktür (ErP alt sınırı %68).",
+  },
+  TICARI_HRV: {
+    ad: "Kompakt ısı geri kazanım cihazı (tavan tipi, ticari)",
+    besleme: true,
+    egzoz: true,
+    hr: true,
+    verim: 78,
+    nemVerim: 0,
+    akustik: "STANDART",
+    aciklama: "250–2.500 m³/h; asma tavana ya da teknik hacme asılan kompakt cihaz (karşı akışlı plakalı eşanjör, ePM1 filtre, EC fan, by-pass). Dükkân, kuaför, küçük ofis, klinik, restoran salonu gibi tek bölümlü işletmeler için santral yerine kullanılır.",
   },
   KONUT_HRV: {
     ad: "Konut tipi ısı geri kazanımlı havalandırma cihazı (HRV / ERV)",
@@ -276,6 +287,7 @@ export const SANTRAL_IC_KAYIP = {
   rotor: 130,
   ara: 120,
   konutCihaz: 150, // kompakt HRV iç kayıplar (eşanjör + G4/F7 filtre)
+  ticariCihaz: 220, // tavan tipi kompakt IGK cihazı iç kayıplar (eşanjör + ePM10 / ePM1 filtre, ortalama kirlilik)
   isitici: 40,
   sogutucu: 110, // ıslak serpantin + damla tutucu
   fanEtkisi: 30,
@@ -309,6 +321,7 @@ export const SFP_SINIFLARI: [string, number][] = [
 // Santral nominal kademeleri (m³/h) — markadan bağımsız tipik seri
 export const SANTRAL_KADEMELERI = [1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 7000, 8000, 10000, 12000, 14000, 16000, 18000, 20000, 25000, 30000, 35000, 40000, 50000, 60000];
 export const KONUT_HRV_KADEMELERI = [150, 200, 250, 300, 350, 450, 550, 650, 800, 1000];
+export const TICARI_HRV_KADEMELERI = [250, 350, 500, 650, 800, 1000, 1300, 1600, 2000, 2500];
 // Fan (egzoz / telafi / otopark) kademeleri (m³/h)
 export const FAN_KADEMELERI = [150, 250, 350, 500, 750, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 8000, 10000, 12000, 15000, 20000, 25000, 30000, 40000, 50000, 60000, 80000, 100000];
 

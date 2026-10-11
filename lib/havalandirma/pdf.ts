@@ -264,6 +264,7 @@ export function havalandirmaPdfOlustur(
       ],
       ["Su rejimleri", `ısıtma ${v.isitmaRejimi[0]}/${v.isitmaRejimi[1]} °C · soğutma ${v.sogutmaRejimi[0]}/${v.sogutmaRejimi[1]} °C`],
       ["Dikdörtgen kanal", `en çok ${v.kanalYukseklikMaks} mm yükseklik (asma tavan boşluğu)`],
+      ["Santral / fan seçimi", s.otoSistem ? "program önerisi (mahal tiplerine göre otomatik; gerekçeler santral bölümlerinde)" : "tasarımcı tarafından elle"],
     ]
   );
 
@@ -297,12 +298,22 @@ export function havalandirmaPdfOlustur(
     { kalinSon: true, boyut: 6.8 }
   );
   paragraf("* Santral dengesi için eklenen geçiş havası payını içerir (egzozu karşılamak için kuru mahallere ek besleme; konut cihazında ıslak hacimlere ek egzoz).", 6.8);
+  altBaslik("Mahallerin havalandırma şekli");
+  {
+    const gorulen = new Set<string>();
+    for (const m of s.mahaller) {
+      if (!m.sistemNotu || gorulen.has(m.tipAdi)) continue;
+      gorulen.add(m.tipAdi);
+      paragraf(`${m.tipAdi}: ${m.sistemNotu}`, 6.9, METIN_60);
+    }
+  }
   altBaslik("Debilerin hesabı");
   for (const m of s.mahaller) paragraf(`${m.ad}: ${m.aciklama}${m.transferCm2 ? ` · geçiş havası menfezi ≥ ${sy(m.transferCm2, 0)} cm²` : ""}`, 6.9, METIN_60);
 
   for (const x of s.santraller) {
     bolumBasligi(`${x.ad} — ${x.tipAdi}`, 70);
     paragraf(x.secim, 7.6, METIN);
+    if (x.gerekce) paragraf(`Seçim gerekçesi: ${x.gerekce}`, 7.2, METIN_60);
     tablo(
       [
         { ad: "Değer", w: 55 },

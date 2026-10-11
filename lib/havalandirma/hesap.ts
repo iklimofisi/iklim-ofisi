@@ -20,7 +20,6 @@ import {
   MAHAL_TIPLERI,
   SANTRAL_TIPLERI,
   DAVLUMBAZ_TIPLERI,
-  EN_KATEGORI,
   HIZ_SINIRLARI,
   MUTFAK_KANAL_HIZI,
   DAIRESEL_CAPLAR,
@@ -29,6 +28,7 @@ import {
   SFP_SINIFLARI,
   SANTRAL_KADEMELERI,
   KONUT_HRV_KADEMELERI,
+  TICARI_HRV_KADEMELERI,
   FAN_KADEMELERI,
   standartUst,
   type MahalTanimi,
@@ -36,6 +36,8 @@ import {
   type SantralTipi,
 } from "./katalog";
 import type { HavalandirmaVerisi, Mahal, Santral } from "./tipler";
+import { mahalDebisi } from "./debi";
+import { otomatikSistem, mahalSistemNotu } from "./oneri";
 
 export { sy };
 
@@ -60,6 +62,7 @@ export type MahalSonucu = {
   aciklama: string; // debinin nasıl bulunduğu
   santral: number;
   egzozSantral: number;
+  sistemNotu: string; // bu mahal nasıl havalandırılır (taze hava + egzoz / yalnız egzoz …)
   menfezB: number; // besleme uç eleman adedi
   menfezE: number; // egzoz uç eleman adedi
   ucKayipB: number; // Pa
@@ -129,6 +132,7 @@ export type SantralSonucu = {
   jetFan: number;
   coSensoru: number;
   mahaller: string[];
+  gerekce: string; // otomatik seçimde neden bu cihaz
   uyarilar: string[];
 };
 
@@ -150,6 +154,9 @@ export type HavalandirmaSonucu = {
   toplamFanKw: number;
   malzemeler: Malzeme[];
   uyarilar: string[];
+  otoSistem: boolean; // santraller otomatik seçildi
+  santralVerisi: Santral[]; // hesapta kullanılan santral girdileri (otomatikte üretilen)
+  baglantilar: { id: string; santral: number; egzozSantral: number | null }[];
 };
 
 // ---------------------------------------------------------------------------
@@ -239,135 +246,6 @@ export function olcuYaz(p: { sekil: "DAIRESEL" | "DIKDORTGEN"; cap: number; en: 
 // ---------------------------------------------------------------------------
 // 1. MAHAL DEBİLERİ
 // ---------------------------------------------------------------------------
-function mahalDebisi(m: Mahal, v: HavalandirmaVerisi, yazKT: number) {
-  const t: MahalTanimi = MAHAL_TIPLERI[m.tip];
-  const A = m.en * m.boy;
-  const V = A * m.yukseklik;
-  const kat = EN_KATEGORI[v.kategori];
-  const uy: string[] = [];
-  let b = 0; // L/s
-  let e = 0;
-  let kisi = 0;
-  let aciklama = "";
-  let yangin = 0;
-  let jetFan = 0;
-  let coSensoru = 0;
-  const lsm = (x: number) => sy(x, 1);
-  switch (t.yontem) {
-    case "KISI_ALAN": {
-      kisi = m.kisi > 0 ? m.kisi : t.yogunluk ? Math.ceil(A / t.yogunluk - 1e-9) : 0;
-      if (v.yontem === "EN16798") {
-        const qa = kat.alan[v.kirlilik];
-        b = kisi * kat.kisi + A * qa;
-        aciklama = `TS EN 16798-1 Kat. ${v.kategori}: ${kisi} kişi × ${kat.kisi} l/s + ${sy(A)} m² × ${sy(qa, 2)} l/s·m² = ${lsm(b)} l/s`;
-      } else {
-        const rp = t.rp ?? 2.5;
-        const ra = t.ra ?? 0.3;
-        b = (rp * kisi + ra * A) / v.ez;
-        aciklama = `ASHRAE 62.1: (${sy(rp, 1)} l/s × ${kisi} kişi + ${sy(ra, 2)} l/s·m² × ${sy(A)} m²) / Ez ${sy(v.ez, 2)} = ${lsm(b)} l/s`;
-      }
-      if (t.minAch && (t.minAch * V) / 3.6 > b) {
-        b = (t.minAch * V) / 3.6;
-        aciklama += ` → en az ${t.minAch} hava değişimi: ${lsm(b)} l/s`;
-      }
-      e = b * (t.egzozOrani ?? 0.8);
-      break;
-    }
-    case "KONUT_KURU": {
-      kisi = m.kisi > 0 ? m.kisi : Math.max(1, Math.ceil(A / (t.yogunluk ?? 8) - 1e-9));
-      const qk = kisi * kat.konutKisi;
-      const qa = A * kat.konutAlan;
-      b = Math.max(qk, qa);
-      aciklama = `TS EN 16798-1 konut Kat. ${v.kategori}: en büyüğü (${kisi} kişi × ${kat.konutKisi} l/s = ${lsm(qk)}; ${sy(A)} m² × ${sy(kat.konutAlan, 2)} = ${lsm(qa)}) = ${lsm(b)} l/s`;
-      break;
-    }
-    case "KONUT_ISLAK": {
-      e = (t.egzozSabit ?? 15) * kat.islak;
-      aciklama = `TS EN 16798-1 / EN 15251 ıslak hacim egzozu Kat. ${v.kategori}: ${lsm(e)} l/s (besleme kuru odalardan geçiş havasıyla)`;
-      break;
-    }
-    case "ARMATUR": {
-      const q = (t.armatur ?? 25) * Math.max(1, m.armatur);
-      const qach = t.minAch ? (t.minAch * V) / 3.6 : 0;
-      e = Math.max(q, qach);
-      aciklama = `${Math.max(1, m.armatur)} armatür × ${t.armatur} l/s = ${lsm(q)} l/s${qach > q ? ` → en az ${t.minAch} hava değişimi: ${lsm(qach)} l/s` : ""} (sürekli egzoz; besleme geçiş havasıyla)`;
-      break;
-    }
-    case "EGZOZ_ALAN": {
-      const qa = (t.egzozAlan ?? 2.5) * A;
-      const qd = m.tip === "DUS_SOYUNMA" ? (t.armatur ?? 25) * m.armatur : 0;
-      e = qa + qd;
-      aciklama = `${sy(A)} m² × ${sy(t.egzozAlan ?? 2.5, 1)} l/s·m²${qd ? ` + ${m.armatur} duş × ${t.armatur} l/s` : ""} = ${lsm(e)} l/s`;
-      break;
-    }
-    case "MUTFAK": {
-      const d = DAVLUMBAZ_TIPLERI[m.davlumbazTip];
-      const birim = d.yuk[m.pisirmeYuku];
-      if (m.davlumbazM > 0) {
-        e = birim * m.davlumbazM;
-        aciklama = `ASHRAE 154 / IMC: ${d.ad.toLocaleLowerCase("tr-TR")} ${sy(m.davlumbazM)} m × ${birim} l/s·m = ${lsm(e)} l/s`;
-      } else {
-        e = 3.5 * A;
-        aciklama = `Davlumbaz girilmedi: genel mutfak egzozu ${sy(A)} m² × 3,5 l/s·m² = ${lsm(e)} l/s`;
-        uy.push("Pişirme cihazları için davlumbaz uzunluğunu girin; davlumbazsız ticari mutfak yönetmeliğe aykırıdır.");
-      }
-      b = e * 0.85;
-      aciklama += `; telafi havası %85 = ${lsm(b)} l/s (mutfak hafif negatif basınçta)`;
-      break;
-    }
-    case "OTOPARK": {
-      const qAch = (6 * V) / 3.6;
-      const qAlan = 3.7 * A;
-      e = Math.max(qAch, qAlan);
-      yangin = (10 * V) / 3.6;
-      b = e * 0.8;
-      jetFan = Math.max(1, Math.ceil(A / 550));
-      coSensoru = Math.max(1, Math.ceil(A / 400));
-      aciklama = `Normal: en büyüğü (6 hava değişimi = ${lsm(qAch)}; ASHRAE 62.1 3,7 l/s·m² × ${sy(A)} m² = ${lsm(qAlan)}) = ${lsm(e)} l/s · Duman tahliyesi: 10 hava değişimi = ${lsm(yangin)} l/s · Taze hava %80`;
-      if (A > 2000) uy.push("2000 m² üstü kapalı otopark: saatte en az 10 hava değişimli mekanik duman tahliyesi zorunludur (Binaların Yangından Korunması Hakkında Yönetmelik).");
-      break;
-    }
-    case "TEKNIK_ISI": {
-      let dT = m.tMaks - yazKT;
-      if (dT < 5) {
-        uy.push(
-          `Yazın dış hava ${sy(yazKT)} °C, izin verilen iç sıcaklık ${sy(m.tMaks)} °C: dış havayla ısı atımı için sıcaklık farkı yetersiz. Hesapta ΔT = 5 K alındı (en sıcak saatlerde iç sıcaklık ${sy(yazKT + 5)} °C'ye çıkar); daha düşük sıcaklık gerekiyorsa mekanik soğutma (split / hassas klima) eklenmelidir.`
-        );
-        dT = 5;
-      }
-      b = (m.isiKw * 1000) / (0.34 * dT) / 3.6;
-      e = b;
-      aciklama = `Isı atımı: ${sy(m.isiKw, 1)} kW / (0,34 × ΔT ${sy(dT, 1)} K) = ${sy(b * 3.6, 0)} m³/h (iç en çok ${sy(m.tMaks)} °C, dış ${sy(yazKT)} °C)`;
-      break;
-    }
-    case "KAZAN": {
-      b = (m.kazanKw * 1.6) / 3.6;
-      e = 0;
-      aciklama = `Yanma havası: ${sy(m.kazanKw, 0)} kW × 1,6 m³/h·kW = ${sy(b * 3.6, 0)} m³/h (hava fazlası ve emniyet dahil); kazan dairesi negatif basınca düşürülmez, üst menfezle doğal atış`;
-      break;
-    }
-    case "HAVA_DEGISIMI": {
-      const n = m.ach ?? t.ach ?? 1;
-      b = (n * V) / 3.6;
-      e = b;
-      aciklama = n > 0 ? `${sy(n, 1)} hava değişimi × ${sy(V, 0)} m³ = ${sy(b * 3.6, 0)} m³/h` : "Geçiş hacmi (besleme / egzoz yok)";
-      break;
-    }
-  }
-  let bm3 = b * 3.6;
-  let em3 = e * 3.6;
-  if (m.besElle !== null) {
-    bm3 = m.besElle;
-    aciklama += ` · besleme elle ${sy(bm3, 0)} m³/h`;
-  }
-  if (m.egzElle !== null) {
-    em3 = m.egzElle;
-    aciklama += ` · egzoz elle ${sy(em3, 0)} m³/h`;
-  }
-  if (t.not) uy.push(t.not);
-  return { b: bm3, e: em3, kisi, aciklama, yangin: yangin * 3.6, jetFan, coSensoru, uy, A, V, t };
-}
-
 // ---------------------------------------------------------------------------
 // 3. KANAL AĞI (zincir: santral —ana— B1 —— B2 —— …; her branşmandan bir mahal)
 // ---------------------------------------------------------------------------
@@ -394,7 +272,10 @@ function govdeUzunluklari(ag: Mahal[], tum: Mahal[], anaHat: number): number[] {
 // ---------------------------------------------------------------------------
 // ANA HESAP
 // ---------------------------------------------------------------------------
-export function havalandirmaHesapla(v: HavalandirmaVerisi): HavalandirmaSonucu {
+export function havalandirmaHesapla(girdi: HavalandirmaVerisi): HavalandirmaSonucu {
+  // Otomatik modda santral / fan seçimi ve mahal bağlantıları öneri motorundan gelir
+  const oto = girdi.otoSistem ? otomatikSistem(girdi) : null;
+  const v = oto ? oto.veri : girdi;
   const il = ilBul(v.il);
   const disT = v.disSicaklikElle ?? il.disSicaklik;
   const yazKT = v.yazKTElle ?? il.yazKT;
@@ -429,6 +310,7 @@ export function havalandirmaHesapla(v: HavalandirmaVerisi): HavalandirmaSonucu {
       aciklama: d.aciklama,
       santral: sNo,
       egzozSantral: eNo,
+      sistemNotu: mahalSistemNotu(m.tip),
       menfezB: 0,
       menfezE: 0,
       ucKayipB: 0,
@@ -459,7 +341,9 @@ export function havalandirmaHesapla(v: HavalandirmaVerisi): HavalandirmaSonucu {
           (x.santral === s.no && x.egzozSantral !== s.no ? x.egzozSantral > 0 && santralTipi(x.egzozSantral) !== "MUTFAK" && santralTipi(x.egzozSantral) !== "OTOPARK" : false) ||
           (x.egzozSantral === s.no && (x.santral === s.no || !beslemeVar(x.santral)))
       )
-      .reduce((t, x) => t + x.egzoz, 0);
+      // Kuaför / laboratuvar gibi bilerek negatif basınçta tutulan mahallerin egzoz fazlası dengelenmez
+      // (fazla hava komşu hacimlerden / kapıdan girer); yalnız beslemesi kadarı sayılır
+      .reduce((t, x) => t + (x.yontem === "KISI_ALAN" && x.egzoz > x.besleme ? x.besleme : x.egzoz), 0);
     if (!st.egzoz && E <= 1) continue;
     if (E > B + 1) {
       const kuru = mahaller.filter((x) => x.santral === s.no && x.besleme > 0 && (x.yontem === "KISI_ALAN" || x.yontem === "KONUT_KURU"));
@@ -587,6 +471,10 @@ export function havalandirmaHesapla(v: HavalandirmaVerisi): HavalandirmaSonucu {
     if (st.besleme) {
       if (s.tip === "KONUT_HRV") {
         icB.push(["Dış hava emiş menfezi + kanal", 20], ["Cihaz içi (eşanjör + G4 / F7 filtre)", ic.konutCihaz]);
+      } else if (s.tip === "TICARI_HRV") {
+        icB.push(["Dış hava emiş panjuru + kanal", ic.disHavaPanjur], ["Cihaz içi (plakalı eşanjör + ePM10 / ePM1 filtre)", ic.ticariCihaz]);
+        if (s.isitici) icB.push(["Son ısıtıcı (kanal tipi, sulu / elektrikli)", ic.isitici]);
+        if (s.sogutucu) icB.push(["Soğutucu batarya (sulu / DX) + damla tutucu", ic.sogutucu]);
       } else {
         icB.push(["Dış hava panjuru / emiş", ic.disHavaPanjur]);
         if (!otopark) icB.push(["Ön filtre ePM10 ≥ %50 (M5)", ic.filtreOn]);
@@ -601,6 +489,7 @@ export function havalandirmaHesapla(v: HavalandirmaVerisi): HavalandirmaSonucu {
     }
     if (st.egzoz) {
       if (s.tip === "KONUT_HRV") icE.push(["Cihaz içi (eşanjör + filtre)", ic.konutCihaz], ["Atış menfezi + kanal", 20]);
+      else if (s.tip === "TICARI_HRV") icE.push(["Cihaz içi (plakalı eşanjör + ePM10 filtre)", ic.ticariCihaz], ["Atış panjuru + kanal", ic.disHavaPanjur]);
       else {
         if (hr) icE.push(["Egzoz filtresi ePM10 ≥ %50 (M5)", ic.filtreOn]);
         if (s.tip === "AHU_PLAKA") icE.push(["Plakalı eşanjör", ic.plaka]);
@@ -636,7 +525,7 @@ export function havalandirmaHesapla(v: HavalandirmaVerisi): HavalandirmaSonucu {
     const eta1 = verimEtkin / 100;
     const nemEta = hr ? (st.nemVerim / 100) * Math.min(1, E / Math.max(1, B)) : 0;
     // Kış
-    const donma = s.tip === "AHU_PLAKA" ? -5 : s.tip === "KONUT_HRV" ? -3 : -100;
+    const donma = s.tip === "AHU_PLAKA" || s.tip === "TICARI_HRV" ? -5 : s.tip === "KONUT_HRV" ? -3 : -100;
     const girisKis = hr && disT < donma ? donma : disT;
     const onIsitici = hr && disT < donma && B > 0 ? (0.34 * B * (donma - disT)) / 1000 : 0;
     const hrKis = girisKis + eta1 * (v.icKis - girisKis);
@@ -673,12 +562,14 @@ export function havalandirmaHesapla(v: HavalandirmaVerisi): HavalandirmaSonucu {
     const suSogutucu = sogutucu > 0 && sd > sg ? (sogutucu * 860) / (sd - sg) : 0;
 
     // Seçim
-    const kademe = s.tip === "KONUT_HRV" ? KONUT_HRV_KADEMELERI : hr || s.tip === "TAZE_HAVA" ? SANTRAL_KADEMELERI : FAN_KADEMELERI;
+    const kademe = s.tip === "KONUT_HRV" ? KONUT_HRV_KADEMELERI : s.tip === "TICARI_HRV" ? TICARI_HRV_KADEMELERI : hr || s.tip === "TAZE_HAVA" ? SANTRAL_KADEMELERI : FAN_KADEMELERI;
     const nominal = standartUst(kademe, otopark ? Math.max(qMaks, Y) : qMaks);
     const kesitM2 = qMaks / 3600 / 2.5;
     let secim = "";
     if (s.tip === "KONUT_HRV")
       secim = `Konut tipi ısı geri kazanımlı havalandırma cihazı ${nominal} m³/h (verim ≥ %${sy(verim, 0)}, by-pass, G4 / F7 filtre, EC fan), dış statik basınç ≈ ${r0(Math.max(fanB?.dis ?? 0, fanE?.dis ?? 0))} Pa`;
+    else if (s.tip === "TICARI_HRV")
+      secim = `Tavan tipi kompakt ısı geri kazanım cihazı ${nominal} m³/h — besleme ${r0(B)} / egzoz ${r0(E)} m³/h, karşı akışlı plakalı eşanjör verim ≥ %${sy(verim, 0)}, by-pass, ePM1 + ePM10 filtre, EC fan, dış statik basınç besleme ${r0(fanB?.dis ?? 0)} / egzoz ${r0(fanE?.dis ?? 0)} Pa`;
     else if (hr)
       secim = `Isı geri kazanımlı klima santrali ${nominal} m³/h kademesi — besleme ${r0(B)} / egzoz ${r0(E)} m³/h, ${st.ad.split("—")[1]?.trim() ?? ""} verim %${sy(verim, 0)}, ePM1 %50 + ePM10 %50 filtre, EC fan, dış statik basınç besleme ${r0(fanB?.dis ?? 0)} / egzoz ${r0(fanE?.dis ?? 0)} Pa`;
     else if (s.tip === "TAZE_HAVA") secim = `Taze hava santrali ${nominal} m³/h kademesi — ${r0(B)} m³/h, ${r0(fanB?.dis ?? 0)} Pa dış statik basınç`;
@@ -689,7 +580,9 @@ export function havalandirmaHesapla(v: HavalandirmaVerisi): HavalandirmaSonucu {
       secim = `Otopark egzoz / duman tahliye fanı (iki hızlı, EN 12101-3 en az F300): normal ${r0(E)} / yangın ${r0(Y)} m³/h, ${r0(fanE?.toplam ?? 0)} Pa — 2 × %50 önerilir`;
 
     // Kontroller
-    if (hr && (s.tip === "AHU_PLAKA" || s.tip === "AHU_ROTOR") && verim < 73) uy.push(`Isı geri kazanım verimi %${sy(verim, 0)}: AB 1253/2014 (2018) konut dışı çift akışlı ünitelerde en az %73 ister.`);
+    if (s.tip === "TICARI_HRV" && qMaks > TICARI_HRV_KADEMELERI[TICARI_HRV_KADEMELERI.length - 1])
+      uy.push(`Debi ${r0(qMaks)} m³/h kompakt cihaz serisinin üstünde: iki cihaza bölün (mahallere Bölge yazın) ya da ısı geri kazanımlı klima santrali seçin.`);
+    if (hr && (s.tip === "AHU_PLAKA" || s.tip === "AHU_ROTOR" || s.tip === "TICARI_HRV") && verim < 73) uy.push(`Isı geri kazanım verimi %${sy(verim, 0)}: AB 1253/2014 (2018) konut dışı çift akışlı ünitelerde en az %73 ister.`);
     if (s.tip === "AHU_ARA" && verim < 68) uy.push(`Ara akışkanlı ısı geri kazanımı %${sy(verim, 0)}: AB 1253/2014 en az %68 ister.`);
     if (hr && E < B * 0.6 && B > 0) uy.push(`Egzoz debisi beslemenin %${sy((E / B) * 100, 0)}'ı: ısı geri kazanım etkin verimi %${sy(verimEtkin, 0)}'a düşer. Islak hacim egzozlarını da bu santrale bağlamak verimi artırır.`);
     for (const [ad, f] of [["Besleme", fanB], ["Egzoz", fanE]] as const)
@@ -697,7 +590,11 @@ export function havalandirmaHesapla(v: HavalandirmaVerisi): HavalandirmaSonucu {
         uy.push(`${ad} fanı SFP ${sy(f.sfp, 0)} W/(m³/s) (${f.sinif}): fan enerjisi yüksek (EN 16798-3 yeni binalarda SFP 4 ve altı hedeflenir); kanal hızlarını düşürmek, filtre / eşanjör basınç kaybı düşük santral seçmek önerilir.`);
     const agUyari = (ag: KanalAgi | null, ad: string) => {
       if (!ag) return;
-      if (ag.dis > (s.tip === "KONUT_HRV" ? 200 : 600)) uy.push(`${ad} kanal dış statik basıncı ${r0(ag.dis)} Pa; ${s.tip === "KONUT_HRV" ? "konut cihazları genelde 150–200 Pa'ya kadar çalışır" : "yüksek, kanal ölçülerini büyütün"}.`);
+      const sinir = s.tip === "KONUT_HRV" ? 200 : s.tip === "TICARI_HRV" ? 250 : 600;
+      if (ag.dis > sinir)
+        uy.push(
+          `${ad} kanal dış statik basıncı ${r0(ag.dis)} Pa; ${s.tip === "KONUT_HRV" ? "konut cihazları genelde 150–200 Pa'ya kadar çalışır" : s.tip === "TICARI_HRV" ? "kompakt cihazlar genelde 150–250 Pa'ya kadar çalışır, kanal ölçülerini büyütün ya da yüksek basınçlı model seçin" : "yüksek, kanal ölçülerini büyütün"}.`
+        );
       for (const pc of ag.parcalar)
         if (mutfak && ag.tur === "EGZOZ" && pc.hiz < MUTFAK_KANAL_HIZI.min - 0.3) uy.push(`${pc.ad}: mutfak egzoz kanal hızı ${sy(pc.hiz, 1)} m/s; yağın çökmemesi için en az ≈ 7,5 m/s olmalı.`);
     };
@@ -735,6 +632,7 @@ export function havalandirmaHesapla(v: HavalandirmaVerisi): HavalandirmaSonucu {
       jetFan: otopark && s.otoparkSistemi === "JETFAN" ? eListe.reduce((t, x) => t + x.jetFan, 0) : 0,
       coSensoru: otopark ? eListe.reduce((t, x) => t + x.coSensoru, 0) : 0,
       mahaller: ilgili.map((x) => x.id),
+      gerekce: oto?.gerekce[s.no] ?? "",
       uyarilar: uy,
     });
   }
@@ -759,6 +657,9 @@ export function havalandirmaHesapla(v: HavalandirmaVerisi): HavalandirmaSonucu {
     toplamFanKw: santraller.reduce((t, x) => t + (x.fanB?.kw ?? 0) + (x.fanE?.kw ?? 0), 0),
     malzemeler,
     uyarilar,
+    otoSistem: !!oto,
+    santralVerisi: v.santraller,
+    baglantilar: v.mahaller.map((m) => ({ id: m.id, santral: m.santral, egzozSantral: m.egzozSantral })),
   };
 }
 
@@ -886,7 +787,9 @@ function malzemeListesi(v: HavalandirmaVerisi, mahaller: MahalSonucu[], santrall
     ek(S, s.secim || s.tipAdi, 1);
     const sv = v.santraller.find((x) => x.no === s.no)!;
     if (s.kis.onIsitici > 0.05) ek(S, `Ön ısıtıcı (donma koruması) ≈ ${sy(s.kis.onIsitici, 1)} kW — ${s.ad}`, 1);
-    if (s.kis.isitici > 0.05) ek(S, `Isıtıcı batarya ${sy(s.kis.isitici, 1)} kW (${v.isitmaRejimi[0]}/${v.isitmaRejimi[1]} °C, ${sy(s.suIsitici, 0)} L/h) + 3 yollu vana ve motor — ${s.ad}`, 1, "Set");
+    if (s.kis.isitici > 0.05 && s.tip === "TICARI_HRV")
+      ek(S, `Son ısıtıcı ${sy(s.kis.isitici, 1)} kW — kanal tipi sulu (${v.isitmaRejimi[0]}/${v.isitmaRejimi[1]} °C, ${sy(s.suIsitici, 0)} L/h, 3 yollu vana) ya da elektrikli (termostatlı) — ${s.ad}`, 1, "Set");
+    else if (s.kis.isitici > 0.05) ek(S, `Isıtıcı batarya ${sy(s.kis.isitici, 1)} kW (${v.isitmaRejimi[0]}/${v.isitmaRejimi[1]} °C, ${sy(s.suIsitici, 0)} L/h) + 3 yollu vana ve motor — ${s.ad}`, 1, "Set");
     if (s.yaz.sogutucu > 0.05) ek(S, `Soğutucu batarya ${sy(s.yaz.sogutucu, 1)} kW (${v.sogutmaRejimi[0]}/${v.sogutmaRejimi[1]} °C, ${sy(s.suSogutucu, 0)} L/h) ya da eş kapasitede DX batarya — ${s.ad}`, 1, "Set");
     if (s.tip !== "EGZOZ") ek(S, `Otomasyon / kontrol paneli (sıcaklık, filtre kirlilik alarmı, ${s.tip === "OTOPARK" ? "CO ve yangın senaryosu" : "zaman programı"}) — ${s.ad}`, 1, "Set");
     for (const ag of [s.agB, s.agE]) {

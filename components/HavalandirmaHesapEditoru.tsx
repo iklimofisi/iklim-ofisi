@@ -26,6 +26,7 @@ import {
   type PisirmeYuku,
 } from "@/lib/havalandirma/katalog";
 import { havalandirmaHesapla, sy, olcuYaz, type HavalandirmaSonucu, type MahalSonucu, type SantralSonucu, type KanalAgi } from "@/lib/havalandirma/hesap";
+import { otomatikSistem } from "@/lib/havalandirma/oneri";
 import { kanalSemasi } from "@/lib/havalandirma/cizim";
 import { cizimSvg } from "@/lib/isi-hesap/svg";
 
@@ -75,7 +76,20 @@ export default function HavalandirmaHesapEditoru({ hesap, musteriler }: Props) {
 
   const guncelle = (p: Partial<HavalandirmaVerisi>) => setVeri((v) => ({ ...v, ...p }));
   const mahalGuncelle = (id: string, p: Partial<Mahal>) => setVeri((v) => ({ ...v, mahaller: v.mahaller.map((m) => (m.id === id ? { ...m, ...p } : m)) }));
-  const santralGuncelle = (no: number, p: Partial<Santral>) => setVeri((v) => ({ ...v, santraller: v.santraller.map((s) => (s.no === no ? { ...s, ...p } : s)) }));
+  // Otomatik moddaki öneriyi elle düzenlenebilir hâle getirir (santraller ve mahal bağlantıları veriye yazılır)
+  const elleyeGec = (v: HavalandirmaVerisi): HavalandirmaVerisi => (v.otoSistem ? { ...otomatikSistem(v).veri, otoSistem: false } : v);
+  const santralGuncelle = (no: number, p: Partial<Santral>) => {
+    if (veri.otoSistem) bildirimGoster("Santral değiştirildi: sistem seçimi elle düzenlemeye geçti.");
+    setVeri((v0) => {
+      const v = elleyeGec(v0);
+      return { ...v, santraller: v.santraller.map((s) => (s.no === no ? { ...s, ...p } : s)) };
+    });
+  };
+  const elleDuzenle = () => setVeri((v) => elleyeGec(v));
+  const otomatigeDon = () => {
+    if (!confirm("Santral / fan seçimi ve mahal bağlantıları yeniden programa bırakılsın mı? Elle yaptığınız santral ayarları silinir.")) return;
+    setVeri((v) => ({ ...v, otoSistem: true, santraller: [] }));
+  };
 
   const kaydet = (sonra?: () => void) => {
     setHata("");
@@ -165,18 +179,17 @@ export default function HavalandirmaHesapEditoru({ hesap, musteriler }: Props) {
         ))}
       </div>
 
-      {sekme === "proje" && <ProjeSekmesi veri={veri} sonuc={sonuc} guncelle={guncelle} santralGuncelle={santralGuncelle} />}
+      {sekme === "proje" && <ProjeSekmesi veri={veri} sonuc={sonuc} guncelle={guncelle} santralGuncelle={santralGuncelle} elleDuzenle={elleDuzenle} otomatigeDon={otomatigeDon} mahaleGit={mahaleGit} />}
 
       {sekme === "mahaller" && (
         <>
           <Rehber
             baslik="Mahaller nasıl girilir?"
             adimlar={[
-              <>Havalandırılacak <strong>her mahali ayrı</strong> ekleyin: soldan <strong>mahal tipini</strong> seçip &quot;+ Mahal&quot;. Tip, debinin hangi yöntemle bulunacağını belirler (kişi + alan, armatür başına egzoz, davlumbaz, otopark, teknik mahal ısısı…).</>,
-              <><strong>Ölçüler:</strong> en × boy ve yükseklik (m). Alan ve hacimden kişi sayısı (boşsa tip yoğunluğundan) ve hava değişim sayısı bulunur.</>,
-              <><strong>Santral:</strong> mahale taze havayı veren santral; egzozu başka bir fan / santral atıyorsa &quot;Egzoz santrali&quot;nden seçin (ör. WC egzozu ayrı fanla). &quot;Yok&quot; seçilirse mahal hesapta görünür ama kanala bağlanmaz.</>,
-              <><strong>Kanal mesafeleri:</strong> mahal listesinin sırası ana kanal üzerindeki sıradır (↑ ↓ ile değişir). Her mahale bir önceki branşmandan ana kanal uzunluğunu ve branşmandan mahale mesafeyi yazın; kanal ölçüleri ve fan basıncı bunlardan hesaplanır.</>,
-              <><strong>Elle debi:</strong> şartname ya da kullanıcı farklı bir debi istiyorsa yazın; hesaplanan değerin yerine geçer (boş = hesap).</>,
+              <><strong>Yalnız mahal tipini ve alanını girmeniz yeterli.</strong> Soldan tipi seçip &quot;+ Mahal&quot; deyin (ör. Kuaför, WC, Açık ofis), alanı (m²) yazın. Program taze hava ve egzoz debisini standarda göre hesaplar, mahalin nasıl havalandırılacağını (taze hava + egzoz, yalnız egzoz, davlumbaz, doğal…) yazar.</>,
+              <><strong>Santral / fan seçimi otomatiktir:</strong> mahaller gruplanır ve her gruba uygun cihaz seçilir (kompakt ısı geri kazanım cihazı, klima santrali, konut HRV, mutfak, otopark, teknik egzoz fanı); seçimin gerekçesi yazılır. İsterseniz Proje sekmesinden elle düzenlemeye geçebilirsiniz.</>,
+              <><strong>Bölge (isteğe bağlı):</strong> ayrı cihaz istenen kısımlara aynı adı yazın (ör. &quot;Daire 1&quot;, &quot;Zemin kat dükkân&quot;, &quot;1. kat ofis&quot;). Boş bırakılırsa aynı türdeki mahaller tek cihaza bağlanır.</>,
+              <><strong>Kanal mesafeleri ve elle debi (isteğe bağlı):</strong> girilmezse tipik mesafelerle (önceki branşmandan 4 m, mahale 3 m) kanal ölçüsü ve fan basıncı hesaplanır. Liste sırası ana kanal üzerindeki sıradır (↑ ↓). Şartname farklı debi istiyorsa elle debi yazın.</>,
             ]}
           />
           <div className="grid lg:grid-cols-[16rem_1fr] gap-5 items-start">
@@ -198,7 +211,7 @@ export default function HavalandirmaHesapEditoru({ hesap, musteriler }: Props) {
                         <span className="text-xs text-metin/50 shrink-0">{ms ? sy(Math.max(ms.besleme, ms.egzoz), 0) : "—"}</span>
                       </span>
                       <span className="block text-[11px] text-metin/45">
-                        {sy(m.en * m.boy)} m² · {m.santral > 0 ? `S${m.santral}` : "santral yok"}
+                        {sy(m.en * m.boy)} m² · {ms && ms.santral > 0 ? `S${ms.santral}${ms.egzozSantral > 0 && ms.egzozSantral !== ms.santral ? `/S${ms.egzozSantral}` : ""}` : "doğal"}
                         {ms && ` · B ${sy(ms.besleme, 0)} / E ${sy(ms.egzoz, 0)}`}
                         {ms && ms.uyarilar.length > 0 && <span className="text-sicak-dim"> · ⚠ {ms.uyarilar.length}</span>}
                       </span>
@@ -249,6 +262,11 @@ export default function HavalandirmaHesapEditoru({ hesap, musteriler }: Props) {
                 mahal={mahal}
                 sonuc={mahalSonuc}
                 veri={veri}
+                hesap={sonuc}
+                elleDuzenle={() => {
+                  bildirimGoster("Sistem seçimi elle düzenlemeye geçti; santralleri mahal ekranından seçebilirsiniz.");
+                  elleDuzenle();
+                }}
                 guncelle={(p) => mahalGuncelle(mahal.id, p)}
                 kopyala={() => {
                   const kopya: Mahal = { ...mahal, id: yeniId(), ad: `${mahal.ad} (kopya)`.slice(0, 120) };
@@ -303,11 +321,17 @@ function ProjeSekmesi({
   sonuc,
   guncelle,
   santralGuncelle,
+  elleDuzenle,
+  otomatigeDon,
+  mahaleGit,
 }: {
   veri: HavalandirmaVerisi;
   sonuc: HavalandirmaSonucu;
   guncelle: (p: Partial<HavalandirmaVerisi>) => void;
   santralGuncelle: (no: number, p: Partial<Santral>) => void;
+  elleDuzenle: () => void;
+  otomatigeDon: () => void;
+  mahaleGit: (id: string) => void;
 }) {
   const il = ilBul(veri.il);
   const kat = EN_KATEGORI[veri.kategori];
@@ -316,8 +340,8 @@ function ProjeSekmesi({
       <Rehber
         baslik="Bu hesap nasıl yapılır? (sırayla)"
         adimlar={[
-          <><strong>1 · Proje & Santraller</strong> (bu sekme): ili ve taze hava yöntemini seçin, aşağıdan <strong>santral / fan ekleyin</strong>. Her bağımsız cihaz (ısı geri kazanımlı santral, konut HRV, egzoz fanı, mutfak egzozu, otopark fanları) ayrı bir santraldir.</>,
-          <><strong>2 · Mahaller</strong>: mahalleri tipiyle ekleyin, ölçülerini ve kanal mesafelerini girin, her mahali bir santrale bağlayın. Debi tipe göre otomatik hesaplanır ve gerekçesi yazılır.</>,
+          <><strong>1 · Proje & Santraller</strong> (bu sekme): ili seçin; diğer değerler hazır gelir (TS EN 16798-1 Kategori II). Santral / fan seçimini program yapar — aşağıda seçilen cihazları ve gerekçelerini görürsünüz.</>,
+          <><strong>2 · Mahaller</strong>: yalnız mahal tipini ve alanını girin (ör. Kuaför 60 m², WC). Taze hava / egzoz debisi, mahalin nasıl havalandırılacağı ve bağlanacağı cihaz otomatik belirlenir.</>,
           <><strong>3 · Sonuçlar</strong>: mahal debileri, santral seçimi, ısı geri kazanımı, batarya kapasiteleri, kanal ölçüleri, fan basıncı ve gücü (SFP). <strong>4 · Kanal Şeması</strong>: tek hat kanal şeması (ölçülere tıklayıp değiştirebilirsiniz). <strong>5 · Malzeme & Teklif</strong>: malzeme listesi ve teklif taslağı.</>,
           <>Klima / VRF hesabı yapılmış bir projeyi buraya aktarabilirsiniz (yeni hesap açarken &quot;Klima / VRF hesabındaki odalarla&quot; seçeneği); odalar yeniden girilmez.</>,
         ]}
@@ -432,7 +456,10 @@ function ProjeSekmesi({
         </Kart>
 
         <div className="lg:col-span-2">
-          <Kart baslik="Santraller ve fanlar" aciklama="Ana kanal: santralden ilk branşmana kanal uzunluğu (besleme ve egzoz için). Isı geri kazanım verimi boşsa tipin tipik değeri kullanılır; seçilen cihazın kataloğundaki değeri yazabilirsiniz.">
+          {veri.otoSistem ? (
+            <OtoSantralKarti sonuc={sonuc} elleDuzenle={elleDuzenle} mahaleGit={mahaleGit} />
+          ) : (
+          <Kart baslik="Santraller ve fanlar (elle)" aciklama="Ana kanal: santralden ilk branşmana kanal uzunluğu (besleme ve egzoz için). Isı geri kazanım verimi boşsa tipin tipik değeri kullanılır; seçilen cihazın kataloğundaki değeri yazabilirsiniz.">
             <SantralYardimi />
             <div className="space-y-3">
               {veri.santraller.map((s) => {
@@ -564,10 +591,74 @@ function ProjeSekmesi({
                 </button>
               ))}
             </div>
+            <div className="mt-4 pt-3 border-t border-hat flex flex-wrap items-center gap-3">
+              <button type="button" onClick={otomatigeDon} className="focus-ring text-xs border border-soguk/50 text-soguk-dim rounded-md px-3 py-1.5 hover:bg-soguk/5">
+                ↺ Santral seçimini yeniden programa bırak
+              </button>
+              <span className="text-[11px] text-metin/50">Mahallere göre cihazları program seçer ve gerekçesini yazar.</span>
+            </div>
           </Kart>
+          )}
         </div>
       </div>
     </>
+  );
+}
+
+// Otomatik modda seçilen santral / fanlar ve gerekçeleri
+function OtoSantralKarti({ sonuc, elleDuzenle, mahaleGit }: { sonuc: HavalandirmaSonucu; elleDuzenle: () => void; mahaleGit: (id: string) => void }) {
+  const dogal = sonuc.mahaller.filter((m) => m.santral === 0 && m.egzozSantral === 0);
+  return (
+    <Kart
+      baslik="Santral ve fan seçimi — otomatik"
+      aciklama="Program mahal tiplerine bakarak her mahalin nasıl havalandırılacağını belirler, mahalleri gruplar ve her gruba uygun cihazı seçer. Mahal eklediğinizde ya da değiştirdiğinizde seçim kendiliğinden güncellenir."
+    >
+      {!sonuc.santraller.length && <p className="text-sm text-metin/55">Mahal girdikçe cihazlar burada görünecek.</p>}
+      <div className="space-y-3">
+        {sonuc.santraller.map((x) => (
+          <div key={x.no} className="border border-hat rounded-md p-3 bg-zemin/40">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <p className="text-sm font-semibold text-metin">
+                <span className="text-soguk-dim">S{x.no}</span> · {x.ad} <span className="font-normal text-metin/55">— {x.tipAdi}</span>
+              </p>
+              <p className="text-xs text-metin/60">
+                {x.besleme > 0.5 && `besleme ${M3(x.besleme)}`}
+                {x.besleme > 0.5 && x.egzoz > 0.5 && " · "}
+                {x.egzoz > 0.5 && `egzoz ${M3(x.egzoz)}`}
+                {x.yangin > 0 && ` · duman ${M3(x.yangin)}`}
+              </p>
+            </div>
+            <p className="text-[12px] text-metin/70 mt-1">{x.secim}</p>
+            {x.gerekce && <p className="text-[12px] text-metin/60 leading-relaxed mt-1.5"><strong className="text-metin/70">Neden?</strong> {x.gerekce}</p>}
+            <p className="text-[11px] text-metin/50 mt-1.5">
+              Bağlı mahaller:{" "}
+              {x.mahaller.map((id, i) => {
+                const m = sonuc.mahaller.find((y) => y.id === id);
+                return (
+                  <span key={id}>
+                    {i > 0 && ", "}
+                    <button type="button" onClick={() => mahaleGit(id)} className="focus-ring text-soguk-dim hover:underline">
+                      {m?.ad ?? "?"}
+                    </button>
+                  </span>
+                );
+              })}
+            </p>
+          </div>
+        ))}
+        {dogal.length > 0 && (
+          <p className="text-[12px] text-metin/60">
+            Fan gerektirmeyen (doğal havalandırmalı) mahaller: {dogal.map((m) => m.ad).join(", ")}.
+          </p>
+        )}
+      </div>
+      <div className="mt-4 pt-3 border-t border-hat flex flex-wrap items-center gap-3">
+        <button type="button" onClick={elleDuzenle} className="focus-ring text-xs border border-hat rounded-md px-3 py-1.5 text-metin/70 hover:border-soguk">
+          Elle düzenle
+        </button>
+        <span className="text-[11px] text-metin/50">Cihaz tipini, verimi, bataryaları, kanal tipini ya da mahal bağlantılarını değiştirmek isterseniz. Bu seçim başlangıç olarak kopyalanır.</span>
+      </div>
+    </Kart>
   );
 }
 
@@ -578,6 +669,9 @@ function SantralYardimi() {
     <div className="text-[12px] leading-relaxed text-metin/65 bg-zemin/60 border border-hat rounded-md px-3 py-2 mb-3 space-y-1.5">
       <p>
         <strong>Isı geri kazanımlı santral</strong>: ofis, mağaza, okul, otel gibi binaların ana cihazı. Plakalı: taze ve egzoz havası karışmaz (hastane, kokulu egzoz). Rotorlu: nemi de geri kazanır, verimi yüksek, donmaz; WC / mutfak egzozu bağlanmaz. Ara akışkanlı: besleme ve egzoz santralleri ayrı yerlerdeyse.
+      </p>
+      <p>
+        <strong>Kompakt ısı geri kazanım cihazı</strong>: 250–2.500 m³/h; dükkân, kuaför, küçük ofis, klinik, restoran salonu gibi tek bölümlü işletmelerde santral yerine asma tavana asılır (makine dairesi gerekmez).
       </p>
       <p>
         <strong>Konut HRV</strong>: dairelerde tavana asılan küçük cihaz; kuru odalara (salon, yatak) taze hava verir, ıslak hacimlerden (mutfak, banyo, WC) emer. Debiler otomatik dengelenir.
@@ -624,6 +718,8 @@ function MahalDuzenleyici({
   mahal: m,
   sonuc,
   veri,
+  hesap,
+  elleDuzenle,
   guncelle,
   kopyala,
   sil,
@@ -632,6 +728,8 @@ function MahalDuzenleyici({
   mahal: Mahal;
   sonuc: MahalSonucu | null;
   veri: HavalandirmaVerisi;
+  hesap: HavalandirmaSonucu;
+  elleDuzenle: () => void;
   guncelle: (p: Partial<Mahal>) => void;
   kopyala: () => void;
   sil: () => void;
@@ -651,18 +749,19 @@ function MahalDuzenleyici({
           <Alan ad="Mahal tipi" className="sm:col-span-2" ipucu="Debi yöntemi tipe göre değişir; tipi değiştirince aşağıdaki alanlar da değişir.">
             <MahalTipSecici deger={m.tip} onChange={(tip) => guncelle({ tip, ad: m.ad === MAHAL_TIPLERI[m.tip].ad ? MAHAL_TIPLERI[tip].ad : m.ad })} />
           </Alan>
+          <Alan ad="Alan (m²)" ipucu="Alanı doğrudan yazabilirsiniz (boy sabit kalır, en buna göre ayarlanır) ya da en × boy girin.">
+            <SayiAlani deger={Math.round(alan * 100) / 100} min={0.5} maks={50000} onChange={(n) => n !== null && n > 0 && guncelle({ en: Math.round((n / Math.max(0.3, m.boy)) * 1000) / 1000 })} />
+          </Alan>
           <Alan ad="En (m)">
-            <SayiAlani deger={m.en} min={0.5} maks={300} onChange={(n) => n !== null && guncelle({ en: n })} />
+            <SayiAlani deger={m.en} min={0.3} maks={500} onChange={(n) => n !== null && guncelle({ en: n })} />
           </Alan>
           <Alan ad="Boy (m)">
-            <SayiAlani deger={m.boy} min={0.5} maks={300} onChange={(n) => n !== null && guncelle({ boy: n })} />
+            <SayiAlani deger={m.boy} min={0.3} maks={500} onChange={(n) => n !== null && guncelle({ boy: n })} />
           </Alan>
           <Alan ad="Yükseklik (m)" ipucu="Döşemeden tavana net yükseklik; hava değişim sayısı hacme göre bulunur.">
             <SayiAlani deger={m.yukseklik} min={1.8} maks={30} onChange={(n) => n !== null && guncelle({ yukseklik: n })} />
           </Alan>
-          <div className="text-xs text-metin/55 pt-5">
-            {sy(alan)} m² · {sy(alan * m.yukseklik, 0)} m³
-          </div>
+          <div className="text-xs text-metin/55 pt-5">{sy(alan * m.yukseklik, 0)} m³ hacim</div>
 
           {(y === "KISI_ALAN" || y === "KONUT_KURU") && (
             <Alan ad={`Kişi sayısı (0 = ${kisiOto}, tip yoğunluğu)`} ipucu={t.yogunluk ? `Bu tipte kişi başı ${t.yogunluk} m² kabul edilir. Gerçek kişi / koltuk sayısı biliniyorsa yazın.` : undefined}>
@@ -720,11 +819,13 @@ function MahalDuzenleyici({
             </Alan>
           )}
         </div>
-        {t.not && <p className="text-[11px] text-metin/55 mt-2">ℹ {t.not}</p>}
       </Kart>
 
-      <Kart baslik="Santral, kanal mesafeleri ve elle debi">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <SistemKarti mahal={m} sonuc={sonuc} hesap={hesap} veri={veri} elleDuzenle={elleDuzenle} guncelle={guncelle} />
+
+      {!veri.otoSistem && (
+      <Kart baslik="Santral bağlantısı (elle)">
+        <div className="grid sm:grid-cols-2 gap-3">
           <Alan ad="Santral (besleme)" ipucu="Bu mahale taze havayı veren santral. Yalnız egzoz olan mahallerde egzozu atan santral / fan.">
             <select value={m.santral} onChange={(e) => guncelle({ santral: Number(e.target.value) })} className={girdi}>
               <option value={0}>— Yok (bağlı değil) —</option>
@@ -746,6 +847,15 @@ function MahalDuzenleyici({
               ))}
             </select>
           </Alan>
+        </div>
+      </Kart>
+      )}
+
+      <details className="bg-yuzey border border-hat rounded-lg p-4 group" open={m.hatMesafe !== 4 || m.bransMesafe !== 3 || m.besElle !== null || m.egzElle !== null}>
+        <summary className="cursor-pointer text-sm font-semibold text-metin select-none">
+          Kanal mesafeleri ve elle debi <span className="text-xs font-normal text-metin/50">(isteğe bağlı — girilmezse tipik değerler: 4 m / 3 m, debi hesaptan)</span>
+        </summary>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
           <Alan ad="Önceki branşmandan ana kanal (m)" ipucu="Listede bir önceki mahalin branşmanından bu mahalin branşmanına ana kanal uzunluğu. İlk mahalde santralin ana kanalına eklenmez.">
             <SayiAlani deger={m.hatMesafe} min={0} maks={300} onChange={(n) => n !== null && guncelle({ hatMesafe: n })} />
           </Alan>
@@ -759,7 +869,9 @@ function MahalDuzenleyici({
             <SayiAlani deger={m.egzElle} bosOlabilir min={0} maks={500000} yerTutucu={sonuc ? sy(sonuc.egzoz - sonuc.dengeEkE, 0) : ""} onChange={(n) => guncelle({ egzElle: n })} />
           </Alan>
         </div>
-        <div className="flex flex-wrap gap-2 mt-4">
+      </details>
+
+      <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => tasi(-1)} className="focus-ring text-xs border border-hat rounded-md px-2.5 py-1 text-metin/60 hover:border-soguk">
             ↑ Yukarı
           </button>
@@ -772,8 +884,7 @@ function MahalDuzenleyici({
           <button type="button" onClick={sil} className="focus-ring text-xs text-metin/40 hover:text-sicak-dim ml-auto">
             Mahali sil
           </button>
-        </div>
-      </Kart>
+      </div>
 
       {sonuc && (
         <div className="bg-soguk/5 border border-soguk/30 rounded-lg p-4">
@@ -798,6 +909,85 @@ function MahalDuzenleyici({
             </ul>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+// Mahalin nasıl havalandırıldığı ve hangi cihaza bağlandığı (otomatik modda program seçer)
+function SistemKarti({
+  mahal: m,
+  sonuc,
+  hesap,
+  veri,
+  elleDuzenle,
+  guncelle,
+}: {
+  mahal: Mahal;
+  sonuc: MahalSonucu | null;
+  hesap: HavalandirmaSonucu;
+  veri: HavalandirmaVerisi;
+  elleDuzenle: () => void;
+  guncelle: (p: Partial<Mahal>) => void;
+}) {
+  const [gerekceAcik, setGerekceAcik] = useState(false);
+  // Elle modda programın bu mahal için önereceği cihaz (karşılaştırma için)
+  const oneri = useMemo(() => {
+    if (veri.otoSistem) return null;
+    const o = otomatikSistem(veri);
+    const b = o.veri.mahaller.find((x) => x.id === m.id);
+    const s = b ? o.veri.santraller.find((x) => x.no === b.santral) : undefined;
+    return s ? SANTRAL_TIPLERI[s.tip].ad : "Doğal havalandırma (fan yok)";
+  }, [veri, m.id]);
+  if (!sonuc) return null;
+  const sB = hesap.santraller.find((x) => x.no === sonuc.santral);
+  const sE = sonuc.egzozSantral !== sonuc.santral ? hesap.santraller.find((x) => x.no === sonuc.egzozSantral) : undefined;
+  const cihaz = (x: SantralSonucu) => `S${x.no} · ${x.ad} — ${x.tipAdi}`;
+  return (
+    <div className="bg-yuzey border border-soguk/40 rounded-lg p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
+        <h3 className="font-display font-semibold text-metin text-sm">
+          Havalandırma sistemi <span className="text-xs font-normal text-metin/50">{veri.otoSistem ? "(program seçti)" : "(elle)"}</span>
+        </h3>
+        {veri.otoSistem && (
+          <button type="button" onClick={elleDuzenle} className="focus-ring text-[11px] border border-hat rounded-md px-2 py-1 text-metin/60 hover:border-soguk" title="Santralleri ve mahal bağlantılarını kendiniz seçmek için">
+            Santrali elle seç
+          </button>
+        )}
+      </div>
+      <p className="text-[13px] text-metin/80 leading-relaxed">{sonuc.sistemNotu}</p>
+      <div className="mt-3 text-[13px] space-y-1">
+        {sB ? (
+          <p>
+            <span className="text-metin/50">{sE ? "Besleme: " : "Bağlı cihaz: "}</span>
+            <strong className="text-soguk-dim">{cihaz(sB)}</strong>
+          </p>
+        ) : (
+          <p className="text-metin/60">{sonuc.besleme > 0.5 ? "Besleme: doğal (menfez / panjur), fan yok" : "Mekanik besleme yok"}</p>
+        )}
+        {sE && (
+          <p>
+            <span className="text-metin/50">Egzoz: </span>
+            <strong className="text-soguk-dim">{cihaz(sE)}</strong>
+          </p>
+        )}
+      </div>
+      {veri.otoSistem && sB?.gerekce && (
+        <div className="mt-2">
+          <button type="button" onClick={() => setGerekceAcik((a) => !a)} className="focus-ring text-[11px] text-soguk-dim hover:underline">
+            {gerekceAcik ? "▾" : "▸"} Neden bu cihaz?
+          </button>
+          {gerekceAcik && <p className="text-[12px] text-metin/65 leading-relaxed mt-1">{sB.gerekce}</p>}
+        </div>
+      )}
+      {veri.otoSistem ? (
+        <div className="mt-3 max-w-xs">
+          <Alan ad="Bölge (isteğe bağlı)" ipucu="Ayrı cihaz istenen kısımlara aynı adı yazın: “Daire 1”, “Zemin kat dükkân”… Aynı bölgedeki mahaller aynı cihaza bağlanır.">
+            <input value={m.bolge} maxLength={40} placeholder="ör. Daire 1" onChange={(e) => guncelle({ bolge: e.target.value })} className={girdi} />
+          </Alan>
+        </div>
+      ) : (
+        oneri && <p className="text-[11px] text-metin/50 mt-2">Program önerisi: {oneri}</p>
       )}
     </div>
   );
@@ -884,7 +1074,9 @@ function SantralKarti({ x, s }: { x: SantralSonucu; s: HavalandirmaSonucu }) {
   const mahalAdi = (id: string | null) => s.mahaller.find((m) => m.id === id)?.ad ?? "—";
   return (
     <Kart baslik={`${x.ad} — ${x.tipAdi}`}>
-      <p className="text-sm text-metin font-medium mb-3">{x.secim}</p>
+      <p className="text-sm text-metin font-medium mb-1">{x.secim}</p>
+      {x.gerekce && <p className="text-[12px] text-metin/60 leading-relaxed mb-3">{x.gerekce}</p>}
+      {!x.gerekce && <div className="mb-2" />}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
         <Ozet ad="Besleme" deger={M3(x.besleme)} alt={`kademe ${sy(x.nominal, 0)}`} vurgu />
         <Ozet ad="Egzoz" deger={M3(x.egzoz)} alt={x.yangin ? `duman ${M3(x.yangin)}` : undefined} />
@@ -996,7 +1188,7 @@ function SemaSekmesi({
   const hedef = (anahtar: string): Omit<DuzenHedef, "x" | "y" | "anahtar"> | null => {
     const [tur, id] = anahtar.split("|");
     if (tur === "anaHat") {
-      const st = veri.santraller.find((x) => String(x.no) === id);
+      const st = (veri.otoSistem ? s.santralVerisi : veri.santraller).find((x) => String(x.no) === id);
       if (!st) return null;
       return { ad: `${st.ad} — ana kanal (m)`, aciklama: "Santralden ilk branşmana kanal uzunluğu (besleme ve egzoz ana kanalı için ortak).", deger: st.anaHat, min: 0, maks: 300, mahalId: null };
     }
