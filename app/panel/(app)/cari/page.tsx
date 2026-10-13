@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import { cariHareketEkle, cariHareketSil } from "@/lib/actions";
 import CariFiltre from "@/components/CariFiltre";
 import SilButon from "@/components/SilButon";
@@ -23,7 +24,7 @@ export default async function CariSayfasi({
   onBesGunSonra.setDate(bugun.getDate() + 15);
 
   const [musteriler, hareketler, yaklasanCekler] = await Promise.all([
-    prisma.musteri.findMany({ orderBy: { ad: "asc" } }),
+    prisma.musteri.findMany({ where: GERCEK_MUSTERI, orderBy: { ad: "asc" } }),
     prisma.cariHareket.findMany({
       where: seciliMusteri === "hepsi" ? {} : { musteriId: seciliMusteri },
       include: { musteri: true },

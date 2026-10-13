@@ -16,6 +16,9 @@ import GorusmeFormu from "@/components/GorusmeFormu";
 import ZiyaretListesi from "@/components/ZiyaretListesi";
 import { PAYLASIM_TABANI } from "@/lib/teklif-paylasim";
 import { redNedeniAdi } from "@/lib/teklif-durum";
+import { GERCEK_MUSTERI, MUSTERISIZ_HITAP, musterisizMi, musterisizGoster } from "@/lib/musterisiz";
+import { teklifMusteriyeBagla } from "@/lib/actions";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +53,7 @@ function kurumsalTeklifKodu(teklifNo: number, tarih: Date) {
 }
 
 export default async function TeklifDetay({ params }: { params: { id: string } }) {
-  const [teklif, sirket, sozlesme, kopyalar, paylasim, gorusmeler] = await Promise.all([
+  const [teklifHam, sirket, sozlesme, kopyalar, paylasim, gorusmeler] = await Promise.all([
     prisma.teklif.findUnique({
       where: { id: params.id },
       include: {
@@ -84,7 +87,13 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
       .catch(() => null),
   ]);
 
-  if (!teklif) notFound();
+  if (!teklifHam) notFound();
+  // Müşterisiz teklif: belgede müşteri yerine muhatap görünür; sipariş / sözleşme için önce müşteriye bağlanır
+  const musterisiz = musterisizMi(teklifHam.musteriId);
+  const teklif = musterisizGoster(teklifHam);
+  const bagliMusteriler = musterisiz
+    ? await prisma.musteri.findMany({ where: GERCEK_MUSTERI, orderBy: { ad: "asc" }, select: { id: true, ad: true } })
+    : [];
 
   const pb = teklif.paraBirimi;
   // Müşteriye tek satır toplam gösterilir: "10.250,00 € + KDV" (KDV dahil tekliflerde "(KDV dahil)")
@@ -159,6 +168,37 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
         </div>
       </div>
 
+      {musterisiz && (
+        <div className="mb-4 bg-amber-50 border border-amber-300 rounded-lg p-4 print:hidden">
+          <p className="text-sm font-semibold text-amber-900">◌ Müşterisiz teklif</p>
+          <p className="text-xs text-amber-900/80 mt-1">
+            Bu teklif bir müşteriye bağlı değil. PDF&apos;te, müşteri linkinde ve e-postada müşteri yerine{" "}
+            <b>&quot;{teklifHam.muhatap?.trim() || MUSTERISIZ_HITAP}&quot;</b> yazar (Düzenle&apos;den değiştirilebilir). Siparişe dönüştürmek ve sözleşme
+            hazırlamak için önce müşteriye bağlayın — teklif numarası, kalemler ve revizyon geçmişi aynen kalır.
+          </p>
+          <form action={teklifMusteriyeBagla} className="mt-3 flex flex-wrap items-end gap-2">
+            <input type="hidden" name="teklifId" value={teklif.id} />
+            <div className="min-w-[16rem] flex-1 max-w-md">
+              <label className="block text-xs font-medium text-amber-900/70 mb-1">Müşteri</label>
+              <select name="musteriId" required defaultValue="" className="focus-ring w-full border border-amber-300 rounded-md px-3 py-2 text-sm bg-white">
+                <option value="">— Müşteri seçin —</option>
+                {bagliMusteriler.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.ad}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <KaydetButonu className="focus-ring bg-amber-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-amber-700 disabled:opacity-60" bekleme="Bağlanıyor…" basari={null}>
+              Müşteriye bağla
+            </KaydetButonu>
+            <Link href="/panel/musteriler" target="_blank" className="focus-ring text-xs text-amber-900/70 hover:underline pb-2">
+              + Müşteri listede yoksa önce ekleyin
+            </Link>
+          </form>
+        </div>
+      )}
+
       {kopyalar.length > 0 && (
         <div className="mb-3 text-xs text-metin/60 bg-soguk-light/40 border border-hat rounded-md px-3 py-2 print:hidden">
           <span className="font-semibold text-metin/70">Bu tekliften kopyalananlar:</span>{" "}
@@ -219,7 +259,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
           )}
         </p>
         <div className="flex items-center gap-3 ml-auto">
-        {(teklif.durum === "ONAYLANDI" || sozlesme) && (
+        {!musterisiz && (teklif.durum === "ONAYLANDI" || sozlesme) && (
           <Link
             href={`/panel/teklifler/${teklif.id}/sozlesme`}
             className="focus-ring text-sm bg-soguk text-white px-4 py-2 rounded-md font-medium hover:bg-soguk-dim transition-colors"
@@ -227,7 +267,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
             📄 {sozlesme ? "Sözleşmeyi Gör / Düzenle" : "Sözleşme Hazırla"}
           </Link>
         )}
-        {teklif.durum === "ONAYLANDI" && !teklif.siparis && (
+        {!musterisiz && teklif.durum === "ONAYLANDI" && !teklif.siparis && (
           <Link
             href={`/panel/teklifler/${teklif.id}/siparis-talebi`}
             className="focus-ring text-sm bg-metin text-zemin px-4 py-2 rounded-md font-medium hover:bg-soguk-dim transition-colors"

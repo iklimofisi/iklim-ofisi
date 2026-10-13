@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { satinalmaTeklifiniDonustur, satinalmaTeklifiGuncelle } from "@/lib/actions";
@@ -18,7 +19,7 @@ export default async function SatinalmaTeklifiDetay({ params }: { params: { id: 
       where: { id: params.id },
       include: { tedarikci: true, kalemler: true, tekliflar: { include: { musteri: true } } },
     }),
-    prisma.musteri.findMany({ orderBy: { ad: "asc" } }),
+    prisma.musteri.findMany({ where: GERCEK_MUSTERI, orderBy: { ad: "asc" } }),
   ]);
 
   if (!satinalmaTeklifi) notFound();

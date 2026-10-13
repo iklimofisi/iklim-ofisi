@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import { teklifEkle } from "@/lib/actions";
 import TeklifKalemleri from "@/components/TeklifKalemleri";
 import { getTcmbKurlari } from "@/lib/kur";
@@ -23,7 +24,7 @@ export default async function YeniTeklifSayfasi({
   };
 }) {
   const [musteriler, sablonlar, markalar, urunler, projeler, kurlar] = await Promise.all([
-    prisma.musteri.findMany({
+    prisma.musteri.findMany({ where: GERCEK_MUSTERI,
       orderBy: { ad: "asc" },
       include: { yetkililer: { orderBy: { ad: "asc" }, select: { id: true, ad: true, unvan: true } } },
     }),

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import { webTalebiOkunduIsaretle, webTalebiSil } from "@/lib/actions";
 import SilButon from "@/components/SilButon";
 import Link from "next/link";
@@ -26,7 +27,7 @@ export default async function TaleplerSayfasi({
       orderBy: { tarih: "desc" },
       select: { id: true, ad: true, telefon: true, email: true, mesaj: true, dosyaAdi: true, okundu: true, tarih: true },
     }),
-    prisma.musteri.findMany({
+    prisma.musteri.findMany({ where: GERCEK_MUSTERI,
       orderBy: { ad: "asc" },
       select: {
         id: true,

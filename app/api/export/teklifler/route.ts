@@ -1,4 +1,5 @@
 import { durumFiltresi } from "@/lib/teklif-durum";
+import { musteriEtiketi } from "@/lib/musterisiz";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { suankiKullanici } from "@/lib/oturum";
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
     .map(({ t, toplam }) => [
       `TKL-${String(t.teklifNo).padStart(4, "0")}`,
       t.baslik,
-      t.musteri.ad,
+      musteriEtiketi(t.musteriId, t.musteri.ad, t.muhatap),
       t.tarih.toISOString().slice(0, 10),
       durumEtiket[t.durum] ?? t.durum,
       t.paraBirimi,

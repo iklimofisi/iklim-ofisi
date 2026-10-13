@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import { veriOku } from "@/lib/havalandirma/tipler";
 import HavalandirmaHesapEditoru from "@/components/HavalandirmaHesapEditoru";
 
@@ -8,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function HavalandirmaHesapSayfasi({ params }: { params: { id: string } }) {
   const [hesap, musteriler] = await Promise.all([
     prisma.havalandirmaHesap.findUnique({ where: { id: params.id }, include: { teklif: { select: { id: true, teklifNo: true } } } }),
-    prisma.musteri.findMany({ orderBy: { ad: "asc" }, select: { id: true, ad: true } }),
+    prisma.musteri.findMany({ where: GERCEK_MUSTERI, orderBy: { ad: "asc" }, select: { id: true, ad: true } }),
   ]);
   if (!hesap) notFound();
   return (

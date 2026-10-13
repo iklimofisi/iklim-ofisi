@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import { notFound } from "next/navigation";
 import { teklifGuncelle } from "@/lib/actions";
 import TeklifKalemleri from "@/components/TeklifKalemleri";
@@ -26,7 +27,7 @@ export default async function TeklifDuzenle({
         sablonlar: true,
       },
     }),
-    prisma.musteri.findMany({
+    prisma.musteri.findMany({ where: GERCEK_MUSTERI,
       orderBy: { ad: "asc" },
       include: { yetkililer: { orderBy: { ad: "asc" }, select: { id: true, ad: true, unvan: true } } },
     }),
@@ -92,6 +93,7 @@ export default async function TeklifDuzenle({
             musteriler={musteriler.map((m) => ({ id: m.id, ad: m.ad, yetkiliAdi: m.yetkiliAdi, yetkililer: m.yetkililer }))}
             varsayilanMusteriId={teklif.musteriId}
             varsayilanYetkiliId={teklif.yetkiliId ?? ""}
+            varsayilanMuhatap={teklif.muhatap ?? ""}
           />
           <div>
             <label className="block text-xs font-medium text-metin/60 mb-1">Proje (opsiyonel)</label>

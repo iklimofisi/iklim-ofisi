@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { projeGuncelle, projeSil } from "@/lib/actions";
@@ -31,7 +32,7 @@ export default async function ProjeDetay({ params }: { params: { id: string } })
         ziyaretler: { orderBy: { tarih: "desc" }, include: { musteri: { select: { id: true, ad: true } }, teklif: { select: { id: true, teklifNo: true } } } },
       },
     }),
-    prisma.musteri.findMany({ orderBy: { ad: "asc" } }),
+    prisma.musteri.findMany({ where: GERCEK_MUSTERI, orderBy: { ad: "asc" } }),
   ]);
 
   if (!proje) notFound();

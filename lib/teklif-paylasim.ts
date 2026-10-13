@@ -6,6 +6,7 @@
 // -----------------------------------------------------------------------------
 import { prisma } from "@/lib/prisma";
 import { epostaGonder } from "@/lib/eposta";
+import { musterisizGoster } from "@/lib/musterisiz";
 
 export const PAYLASIM_TABANI = "https://iklimofisi.com/t/";
 
@@ -35,6 +36,7 @@ const BELGE_ALANLARI = {
   sablonlar: { orderBy: { sira: "asc" as const } },
   ozelNotlar: true,
   musteriId: true,
+  muhatap: true,
   projeId: true,
   musteriOnayAdi: true,
   musteriOnayTarihi: true,
@@ -80,12 +82,14 @@ export async function paylasilanTeklif(anahtar: string) {
   const paylasim = await prisma.teklifPaylasim
     .findUnique({ where: { anahtar }, select: { id: true, teklif: { select: BELGE_ALANLARI } } })
     .catch(() => null);
-  return paylasim ? { paylasimId: paylasim.id, teklif: paylasim.teklif } : null;
+  // Müşterisiz teklifte belgede müşteri yerine muhatap (yoksa "Sayın Yetkili") görünür
+  return paylasim ? { paylasimId: paylasim.id, teklif: musterisizGoster(paylasim.teklif) } : null;
 }
 
 // Panel içi önizleme / PDF için (giriş kontrolü çağıran yerde yapılır)
 export async function belgeTeklifi(id: string) {
-  return prisma.teklif.findUnique({ where: { id }, select: BELGE_ALANLARI });
+  const t = await prisma.teklif.findUnique({ where: { id }, select: BELGE_ALANLARI });
+  return t ? musterisizGoster(t) : null;
 }
 
 // Link önizlemesi yapan botlar (WhatsApp, Telegram...) "görüntülendi" sayılmaz

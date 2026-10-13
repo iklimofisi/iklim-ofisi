@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { ziyaretHatirlatmaTamamlandi } from "@/lib/actions";
@@ -87,7 +88,7 @@ export default async function ZiyaretlerSayfasi({ searchParams = {} }: { searchP
       },
       orderBy: { tarih: "desc" },
     }),
-    prisma.musteri.findMany({ orderBy: { ad: "asc" }, select: { id: true, ad: true } }),
+    prisma.musteri.findMany({ where: GERCEK_MUSTERI, orderBy: { ad: "asc" }, select: { id: true, ad: true } }),
     prisma.proje.findMany({ orderBy: { ad: "asc" }, select: { id: true, ad: true, musteriId: true } }),
     prisma.kullanici.findMany({ orderBy: { ad: "asc" }, select: { ad: true } }),
     prisma.ziyaret.findMany({ distinct: ["olusturanAdi"], select: { olusturanAdi: true } }),

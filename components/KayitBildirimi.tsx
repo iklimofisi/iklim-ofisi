@@ -29,6 +29,7 @@ const MESAJLAR: Record<string, string> = {
   "klima-hesap-teklif": "Klima / VRF hesabından teklif taslağı oluşturuldu. Fiyatları girip kaydedin.",
   "havalandirma-hesap-kopyalandi": "Hesap kopyalandı. Şu an kopyayı düzenliyorsunuz.",
   "havalandirma-hesap-teklif": "Havalandırma hesabından teklif taslağı oluşturuldu. Fiyatları girip kaydedin.",
+  "teklif-musteriye-baglandi": "Teklif müşteriye bağlandı. Artık siparişe dönüştürülebilir ve sözleşme hazırlanabilir.",
   "paylasim-iptal": "Teklif linki iptal edildi; eski link artık açılmaz.",
   "eposta-test-ok": "Deneme e-postası gönderildi. Gelen kutunuzu (ve Spam klasörünü) kontrol edin.",
 };
@@ -43,6 +44,9 @@ const HATALAR: Record<string, string> = {
   "klima-hesap-eksik": "Hesap OLUŞTURULMADI: hesap adı boş olamaz.",
   "klima-hesap-teklif-eksik": "Teklif OLUŞTURULMADI: müşteri ve teklif başlığı seçilmeli, hesapta klimalanan en az bir oda olmalı.",
   "havalandirma-hesap-eksik": "Hesap OLUŞTURULMADI: hesap adı boş olamaz.",
+  "musterisiz-siparis": "Müşterisiz teklif siparişe dönüştürülemez: önce sayfanın üstündeki kutudan teklifi müşteriye bağlayın.",
+  "musterisiz-sozlesme": "Müşterisiz teklif için sözleşme hazırlanamaz: önce sayfanın üstündeki kutudan teklifi müşteriye bağlayın.",
+  "musteri-secilmedi": "Teklif müşteriye bağlanmadı: listeden bir müşteri seçin.",
   "havalandirma-hesap-teklif-eksik": "Teklif OLUŞTURULMADI: müşteri ve teklif başlığı seçilmeli, hesapta en az bir santral ve mahal olmalı.",
   "isi-modeli-eksik": "Model KAYDEDİLMEDİ: marka, model ve üç kapasite değeri (A7/W35, A-7/W35, A-7/W55) zorunludur.",
   "teklif-eksik": "Teklif KAYDEDİLMEDİ: müşteri, başlık veya en az bir açıklamalı kalem eksik.",

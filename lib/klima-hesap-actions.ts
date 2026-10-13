@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { girisZorunlu } from "@/lib/oturum";
 import { islemKaydet } from "@/lib/islem-kaydi";
+import { musterisizMi } from "@/lib/musterisiz";
+import { musterisizKaydiHazirla } from "@/lib/musterisiz-sunucu";
 import { klimaVeriOku, varsayilanKlimaVerisi, ornekKlimaDairesi, klimaOdasi, type KlimaOda } from "@/lib/klima-hesap/tipler";
 import { mekanOdaTipinden } from "@/lib/klima-hesap/mekanlar";
 import { veriOku as isiVeriOku } from "@/lib/isi-hesap/tipler";
@@ -23,8 +25,9 @@ async function yetki(islem: string, girdi?: FormData | Record<string, unknown>) 
 
 const metinAl = (v: unknown, maks = 200) => (typeof v === "string" ? v.trim().slice(0, maks) : "");
 
+// Hesabın kendisi müşterisiz teklif sistem kaydına bağlanmaz
 async function musteriDogrula(id: string): Promise<string | null> {
-  if (!id) return null;
+  if (!id || musterisizMi(id)) return null;
   const m = await prisma.musteri.findUnique({ where: { id }, select: { id: true } });
   return m ? m.id : null;
 }
@@ -131,7 +134,10 @@ export async function klimaHesapSil(id: string) {
 export async function klimaHesapTeklifeAktar(formData: FormData) {
   const kullanici = await yetki("klimaHesapTeklifeAktar", formData);
   const hesapId = metinAl(formData.get("hesapId"), 40);
-  const musteriId = await musteriDogrula(metinAl(formData.get("musteriId"), 40));
+  const musteriHam = metinAl(formData.get("musteriId"), 40);
+  // "Müşterisiz teklif" seçilebilir; teklif daha sonra teklif sayfasından müşteriye bağlanır
+  if (musterisizMi(musteriHam)) await musterisizKaydiHazirla();
+  const musteriId = musterisizMi(musteriHam) ? musteriHam : await musteriDogrula(musteriHam);
   const baslik = metinAl(formData.get("baslik"), 200);
   if (!hesapId) return;
   if (!musteriId || !baslik) redirect(`/panel/klima-hesabi/${hesapId}?mesaj=klima-hesap-teklif-eksik`);
@@ -161,7 +167,7 @@ export async function klimaHesapTeklifeAktar(formData: FormData) {
     },
     select: { id: true },
   });
-  await prisma.klimaHesap.update({ where: { id: hesapId }, data: { teklifId: teklif.id, musteriId } });
+  await prisma.klimaHesap.update({ where: { id: hesapId }, data: { teklifId: teklif.id, ...(musteriId && !musterisizMi(musteriId) ? { musteriId } : {}) } });
   revalidatePath("/panel/teklifler");
   revalidatePath("/panel/klima-hesabi");
   redirect(`/panel/teklifler/${teklif.id}/duzenle?mesaj=klima-hesap-teklif`);

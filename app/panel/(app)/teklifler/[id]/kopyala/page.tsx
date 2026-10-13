@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import { notFound } from "next/navigation";
 import { teklifEkle } from "@/lib/actions";
 import TeklifKalemleri from "@/components/TeklifKalemleri";
@@ -26,7 +27,7 @@ export default async function TeklifKopyala({
       where: { id: params.id },
       include: { kalemler: { orderBy: [{ sira: "asc" }, { id: "asc" }] }, sablonlar: true },
     }),
-    prisma.musteri.findMany({
+    prisma.musteri.findMany({ where: GERCEK_MUSTERI,
       orderBy: { ad: "asc" },
       include: { yetkililer: { orderBy: { ad: "asc" }, select: { id: true, ad: true, unvan: true } } },
     }),
@@ -83,6 +84,7 @@ export default async function TeklifKopyala({
             musteriler={musteriler.map((m) => ({ id: m.id, ad: m.ad, yetkiliAdi: m.yetkiliAdi, yetkililer: m.yetkililer }))}
             varsayilanMusteriId={varsayilanMusteriId}
             varsayilanYetkiliId={varsayilanYetkiliId}
+            varsayilanMuhatap={varsayilanMusteriId === kaynak.musteriId ? kaynak.muhatap ?? "" : ""}
             musteriEtiketSag={<HizliMusteriEkleModal yonlendirPath={`/panel/teklifler/${kaynak.id}/kopyala`} />}
           />
           <div>

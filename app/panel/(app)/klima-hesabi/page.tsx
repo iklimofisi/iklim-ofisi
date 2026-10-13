@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import { klimaHesapOlustur, klimaHesapKopyala, klimaHesapSil } from "@/lib/klima-hesap-actions";
 import { ILLER } from "@/lib/isi-hesap/iklim";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
@@ -28,7 +29,7 @@ export default async function KlimaHesaplariSayfasi() {
         teklif: { select: { teklifNo: true } },
       },
     }),
-    prisma.musteri.findMany({ orderBy: { ad: "asc" }, select: { id: true, ad: true } }),
+    prisma.musteri.findMany({ where: GERCEK_MUSTERI, orderBy: { ad: "asc" }, select: { id: true, ad: true } }),
     prisma.isiHesap.findMany({ orderBy: { updatedAt: "desc" }, select: { id: true, ad: true } }),
   ]);
 

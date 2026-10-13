@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import { musteriEkle, musteriSil } from "@/lib/actions"; // DÜZELTİLDİ: musteriEkle eklendi
 import SilButon from "@/components/SilButon";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
@@ -8,7 +9,7 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function MusterilerPage() {
-  const musteriler = await prisma.musteri.findMany({
+  const musteriler = await prisma.musteri.findMany({ where: GERCEK_MUSTERI,
     orderBy: { ad: "asc" },
     include: { yetkililer: { select: { ad: true, telefon: true, email: true } } },
   });

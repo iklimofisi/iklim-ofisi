@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import { projeEkle, projeSil } from "@/lib/actions";
 import HizliMusteriEkleModal from "@/components/HizliMusteriEkleModal"; // MODAL İMPORT
 import SilButon from "@/components/SilButon";
@@ -35,7 +36,7 @@ export default async function ProjelerPage({
       },
       orderBy: { olusturmaTarihi: "desc" },
     }),
-    prisma.musteri.findMany({ orderBy: { ad: "asc" } }),
+    prisma.musteri.findMany({ where: GERCEK_MUSTERI, orderBy: { ad: "asc" } }),
   ]);
 
   return (

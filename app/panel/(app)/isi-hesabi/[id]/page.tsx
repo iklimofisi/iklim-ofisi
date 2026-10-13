@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import { veriOku } from "@/lib/isi-hesap/tipler";
 import { aktifPompaModelleri } from "@/lib/isi-hesap/modeller-db";
 import IsiHesapEditoru from "@/components/IsiHesapEditoru";
@@ -12,7 +13,7 @@ export default async function IsiHesapSayfasi({ params }: { params: { id: string
       where: { id: params.id },
       include: { teklif: { select: { id: true, teklifNo: true } } },
     }),
-    prisma.musteri.findMany({ orderBy: { ad: "asc" }, select: { id: true, ad: true } }),
+    prisma.musteri.findMany({ where: GERCEK_MUSTERI, orderBy: { ad: "asc" }, select: { id: true, ad: true } }),
     aktifPompaModelleri(),
   ]);
   if (!hesap) notFound();

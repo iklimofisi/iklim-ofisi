@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { kesifiTeklifeDonustur } from "@/lib/actions";
@@ -12,7 +13,7 @@ export default async function KesifDetay({ params }: { params: { id: string } })
       where: { id: params.id },
       include: { olusturulanTeklif: true },
     }),
-    prisma.musteri.findMany({ orderBy: { ad: "asc" } }),
+    prisma.musteri.findMany({ where: GERCEK_MUSTERI, orderBy: { ad: "asc" } }),
   ]);
 
   if (!kesif) notFound();

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { musterisizMi } from "@/lib/musterisiz";
 import { prisma } from "@/lib/prisma";
 import { sozlesmeOlustur, sozlesmeKaydet, sozlesmeKalemleriYenile, sozlesmeSil } from "@/lib/actions";
 import { sablonlariGrupla, notlariUygula } from "@/lib/sablon";
@@ -40,6 +41,8 @@ export default async function SozlesmeSayfasi({ params }: { params: { id: string
     suankiKullanici(),
   ]);
   if (!teklif) notFound();
+  // Sözleşme müşteri adına hazırlanır; müşterisiz teklif önce müşteriye bağlanmalı
+  if (musterisizMi(teklif.musteriId) && !sozlesme) redirect(`/panel/teklifler/${teklif.id}?mesaj=musterisiz-sozlesme`);
 
   const tklNo = `TKL-${String(teklif.teklifNo).padStart(4, "0")}`;
   const ust = (

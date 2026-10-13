@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { siparisTalebiOlustur } from "@/lib/actions";
 import KaydetButonu from "@/components/KaydetButonu";
+import { musterisizMi } from "@/lib/musterisiz";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,8 @@ export default async function SiparisTalebi({ params }: { params: { id: string }
 
   if (!teklif) notFound();
   if (teklif.siparis) redirect(`/panel/siparisler/${teklif.siparis.id}`);
+  // Müşterisiz teklif önce müşteriye bağlanmalı (sipariş ve cari müşteriye yazılır)
+  if (musterisizMi(teklif.musteriId)) redirect(`/panel/teklifler/${teklif.id}?mesaj=musterisiz-siparis`);
 
   const toplam = teklif.kalemler.reduce(
     (a, k) => a + k.adet * k.birimFiyat * (1 - k.iskontoYuzde / 100),

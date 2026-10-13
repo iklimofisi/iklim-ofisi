@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { MUSTERISIZ_ID } from "@/lib/musterisiz";
 import Link from "next/link";
 import { musteriGuncelle, musteriYetkiliEkle, musteriYetkiliGuncelle, musteriYetkiliSil } from "@/lib/actions";
 import ZiyaretListesi from "@/components/ZiyaretListesi";
@@ -35,6 +36,8 @@ const teklifDurumEtiket: Record<string, string> = {
 };
 
 export default async function MusteriDetay({ params }: { params: { id: string } }) {
+  // Müşterisiz teklif sistem kaydının müşteri kartı yoktur; o tekliflerin listesine gidilir
+  if (params.id === MUSTERISIZ_ID) redirect(`/panel/teklifler?musteri=${MUSTERISIZ_ID}`);
   const musteri = await prisma.musteri.findUnique({
     where: { id: params.id },
     include: {

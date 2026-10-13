@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { girisZorunlu } from "@/lib/oturum";
 import { islemKaydet } from "@/lib/islem-kaydi";
+import { musterisizMi } from "@/lib/musterisiz";
+import { musterisizKaydiHazirla } from "@/lib/musterisiz-sunucu";
 import { veriOku, varsayilanVeri, ornekDaire } from "@/lib/isi-hesap/tipler";
 import { aktifPompaModelleri } from "@/lib/isi-hesap/modeller-db";
 import { sistemiHesapla } from "@/lib/isi-hesap/hesap";
@@ -31,8 +33,9 @@ function sayiAl(v: unknown, varsayilan: number | null = null): number | null {
   return Number.isFinite(n) ? n : varsayilan;
 }
 
+// Hesabın kendisi müşterisiz teklif sistem kaydına bağlanmaz
 async function musteriDogrula(id: string): Promise<string | null> {
-  if (!id) return null;
+  if (!id || musterisizMi(id)) return null;
   const m = await prisma.musteri.findUnique({ where: { id }, select: { id: true } });
   return m ? m.id : null;
 }
@@ -121,7 +124,10 @@ export async function isiHesapSil(id: string) {
 export async function isiHesapTeklifeAktar(formData: FormData) {
   const kullanici = await yetki("isiHesapTeklifeAktar", formData);
   const hesapId = metinAl(formData.get("hesapId"), 40);
-  const musteriId = await musteriDogrula(metinAl(formData.get("musteriId"), 40));
+  const musteriHam = metinAl(formData.get("musteriId"), 40);
+  // "Müşterisiz teklif" seçilebilir; teklif daha sonra teklif sayfasından müşteriye bağlanır
+  if (musterisizMi(musteriHam)) await musterisizKaydiHazirla();
+  const musteriId = musterisizMi(musteriHam) ? musteriHam : await musteriDogrula(musteriHam);
   const baslik = metinAl(formData.get("baslik"), 200);
   if (!hesapId) return;
   if (!musteriId || !baslik) redirect(`/panel/isi-hesabi/${hesapId}?mesaj=isi-hesap-teklif-eksik`);
@@ -168,7 +174,7 @@ export async function isiHesapTeklifeAktar(formData: FormData) {
     },
     select: { id: true },
   });
-  await prisma.isiHesap.update({ where: { id: hesapId }, data: { teklifId: teklif.id, musteriId } });
+  await prisma.isiHesap.update({ where: { id: hesapId }, data: { teklifId: teklif.id, ...(musteriId && !musterisizMi(musteriId) ? { musteriId } : {}) } });
   revalidatePath("/panel/teklifler");
   revalidatePath("/panel/isi-hesabi");
   redirect(`/panel/teklifler/${teklif.id}/duzenle?mesaj=isi-hesap-teklif`);

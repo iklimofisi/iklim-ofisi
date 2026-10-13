@@ -48,6 +48,7 @@ const ISLEM_ADI: Record<string, string> = {
   havalandirmaHesapKopyala: "Havalandırma hesabını kopyaladı",
   havalandirmaHesapSil: "Havalandırma hesabını sildi",
   havalandirmaHesapTeklifeAktar: "Havalandırma hesabını teklife aktardı",
+  teklifMusteriyeBagla: "Müşterisiz teklifi müşteriye bağladı",
   urunGorselAyarla: "Ürün fotoğrafını değiştirdi",
   sablonHizliEkle: "Teklif ekranından hazır not ekledi",
   sablonIcerikGuncelle: "Hazır not metnini güncelledi",

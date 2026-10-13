@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import Link from "next/link";
 import { teklifToplamlari, tarihYaz } from "@/lib/teklif-hesap";
 import SatisPaneli, { DONEMLER, type Donem } from "@/components/SatisPaneli";
@@ -36,11 +37,11 @@ export default async function PanelOzet({
     sonTalepler,
     gelenHatirlatmalar,
   ] = await Promise.all([
-    prisma.musteri.count(),
+    prisma.musteri.count({ where: GERCEK_MUSTERI }),
     prisma.teklif.count({ where: { durum: "BEKLEMEDE" } }),
     prisma.siparis.count({ where: { durum: "ONAY_BEKLIYOR" } }),
     prisma.cariHareket.findMany(),
-    prisma.musteri.findMany({ include: { cariHareketler: true } }),
+    prisma.musteri.findMany({ where: GERCEK_MUSTERI, include: { cariHareketler: true } }),
     prisma.teklif.findMany({
       include: { musteri: true, kalemler: true },
       orderBy: { tarih: "desc" },

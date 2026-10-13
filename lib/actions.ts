@@ -24,6 +24,8 @@ import { randomUUID, randomBytes } from "crypto";
 import { gecerliTur } from "@/lib/gorusme";
 import { gecerliRedNedeni } from "@/lib/teklif-durum";
 import { flKalemleriOku, metinAl } from "@/lib/fiyat-listesi";
+import { MUSTERISIZ_ID, musterisizMi, musterisizGoster } from "@/lib/musterisiz";
+import { musterisizKaydiHazirla } from "@/lib/musterisiz-sunucu";
 
 // --- Yetki kontrolü + işlem kaydı ---
 // Her sunucu işleminin ilk satırında çağrılır: giriş yapılmamışsa işlem yapılmaz
@@ -219,6 +221,8 @@ export async function teklifEkle(formData: FormData) {
   const projeId = String(formData.get("projeId") ?? "");
   const yetkiliIdHam = String(formData.get("yetkiliId") ?? "");
   const kopyaKaynakTeklifId = String(formData.get("kopyaKaynakTeklifId") ?? "");
+  // Müşterisiz teklif: müşteri yerine PDF'e yazılacak serbest metin (isteğe bağlı)
+  const muhatap = musterisizMi(musteriId) ? String(formData.get("muhatap") ?? "").trim().slice(0, 200) || null : null;
   const paraBirimi = String(formData.get("paraBirimi") ?? "TRY");
   const kdvOrani = parseSayi(formData.get("kdvOrani"));
   const kdvDahil = String(formData.get("kdvDurumu") ?? "haric") === "dahil";
@@ -236,6 +240,7 @@ export async function teklifEkle(formData: FormData) {
   }
 
   const simdi = new Date();
+  if (musterisizMi(musteriId)) await musterisizKaydiHazirla();
   const yetkiliId = await yetkiliDogrula(yetkiliIdHam, musteriId);
 
   // Kopyalanarak oluşturuluyorsa kaynak teklif bilgisi (yalnızca panelde görünür)
@@ -254,6 +259,7 @@ export async function teklifEkle(formData: FormData) {
     data: {
       baslik,
       musteriId,
+      muhatap,
       projeId: projeId || null,
       yetkiliId,
       kopyaKaynakTeklifId: kopyaKaynak?.id ?? null,
@@ -300,6 +306,7 @@ export async function teklifGuncelle(formData: FormData) {
   const musteriId = String(formData.get("musteriId") ?? "");
   const projeId = String(formData.get("projeId") ?? "");
   const yetkiliIdHam = String(formData.get("yetkiliId") ?? "");
+  const muhatap = musterisizMi(musteriId) ? String(formData.get("muhatap") ?? "").trim().slice(0, 200) || null : null;
   const paraBirimi = String(formData.get("paraBirimi") ?? "TRY");
   const kdvOrani = parseSayi(formData.get("kdvOrani"));
   const kdvDahil = String(formData.get("kdvDurumu") ?? "haric") === "dahil";
@@ -345,6 +352,7 @@ export async function teklifGuncelle(formData: FormData) {
     redirect(`/panel/teklifler/${teklifId}/duzenle?hata=sevkiyatli-kalem&adet=${kaldirilanKayitli.length}`);
   }
 
+  if (musterisizMi(musteriId)) await musterisizKaydiHazirla();
   const yetkiliId = await yetkiliDogrula(yetkiliIdHam, musteriId);
 
   const tasinacaklar = yeniSatirlar.filter((s) => s.eskiId && kayitliKalemIdleri.has(s.eskiId));
@@ -384,6 +392,7 @@ export async function teklifGuncelle(formData: FormData) {
       data: {
         baslik,
         musteriId,
+        muhatap,
         projeId: projeId || null,
         yetkiliId,
         paraBirimi,
@@ -415,6 +424,33 @@ export async function teklifGuncelle(formData: FormData) {
   revalidatePath(`/panel/musteriler/${musteriId}`);
   if (mevcut.musteriId !== musteriId) revalidatePath(`/panel/musteriler/${mevcut.musteriId}`);
   redirect(`/panel/teklifler/${teklifId}?mesaj=teklif-guncellendi`);
+}
+
+// MÜŞTERİSİZ TEKLİFİ MÜŞTERİYE BAĞLA (müşteri belli olunca; teklif no, kalemler ve revizyonlar aynen kalır)
+export async function teklifMusteriyeBagla(formData: FormData) {
+  await yetki("teklifMusteriyeBagla", formData);
+  const teklifId = String(formData.get("teklifId") ?? "");
+  const musteriId = String(formData.get("musteriId") ?? "");
+  const yetkiliIdHam = String(formData.get("yetkiliId") ?? "");
+  if (!teklifId) return;
+  if (!musteriId || musterisizMi(musteriId)) redirect(`/panel/teklifler/${teklifId}?mesaj=musteri-secilmedi`);
+  const [teklif, musteri] = await Promise.all([
+    prisma.teklif.findUnique({ where: { id: teklifId }, select: { id: true, musteriId: true } }),
+    prisma.musteri.findUnique({ where: { id: musteriId }, select: { id: true } }),
+  ]);
+  if (!teklif) return;
+  if (!musteri) redirect(`/panel/teklifler/${teklifId}?mesaj=musteri-secilmedi`);
+  const yetkiliId = await yetkiliDogrula(yetkiliIdHam, musteriId);
+  // Teklife bağlı görüşme notları da müşteriye taşınır (müşteri kartında görünsün)
+  await prisma.$transaction([
+    prisma.teklif.update({ where: { id: teklifId }, data: { musteriId, yetkiliId, muhatap: null } }),
+    prisma.ziyaret.updateMany({ where: { teklifId, musteriId: teklif.musteriId }, data: { musteriId } }),
+  ]);
+  revalidatePath("/panel/teklifler");
+  revalidatePath(`/panel/teklifler/${teklifId}`);
+  revalidatePath(`/panel/musteriler/${musteriId}`);
+  revalidatePath("/panel");
+  redirect(`/panel/teklifler/${teklifId}?mesaj=teklif-musteriye-baglandi`);
 }
 
 export async function teklifDurumGuncelle(teklifId: string, durum: "BEKLEMEDE" | "ONAYLANDI" | "REDDEDILDI") {
@@ -885,6 +921,8 @@ export async function siparisTalebiOlustur(formData: FormData) {
 
   const teklif = await prisma.teklif.findUnique({ where: { id: teklifId } });
   if (!teklif) return;
+  // Müşterisiz teklif siparişe çevrilemez (sipariş ve cari hareket müşteriye yazılır)
+  if (musterisizMi(teklif.musteriId)) redirect(`/panel/teklifler/${teklifId}?mesaj=musterisiz-siparis`);
 
   let sozlesmeDosya: Buffer | undefined;
   let sozlesmeDosyaAdi: string | undefined;
@@ -1973,6 +2011,7 @@ export async function siparisOlustur(teklifId: string) {
 
   const teklif = await prisma.teklif.findUnique({ where: { id: teklifId } });
   if (!teklif) return;
+  if (musterisizMi(teklif.musteriId)) redirect(`/panel/teklifler/${teklifId}?mesaj=musterisiz-siparis`);
 
   // Zaten oluşturulmuş bir siparişi varsa ona yönlendir
   const mevcutSiparis = await prisma.siparis.findUnique({ where: { teklifId } });
@@ -2000,7 +2039,8 @@ export async function musteriSil(musteriId: string) {
   const giren = await yetki("musteriSil", { musteriId });
   if (!giren || giren.rol !== "ADMIN") return;
 
-  if (!musteriId) return;
+  // Müşterisiz teklif sistem kaydı silinmez (müşterisiz teklifler ona bağlı)
+  if (!musteriId || musteriId === MUSTERISIZ_ID) return;
 
   // Bağlı ilişkili cari hareketleri ve ziyaretleri sil
   await prisma.cariHareket.deleteMany({ where: { musteriId } });
@@ -2053,7 +2093,7 @@ export async function teklifMusteriyeEpostaGonder(formData: FormData) {
 
   if (!teklifId || !aliciEmail) return;
 
-  const [teklif, sirket] = await Promise.all([
+  const [teklifHam, sirket] = await Promise.all([
     prisma.teklif.findUnique({
       where: { id: teklifId },
       include: {
@@ -2071,7 +2111,9 @@ export async function teklifMusteriyeEpostaGonder(formData: FormData) {
     getSirketAyarlari(),
   ]);
 
-  if (!teklif) return;
+  if (!teklifHam) return;
+  // Müşterisiz teklifte PDF'e ve e-postaya müşteri yerine muhatap yazılır
+  const teklif = musterisizGoster(teklifHam);
 
   const pb = teklif.paraBirimi;
   const sembol = pb === "EUR" ? "€" : pb === "USD" ? "$" : "TL";
@@ -2358,6 +2400,8 @@ export async function sozlesmeOlustur(formData: FormData) {
     },
   });
   if (!teklif) return;
+  // Sözleşme müşteri adına hazırlanır; müşterisiz teklifte önce müşteriye bağlanmalı
+  if (musterisizMi(teklif.musteriId)) redirect(`/panel/teklifler/${teklifId}?mesaj=musterisiz-sozlesme`);
 
   const pbHam = String(formData.get("paraBirimi") ?? teklif.paraBirimi);
   const paraBirimi = (PARA_BIRIMLERI as readonly string[]).includes(pbHam) ? pbHam : teklif.paraBirimi;

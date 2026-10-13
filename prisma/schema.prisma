@@ -75,6 +75,7 @@ model Teklif {
   baslik                   String            @default("")
   musteri                  Musteri           @relation(fields: [musteriId], references: [id])
   musteriId                String
+  muhatap                  String?           // Müşterisiz teklifte PDF'te müşteri adı yerine yazılan serbest metin
   // YENİ: MALİYET PDF VE EXCEL DOSYA ALANLARI
   maliyetPdf               Bytes?
   maliyetPdfAdi            String?

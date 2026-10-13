@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { GERCEK_MUSTERI, MUSTERISIZ_ID, musterisizMi, musteriEtiketi } from "@/lib/musterisiz";
 import { teklifSil } from "@/lib/actions";
 import TeklifDurumSecici from "@/components/TeklifDurumSecici";
 import SilButon from "@/components/SilButon";
@@ -44,7 +45,7 @@ export default async function TekliflerSayfasi({
   }
 
   const [musteriler, tumTeklifler, kullanicilar] = await Promise.all([
-    prisma.musteri.findMany({ orderBy: { ad: "asc" }, select: { id: true, ad: true } }),
+    prisma.musteri.findMany({ where: GERCEK_MUSTERI, orderBy: { ad: "asc" }, select: { id: true, ad: true } }),
     prisma.teklif.findMany({
       where: {
         ...(searchParams.musteri ? { musteriId: searchParams.musteri } : {}),
@@ -186,6 +187,7 @@ export default async function TekliflerSayfasi({
                 <label className="block text-xs font-medium text-metin/60 mb-1">Müşteri</label>
                 <select name="musteri" defaultValue={searchParams.musteri ?? ""} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
                   <option value="">Tümü</option>
+                  <option value={MUSTERISIZ_ID}>◌ Müşterisiz teklifler</option>
                   {musteriler.map((m) => (
                     <option key={m.id} value={m.id}>{m.ad}</option>
                   ))}
@@ -255,7 +257,7 @@ export default async function TekliflerSayfasi({
             teklifNoFormat(t.teklifNo),
             String(t.teklifNo),
             t.baslik,
-            t.musteri.ad,
+            musteriEtiketi(t.musteriId, t.musteri.ad, t.muhatap),
             t.proje?.ad,
             hazirlayanPersonel,
             t.yetkili?.ad || t.musteri.yetkiliAdi,
@@ -276,7 +278,13 @@ export default async function TekliflerSayfasi({
                     {t.baslik || "(Başlıksız Teklif)"}
                   </p>
                   <div className="text-xs text-metin/60 flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
-                    <span className="font-semibold text-metin">{t.musteri.ad}</span>
+                    {musterisizMi(t.musteriId) ? (
+                      <span className="font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5" title="Müşteri henüz bağlanmadı">
+                        {musteriEtiketi(t.musteriId, t.musteri.ad, t.muhatap)}
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-metin">{t.musteri.ad}</span>
+                    )}
                     {t.proje && <span className="text-metin/50">· 📁 {t.proje.ad}</span>}
                     <span>·</span>
                     <span title="İlk hazırlanma tarihi">{tarihYaz(ilkTarih)}</span>

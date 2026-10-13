@@ -1353,6 +1353,7 @@ function MalzemeSekmesi({
             <Alan ad="Müşteri">
               <select name="musteriId" defaultValue={musteriId} required className={girdi}>
                 <option value="">— Müşteri seçin —</option>
+                <option value="musterisiz">◌ Müşterisiz teklif (müşteri sonra bağlanır)</option>
                 {musteriler.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.ad}
