@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/hatirlatmalar",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/kaya-fiyat",
+      "schedule": "30 4 * * *"
     }
   ]
 }

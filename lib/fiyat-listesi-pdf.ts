@@ -2,11 +2,14 @@ import { jsPDF } from "jspdf";
 import { LIBERATION_SANS_NORMAL, LIBERATION_SANS_KALIN } from "@/lib/pdf-fontlari";
 import { PDF_LOGO_JPEG_BASE64, PDF_LOGO_ORAN } from "@/lib/pdf-logo";
 import { ISTIRAK_METNI } from "@/lib/kurumsal";
-import { iskontoluFiyat, fiyatBilgiCumlesi, paraSembolu } from "@/lib/fiyat-listesi";
+import { iskontoluFiyat, fiyatBilgiCumlesi, paraSembolu, ikiFiyatli, FIYAT_SORUNUZ } from "@/lib/fiyat-listesi";
 
 // -----------------------------------------------------------------------------
 // FOTOĞRAFLI FİYAT LİSTESİ PDF'İ (müşteriye gönderilir)
-// İki görünüm: KART (sayfada 2 sütun, büyük fotoğraf) ve LISTE (satır satır).
+// Üç görünüm: KART (sayfada 3 sütun, fotoğraf üstte), LISTE (satır satır) ve
+// TABLO (kompakt tablo, fotoğrafsız; yüzlerce ürünlük listeler için).
+// İki fiyatlı listelerde (ör. Nakit / Kart) her iki fiyat ayrı gösterilir; fiyatı
+// olmayan ürünlerde "Fiyat sorunuz" yazar.
 // Renkler ve yazı tipi teklif PDF'iyle aynıdır.
 // -----------------------------------------------------------------------------
 
@@ -36,6 +39,7 @@ export type PdfKalem = {
   aciklama: string | null;
   birim: string;
   fiyat: number;
+  fiyat2?: number | null; // iki fiyatlı listede ikinci fiyat
   gorselId: string | null; // satırın ya da ürünün fotoğrafı (hangisi geçerliyse)
 };
 
@@ -49,6 +53,8 @@ export type PdfListe = {
   iskontoYuzde: number;
   fiyatGoster: boolean;
   duzen: string;
+  fiyatBaslik?: string | null;
+  fiyat2Baslik?: string | null;
   gecerlilikTarihi: Date | null;
   notlar: string | null;
   updatedAt: Date;
@@ -108,6 +114,10 @@ export function fiyatListesiPdfOlustur(
   kalemler = kalemler.map((k) => ({ ...k, ad: temizAd(k.ad), aciklama: k.aciklama ? temizAciklama(k.aciklama) : null }));
   const sembol = paraSembolu(liste.paraBirimi);
   const unvan = metin(sirket.unvan || "İklim Ofisi");
+  const iki = ikiFiyatli(liste);
+  const fb1 = metin(liste.fiyatBaslik) || "Fiyat";
+  const fb2 = metin(liste.fiyat2Baslik) || "Fiyat 2";
+  const fiyatVar = (n: number | null | undefined): n is number => typeof n === "number" && n > 0;
 
   const yazi = (boyut: number, kalin: boolean, renk: Renk) => {
     doc.setFont(YAZI_TIPI, kalin ? "bold" : "normal");
@@ -150,9 +160,30 @@ export function fiyatListesiPdfOlustur(
   // Fiyat: iskonto varsa üstü çizili liste fiyatı + iskontolu fiyat. Sağa hizalı; kullandığı yüksekliği döner.
   const fiyatYaz = (k: PdfKalem, sagX: number, y: number, buyuk: number) => {
     if (!liste.fiyatGoster) return 0;
+    if (iki) {
+      // İki fiyat alt alta: "Nakit  37.538,00 TL" / "Kart  41.990,00 TL"
+      if (!fiyatVar(k.fiyat) && !fiyatVar(k.fiyat2)) {
+        yazi(8.5, true, METIN_50);
+        doc.text(FIYAT_SORUNUZ, sagX, y, { align: "right" });
+        return 4;
+      }
+      let yy = y;
+      for (const [etiket, f] of [[fb1, k.fiyat], [fb2, k.fiyat2]] as const) {
+        const deger = fiyatVar(f) ? `${sayi(iskontoluFiyat(f, liste.iskontoYuzde))} ${sembol}` : FIYAT_SORUNUZ;
+        yazi(buyuk * 0.86, true, fiyatVar(f) ? SOGUK_DIM : METIN_50);
+        doc.text(deger, sagX, yy, { align: "right" });
+        const w = doc.getTextWidth(deger);
+        yazi(6.8, false, METIN_50);
+        doc.text(etiket, sagX - w - 1.5, yy, { align: "right" });
+        yy += buyuk * 0.42 + 0.9;
+      }
+      yazi(6.8, false, METIN_50);
+      doc.text(`/ ${metin(k.birim) || "Adet"}${liste.kdvDahil ? " · KDV dahil" : " + KDV"}`, sagX, yy - 0.6, { align: "right" });
+      return yy - y + 1;
+    }
     if (!(k.fiyat > 0)) {
       yazi(8, false, METIN_50);
-      doc.text("Fiyat için sorunuz", sagX, y, { align: "right" });
+      doc.text(FIYAT_SORUNUZ, sagX, y, { align: "right" });
       return 4;
     }
     let yy = y;
@@ -284,7 +315,7 @@ export function fiyatListesiPdfOlustur(
   const KART_FOTO = fotoVar ? 40 : 0;
   const KART_Y = fotoVar ? 82 : 46;
   const KART_ACIKLAMA_SATIR = 4; // kartta açıklamanın en fazla gösterilecek satırı
-  const kartFiyatPayi = liste.fiyatGoster ? (liste.iskontoYuzde > 0 ? 14 : 11) : 3;
+  const kartFiyatPayi = liste.fiyatGoster ? (iki ? 15 : liste.iskontoYuzde > 0 ? 14 : 11) : 3;
   // Kartın metin bölümü (ad + marka/kod + açıklama) için gereken yükseklik
   const kartMetinYuksekligi = (k: PdfKalem) => {
     yazi(8.8, true, METIN);
@@ -325,7 +356,7 @@ export function fiyatListesiPdfOlustur(
       }
     }
     if (liste.fiyatGoster) {
-      const fy = ky + KART_Y - p - (liste.iskontoYuzde > 0 && k.fiyat > 0 ? 7.4 : 4.4);
+      const fy = ky + KART_Y - p - (iki ? (fiyatVar(k.fiyat) || fiyatVar(k.fiyat2) ? 11.2 : 4.4) : liste.iskontoYuzde > 0 && k.fiyat > 0 ? 7.4 : 4.4);
       fiyatYaz(k, x + KART_G - p, fy, 10.5);
     }
   };
@@ -335,7 +366,7 @@ export function fiyatListesiPdfOlustur(
   const LISTE_FOTO_G = 34; // genişlik
   const satirCiz = (k: PdfKalem) => {
     const p = 3;
-    const fiyatG = liste.fiyatGoster ? 42 : 0;
+    const fiyatG = liste.fiyatGoster ? (iki ? 50 : 42) : 0;
     const tx = fotoVar ? SOL + LISTE_FOTO_G + 5 : SOL + 1;
     const tw = SAG - fiyatG - tx - 3;
     yazi(9.5, true, METIN);
@@ -368,8 +399,98 @@ export function fiyatListesiPdfOlustur(
     cizgi(SOL, y, SAG, y);
   };
 
+  // --- TABLO görünümü: kompakt tablo (fotoğrafsız), yüzlerce ürünlük listeler için ---
+  const TB_FIYAT_G = 31;
+  const birimVar = kalemler.some((k) => (metin(k.birim) || "Adet") !== "Adet");
+  const TB_BIRIM_G = birimVar ? 15 : 0;
+  const tbFiyatSutun = liste.fiyatGoster ? (iki ? 2 : 1) : 0;
+  const TB_AD_G = GENISLIK - TB_BIRIM_G - tbFiyatSutun * TB_FIYAT_G;
+  const tbBaslik = () => {
+    doc.setFillColor(...FOTO_ZEMIN);
+    doc.rect(SOL, y, GENISLIK, 6, "F");
+    yazi(7, true, METIN_60);
+    doc.text("ÜRÜN", SOL + 2, y + 4.1, { charSpace: 0.3 });
+    let x = SOL + TB_AD_G;
+    if (TB_BIRIM_G) {
+      doc.text("BİRİM", x + TB_BIRIM_G / 2, y + 4.1, { align: "center", charSpace: 0.3 });
+      x += TB_BIRIM_G;
+    }
+    const etiketler = tbFiyatSutun === 2 ? [fb1, fb2] : tbFiyatSutun === 1 ? ["FİYAT"] : [];
+    for (const e of etiketler) {
+      x += TB_FIYAT_G;
+      doc.text(metin(e).toLocaleUpperCase("tr-TR"), x - 2, y + 4.1, { align: "right", charSpace: 0.3 });
+    }
+    y += 6;
+    cizgi(SOL, y, SAG, y, HAT, 0.3);
+  };
+  const tbSatir = (k: PdfKalem, sira: number, bolumAd: string) => {
+    const tw = TB_AD_G - 4;
+    yazi(8.4, true, METIN);
+    const ad = satirlar(k.ad, tw, 6);
+    const alt = [k.marka, k.kod].filter(Boolean).map((v) => metin(v)).join(" · ");
+    yazi(7, false, METIN_50);
+    const altS = alt ? satirlar(alt, tw, 1) : [];
+    yazi(7, false, METIN_60);
+    const ac = k.aciklama ? satirlar(k.aciklama, tw, 4) : [];
+    const h = 1.6 + 3.6 * ad.length + (altS.length ? 3.1 : 0) + (ac.length ? 3 * ac.length + 0.4 : 0) + 1.0;
+    if (y + h > ALT_SINIR) {
+      yeniSayfa();
+      if (bolumAd) {
+        yazi(7.5, true, SOGUK_DIM);
+        doc.text(`${metin(bolumAd).toLocaleUpperCase("tr-TR")} (devam)`, SOL, y);
+        y += 3;
+      }
+      tbBaslik();
+    }
+    const y0 = y;
+    if (sira % 2 === 1) {
+      doc.setFillColor(...FOTO_ZEMIN);
+      doc.rect(SOL, y0, GENISLIK, h, "F");
+    }
+    let ty = y0 + 1.6 + 2.6;
+    yazi(8.4, true, METIN);
+    doc.text(ad, SOL + 2, ty);
+    ty += 3.6 * ad.length;
+    if (altS.length) {
+      yazi(7, false, METIN_50);
+      doc.text(altS, SOL + 2, ty - 0.4);
+      ty += 3.1;
+    }
+    if (ac.length) {
+      yazi(7, false, METIN_60);
+      doc.text(ac, SOL + 2, ty - 0.2);
+    }
+    let x = SOL + TB_AD_G;
+    const fy = y0 + 1.6 + 2.6;
+    if (TB_BIRIM_G) {
+      yazi(7.5, false, METIN_60);
+      doc.text(metin(k.birim) || "Adet", x + TB_BIRIM_G / 2, fy, { align: "center" });
+      x += TB_BIRIM_G;
+    }
+    const fiyatlar = tbFiyatSutun === 2 ? [k.fiyat, k.fiyat2] : tbFiyatSutun === 1 ? [k.fiyat] : [];
+    for (const f of fiyatlar) {
+      x += TB_FIYAT_G;
+      if (fiyatVar(f)) {
+        yazi(8.6, true, SOGUK_DIM);
+        doc.text(`${sayi(iskontoluFiyat(f, liste.iskontoYuzde))} ${sembol}`, x - 2, fy, { align: "right" });
+      } else {
+        yazi(7.5, false, METIN_50);
+        doc.text(FIYAT_SORUNUZ, x - 2, fy, { align: "right" });
+      }
+    }
+    y = y0 + h;
+    cizgi(SOL, y, SAG, y, HAT, 0.15);
+  };
+
   for (const [ad, grup] of gruplar) {
-    if (liste.duzen === "LISTE") {
+    if (liste.duzen === "TABLO") {
+      yerAc(11 + 6 + 10);
+      if (ad) bolumBasligi(ad);
+      else y += 1;
+      tbBaslik();
+      grup.forEach((k, i) => tbSatir(k, i, ad));
+      y += 6;
+    } else if (liste.duzen === "LISTE") {
       if (ad) {
         yerAc(11 + 30);
         bolumBasligi(ad);

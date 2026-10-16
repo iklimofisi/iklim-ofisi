@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { fiyatListesiOlustur, fiyatListesiKopyala, fiyatListesiSil } from "@/lib/actions";
+import { fiyatListesiOlustur, fiyatListesiKopyala, fiyatListesiSil, kayaFiyatListesiGuncelle } from "@/lib/actions";
+import { kaynakDurumOku } from "@/lib/kaya-fiyat";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
 import KaydetButonu from "@/components/KaydetButonu";
 import SilButon from "@/components/SilButon";
 
 export const dynamic = "force-dynamic";
+// Kaya listesini ilk kez getirmek PDF indirip okumayı gerektirir
+export const maxDuration = 60;
 
 const tarih = (d: Date) =>
   new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Europe/Istanbul" }).format(new Date(d));
@@ -22,9 +25,14 @@ export default async function FiyatListeleriSayfasi() {
       gecerlilikTarihi: true,
       olusturanAdi: true,
       updatedAt: true,
+      kaynak: true,
+      kaynakDurum: true,
       _count: { select: { kalemler: true } },
     },
   });
+  // Otomatik liste en üstte
+  listeler.sort((a, b) => Number(Boolean(b.kaynak)) - Number(Boolean(a.kaynak)));
+  const kayaVar = listeler.some((l) => l.kaynak === "KAYA");
 
   const dugme = "focus-ring text-xs text-metin/50 hover:text-soguk-dim font-medium";
 
@@ -65,6 +73,23 @@ export default async function FiyatListeleriSayfasi() {
         </KaydetButonu>
       </form>
 
+      {!kayaVar && (
+        <div className="bg-soguk-light/40 border border-soguk/30 rounded-lg p-5 mb-8 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-sm">
+            <p className="font-medium text-metin">↻ Kaya İklimlendirme fiyat listesi (otomatik)</p>
+            <p className="text-xs text-metin/60 mt-0.5">
+              Kaya&apos;nın sitesindeki fiyat listesi okunur, nakit ve kart fiyatlarına %5 eklenerek bizim formatımızda burada tutulur ve Kaya
+              güncelledikçe kendiliğinden yenilenir.
+            </p>
+          </div>
+          <form action={kayaFiyatListesiGuncelle}>
+            <KaydetButonu basari={null} bekleme="Kaya'dan okunuyor…">
+              Listeyi getir
+            </KaydetButonu>
+          </form>
+        </div>
+      )}
+
       <HizliAramaListesi
         yerTutucu="Hızlı ara: liste adı, hazırlayan…"
         bosMetin="Henüz fiyat listesi yok."
@@ -75,7 +100,24 @@ export default async function FiyatListeleriSayfasi() {
           icerik: (
             <div className="bg-yuzey border border-hat rounded-lg p-4 flex flex-wrap items-center justify-between gap-3 shadow-sm hover:border-soguk transition-colors">
               <Link href={`/panel/fiyat-listeleri/${l.id}`} className="focus-ring min-w-0 flex-1">
-                <p className="font-medium text-metin text-sm truncate">{l.baslik}</p>
+                <p className="font-medium text-metin text-sm truncate">
+                  {l.kaynak && (
+                    <span className="mr-2 inline-block rounded bg-soguk-light text-soguk-dim border border-soguk/30 px-1.5 text-[10px] font-semibold align-middle">
+                      ↻ OTOMATİK · KAYA +%5
+                    </span>
+                  )}
+                  {l.baslik}
+                </p>
+                {l.kaynak && (() => {
+                  const d = kaynakDurumOku(l.kaynakDurum);
+                  return (
+                    <p className={`text-[11px] mt-0.5 ${d.hata ? "text-sicak-dim" : "text-metin/50"}`}>
+                      {d.hata
+                        ? `⚠ Son güncelleme başarısız: ${d.hata.mesaj}`
+                        : `Kaya liste tarihi ${d.listeTarihi ? d.listeTarihi.split("-").reverse().join(".") : "—"} · her sabah kontrol edilir`}
+                    </p>
+                  );
+                })()}
                 <p className="text-xs text-metin/50 mt-1">
                   {l._count.kalemler} ürün · {l.paraBirimi}
                   {l.iskontoYuzde > 0 && ` · %${l.iskontoYuzde.toLocaleString("tr-TR")} iskontolu`}

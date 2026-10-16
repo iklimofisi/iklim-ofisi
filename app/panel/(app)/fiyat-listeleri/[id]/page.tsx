@@ -3,8 +3,12 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTcmbKurlari } from "@/lib/kur";
 import FiyatListesiDuzenleyici from "@/components/FiyatListesiDuzenleyici";
+import KayaFiyatListesi from "@/components/KayaFiyatListesi";
+import { kaynakDurumOku } from "@/lib/kaya-fiyat";
 
 export const dynamic = "force-dynamic";
+// "Şimdi güncelle" Kaya'nın PDF'ini indirip okur (birkaç saniye sürebilir)
+export const maxDuration = 60;
 
 const gun = (d: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 
@@ -33,6 +37,33 @@ export default async function FiyatListesiSayfasi({ params }: { params: { id: st
   if (!liste) notFound();
 
   const dugme = "focus-ring text-sm font-medium border px-4 py-2 rounded-md transition-colors";
+
+  // Otomatik güncellenen liste (Kaya İklimlendirme): ürünler düzenlenmez, gönderirken seçilir
+  if (liste.kaynak) {
+    return (
+      <div className="max-w-5xl">
+        <Link href="/panel/fiyat-listeleri" className="focus-ring text-sm text-metin/60 hover:text-metin inline-block mb-6">
+          ← Fiyat listelerine dön
+        </Link>
+        <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">Fiyat Listesi · Otomatik</p>
+        <h1 className="font-display text-2xl font-semibold text-metin mb-6">{liste.baslik}</h1>
+        <KayaFiyatListesi
+          liste={{
+            id: liste.id,
+            baslik: liste.baslik,
+            aciklama: liste.aciklama ?? "",
+            notlar: liste.notlar ?? "",
+            duzen: liste.duzen,
+            fiyatBaslik: liste.fiyatBaslik ?? "Nakit",
+            fiyat2Baslik: liste.fiyat2Baslik ?? "Kart",
+            paraBirimi: liste.paraBirimi,
+          }}
+          durum={kaynakDurumOku(liste.kaynakDurum)}
+          satirlar={liste.kalemler.map((k) => ({ id: k.id, bolum: k.bolum, ad: k.ad, aciklama: k.aciklama, fiyat: k.fiyat, fiyat2: k.fiyat2 }))}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl">
@@ -63,6 +94,8 @@ export default async function FiyatListesiSayfasi({ params }: { params: { id: st
           iskontoYuzde: liste.iskontoYuzde,
           fiyatGoster: liste.fiyatGoster,
           duzen: liste.duzen,
+          fiyatBaslik: liste.fiyatBaslik ?? "",
+          fiyat2Baslik: liste.fiyat2Baslik ?? "",
           gecerlilikTarihi: gun(liste.gecerlilikTarihi),
           notlar: liste.notlar ?? "",
         }}
@@ -75,6 +108,7 @@ export default async function FiyatListesiSayfasi({ params }: { params: { id: st
           aciklama: k.aciklama,
           birim: k.birim,
           fiyat: k.fiyat,
+          fiyat2: k.fiyat2,
           gorselId: k.gorselId,
           urunGorselId: k.urun?.gorselId ?? null,
         }))}

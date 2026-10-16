@@ -36,16 +36,18 @@ export type DuzenlenenKalem = {
   aciklama: string | null;
   birim: string;
   fiyat: number;
+  fiyat2: number | null; // iki fiyatlı listede ikinci fiyat
   gorselId: string | null;
   urunGorselId: string | null; // katalogdaki ürünün fotoğrafı (satıra özel fotoğraf yoksa bu görünür)
 };
 
-type Satir = Omit<DuzenlenenKalem, "fiyat" | "kod" | "marka" | "aciklama"> & {
+type Satir = Omit<DuzenlenenKalem, "fiyat" | "fiyat2" | "kod" | "marka" | "aciklama"> & {
   key: number;
   kod: string;
   marka: string;
   aciklama: string;
   fiyat: string;
+  fiyat2: string;
   uyari?: string;
   yukleniyor?: boolean;
 };
@@ -59,6 +61,8 @@ type Ayarlar = {
   iskontoYuzde: number;
   fiyatGoster: boolean;
   duzen: string;
+  fiyatBaslik: string;
+  fiyat2Baslik: string; // doluysa liste iki fiyatlı (ör. Nakit / Kart)
   gecerlilikTarihi: string; // YYYY-MM-DD veya ""
   notlar: string;
 };
@@ -102,8 +106,11 @@ export default function FiyatListesiDuzenleyici({
       marka: k.marka ?? "",
       aciklama: k.aciklama ?? "",
       fiyat: k.fiyat ? String(k.fiyat).replace(".", ",") : "",
+      fiyat2: k.fiyat2 ? String(k.fiyat2).replace(".", ",") : "",
     }))
   );
+  const [fiyat2Baslik, setFiyat2Baslik] = useState(ayarlar.fiyat2Baslik);
+  const ikiFiyat = fiyat2Baslik.trim().length > 0;
   const [ara, setAra] = useState("");
   const [yeniBolum, setYeniBolum] = useState(kalemler.length ? kalemler[kalemler.length - 1].bolum : "");
   const [degisti, setDegisti] = useState(false);
@@ -115,7 +122,7 @@ export default function FiyatListesiDuzenleyici({
       return;
     }
     setDegisti(true);
-  }, [satirlar, paraBirimi, iskonto]);
+  }, [satirlar, paraBirimi, iskonto, fiyat2Baslik]);
 
   // Kaydedilmemiş değişiklik varken sayfadan çıkmadan önce uyar
   useEffect(() => {
@@ -172,7 +179,7 @@ export default function FiyatListesiDuzenleyici({
     const n = tutarOku(t);
     return n === null ? null : eksi ? -n : n;
   })();
-  const etkilenecek = satirlar.filter((r) => kapsamda(r) && sayiOku(r.fiyat) > 0).length;
+  const etkilenecek = satirlar.filter((r) => kapsamda(r) && (sayiOku(r.fiyat) > 0 || (ikiFiyat && sayiOku(r.fiyat2) > 0))).length;
   const yuvarlaFiyat = (n: number) => {
     const adim = Number(yuvarla);
     return adim > 0 ? Math.max(adim, Math.round(n / adim) * adim) : Math.round(n * 100) / 100;
@@ -184,9 +191,15 @@ export default function FiyatListesiDuzenleyici({
     setYedek({ satirlar, aciklama: `%${zamOrani.toLocaleString("tr-TR")} ${zamOrani > 0 ? "zam" : "indirim"}` });
     setSatirlar((s) =>
       s.map((r) => {
+        if (!kapsamda(r)) return r;
         const f = sayiOku(r.fiyat);
-        if (!kapsamda(r) || !(f > 0)) return r;
-        return { ...r, fiyat: fiyatMetni(yuvarlaFiyat(f * (1 + zamOrani / 100))), uyari: undefined };
+        const f2 = sayiOku(r.fiyat2);
+        return {
+          ...r,
+          fiyat: f > 0 ? fiyatMetni(yuvarlaFiyat(f * (1 + zamOrani / 100))) : r.fiyat,
+          fiyat2: ikiFiyat && f2 > 0 ? fiyatMetni(yuvarlaFiyat(f2 * (1 + zamOrani / 100))) : r.fiyat2,
+          uyari: undefined,
+        };
       })
     );
     setZam("");
@@ -219,6 +232,7 @@ export default function FiyatListesiDuzenleyici({
         aciklama: u.aciklama ?? "",
         birim: u.birim || "Adet",
         fiyat: fiyat ? String(fiyat).replace(".", ",") : "",
+        fiyat2: "",
         gorselId: null,
         urunGorselId: u.gorselId,
         uyari,
@@ -229,7 +243,7 @@ export default function FiyatListesiDuzenleyici({
   const elleEkle = () =>
     setSatirlar((s) => [
       ...s,
-      { key: sayac++, bolum: yeniBolum.trim(), urunId: null, ad: "", kod: "", marka: "", aciklama: "", birim: "Adet", fiyat: "", gorselId: null, urunGorselId: null },
+      { key: sayac++, bolum: yeniBolum.trim(), urunId: null, ad: "", kod: "", marka: "", aciklama: "", birim: "Adet", fiyat: "", fiyat2: "", gorselId: null, urunGorselId: null },
     ]);
 
   const tasi = (i: number, yon: -1 | 1) =>
@@ -263,6 +277,7 @@ export default function FiyatListesiDuzenleyici({
       aciklama: r.aciklama,
       birim: r.birim,
       fiyat: sayiOku(r.fiyat),
+      fiyat2: ikiFiyat && sayiOku(r.fiyat2) > 0 ? sayiOku(r.fiyat2) : null,
       gorselId: r.gorselId,
     }))
   );
@@ -335,6 +350,16 @@ export default function FiyatListesiDuzenleyici({
               ))}
             </select>
           </div>
+          <div>
+            <label className={etiket}>İkinci fiyat sütunu (ops.)</label>
+            <input name="fiyat2Baslik" value={fiyat2Baslik} maxLength={40} onChange={(e) => setFiyat2Baslik(e.target.value)} placeholder="örn. Kart" className={kutu} />
+          </div>
+          {ikiFiyat && (
+            <div>
+              <label className={etiket}>Birinci fiyat sütunu adı</label>
+              <input name="fiyatBaslik" defaultValue={ayarlar.fiyatBaslik || "Nakit"} maxLength={40} onChange={() => setDegisti(true)} className={kutu} />
+            </div>
+          )}
           <label className="flex items-center gap-2 text-sm text-metin/80 pb-2">
             <input type="checkbox" name="fiyatGoster" value="evet" defaultChecked={ayarlar.fiyatGoster} onChange={() => setDegisti(true)} className="accent-soguk" />
             Fiyatları göster
@@ -521,10 +546,20 @@ export default function FiyatListesiDuzenleyici({
                     value={r.fiyat}
                     onChange={(e) => guncelle(r.key, { fiyat: e.target.value, uyari: undefined })}
                     inputMode="decimal"
-                    placeholder={`Fiyat (${paraBirimi})`}
+                    placeholder={ikiFiyat ? "1. fiyat" : `Fiyat (${paraBirimi})`}
                     aria-label="Fiyat"
                     className={`${kutu} text-right font-mono`}
                   />
+                  {ikiFiyat && (
+                    <input
+                      value={r.fiyat2}
+                      onChange={(e) => guncelle(r.key, { fiyat2: e.target.value })}
+                      inputMode="decimal"
+                      placeholder={`${fiyat2Baslik.trim()} fiyatı`}
+                      aria-label={`${fiyat2Baslik.trim()} fiyatı`}
+                      className={`${kutu} text-right font-mono sm:col-start-4`}
+                    />
+                  )}
                 </div>
                 <textarea
                   value={r.aciklama}
