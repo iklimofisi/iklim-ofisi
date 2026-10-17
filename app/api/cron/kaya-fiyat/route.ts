@@ -21,6 +21,6 @@ export async function GET(req: NextRequest) {
     const k = await suankiKullanici();
     if (k?.rol !== "ADMIN") return new NextResponse("Yetkisiz", { status: 401 });
   }
-  const sonuc = await kayaListesiniGuncelle({ zorla: false, tetikleyen: cronIstegi ? "Otomatik (günlük kontrol)" : "Yönetici (cron adresi)" });
+  const sonuc = await kayaListesiniGuncelle({ zorla: false, otomatik: cronIstegi, tetikleyen: cronIstegi ? "Otomatik (günlük kontrol)" : "Yönetici (cron adresi)" });
   return NextResponse.json(sonuc, { status: sonuc.durum === "HATA" ? 500 : 200 });
 }

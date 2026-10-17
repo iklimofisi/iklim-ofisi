@@ -1703,7 +1703,8 @@ export async function kayaFiyatListesiGuncelle() {
   revalidatePath("/panel/fiyat-listeleri");
   if (sonuc.listeId) revalidatePath(`/panel/fiyat-listeleri/${sonuc.listeId}`);
   const hedef = sonuc.listeId ? `/panel/fiyat-listeleri/${sonuc.listeId}` : "/panel/fiyat-listeleri";
-  redirect(`${hedef}?mesaj=${sonuc.durum === "HATA" ? "kaya-guncelleme-hatasi" : "kaya-guncellendi"}`);
+  const mesaj = sonuc.durum === "HATA" ? "kaya-guncelleme-hatasi" : sonuc.durum === "AYNI" ? "kaya-degisiklik-yok" : "kaya-guncellendi";
+  redirect(`${hedef}?mesaj=${mesaj}`);
 }
 
 // Otomatik güncellenen listenin yalnız görünüm ayarları (ürünler ve fiyatlar Kaya'dan gelir)
@@ -1713,6 +1714,11 @@ export async function fiyatListesiAyarKaydet(formData: FormData) {
   const baslik = metinAl(formData.get("baslik"), 200);
   if (!id) return;
   if (!baslik) redirect(`/panel/fiyat-listeleri/${id}?mesaj=fiyat-listesi-eksik`);
+  // "Değişiklik yok" e-postasının sıklığı kaynak durumunun içinde saklanır (ayrı sütun gerekmez)
+  const { kaynakDurumOku, kayaBildirimGecerli } = await import("@/lib/kaya-fiyat");
+  const mevcut = await prisma.fiyatListesi.findUnique({ where: { id }, select: { kaynakDurum: true } });
+  const durum = kaynakDurumOku(mevcut?.kaynakDurum);
+  if (formData.has("bildirim")) durum.bildirim = kayaBildirimGecerli(formData.get("bildirim"));
   await prisma.fiyatListesi.update({
     where: { id },
     data: {
@@ -1720,6 +1726,7 @@ export async function fiyatListesiAyarKaydet(formData: FormData) {
       aciklama: metinAl(formData.get("aciklama"), 3000) || null,
       notlar: metinAl(formData.get("notlar"), 5000) || null,
       duzen: duzenGecerli(String(formData.get("duzen") ?? "")),
+      ...(mevcut?.kaynakDurum != null && formData.has("bildirim") ? { kaynakDurum: JSON.stringify(durum) } : {}),
     },
   });
   revalidatePath("/panel/fiyat-listeleri");

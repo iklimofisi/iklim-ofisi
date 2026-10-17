@@ -25,6 +25,8 @@ import {
   type KaynakDurum,
   type MetinParcasi,
   type KayaKalem,
+  type KayaDegisiklik,
+  yuzdeFark,
 } from "@/lib/kaya-fiyat";
 
 const TARAYICI = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
@@ -83,24 +85,42 @@ export function kalemlereCevir(k: KayaKalem[]): YeniKalem[] {
 }
 
 export function degisiklikOzeti(eski: { bolum: string; ad: string; fiyat: number; fiyat2: number | null }[], yeni: YeniKalem[]) {
-  const e = new Map(eski.map((k) => [urunAnahtari(k.bolum, k.ad), k]));
-  const y = new Map(yeni.map((k) => [urunAnahtari(k.bolum, k.ad), k]));
-  let yeniSayi = 0;
-  let degisen = 0;
-  const ornekler: string[] = [];
-  const tl = (n: number | null) => (n ? `${n.toLocaleString("tr-TR")} TL` : "fiyat sorunuz");
+  // Aynı ad iki kez geçerse karışmasın diye anahtara sıra numarası eklenir
+  const anahtarla = <T extends { bolum: string; ad: string }>(liste: T[]) => {
+    const say = new Map<string, number>();
+    const m = new Map<string, T>();
+    for (const k of liste) {
+      const a = urunAnahtari(k.bolum, k.ad);
+      const n = (say.get(a) ?? 0) + 1;
+      say.set(a, n);
+      m.set(n > 1 ? `${a}#${n}` : a, k);
+    }
+    return m;
+  };
+  const e = anahtarla(eski);
+  const y = anahtarla(yeni);
+  const f = (n: number | null | undefined) => (n && n > 0 ? n : null);
+  const degisiklikler: KayaDegisiklik[] = [];
   for (const [a, k] of y) {
     const o = e.get(a);
-    if (!o) {
-      yeniSayi++;
-      if (ornekler.length < 12) ornekler.push(`Yeni: ${k.ad} (${tl(k.fiyat)})`);
-    } else if (o.fiyat !== k.fiyat || (o.fiyat2 ?? null) !== (k.fiyat2 ?? null)) {
-      degisen++;
-      if (ornekler.length < 12) ornekler.push(`${k.ad}: ${tl(o.fiyat)} → ${tl(k.fiyat)}`);
-    }
+    if (!o) degisiklikler.push({ tur: "YENI", bolum: k.bolum, ad: k.ad, eski: null, eski2: null, yeni: f(k.fiyat), yeni2: f(k.fiyat2) });
+    else if (f(o.fiyat) !== f(k.fiyat) || f(o.fiyat2) !== f(k.fiyat2))
+      degisiklikler.push({ tur: "DEGISEN", bolum: k.bolum, ad: k.ad, eski: f(o.fiyat), eski2: f(o.fiyat2), yeni: f(k.fiyat), yeni2: f(k.fiyat2) });
   }
-  const cikan = [...e.keys()].filter((a) => !y.has(a)).length;
-  return { yeni: yeniSayi, cikan, degisen, ornekler };
+  for (const [a, o] of e)
+    if (!y.has(a)) degisiklikler.push({ tur: "CIKAN", bolum: o.bolum, ad: o.ad, eski: f(o.fiyat), eski2: f(o.fiyat2), yeni: null, yeni2: null });
+  const tl = (n: number | null) => (n ? `${n.toLocaleString("tr-TR")} TL` : "fiyat sorunuz");
+  const say = (t: KayaDegisiklik["tur"]) => degisiklikler.filter((d) => d.tur === t).length;
+  return {
+    yeni: say("YENI"),
+    cikan: say("CIKAN"),
+    degisen: say("DEGISEN"),
+    // kısa örnekler (eski kayıtlarla uyum için)
+    ornekler: degisiklikler.slice(0, 12).map((d) =>
+      d.tur === "YENI" ? `Yeni: ${d.ad} (${tl(d.yeni)})` : d.tur === "CIKAN" ? `Çıktı: ${d.ad}` : `${d.ad}: ${tl(d.eski)} → ${tl(d.yeni)}`
+    ),
+    degisiklikler,
+  };
 }
 
 async function durumYaz(listeId: string | null, durum: KaynakDurum) {
@@ -108,23 +128,25 @@ async function durumYaz(listeId: string | null, durum: KaynakDurum) {
   await prisma.fiyatListesi.update({ where: { id: listeId }, data: { kaynakDurum: JSON.stringify(durum) } }).catch(() => null);
 }
 
-async function bildir(konu: string, satirlar: string[]) {
+async function bildir(konu: string, satirlar: string[], ekHtml = "") {
   await epostaGonder({
     konu,
     icerikHtml: `<div style="font-family:Arial,sans-serif;max-width:620px;margin:0 auto;padding:16px;color:#334155">
       <h2 style="color:#0f766e;margin:0 0 12px">${konu.replace(/</g, "&lt;")}</h2>
-      ${satirlar.map((s) => `<p style="margin:4px 0;font-size:13px">${s.replace(/</g, "&lt;")}</p>`).join("")}
+      ${satirlar.filter(Boolean).map((s) => `<p style="margin:4px 0;font-size:13px">${s.replace(/</g, "&lt;")}</p>`).join("")}
+      ${ekHtml}
       <p style="margin-top:18px"><a href="https://iklimofisi.com/panel/fiyat-listeleri" style="background:#0f766e;color:#fff;padding:9px 16px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:bold">Fiyat listelerini aç</a></p>
     </div>`,
   }).catch(() => null);
 }
 
-export async function kayaListesiniGuncelle(opt: { zorla?: boolean; tetikleyen: string }): Promise<GuncellemeSonucu> {
+// otomatik: sabah kontrolü (Vercel cron). Yalnız o zaman "değişiklik yok" e-postası gider.
+export async function kayaListesiniGuncelle(opt: { zorla?: boolean; tetikleyen: string; otomatik?: boolean }): Promise<GuncellemeSonucu> {
   const simdi = new Date().toISOString();
   const liste = await prisma.fiyatListesi.findFirst({
     where: { kaynak: KAYA_KAYNAK },
     orderBy: { createdAt: "asc" },
-    include: { kalemler: { select: { bolum: true, ad: true, fiyat: true, fiyat2: true } } },
+    include: { kalemler: { orderBy: { sira: "asc" }, select: { bolum: true, ad: true, aciklama: true, fiyat: true, fiyat2: true } } },
   });
   const durum = kaynakDurumOku(liste?.kaynakDurum);
   durum.sonKontrol = simdi;
@@ -155,8 +177,9 @@ export async function kayaListesiniGuncelle(opt: { zorla?: boolean; tetikleyen: 
 
   // 2) Kaya yeni liste koymadıysa bir şey yapılmaz
   if (!opt.zorla && liste && durum.pdfUrl === pdfUrl && !durum.hata) {
+    await degisiklikYokBildir(durum, opt, false);
     await durumYaz(liste.id, durum);
-    return { durum: "AYNI", mesaj: "Kaya yeni liste yayınlamamış; liste günceldir.", listeId: liste.id };
+    return { durum: "AYNI", mesaj: "Kaya yeni liste yayınlamamış; fiyatlarda değişiklik yok.", listeId: liste.id };
   }
 
   // 3) PDF'i indir ve oku
@@ -178,20 +201,63 @@ export async function kayaListesiniGuncelle(opt: { zorla?: boolean; tetikleyen: 
       `PDF beklenen biçimde okunamadı (${a.kalemler.length} ürün, ${fiyatli} fiyatlı). Kaya dosya düzenini değiştirmiş olabilir; liste güncellenmedi.`
     );
 
-  // 4) Listeyi yenile (ürünler tek seferde değişir; yarım kalmaz)
+  // 4) Değişiklik var mı?
   const yeni = kalemlereCevir(a.kalemler);
   const ozet = degisiklikOzeti(liste?.kalemler ?? [], yeni);
+  const fiyatDegisti = ozet.degisiklikler.length > 0;
+  const fiyatSorunuz = yeni.filter((k) => !k.fiyat && !k.fiyat2).length;
+  const listeTarihi = a.gecerlilik ?? dosyaTarihi(pdfUrl) ?? durum.listeTarihi;
+  const yeniDosya = durum.pdfUrl !== pdfUrl;
+
+  // Fiyatlar aynı: kayıtlı ürünlere dokunulmaz (sıra ve açıklamalar da aynıysa), yalnız durum yazılır
+  const ayniIcerik =
+    !!liste &&
+    !fiyatDegisti &&
+    liste.kalemler.length === yeni.length &&
+    liste.kalemler.every((k, i) => urunAnahtari(k.bolum, k.ad) === urunAnahtari(yeni[i].bolum, yeni[i].ad) && (k.aciklama ?? null) === (yeni[i].aciklama ?? null));
+  if (liste && !fiyatDegisti) {
+    durum.pdfUrl = pdfUrl;
+    durum.pdfAdi = decodeURIComponent(pdfUrl.split("/").pop() || "");
+    durum.listeTarihi = listeTarihi;
+    durum.urunSayisi = yeni.length;
+    durum.fiyatSorunuz = fiyatSorunuz;
+    durum.hata = null;
+    durum.atlanan = a.atlanan.slice(0, 40);
+    if (!ayniIcerik) {
+      // Fiyat aynı ama sıra / not değişmiş: ürünler sessizce yenilenir, fiyat değişikliği sayılmaz
+      durum.sonGuncelleme = simdi;
+      await prisma.$transaction([
+        prisma.fiyatListesiKalem.deleteMany({ where: { listeId: liste.id } }),
+        prisma.fiyatListesiKalem.createMany({
+          data: yeni.map((k, sira) => ({ listeId: liste.id, sira, bolum: k.bolum, ad: k.ad, aciklama: k.aciklama, birim: "Adet", fiyat: k.fiyat, fiyat2: k.fiyat2 })),
+        }),
+        prisma.fiyatListesi.update({ where: { id: liste.id }, data: { kaynakDurum: JSON.stringify(durum) } }),
+      ]);
+    }
+    await degisiklikYokBildir(durum, opt, yeniDosya);
+    await durumYaz(liste.id, durum);
+    return {
+      durum: "AYNI",
+      mesaj: yeniDosya ? "Kaya yeni liste dosyası yayınlamış ama fiyatlar aynı; değişiklik yok." : "Kaya'nın listesi okundu; fiyatlarda değişiklik yok.",
+      listeId: liste.id,
+    };
+  }
+
+  // 5) Fiyatlar değişti (ya da liste ilk kez oluşuyor): ürünler tek seferde yenilenir; yarım kalmaz
   const yeniDurum: KaynakDurum = {
+    ...durum,
     pdfUrl,
     pdfAdi: decodeURIComponent(pdfUrl.split("/").pop() || ""),
-    listeTarihi: a.gecerlilik ?? dosyaTarihi(pdfUrl),
+    listeTarihi,
     sonKontrol: simdi,
     sonGuncelleme: simdi,
     urunSayisi: yeni.length,
-    fiyatSorunuz: yeni.filter((k) => !k.fiyat && !k.fiyat2).length,
-    ozet: liste ? ozet : null,
+    fiyatSorunuz,
+    ozet: liste ? { yeni: ozet.yeni, cikan: ozet.cikan, degisen: ozet.degisen, ornekler: ozet.ornekler } : null,
     hata: null,
     atlanan: a.atlanan.slice(0, 40),
+    degisiklikler: liste ? ozet.degisiklikler : [],
+    degisiklikTarihi: liste ? simdi : null,
   };
   let listeId: string;
   if (liste) {
@@ -228,17 +294,26 @@ export async function kayaListesiniGuncelle(opt: { zorla?: boolean; tetikleyen: 
         kullaniciAd: opt.tetikleyen,
         islem: "kayaFiyatListesiGuncellendi",
         hedefId: listeId,
-        veri: JSON.stringify({ pdfUrl, urunSayisi: yeni.length, ...ozet }),
+        veri: JSON.stringify({ pdfUrl, urunSayisi: yeni.length, yeni: ozet.yeni, cikan: ozet.cikan, degisen: ozet.degisen, ornekler: ozet.ornekler }),
       },
     })
     .catch(() => null);
 
-  const tarihMetni = yeniDurum.listeTarihi ? yeniDurum.listeTarihi.split("-").reverse().join(".") : "-";
-  await bildir(liste ? "Kaya fiyat listesi güncellendi" : "Kaya fiyat listesi oluşturuldu", [
-    `Kaya liste tarihi: ${tarihMetni} · ${yeni.length} ürün (${yeniDurum.fiyatSorunuz} ürün "fiyat sorunuz").`,
-    ...(liste ? [`Fiyatı değişen: ${ozet.degisen} · yeni ürün: ${ozet.yeni} · listeden çıkan: ${ozet.cikan}.`, ...ozet.ornekler] : []),
-    `Nakit ve kart fiyatlarına %5 eklendi.`,
-  ]);
+  const tarihMetni = listeTarihi ? listeTarihi.split("-").reverse().join(".") : "-";
+  if (liste)
+    await bildir(
+      `Kaya fiyat listesi değişti (${ozet.degisen} fiyat değişti · ${ozet.yeni} yeni · ${ozet.cikan} çıkan)`,
+      [
+        `Kaya'nın ${tarihMetni} tarihli yeni listesi okundu; fiyat listemiz güncellendi (${yeni.length} ürün, nakit ve kart fiyatlarına %5 eklendi).`,
+        `Aşağıdaki fiyatlar %5 eklenmiş, müşteriye giden fiyatlardır.`,
+      ],
+      degisiklikTablosu(ozet.degisiklikler)
+    );
+  else
+    await bildir("Kaya fiyat listesi oluşturuldu", [
+      `Kaya liste tarihi: ${tarihMetni} · ${yeni.length} ürün (${fiyatSorunuz} ürün "fiyat sorunuz").`,
+      `Nakit ve kart fiyatlarına %5 eklendi. Bundan sonra her sabah kontrol edilir; fiyat değişince değişen ürünlerin tam listesi e-postayla gelir.`,
+    ]);
   return {
     durum: "GUNCELLENDI",
     mesaj: liste
@@ -247,3 +322,75 @@ export async function kayaListesiniGuncelle(opt: { zorla?: boolean; tetikleyen: 
     listeId,
   };
 }
+
+// "Değişiklik yok" e-postası (yalnız sabah otomatik kontrolünde; sıklık panelden seçilir)
+const trBugun = (d = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Istanbul" }).format(d); // YYYY-MM-DD
+const trHaftaGunu = (d = new Date()) => new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "Europe/Istanbul" }).format(d);
+const trZaman = (iso: string) =>
+  new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Istanbul" }).format(
+    new Date(iso)
+  );
+async function degisiklikYokBildir(durum: KaynakDurum, opt: { otomatik?: boolean }, yeniDosya: boolean) {
+  if (!opt.otomatik) return; // elle "Şimdi güncelle" sonucu zaten ekranda görünür
+  if (durum.bildirim === "KAPALI") return;
+  if (durum.bildirim === "HAFTALIK" && trHaftaGunu() !== "Mon") return;
+  const bugun = trBugun();
+  if (durum.sonDegisiklikYokMail === bugun) return;
+  durum.sonDegisiklikYokMail = bugun;
+  const listeTarihi = durum.listeTarihi ? durum.listeTarihi.split("-").reverse().join(".") : "—";
+  await bildir("Kaya fiyat listesi kontrol edildi — fiyat değişikliği yok", [
+    yeniDosya
+      ? `Kaya yeni bir liste dosyası yayınlamış (${listeTarihi}) ama fiyatlar aynı.`
+      : `Kaya'nın listesi değişmedi; hâlâ ${listeTarihi} tarihli.`,
+    `Kontrol zamanı: ${durum.sonKontrol ? trZaman(durum.sonKontrol) : "—"} · ${durum.urunSayisi} ürün.`,
+    durum.degisiklikTarihi
+      ? `Son fiyat değişikliği: ${trZaman(durum.degisiklikTarihi)}.`
+      : durum.sonGuncelleme
+        ? `Liste ${trZaman(durum.sonGuncelleme)} tarihinde oluşturulduğundan beri fiyat değişmedi.`
+        : "",
+    durum.bildirim === "HAFTALIK"
+      ? "Bu e-posta haftada bir (pazartesi) gelir; fiyat değişince ayrıca hemen bildirilir."
+      : "Bu e-posta her sabah gelir; sıklığını Fiyat Listeleri → Kaya listesi → ayarlardan değiştirebilirsiniz.",
+  ]);
+}
+
+// Değişen / yeni / çıkan ürünlerin TAM listesi (e-posta için HTML tablo)
+const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+function degisiklikTablosu(d: KayaDegisiklik[]) {
+  if (!d.length) return "";
+  const tl = (n: number | null) => (n ? `${n.toLocaleString("tr-TR")} TL` : "fiyat sorunuz");
+  const fark = (e: number | null, y: number | null) => {
+    const f = yuzdeFark(e, y);
+    if (f === null) return "";
+    const renk = f > 0 ? "#b45309" : "#0f766e";
+    return ` <span style="color:${renk};font-weight:bold">(${f > 0 ? "+" : ""}${f.toLocaleString("tr-TR", { maximumFractionDigits: 1 })}%)</span>`;
+  };
+  const td = "padding:5px 8px;border-bottom:1px solid #e2e8f0;font-size:12px;vertical-align:top";
+  const grup = (baslik: string, satirlar: KayaDegisiklik[], hucre: (x: KayaDegisiklik) => string) =>
+    satirlar.length
+      ? `<h3 style="font-size:14px;margin:18px 0 6px;color:#0f172a">${baslik} (${satirlar.length})</h3>
+<table style="border-collapse:collapse;width:100%"><tr style="background:#f1f5f9"><th style="${td};text-align:left">Ürün</th><th style="${td};text-align:right">Nakit</th><th style="${td};text-align:right">Kart</th></tr>
+${satirlar.map((x) => `<tr><td style="${td}">${esc(x.ad)}<br><span style="color:#94a3b8;font-size:11px">${esc(x.bolum)}</span></td>${hucre(x)}</tr>`).join("\n")}</table>`
+      : "";
+  return [
+    grup("Fiyatı değişen ürünler", d.filter((x) => x.tur === "DEGISEN"), (x) =>
+      [
+        [x.eski, x.yeni],
+        [x.eski2, x.yeni2],
+      ]
+        .map(([e, y]) =>
+          e === y
+            ? `<td style="${td};text-align:right;white-space:nowrap">${tl(y)}</td>`
+            : `<td style="${td};text-align:right;white-space:nowrap"><span style="color:#94a3b8;text-decoration:line-through">${tl(e)}</span><br><b>${tl(y)}</b>${fark(e, y)}</td>`
+        )
+        .join("")
+    ),
+    grup("Yeni eklenen ürünler", d.filter((x) => x.tur === "YENI"), (x) =>
+      [x.yeni, x.yeni2].map((n) => `<td style="${td};text-align:right;white-space:nowrap">${tl(n)}</td>`).join("")
+    ),
+    grup("Listeden çıkan ürünler", d.filter((x) => x.tur === "CIKAN"), (x) =>
+      [x.eski, x.eski2].map((n) => `<td style="${td};text-align:right;white-space:nowrap;color:#94a3b8">${tl(n)}</td>`).join("")
+    ),
+  ].join("");
+}
+

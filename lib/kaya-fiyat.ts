@@ -45,7 +45,82 @@ export type KaynakDurum = {
   ozet: { yeni: number; cikan: number; degisen: number; ornekler: string[] } | null;
   hata: { mesaj: string; zaman: string } | null;
   atlanan: string[];
+  // Fiyatı değişen / yeni / çıkan ürünlerin tam listesi (en son DEĞİŞİKLİK olan güncellemeden).
+  // Bir sonraki değişikliğe kadar panelde tabloda işaretli kalır.
+  degisiklikler: KayaDegisiklik[];
+  degisiklikTarihi: string | null; // ISO — fiyatların en son değiştiği an
+  // "Değişiklik yok" e-postası: her gün / haftada bir (pazartesi) / hiç
+  bildirim: KayaBildirim;
+  sonDegisiklikYokMail: string | null; // YYYY-MM-DD (aynı gün ikinci kez gitmesin)
 };
+
+export type KayaBildirim = "GUNLUK" | "HAFTALIK" | "KAPALI";
+export const KAYA_BILDIRIMLER: { kod: KayaBildirim; ad: string }[] = [
+  { kod: "GUNLUK", ad: "Her sabah (değişiklik olmasa da)" },
+  { kod: "HAFTALIK", ad: "Haftada bir, pazartesi (değişiklik olmasa da)" },
+  { kod: "KAPALI", ad: "Yalnız fiyat değişince ya da hata olunca" },
+];
+export const kayaBildirimGecerli = (v: unknown): KayaBildirim => (v === "HAFTALIK" || v === "KAPALI" ? v : "GUNLUK");
+
+export type KayaDegisiklik = {
+  tur: "DEGISEN" | "YENI" | "CIKAN";
+  bolum: string;
+  ad: string;
+  eski: number | null; // eski 1. fiyat (nakit)
+  eski2: number | null; // eski 2. fiyat (kart)
+  yeni: number | null;
+  yeni2: number | null;
+};
+
+// Yüzde değişim (fiyat sorunuz ↔ fiyat geçişlerinde null)
+export const yuzdeFark = (eski: number | null, yeni: number | null) =>
+  eski && yeni && eski > 0 ? ((yeni - eski) / eski) * 100 : null;
+
+// Panelde ve liste sayfasında gösterilen tek cümlelik durum
+export type KayaDurumOzeti = { renk: "yesil" | "turuncu" | "kirmizi" | "sari"; baslik: string; detay: string };
+const trZaman = (iso: string) =>
+  new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Istanbul" }).format(
+    new Date(iso)
+  );
+const trGun = (iso: string) =>
+  new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Europe/Istanbul" }).format(new Date(iso));
+export function kayaDurumOzeti(d: KaynakDurum, simdi = new Date()): KayaDurumOzeti {
+  const listeTarihi = d.listeTarihi ? d.listeTarihi.split("-").reverse().join(".") : "—";
+  if (d.hata)
+    return {
+      renk: "kirmizi",
+      baslik: "Son kontrol başarısız — mevcut fiyatlar korunuyor",
+      detay: `${trZaman(d.hata.zaman)}: ${d.hata.mesaj}`,
+    };
+  const kontrolSaat = d.sonKontrol ? (simdi.getTime() - new Date(d.sonKontrol).getTime()) / 3600000 : Infinity;
+  if (kontrolSaat > 36)
+    return {
+      renk: "sari",
+      baslik: "Otomatik kontrol bir süredir çalışmadı",
+      detay: d.sonKontrol
+        ? `En son ${trZaman(d.sonKontrol)} kontrol edildi. "Şimdi güncelle" ile elle kontrol edebilirsiniz.`
+        : `Henüz kontrol yapılmadı. "Şimdi güncelle" ile elle kontrol edebilirsiniz.`,
+    };
+  const sayilar = (["DEGISEN", "YENI", "CIKAN"] as const).map((t) => d.degisiklikler.filter((x) => x.tur === t).length);
+  const degisiklikGun = d.degisiklikTarihi ? (simdi.getTime() - new Date(d.degisiklikTarihi).getTime()) / 86400000 : Infinity;
+  if (d.degisiklikler.length && degisiklikGun <= 7)
+    return {
+      renk: "turuncu",
+      baslik: `${trGun(d.degisiklikTarihi!)} tarihinde fiyatlar değişti`,
+      detay: `Kaya'nın ${listeTarihi} tarihli yeni listesi: ${sayilar[0]} ürünün fiyatı değişti · ${sayilar[1]} yeni ürün · ${sayilar[2]} ürün listeden çıktı. Değişen ürünler aşağıdaki tabloda işaretli.`,
+    };
+  return {
+    renk: "yesil",
+    baslik: "Fiyatlar güncel — değişiklik yok",
+    detay:
+      `Kaya'nın listesi hâlâ ${listeTarihi} tarihli; en son ${d.sonKontrol ? trZaman(d.sonKontrol) : "—"} kontrol edildi. ` +
+      (d.degisiklikTarihi
+        ? `Son fiyat değişikliği ${trGun(d.degisiklikTarihi)} tarihindeydi.`
+        : d.sonGuncelleme
+          ? `Liste ${trGun(d.sonGuncelleme)} tarihinde oluşturulduğundan beri fiyat değişmedi.`
+          : ""),
+  };
+}
 
 export function kaynakDurumOku(json: string | null | undefined): KaynakDurum {
   const bos: KaynakDurum = {
@@ -59,10 +134,19 @@ export function kaynakDurumOku(json: string | null | undefined): KaynakDurum {
     ozet: null,
     hata: null,
     atlanan: [],
+    degisiklikler: [],
+    degisiklikTarihi: null,
+    bildirim: "GUNLUK",
+    sonDegisiklikYokMail: null,
   };
   try {
     const v = JSON.parse(json || "{}");
-    return v && typeof v === "object" ? { ...bos, ...v } : bos;
+    if (!v || typeof v !== "object") return bos;
+    const d: KaynakDurum = { ...bos, ...v };
+    d.degisiklikler = Array.isArray(d.degisiklikler) ? d.degisiklikler : [];
+    d.atlanan = Array.isArray(d.atlanan) ? d.atlanan : [];
+    d.bildirim = kayaBildirimGecerli(d.bildirim);
+    return d;
   } catch {
     return bos;
   }

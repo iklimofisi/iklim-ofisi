@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { fiyatListesiOlustur, fiyatListesiKopyala, fiyatListesiSil, kayaFiyatListesiGuncelle } from "@/lib/actions";
-import { kaynakDurumOku } from "@/lib/kaya-fiyat";
+import { kaynakDurumOku, kayaDurumOzeti } from "@/lib/kaya-fiyat";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
 import KaydetButonu from "@/components/KaydetButonu";
 import SilButon from "@/components/SilButon";
@@ -109,12 +109,15 @@ export default async function FiyatListeleriSayfasi() {
                   {l.baslik}
                 </p>
                 {l.kaynak && (() => {
-                  const d = kaynakDurumOku(l.kaynakDurum);
+                  const o = kayaDurumOzeti(kaynakDurumOku(l.kaynakDurum));
+                  const renk = { yesil: "text-emerald-700", turuncu: "text-amber-700", sari: "text-amber-700", kirmizi: "text-sicak-dim" }[o.renk];
+                  const isaret = { yesil: "✓", turuncu: "●", sari: "!", kirmizi: "⚠" }[o.renk];
                   return (
-                    <p className={`text-[11px] mt-0.5 ${d.hata ? "text-sicak-dim" : "text-metin/50"}`}>
-                      {d.hata
-                        ? `⚠ Son güncelleme başarısız: ${d.hata.mesaj}`
-                        : `Kaya liste tarihi ${d.listeTarihi ? d.listeTarihi.split("-").reverse().join(".") : "—"} · her sabah kontrol edilir`}
+                    <p className="text-[11px] mt-0.5 text-metin/50 whitespace-normal">
+                      <span className={`font-semibold ${renk}`}>
+                        {isaret} {o.baslik}
+                      </span>{" "}
+                      · {o.detay}
                     </p>
                   );
                 })()}
