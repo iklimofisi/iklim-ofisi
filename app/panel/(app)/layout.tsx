@@ -10,6 +10,7 @@ import PanelYanMenu, { type MenuGrubu } from "@/components/PanelYanMenu";
 import KayitBildirimi from "@/components/KayitBildirimi";
 import KurGostergesi from "@/components/KurGostergesi";
 import { Suspense } from "react";
+import { trSimdi } from "@/lib/notlar";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -18,7 +19,13 @@ export const metadata: Metadata = {
 // MENÜ GRUPLARI — sol menü açılır gruplar hâlinde gösterilir (bulunulan sayfanın grubu açık durur).
 // Sayfa adresleri değişmedi; yalnızca menüdeki yerleri gruplandı.
 const menuGruplari: MenuGrubu[] = [
-  { baslik: null, ogeler: [{ href: "/panel", label: "Özet" }] },
+  {
+    baslik: null,
+    ogeler: [
+      { href: "/panel", label: "Özet" },
+      { href: "/panel/notlar", label: "📝 Notlar & Hatırlatmalar" },
+    ],
+  },
   {
     baslik: "Satış & Müşteri",
     ogeler: [
@@ -69,11 +76,22 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   bugun.setHours(23, 59, 59, 999);
 
   // CANLI UYARI ROZET SAYILARI
-  const [okunmamisTalep, bekleyenHatirlatma, yeniKesifSayisi, takiptekiProjeSayisi] = await Promise.all([
+  const [okunmamisTalep, bekleyenHatirlatma, yeniKesifSayisi, takiptekiProjeSayisi, gunuGelenNot] = await Promise.all([
     prisma.webTalebi.count({ where: { okundu: false } }),
     prisma.ziyaret.count({ where: { hatirlatmaTamam: false, hatirlatmaTarihi: { lte: bugun, not: null } } }),
     prisma.kesifFormu.count({ where: { olusturulanTeklifId: null } }),
     prisma.proje.count({ where: { ihaleDurumu: "TAKIPTE" } }),
+    // Günü gelen notlar: benim yazdıklarım ya da (herkese açık olup) bana gidenler.
+    // Tablo henüz yoksa (SQL çalıştırılmadıysa) panel bozulmasın diye 0 sayılır.
+    prisma.panelNotu
+      .count({
+        where: {
+          tamamlandi: false,
+          hatirlatmaGunu: { not: null, lte: trSimdi().gun },
+          OR: [{ olusturanId: kullanici.id }, { gizli: false, hatirlatmaAlicilar: { contains: kullanici.id } }],
+        },
+      })
+      .catch(() => 0),
   ]);
 
   const rozetler: Record<string, number> = {
@@ -81,6 +99,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     "/panel/ziyaretler": bekleyenHatirlatma,
     "/panel/kesif": yeniKesifSayisi,
     "/panel/projeler": takiptekiProjeSayisi,
+    "/panel/notlar": gunuGelenNot,
   };
 
   const gruplar: MenuGrubu[] = [

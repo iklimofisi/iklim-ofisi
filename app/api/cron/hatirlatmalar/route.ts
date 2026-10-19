@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { suankiKullanici } from "@/lib/oturum";
 import { epostaGonder } from "@/lib/eposta";
 import { gorusmeTuru, teklifNoYaz } from "@/lib/gorusme";
+import { notHatirlatmalariniGonder } from "@/lib/not-hatirlatma";
 
 // -----------------------------------------------------------------------------
 // ZİYARET HATIRLATMALARI — HER SABAH E-POSTA
@@ -54,11 +55,15 @@ export async function GET(req: NextRequest) {
 
   const bugun = trBugun();
 
+  // --- Notlar & Hatırlatmalar sayfasındaki hatırlatma mailleri ---
+  // (ziyaret hatırlatmalarından bağımsız; her not yalnız bir kez gönderilir)
+  const notlar = await notHatirlatmalariniGonder().catch((e: unknown) => ({ hata: e instanceof Error ? e.message : String(e) }));
+
   // --- Aynı gün iki kez gönderme ---
   const dahaOnce = await prisma.islemKaydi
     .findFirst({ where: { islem: "hatirlatmaEpostasi", hedefId: bugun }, select: { id: true } })
     .catch(() => null);
-  if (dahaOnce) return NextResponse.json({ durum: "bugün zaten gönderildi", tarih: bugun });
+  if (dahaOnce) return NextResponse.json({ durum: "bugün zaten gönderildi", tarih: bugun, notlar });
 
   // Hatırlatma tarihleri gün olarak (UTC gece yarısı) saklanır
   const bugunSinir = new Date(`${bugun}T00:00:00.000Z`);
@@ -77,7 +82,7 @@ export async function GET(req: NextRequest) {
   ]);
 
   if (hatirlatmalar.length === 0) {
-    return NextResponse.json({ durum: "hatırlatma yok", tarih: bugun });
+    return NextResponse.json({ durum: "hatırlatma yok", tarih: bugun, notlar });
   }
 
   // Kişiye göre grupla ("" = eşleşmeyenler → bildirim adresi)
@@ -158,5 +163,5 @@ export async function GET(req: NextRequest) {
       .catch(() => null);
   }
 
-  return NextResponse.json({ durum: "tamam", tarih: bugun, sonuc });
+  return NextResponse.json({ durum: "tamam", tarih: bugun, sonuc, notlar });
 }

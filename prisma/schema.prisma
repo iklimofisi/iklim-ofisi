@@ -711,3 +711,26 @@ model HavalandirmaHesap {
 
   @@index([musteriId])
 }
+
+// NOTLAR & HATIRLATMALAR (panel)
+// gizli = true → yalnız yazan kullanıcı görür. Hatırlatma maili seçilen gün sabah
+// 08:00'de (otomatik görevle) gider; o gün 08:00 geçtiyse kaydedilir kaydedilmez gider.
+model PanelNotu {
+  id                   String    @id @default(cuid())
+  baslik               String?
+  icerik               String
+  gizli                Boolean   @default(false)
+  sabit                Boolean   @default(false) // listenin başında tutulur
+  tamamlandi           Boolean   @default(false)
+  olusturanId          String
+  olusturanAdi         String    @default("")
+  hatirlatmaGunu       String?   // YYYY-MM-DD (Türkiye saatiyle)
+  hatirlatmaSaati      String?   // HH:MM (mailde ve listede yazar)
+  hatirlatmaAlicilar   String?   // JSON: mail gidecek kullanıcı id listesi
+  hatirlatmaGonderildi DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([olusturanId])
+  @@index([hatirlatmaGunu])
+}
