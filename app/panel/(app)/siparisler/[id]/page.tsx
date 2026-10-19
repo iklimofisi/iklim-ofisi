@@ -16,6 +16,7 @@ import SiparisSureciGostergesi from "@/components/SiparisSureciGostergesi";
 import SilButon from "@/components/SilButon";
 import YazdirButon from "@/components/YazdirButon";
 import KaydetButonu from "@/components/KaydetButonu";
+import { miktarYaz } from "@/lib/birimler";
 
 export const dynamic = "force-dynamic";
 
@@ -91,9 +92,9 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
               return (
                 <tr key={k.id} className="border-b border-hat last:border-0">
                   <td className="py-2 text-metin">{k.aciklama}</td>
-                  <td className="py-2 text-right font-mono">{k.adet}</td>
+                  <td className="py-2 text-right font-mono whitespace-nowrap">{miktarYaz(k.adet, k.birim)}</td>
                   <td className="py-2 text-right font-mono">{sevk}</td>
-                  <td className="py-2 text-right font-mono">{k.adet - sevk}</td>
+                  <td className="py-2 text-right font-mono whitespace-nowrap">{miktarYaz(k.adet - sevk, k.birim)}</td>
                 </tr>
               );
             })}
@@ -226,7 +227,7 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-sm text-metin">{k.aciklama}</p>
                       <p className="text-xs text-metin/50">
-                        {sevkEdilen}/{k.adet} sevk edildi
+                        {sevkEdilen}/{k.adet} {k.birim} sevk edildi
                         {kalan > 0 ? ` · ${kalan} kaldı` : " · tamamlandı"}
                       </p>
                     </div>
@@ -305,7 +306,7 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-sm text-metin">{k.aciklama}</p>
                       <p className="text-xs text-metin/50">
-                        {teslimEdilen}/{k.adet} teslim edildi
+                        {teslimEdilen}/{k.adet} {k.birim} teslim edildi
                         {teslimEdilen < k.adet ? "" : " · tamamlandı"}
                       </p>
                     </div>

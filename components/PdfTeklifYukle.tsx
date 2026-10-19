@@ -63,6 +63,7 @@ export default function PdfTeklifYukle({
           </div>
 
           <TeklifKalemleri
+            birimli={false}
             baslangic={sonuc.kalemler.map((k, i) => ({ key: i, aciklama: k.aciklama, adet: k.adet, birimFiyat: k.birimFiyat }))}
           />
 

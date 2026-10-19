@@ -18,6 +18,7 @@ import {
 import KaydetButonu from "@/components/KaydetButonu";
 import SozlesmeMaddeleri from "@/components/SozlesmeMaddeleri";
 import SilButon from "@/components/SilButon";
+import { miktarYaz } from "@/lib/birimler";
 
 export const dynamic = "force-dynamic";
 
@@ -281,7 +282,7 @@ export default async function SozlesmeSayfasi({ params }: { params: { id: string
               <thead className="bg-zemin text-metin/60">
                 <tr>
                   <th className="text-left px-3 py-2 font-medium">Kalem</th>
-                  <th className="text-right px-3 py-2 font-medium">Adet</th>
+                  <th className="text-right px-3 py-2 font-medium">Miktar</th>
                   <th className="text-right px-3 py-2 font-medium whitespace-nowrap">Birim ({paraSembolu(sozlesme.paraBirimi)})</th>
                   <th className="text-right px-3 py-2 font-medium">Tutar</th>
                 </tr>
@@ -290,7 +291,7 @@ export default async function SozlesmeSayfasi({ params }: { params: { id: string
                 {h.satirlar.map((k, i) => (
                   <tr key={i} className="border-t border-hat">
                     <td className="px-3 py-1.5">{k.aciklama}</td>
-                    <td className="px-3 py-1.5 text-right">{k.adet}</td>
+                    <td className="px-3 py-1.5 text-right whitespace-nowrap">{miktarYaz(k.adet, k.olcu)}</td>
                     <td className="px-3 py-1.5 text-right whitespace-nowrap">{paraYaz(k.birim, sozlesme.paraBirimi)}</td>
                     <td className="px-3 py-1.5 text-right whitespace-nowrap">{paraYaz(k.tutar, sozlesme.paraBirimi)}</td>
                   </tr>

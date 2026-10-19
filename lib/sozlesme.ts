@@ -5,7 +5,8 @@
 // teklifin para biriminde saklanır, sözleşme para birimine "kur" ile çevrilir.
 // -----------------------------------------------------------------------------
 
-export type SozlesmeKalemi = { bolum: string; aciklama: string; adet: number; birimFiyat: number }; // birimFiyat: iskonto sonrası, teklif para biriminde
+// birimFiyat: iskonto sonrası, teklif para biriminde · olcu: ölçü birimi (Adet, m, m²…; eski sözleşmelerde yoksa "Adet")
+export type SozlesmeKalemi = { bolum: string; aciklama: string; adet: number; olcu: string; birimFiyat: number };
 export type SozlesmeMaddesi = { baslik: string; icerik: string };
 
 export const PARA_BIRIMLERI = ["TRY", "EUR", "USD"] as const;
@@ -31,6 +32,7 @@ export function kalemleriOku(json: string | null | undefined): SozlesmeKalemi[] 
         bolum: String(k.bolum || "Genel Kalemler"),
         aciklama: String(k.aciklama),
         adet: Number(k.adet) || 0,
+        olcu: String(k.olcu || "Adet").slice(0, 20),
         birimFiyat: Number(k.birimFiyat) || 0,
       }));
   } catch {
@@ -52,12 +54,13 @@ export function maddeleriOku(json: string | null | undefined): SozlesmeMaddesi[]
 
 // Teklif kalemlerinden sözleşme kalemi kopyası (iskonto birim fiyata katılır)
 export function tekliftenKalemler(
-  kalemler: { bolum: string | null; aciklama: string; adet: number; birimFiyat: number; iskontoYuzde: number }[]
+  kalemler: { bolum: string | null; aciklama: string; adet: number; birim?: string | null; birimFiyat: number; iskontoYuzde: number }[]
 ): SozlesmeKalemi[] {
   return kalemler.map((k) => ({
     bolum: k.bolum || "Genel Kalemler",
     aciklama: k.aciklama,
     adet: k.adet,
+    olcu: (k.birim || "Adet").slice(0, 20),
     birimFiyat: k.birimFiyat * (1 - (k.iskontoYuzde || 0) / 100),
   }));
 }

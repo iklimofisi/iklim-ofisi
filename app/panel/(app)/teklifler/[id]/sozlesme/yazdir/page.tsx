@@ -6,6 +6,7 @@ import { getSirketAyarlari } from "@/lib/sirket";
 import { ISTIRAK_METNI } from "@/lib/kurumsal";
 import YazdirButon from "@/components/YazdirButon";
 import { kalemleriOku, maddeleriOku, sozlesmeHesap, paraYaz, tutariYaziyla, sayiyiYaziyla, sozlesmeNo } from "@/lib/sozlesme";
+import { miktarYaz } from "@/lib/birimler";
 
 export const dynamic = "force-dynamic";
 
@@ -148,7 +149,7 @@ export default async function SozlesmeYazdir({ params }: { params: { id: string 
             <colgroup>
               <col className="w-7" />
               <col />
-              <col className="w-12" />
+              <col className="w-20" />
               {fiyatli && <col className="w-28" />}
               <col className="w-28" />
             </colgroup>
@@ -156,7 +157,7 @@ export default async function SozlesmeYazdir({ params }: { params: { id: string 
               <tr className="bg-zemin border-y border-metin/40 text-metin/70">
                 <th className="py-1.5 px-1 text-left font-semibold">#</th>
                 <th className="py-1.5 px-1 text-left font-semibold">Açıklama</th>
-                <th className="py-1.5 px-1 text-right font-semibold">Adet</th>
+                <th className="py-1.5 px-1 text-right font-semibold">Miktar</th>
                 {fiyatli && <th className="py-1.5 px-1 text-right font-semibold whitespace-nowrap">Birim Fiyat</th>}
                 <th className="py-1.5 px-1 text-right font-semibold">Tutar</th>
               </tr>
@@ -178,7 +179,7 @@ export default async function SozlesmeYazdir({ params }: { params: { id: string 
                       <tr key={`k-${sira}`} className="border-b border-hat align-top break-inside-avoid">
                         <td className="py-1.5 px-1 text-metin/50">{sira}</td>
                         <td className="py-1.5 px-1 break-words">{k.aciklama}</td>
-                        <td className="py-1.5 px-1 text-right">{k.adet}</td>
+                        <td className="py-1.5 px-1 text-right whitespace-nowrap">{miktarYaz(k.adet, k.olcu)}</td>
                         {fiyatli && <td className="py-1.5 px-1 text-right whitespace-nowrap">{paraYaz(k.birim, pb)}</td>}
                         <td className="py-1.5 px-1 text-right whitespace-nowrap">{paraYaz(k.tutar, pb)}</td>
                       </tr>

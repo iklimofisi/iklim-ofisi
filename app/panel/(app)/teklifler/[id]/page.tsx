@@ -19,6 +19,7 @@ import { redNedeniAdi } from "@/lib/teklif-durum";
 import { GERCEK_MUSTERI, MUSTERISIZ_HITAP, musterisizMi, musterisizGoster } from "@/lib/musterisiz";
 import { teklifMusteriyeBagla } from "@/lib/actions";
 import KaydetButonu from "@/components/KaydetButonu";
+import { miktarYaz } from "@/lib/birimler";
 
 export const dynamic = "force-dynamic";
 
@@ -356,7 +357,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
         <table className="w-full table-fixed text-sm mb-8 tabular-nums">
           <colgroup>
             <col />
-            <col className="w-14" />
+            <col className="w-24" />
             {teklif.birimFiyatGoster && (
               <>
                 <col className="w-32" />
@@ -367,7 +368,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
           <thead>
             <tr className="text-xs text-metin/50 border-b-2 border-metin/20">
               <th className="py-2 pr-4 font-medium text-left">Açıklama</th>
-              <th className="py-2 font-medium text-right whitespace-nowrap">Adet</th>
+              <th className="py-2 font-medium text-right whitespace-nowrap">Miktar</th>
               {teklif.birimFiyatGoster && (
                 <>
                   <th className="py-2 font-medium text-right whitespace-nowrap">Birim Fiyat</th>
@@ -407,7 +408,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
                           <span className="break-words min-w-0">{k.aciklama}</span>
                         </div>
                       </td>
-                      <td className="py-2 text-right text-metin/70 whitespace-nowrap">{k.adet}</td>
+                      <td className="py-2 text-right text-metin/70 whitespace-nowrap">{miktarYaz(k.adet, k.birim)}</td>
                       {teklif.birimFiyatGoster && (
                         <>
                           <td className="py-2 text-right text-metin/70 whitespace-nowrap">{paraFormat(netBirimFiyat, pb)}</td>

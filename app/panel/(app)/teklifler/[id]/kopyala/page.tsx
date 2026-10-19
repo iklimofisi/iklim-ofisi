@@ -134,6 +134,7 @@ export default async function TeklifKopyala({
             markaId: u.markaId,
             birimFiyat: u.listeFiyati,
             paraBirimi: u.paraBirimi,
+            birim: u.birim,
           }))}
           // Kalemler kopyalanır; kimlik (id) taşınmaz — yeni teklifte yeni kalemler oluşur
           baslangic={kaynak.kalemler.map((k, i) => ({
@@ -141,6 +142,7 @@ export default async function TeklifKopyala({
             bolum: k.bolum || "Genel Kalemler",
             aciklama: k.aciklama,
             adet: k.adet,
+            birim: k.birim,
             birimFiyat: String(k.birimFiyat ?? 0),
             iskontoYuzde: String(k.iskontoYuzde ?? 0),
             markaId: k.markaId,

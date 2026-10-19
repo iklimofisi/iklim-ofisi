@@ -24,6 +24,7 @@ import { randomUUID, randomBytes } from "crypto";
 import { gecerliTur } from "@/lib/gorusme";
 import { gecerliRedNedeni } from "@/lib/teklif-durum";
 import { flKalemleriOku, metinAl, duzenGecerli } from "@/lib/fiyat-listesi";
+import { birimNormal } from "@/lib/birimler";
 import { MUSTERISIZ_ID, musterisizMi, musterisizGoster } from "@/lib/musterisiz";
 import { musterisizKaydiHazirla } from "@/lib/musterisiz-sunucu";
 
@@ -163,6 +164,7 @@ function kalemleriOku(formData: FormData) {
   const bolumler = formData.getAll("kalemBolum") as string[];
   const aciklamalar = formData.getAll("kalemAciklama") as string[];
   const adetler = formData.getAll("kalemAdet") as string[];
+  const birimler = formData.getAll("kalemBirim") as string[]; // ölçü birimi (yoksa "Adet")
   const fiyatlar = formData.getAll("kalemFiyat") as string[];
   const iskontolar = formData.getAll("kalemIskonto") as string[];
   const markalar = formData.getAll("kalemMarka") as string[];
@@ -174,6 +176,7 @@ function kalemleriOku(formData: FormData) {
       bolum: bolumler[i] ? bolumler[i].trim() : "Genel Kalemler",
       aciklama: aciklama.trim(),
       adet: parseSayi(adetler[i]),
+      birim: birimNormal(birimler[i]),
       birimFiyat: parseSayi(fiyatlar[i]),
       iskontoYuzde: parseSayi(iskontolar[i]),
       markaId: markalar[i] || null,
@@ -207,6 +210,7 @@ function kalemVerisi(k: ReturnType<typeof kalemleriOku>[number], sira: number) {
     bolum: k.bolum,
     aciklama: k.aciklama,
     adet: k.adet,
+    birim: k.birim,
     birimFiyat: k.birimFiyat,
     iskontoYuzde: k.iskontoYuzde,
     markaId: k.markaId,

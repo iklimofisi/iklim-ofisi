@@ -183,6 +183,7 @@ model TeklifKalem {
   bolum        String?         @default("Genel Kalemler")
   aciklama     String
   adet         Float           @default(1)
+  birim        String          @default("Adet") // Ölçü birimi: Adet, m, m², m³, kg, Takım, Götürü… (lib/birimler.ts)
   birimFiyat   Float           @default(0)
   iskontoYuzde Float           @default(0)
   markaId      String?

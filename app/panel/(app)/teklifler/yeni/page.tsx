@@ -138,6 +138,7 @@ export default async function YeniTeklifSayfasi({
             markaId: u.markaId,
             birimFiyat: u.listeFiyati,
             paraBirimi: u.paraBirimi,
+            birim: u.birim,
           }))}
         />
 

@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import UrunArama from "@/components/UrunArama";
 import { toplamaGoreDagit, tutarOku } from "@/lib/toplam-dagit";
 import { donusumKalemleri } from "@/lib/satinalma-hesap";
+import { BIRIM_GRUPLARI, BIRIMLER, VARSAYILAN_BIRIM, birimNormal } from "@/lib/birimler";
 
 export type Satir = {
   key: number | string;
@@ -11,6 +12,7 @@ export type Satir = {
   bolum?: string;
   aciklama?: string;
   adet?: string | number;
+  birim?: string; // ölçü birimi (Adet, m, m², m³…); boşsa "Adet"
   birimFiyat?: string | number;
   iskontoYuzde?: string | number;
   markaId?: string | null;
@@ -23,6 +25,7 @@ type Urun = {
   markaId: string | null;
   birimFiyat: number;
   paraBirimi: string;
+  birim?: string | null; // ürün kartındaki birim (seçilince satıra gelir)
 };
 
 // Türkçe virgülü ve noktayı güvenli sayıya çevirici
@@ -46,6 +49,12 @@ function bolumlereGoreDiz(liste: Satir[]): Satir[] {
   return Array.from(gruplar.values()).flat();
 }
 
+// Açılır listede kısa birim önce görünür: "m² · Metrekare" (kapalıyken de "m²" okunur)
+const birimEtiketi = (b: { kod: string; ad: string }) => {
+  const ad = b.ad.replace(/\s*\(.*\)$/, "");
+  return ad.toLocaleLowerCase("tr-TR") === b.kod.toLocaleLowerCase("tr-TR") ? b.kod : `${b.kod} · ${ad}`;
+};
+
 // Fiyat Formatlayıcı
 const formatPara = (val: number) => {
   return val.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -57,12 +66,14 @@ export default function TeklifKalemleri({
   urunler,
   paraBirimi = "TRY",
   kurlar = null,
+  birimli = true,
 }: {
   baslangic?: Satir[];
   markalar?: { id: string; ad: string }[];
   urunler?: Urun[];
   paraBirimi?: string;
   kurlar?: { tarih: string; USD: number; EUR: number } | null; // TCMB efektif satış (1 birim = ? TL)
+  birimli?: boolean; // ölçü birimi seçimi (müşteri teklifleri). Tedarikçi teklifi ekranında kapalı.
 }) {
   // State: Tüm kalemler
   const [satirlar, setSatirlar] = useState<Satir[]>(() => {
@@ -73,6 +84,7 @@ export default function TeklifKalemleri({
         bolum: s.bolum || "VRF Sistemleri",
         aciklama: s.aciklama ?? "",
         adet: String(s.adet ?? 1),
+        birim: birimNormal(s.birim),
         birimFiyat: String(s.birimFiyat ?? 0),
         iskontoYuzde: String(s.iskontoYuzde ?? 0),
         markaId: s.markaId ?? "",
@@ -84,6 +96,7 @@ export default function TeklifKalemleri({
         bolum: "VRF Sistemleri",
         aciklama: "",
         adet: "1",
+        birim: VARSAYILAN_BIRIM,
         birimFiyat: "0",
         iskontoYuzde: "0",
         markaId: "",
@@ -212,6 +225,7 @@ export default function TeklifKalemleri({
           bolum: String(s["Bölüm"] || s["Bolum"] || s["Kategori"] || "Genel Kalemler").trim(),
           aciklama: String(s["Açıklama"] || s["Aciklama"] || s["Ürün Adı"] || s["Urun Adi"] || "").trim(),
           adet: String(s["Miktar"] || s["Adet"] || "1"),
+          birim: birimNormal(s["Birim"] || s["Ölçü Birimi"] || s["Olcu Birimi"]),
           birimFiyat: String(s["Birim Fiyat"] || s["Fiyat"] || "0"),
           iskontoYuzde: String(s["İskonto %"] || s["Iskonto"] || "0"),
           markaId: "",
@@ -236,6 +250,7 @@ export default function TeklifKalemleri({
         "Bölüm": "VRF Sistemleri",
         "Açıklama": "Bosch VRF Dış Ünite 18HP (AF5301A 50 C-3)",
         "Miktar": 1,
+        "Birim": "Adet",
         "Birim Fiyat": 5000,
         "İskonto %": 10,
       },
@@ -243,6 +258,7 @@ export default function TeklifKalemleri({
         "Bölüm": "VRF Sistemleri",
         "Açıklama": "Bosch Kablolu Kumanda Bağlantı Kartı (AC-CCB)",
         "Miktar": 5,
+        "Birim": "Takım",
         "Birim Fiyat": 150,
         "İskonto %": 0,
       },
@@ -254,6 +270,10 @@ export default function TeklifKalemleri({
   };
 
   const markaVar = markalar && markalar.length > 0;
+  // Satır ızgarası: birim seçimi varken miktar sütunu genişler (Tailwind sınıfları sabit yazılmalı)
+  const izgara = birimli
+    ? "sm:grid-cols-[65px_1fr_165px_110px_75px_110px_100px_28px]"
+    : "sm:grid-cols-[65px_1fr_75px_110px_75px_110px_100px_28px]";
   const urunVar = urunler && urunler.length > 0;
 
   // --- SIRALAMA & KONUM DEĞİŞTİRME MANTIKLARI ---
@@ -308,6 +328,7 @@ export default function TeklifKalemleri({
           bolum: bolumAdi,
           aciklama: "",
           adet: "1",
+          birim: VARSAYILAN_BIRIM,
           birimFiyat: "0",
           iskontoYuzde: topluIskontoOrani || "0",
           markaId: "",
@@ -330,6 +351,7 @@ export default function TeklifKalemleri({
             ...s,
             aciklama: urun.kod ? `${urun.ad} (${urun.kod})` : urun.ad,
             birimFiyat: String(urun.birimFiyat),
+            birim: urun.birim ? birimNormal(urun.birim) : s.birim,
             markaId: urun.markaId ?? s.markaId,
           };
         }
@@ -680,10 +702,10 @@ export default function TeklifKalemleri({
             </button>
           </div>
 
-          <div className="hidden sm:grid grid-cols-[65px_1fr_75px_110px_75px_110px_100px_28px] gap-2 text-xs text-metin/50 px-1 font-medium">
+          <div className={`hidden sm:grid ${izgara} gap-2 text-xs text-metin/50 px-1 font-medium`}>
             <span className="text-center">Sıra / Taşı</span>
             <span>Açıklama</span>
-            <span>Adet</span>
+            <span>{birimli ? "Miktar · Birim" : "Adet"}</span>
             <span>Birim Fiyat ({sembol})</span>
             <span>İskonto %</span>
             {markaVar ? <span>Marka</span> : <span></span>}
@@ -711,7 +733,7 @@ export default function TeklifKalemleri({
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 sm:grid-cols-[65px_1fr_75px_110px_75px_110px_100px_28px] gap-2 items-center">
+                <div className={`grid grid-cols-2 ${izgara} gap-2 items-center`}>
                   <div className="flex items-center gap-1 justify-center bg-slate-50 border border-hat rounded p-1">
                     <input
                       type="number"
@@ -754,15 +776,40 @@ export default function TeklifKalemleri({
                     className="focus-ring col-span-2 sm:col-span-1 border border-hat rounded-md px-2.5 py-1.5 text-sm"
                   />
 
-                  <input
-                    name="kalemAdet"
-                    type="text"
-                    inputMode="decimal"
-                    value={satir.adet}
-                    onChange={(e) => satirGuncelle(satir.key, "adet", e.target.value)}
-                    placeholder="Adet"
-                    className="focus-ring border border-hat rounded-md px-2 py-1.5 text-sm text-center"
-                  />
+                  <div className="flex gap-1 min-w-0">
+                    <input
+                      name="kalemAdet"
+                      type="text"
+                      inputMode="decimal"
+                      value={satir.adet}
+                      onChange={(e) => satirGuncelle(satir.key, "adet", e.target.value)}
+                      placeholder="Miktar"
+                      aria-label="Miktar"
+                      className="focus-ring w-full min-w-0 border border-hat rounded-md px-2 py-1.5 text-sm text-center"
+                    />
+                    {birimli && (
+                      <select
+                        name="kalemBirim"
+                        value={satir.birim || VARSAYILAN_BIRIM}
+                        onChange={(e) => satirGuncelle(satir.key, "birim", e.target.value)}
+                        aria-label="Birim"
+                        title="Ölçü birimi"
+                        className="focus-ring w-[92px] shrink-0 border border-hat rounded-md px-1 py-1.5 text-sm bg-white"
+                      >
+                        {/* Listede olmayan eski bir birim (ör. ürün kartından) kaybolmasın */}
+                        {satir.birim && !BIRIMLER.some((b) => b.kod === satir.birim) && <option value={satir.birim}>{satir.birim}</option>}
+                        {BIRIM_GRUPLARI.map((g) => (
+                          <optgroup key={g.grup} label={g.grup}>
+                            {g.birimler.map((b) => (
+                              <option key={b.kod} value={b.kod}>
+                                {birimEtiketi(b)}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                    )}
+                  </div>
 
                   <input
                     name="kalemFiyat"

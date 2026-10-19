@@ -152,6 +152,7 @@ export default async function TeklifDuzenle({
             markaId: u.markaId,
             birimFiyat: u.listeFiyati,
             paraBirimi: u.paraBirimi,
+            birim: u.birim,
           }))}
           baslangic={teklif.kalemler.map((k, i) => ({
             key: i,
@@ -159,6 +160,7 @@ export default async function TeklifDuzenle({
             bolum: (k as any).bolum || "Genel Kalemler", // Bölüm Desteği
             aciklama: k.aciklama,
             adet: k.adet,
+            birim: k.birim,
             birimFiyat: String(k.birimFiyat ?? 0), // Ondalıklı fiyat için String tutuluyor
             iskontoYuzde: String(k.iskontoYuzde ?? 0),
             markaId: k.markaId,

@@ -4,6 +4,7 @@ import { PDF_LOGO_JPEG_BASE64, PDF_LOGO_ORAN } from "@/lib/pdf-logo";
 import { musteriToplami, ilkHazirlanmaTarihi, musteriTeklifTarihi, kosulCumlesi, bolumToplamlari } from "@/lib/teklif-hesap";
 import { sablonlariGrupla, notlariUygula } from "@/lib/sablon";
 import { ISTIRAK_METNI } from "@/lib/kurumsal";
+import { miktarYaz } from "@/lib/birimler";
 
 // -----------------------------------------------------------------------------
 // MÜŞTERİYE E-POSTAYLA GİDEN TEKLİF PDF'İ
@@ -216,15 +217,16 @@ export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer
   // 4. KALEMLER (bölüm bölüm)
   // ---------------------------------------------------------------------------
   const fiyatli = !!teklif.birimFiyatGoster;
-  const X_ADET = fiyatli ? 128 : SAG;
-  const X_BIRIM = 162;
+  // Miktar sütunu birimle birlikte yazılır ("12,5 m²", "3 Takım"), bu yüzden biraz geniştir
+  const X_ADET = fiyatli ? 133 : SAG;
+  const X_BIRIM = 164;
   const X_TUTAR = SAG;
-  const ACIKLAMA_GEN = fiyatli ? 98 : 150;
+  const ACIKLAMA_GEN = fiyatli ? 93 : 148;
 
   const tabloBasligi = () => {
     yazi(7.5, false, METIN_50);
     doc.text("Açıklama", SOL, y);
-    doc.text("Adet", X_ADET, y, { align: "right" });
+    doc.text("Miktar", X_ADET, y, { align: "right" });
     if (fiyatli) {
       doc.text("Birim Fiyat", X_BIRIM, y, { align: "right" });
       doc.text("Tutar", X_TUTAR, y, { align: "right" });
@@ -300,7 +302,7 @@ export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer
       yazi(8.5, false, METIN);
       doc.text(satirlar, metinX, ilkSatirY);
       yazi(8.5, false, METIN_70);
-      doc.text(String(k.adet ?? 1).replace(".", ","), X_ADET, ilkSatirY, { align: "right" });
+      doc.text(metin(miktarYaz(Number(k.adet ?? 1), k.birim)), X_ADET, ilkSatirY, { align: "right" });
       if (fiyatli) {
         doc.text(paraYaz(netBirim, pb), X_BIRIM, ilkSatirY, { align: "right" });
         yazi(8.5, false, METIN);
