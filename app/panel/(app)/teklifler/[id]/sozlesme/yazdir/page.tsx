@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import { LogoIsaret } from "@/components/Logo";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSirketAyarlari } from "@/lib/sirket";
@@ -80,7 +80,7 @@ export default async function SozlesmeYazdir({ params }: { params: { id: string 
         {/* ÜST BİLGİ */}
         <header className="flex items-start justify-between gap-6 pb-4 mb-6 border-b-2 border-metin/80">
           <div className="flex items-center gap-3">
-            <Image src="/logo-icon.png" alt={sirket.unvan} width={40} height={40} />
+            <LogoIsaret boyut={38} baslik={sirket.unvan} className="shrink-0" />
             <div>
               <p className="font-display font-bold text-base">{sirket.unvan}</p>
               {ISTIRAK_METNI && <p className="text-[10.5px] text-metin/60">{ISTIRAK_METNI}</p>}

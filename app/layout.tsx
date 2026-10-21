@@ -36,9 +36,9 @@ export const metadata: Metadata = {
   
   // CHROME SEKMESİNDEKİ LOGO (FAVICON) BURAYA TANIMLANDI
   icons: {
-    icon: "/logo-icon.png",
-    shortcut: "/logo-icon.png",
-    apple: "/logo-icon.png",
+    icon: "/icon.png",
+    shortcut: "/favicon.ico",
+    apple: "/apple-icon.png",
   },
 
   // WHATSAPP, LINKEDIN & SOSYAL MEDYA PAYLAŞIM KARTI (OPEN GRAPH)

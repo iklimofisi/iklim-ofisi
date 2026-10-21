@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { cikisYap } from "@/lib/auth-actions";
@@ -9,6 +8,7 @@ import PanelMobilMenu from "@/components/PanelMobilMenu";
 import PanelYanMenu, { type MenuGrubu } from "@/components/PanelYanMenu";
 import KayitBildirimi from "@/components/KayitBildirimi";
 import KurGostergesi from "@/components/KurGostergesi";
+import { LogoTam } from "@/components/Logo";
 import { Suspense } from "react";
 import { trSimdi } from "@/lib/notlar";
 
@@ -122,10 +122,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       <aside className="w-56 shrink-0 border-r border-hat bg-yuzey hidden sm:flex flex-col print:hidden">
         <div className="h-16 flex items-center gap-2 px-6 border-b border-hat">
           <Link href="/" className="flex items-center gap-2 focus-ring">
-            <Image src="/logo-icon.png" alt="İklim Ofisi" width={24} height={24} />
-            <span className="font-display font-semibold text-metin">
-              İklim <span className="text-soguk">Ofisi</span>
-            </span>
+            <LogoTam boyut={26} altYazi={false} />
           </Link>
         </div>
         {/* DÖVİZ KURLARI (üzerine gelince açılır) */}

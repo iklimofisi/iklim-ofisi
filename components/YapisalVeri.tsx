@@ -61,7 +61,7 @@ export function IsletmeYapisalVerisi({ sirket }: { sirket: Sirket }) {
     "@id": `${SITE}/#isletme`,
     name: sirket.unvan,
     url: SITE,
-    logo: `${SITE}/logo-icon.png`,
+    logo: `${SITE}/logo-hat.png`,
     image: `${SITE}/og-image.png`,
     description:
       sirket.slogan ||

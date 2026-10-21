@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { LogoTam } from "@/components/Logo";
 import { girisYap } from "@/lib/auth-actions";
 
 export default function GirisSayfasi({
@@ -10,10 +10,7 @@ export default function GirisSayfasi({
     <div className="min-h-screen bg-zemin flex items-center justify-center px-6">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
-          <Image src="/logo-icon.png" alt="İklim Ofisi" width={56} height={56} priority />
-          <p className="font-display font-semibold text-lg mt-3">
-            İklim <span className="text-soguk">Ofisi</span>
-          </p>
+          <LogoTam boyut={48} />
         </div>
         <form
           action={girisYap}

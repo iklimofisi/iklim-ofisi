@@ -1,12 +1,12 @@
 import Link from "next/link";
-import Image from "next/image";
+import { LogoTam } from "@/components/Logo";
 
 export default function NotFound() {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 text-center">
       <div className="max-w-md bg-white border border-slate-200 rounded-2xl p-8 shadow-sm space-y-6">
         <div className="flex justify-center">
-          <Image src="/logo-icon.png" alt="İklim Ofisi" width={56} height={56} />
+          <LogoTam boyut={44} />
         </div>
 
         <div className="space-y-2">

@@ -62,7 +62,7 @@ export default function BlogDetayPage({ params }: { params: { slug: string } }) 
               publisher: {
                 "@type": "Organization",
                 name: "İklim Ofisi Mühendislik",
-                logo: { "@type": "ImageObject", url: `${SITE}/logo-icon.png` },
+                logo: { "@type": "ImageObject", url: `${SITE}/logo-hat.png` },
               },
             }}
           />

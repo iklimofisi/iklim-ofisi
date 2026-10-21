@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import { LogoTam } from "@/components/Logo";
 import MobilMenu from "@/components/MobilMenu";
 
 export default function Header() {
@@ -8,22 +8,9 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-3">
         
         {/* BÜYÜTÜLMÜŞ LOGO */}
-        <Link href="/" className="flex items-center gap-3 group shrink-0">
-          <Image
-            src="/logo-icon.png"
-            alt="İklim Ofisi"
-            width={44}
-            height={48}
-            className="w-auto h-11 object-contain group-hover:scale-105 transition-transform"
-          />
-          <div className="flex flex-col">
-            <span className="font-display font-extrabold text-xl sm:text-2xl tracking-tight text-slate-950">
-              İklim <span className="text-teal-700">Ofisi</span>
-            </span>
-            <span className="hidden sm:block lg:hidden xl:block text-[10px] font-bold text-slate-400 tracking-widest uppercase -mt-1">
-              Türkiye'nin güvenilir iklimlendirme markası
-            </span>
-          </div>
+        <Link href="/" aria-label="İklim Ofisi ana sayfa" className="flex items-center group shrink-0">
+          <LogoTam boyut={40} className="sm:hidden" altYazi={false} />
+          <LogoTam boyut={44} className="hidden sm:inline-flex" />
         </Link>
 
         {/* MENÜ LİNKLERİ (Hakkımızda Öne Alındı) */}

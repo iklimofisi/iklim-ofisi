@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { LogoTam } from "@/components/Logo";
 import { cikisYap } from "@/lib/auth-actions";
 import KurGostergesi from "@/components/KurGostergesi";
 import { aktifMi, useMenuDurumu, type MenuGrubu } from "@/components/PanelYanMenu";
@@ -14,8 +14,7 @@ export default function PanelMobilMenu({ gruplar, rozetler }: { gruplar: MenuGru
   return (
     <div className="sm:hidden border-b border-hat bg-yuzey p-4 flex justify-between items-center print:hidden">
       <Link href="/panel" className="flex items-center gap-2 font-display font-bold text-metin text-base">
-        <Image src="/logo-icon.png" alt="İklim Ofisi" width={24} height={24} />
-        <span>İklim <span className="text-soguk">Ofisi</span></span>
+        <LogoTam boyut={26} altYazi={false} />
       </Link>
 
       <div className="ml-auto mr-2">

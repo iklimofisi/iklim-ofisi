@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import { LogoIsaret } from "@/components/Logo";
 import { notFound } from "next/navigation";
 import { cookies, headers } from "next/headers";
 import { paylasilanTeklif, onizlemeBotuMu, goruntulenmeKaydet, hazirlayanaBildir, htmlGuvenli } from "@/lib/teklif-paylasim";
@@ -60,7 +60,7 @@ export default async function TeklifLinki({
     return (
       <main className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
         <div className="max-w-md text-center bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
-          <Image src="/logo-icon.png" alt="İklim Ofisi" width={48} height={48} className="mx-auto mb-4" />
+          <LogoIsaret boyut={44} baslik="İklim Ofisi" className="mx-auto mb-4" />
           <h1 className="text-lg font-semibold text-slate-800 mb-2">Bu teklif linki artık geçerli değil</h1>
           <p className="text-sm text-slate-500">
             Link iptal edilmiş veya hatalı olabilir. Güncel teklif için lütfen bizimle iletişime geçin.
@@ -111,7 +111,7 @@ export default async function TeklifLinki({
     <main className="min-h-screen bg-slate-50 py-8 px-4">
       <div className="max-w-xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
-          <Image src="/logo-icon.png" alt={sirket.unvan} width={44} height={44} />
+          <LogoIsaret boyut={40} baslik={sirket.unvan} className="shrink-0" />
           <div className="min-w-0">
             <p className="font-bold text-slate-800 leading-tight">{sirket.unvan}</p>
             {ISTIRAK_METNI && <p className="text-[11px] text-slate-500">{ISTIRAK_METNI}</p>}

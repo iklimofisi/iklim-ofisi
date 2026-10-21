@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import Image from "next/image";
+import { LogoIsaret } from "@/components/Logo";
 import Link from "next/link";
 import React from "react";
 import YazdirButon from "@/components/YazdirButon";
@@ -291,7 +291,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
         {/* ŞİRKET BİLGİLERİ VE ADRESİ */}
         <div className="flex items-start justify-between mb-10 pb-6 border-b border-hat">
           <div className="flex items-center gap-3">
-            <Image src="/logo-icon.png" alt={sirket.unvan} width={48} height={48} />
+            <LogoIsaret boyut={44} baslik={sirket.unvan} className="shrink-0" />
             <div>
               <p className="font-display font-bold text-lg text-metin">{sirket.unvan}</p>
               {ISTIRAK_METNI && <p className="text-[11px] text-metin/60 font-medium">{ISTIRAK_METNI}</p>}
