@@ -213,8 +213,8 @@ export default async function HizmetlerPage() {
                     Fraenkische
                   </span>
                   <Image
-                    src="/yerden-isitma/fraenkische-boru-kart.jpg"
-                    alt="Fraenkische yerden ısıtma borusu kangalı"
+                    src="/yerden-isitma/yerden-isitma-kart.jpg"
+                    alt="Spiral serimle döşenmiş yerden ısıtma boruları"
                     fill
                     sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
                     className="object-cover"

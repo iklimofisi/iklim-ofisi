@@ -44,10 +44,7 @@ export default async function Footer() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 mt-10 pt-6 border-t border-slate-900 flex flex-col sm:flex-row gap-2 justify-between text-[11px] text-slate-500">
-        <p>
-          © {new Date().getFullYear()} {sirket.unvan}
-        </p>
+      <div className="max-w-7xl mx-auto px-6 mt-10 pt-6 border-t border-slate-900 flex flex-col sm:flex-row gap-2 sm:justify-end text-[11px] text-slate-500">
         <Link href="/kvkk" className="hover:text-white transition-colors">
           KVKK Aydınlatma Metni & Çerezler
         </Link>

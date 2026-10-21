@@ -233,27 +233,14 @@ export default async function Home() {
                   </Link>
                 </div>
               </div>
-              <div className="relative min-h-[16rem] bg-gradient-to-br from-slate-900 via-slate-950 to-amber-950/40 flex items-center justify-center p-8">
-                <div
-                  aria-hidden
-                  className="absolute inset-0 opacity-[0.07]"
-                  style={{
-                    backgroundImage: "linear-gradient(#fbbf24 1px, transparent 1px), linear-gradient(90deg, #fbbf24 1px, transparent 1px)",
-                    backgroundSize: "28px 28px",
-                  }}
+              <div className="relative min-h-[16rem] bg-slate-900">
+                <Image
+                  src="/yerden-isitma/yerden-isitma-genis.jpg"
+                  alt="Spiral serimle döşenmiş yerden ısıtma boruları"
+                  fill
+                  sizes="(min-width: 1024px) 50vw, 100vw"
+                  className="object-cover"
                 />
-                <svg className="relative w-full max-w-md h-auto" viewBox="0 0 200 110" fill="none" aria-hidden>
-                  <rect x="8" y="30" width="34" height="50" rx="4" stroke="#fbbf24" strokeWidth="2" fill="#0f172a" />
-                  <path d="M16 70c3-7 7-7 7-14s5-7 5-11" stroke="#fcd34d" strokeWidth="2" strokeLinecap="round" />
-                  <path d="M42 40h14M42 70h14" stroke="#f59e0b" strokeWidth="2" />
-                  <path
-                    d="M56 18h132v12H66v12h122v12H66v12h122v12H66v12h122"
-                    stroke="#f59e0b"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
               </div>
             </div>
           </div>

@@ -69,8 +69,8 @@ const urunKategorileri: {
   },
   {
     id: "yerden-isitma",
-    gorsel: "/yerden-isitma/fraenkische-boru-kart.jpg",
-    gorselAlt: "Fraenkische yerden ısıtma borusu kangalı",
+    gorsel: "/yerden-isitma/yerden-isitma-kart.jpg",
+    gorselAlt: "Spiral serimle döşenmiş yerden ısıtma boruları",
     kategori: "YERDEN ISITMA",
     baslik: "Fraenkische Yerden Isıtma Sistemleri",
     aciklama: "Zeminden eşit ve konforlu ısıtma için Fraenkische yerden ısıtma boru, kolektör ve bağlantı sistemleri. Isı pompası ve yoğuşmalı kazanla birlikte projelendirilir.",
