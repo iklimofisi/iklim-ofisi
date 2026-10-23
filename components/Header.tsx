@@ -9,8 +9,9 @@ export default function Header() {
         
         {/* BÜYÜTÜLMÜŞ LOGO */}
         <Link href="/" aria-label="İklim Ofisi ana sayfa" className="flex items-center group shrink-0">
-          <LogoTam boyut={40} className="sm:hidden" altYazi={false} />
-          <LogoTam boyut={44} className="hidden sm:inline-flex" />
+          {/* 1024–1279 px arası menü sığsın diye alt yazısız (kısa) logo */}
+          <LogoTam boyut={40} className="sm:hidden lg:inline-flex xl:hidden" altYazi={false} />
+          <LogoTam boyut={44} className="hidden sm:inline-flex lg:hidden xl:inline-flex" />
         </Link>
 
         {/* MENÜ LİNKLERİ (Hakkımızda Öne Alındı) */}
@@ -23,6 +24,9 @@ export default function Header() {
           </Link>
           <Link href="/urunler" className="hover:text-teal-700 transition-colors">
             Ürünler
+          </Link>
+          <Link href="/tcl-vrf" className="hover:text-teal-700 transition-colors">
+            TCL VRF
           </Link>
           <Link href="/referanslar" className="hover:text-teal-700 transition-colors">
             Referanslar

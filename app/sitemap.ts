@@ -8,6 +8,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { yol: "", oncelik: 1 },
     { yol: "/hizmetler", oncelik: 0.9 },
     { yol: "/urunler", oncelik: 0.9 },
+    { yol: "/tcl-vrf", oncelik: 0.9 },
     { yol: "/airnex", oncelik: 0.8 },
     { yol: "/verta", oncelik: 0.8 },
     { yol: "/buderus", oncelik: 0.8 },

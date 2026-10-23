@@ -49,14 +49,14 @@ const SLAYTLAR: Slayt[] = [
     etiket: "TCL · Mini VRF",
     baslik: "Tam DC İnverter Mini VRF",
     alt: "TCL Mini VRF dış üniteleri",
-    href: "/urunler",
+    href: "/tcl-vrf#mini-vrf",
     gorsel: "/slider/slider-tcl-mini-vrf.jpg",
   },
   {
     etiket: "TCL · İç Ünite Gamı",
     baslik: "Kaset Tipi İç Üniteler",
     alt: "Tavana monte TCL kaset tipi iç ünite",
-    href: "/urunler",
+    href: "/tcl-vrf#ic-uniteler",
     gorsel: "/slider/slider-tcl-kaset.jpg",
   },
   {

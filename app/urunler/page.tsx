@@ -36,6 +36,7 @@ const urunKategorileri: {
     aciklama: "Otel, plaza, hastane ve binalarda her odayı bağımsız iklimlendiren Mitsubishi Electric City Multi ve TCL TMV serisi VRF dış/iç ünite grupları.",
     urunler: ["Mitsubishi Electric City Multi VRF", "TCL TMV Serisi VRF Sistemleri", "Heat Pump & Heat Recovery Dış Üniteler", "Y-Branch & Joint Bağlantı Kitleri"],
     markalar: "Mitsubishi Electric, TCL",
+    detay: { href: "/tcl-vrf", etiket: "TCL VRF Ürün Detayları →", katalog: "/kataloglar/tcl-vrf-tmv6-super-katalog-2026.pdf" },
   },
   {
     id: "bireysel-klima",

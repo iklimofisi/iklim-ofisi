@@ -45,7 +45,7 @@ export const MAKALELER: Makale[] = [
       <p>Mitsubishi Electric VRF sistemleri, Inverter kompresör yapısı ve yüksek COP/EER verimlilik değerleri ile öne çıkar. Düşük dış hava sıcaklıklarında dahi yüksek ısıtma performansı sunan Zubadan teknolojisi, otel ve plaza projelerinde güçlü bir konfor sağlar.</p>
 
       <h2>TCL TMV Serisi VRF Sistemleri</h2>
-      <p>TCL'in yeni nesil TMV serisi VRF sistemleri, Inverter kompresör ve akıllı kontrol altyapısıyla ofis, mağaza, otel ve konut projelerinde yüksek verim ile rekabetçi yatırım maliyetini bir arada sunar. Geniş iç ünite seçenekleri sayesinde farklı mahal tiplerine esnek çözüm üretir.</p>
+      <p>TCL'in yeni nesil TMV serisi VRF sistemleri, Inverter kompresör ve akıllı kontrol altyapısıyla ofis, mağaza, otel ve konut projelerinde yüksek verim ile rekabetçi yatırım maliyetini bir arada sunar. Geniş iç ünite seçenekleri sayesinde farklı mahal tiplerine esnek çözüm üretir. Model ve teknik veriler için <a href="/tcl-vrf">TCL VRF sistemleri</a> sayfamıza bakabilirsiniz.</p>
 
       <h2>Projenizde Hangi Sistemi Seçmelisiniz?</h2>
       <p>Mühendis kadromuz; binanızın cephe yönü, cam alanları ve kullanım amacına göre m² bazlı ısı kazancı/kaybı hesabı yaparak Mitsubishi Electric veya TCL VRF sistemlerinden projenize ve bütçenize en uygun olanı projelendirir.</p>

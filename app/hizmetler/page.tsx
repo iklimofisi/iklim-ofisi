@@ -87,6 +87,9 @@ export default async function HizmetlerPage() {
                       <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
                       <span>Merkezi dokunmatik otomasyon kumandaları</span>
                     </div>
+                    <Link href="/tcl-vrf" className="inline-block pt-1 text-xs font-bold text-teal-700 hover:underline">
+                      TCL VRF ürünleri ve teknik veriler →
+                    </Link>
                   </div>
                 </div>
               </div>

@@ -7,6 +7,7 @@ const links = [
   { href: "/hakkimizda", label: "Hakkımızda" },
   { href: "/hizmetler", label: "Hizmetler" },
   { href: "/urunler", label: "Ürünler" },
+  { href: "/tcl-vrf", label: "TCL VRF Sistemleri" },
   { href: "/buderus", label: "Buderus Yoğuşmalı Kazanlar" },
   { href: "/referanslar", label: "Referanslar" },
   { href: "/hesaplama", label: "Kapasite Hesaplama" },
