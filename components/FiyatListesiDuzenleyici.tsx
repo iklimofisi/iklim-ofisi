@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { fiyatListesiKaydet } from "@/lib/actions";
 import KaydetButonu from "@/components/KaydetButonu";
 import { fotografYukle } from "@/lib/gorsel-yukle";
-import { DUZENLER, iskontoluFiyat, flParaYaz } from "@/lib/fiyat-listesi";
+import { DUZENLER, FIYAT_SUTUN_KALIPLARI, iskontoluFiyat, flParaYaz, sutunIskontolari, iskontoKapsamGecerli } from "@/lib/fiyat-listesi";
 import { tutarOku } from "@/lib/toplam-dagit";
 
 // -----------------------------------------------------------------------------
@@ -59,6 +59,7 @@ type Ayarlar = {
   paraBirimi: string;
   kdvDahil: boolean;
   iskontoYuzde: number;
+  iskontoKapsam: string; // HEPSI | FIYAT1 | FIYAT2 (iki fiyatlı listede iskontonun uygulandığı sütun)
   fiyatGoster: boolean;
   duzen: string;
   fiyatBaslik: string;
@@ -110,7 +111,28 @@ export default function FiyatListesiDuzenleyici({
     }))
   );
   const [fiyat2Baslik, setFiyat2Baslik] = useState(ayarlar.fiyat2Baslik);
+  const [fiyatBaslik, setFiyatBaslik] = useState(ayarlar.fiyatBaslik || (ayarlar.fiyat2Baslik ? "Fiyat" : ""));
   const ikiFiyat = fiyat2Baslik.trim().length > 0;
+  const fb1 = fiyatBaslik.trim() || "1. fiyat";
+  const fb2 = fiyat2Baslik.trim() || "2. fiyat";
+  const [iskontoKapsam, setIskontoKapsam] = useState(iskontoKapsamGecerli(ayarlar.iskontoKapsam));
+  // Fiyat sütunu kalıbı: adlar bir kalıba uyuyorsa o, değilse "özel"
+  const kalip = !ikiFiyat
+    ? "TEK"
+    : FIYAT_SUTUN_KALIPLARI.find((k) => k.b1 === fiyatBaslik.trim() && k.b2 === fiyat2Baslik.trim())?.kod ?? "OZEL";
+  const kalipSec = (kod: string) => {
+    if (kod === "OZEL") {
+      if (!ikiFiyat) {
+        setFiyatBaslik("Fiyat");
+        setFiyat2Baslik("Fiyat 2");
+      }
+      return;
+    }
+    const k = FIYAT_SUTUN_KALIPLARI.find((x) => x.kod === kod);
+    if (!k) return;
+    setFiyatBaslik(k.b1);
+    setFiyat2Baslik(k.b2);
+  };
   const [ara, setAra] = useState("");
   const [yeniBolum, setYeniBolum] = useState(kalemler.length ? kalemler[kalemler.length - 1].bolum : "");
   const [degisti, setDegisti] = useState(false);
@@ -122,7 +144,7 @@ export default function FiyatListesiDuzenleyici({
       return;
     }
     setDegisti(true);
-  }, [satirlar, paraBirimi, iskonto, fiyat2Baslik]);
+  }, [satirlar, paraBirimi, iskonto, fiyat2Baslik, fiyatBaslik, iskontoKapsam]);
 
   // Kaydedilmemiş değişiklik varken sayfadan çıkmadan önce uyar
   useEffect(() => {
@@ -167,6 +189,10 @@ export default function FiyatListesiDuzenleyici({
   // --- TOPLU FİYAT GÜNCELLEME (aylık zam vb.) ---
   const [zam, setZam] = useState("");
   const [zamKapsam, setZamKapsam] = useState("__hepsi");
+  // İki fiyatlı listede zam/indirimin uygulanacağı fiyat
+  const [zamHedef, setZamHedef] = useState<"HEPSI" | "FIYAT1" | "FIYAT2">("HEPSI");
+  const zam1 = !ikiFiyat || zamHedef !== "FIYAT2";
+  const zam2 = ikiFiyat && zamHedef !== "FIYAT1";
   const [yuvarla, setYuvarla] = useState("0");
   const [yedek, setYedek] = useState<{ satirlar: Satir[]; aciklama: string } | null>(null);
   const bolumler = Array.from(new Set(satirlar.map((r) => r.bolum.trim()).filter(Boolean)));
@@ -179,7 +205,7 @@ export default function FiyatListesiDuzenleyici({
     const n = tutarOku(t);
     return n === null ? null : eksi ? -n : n;
   })();
-  const etkilenecek = satirlar.filter((r) => kapsamda(r) && (sayiOku(r.fiyat) > 0 || (ikiFiyat && sayiOku(r.fiyat2) > 0))).length;
+  const etkilenecek = satirlar.filter((r) => kapsamda(r) && ((zam1 && sayiOku(r.fiyat) > 0) || (zam2 && sayiOku(r.fiyat2) > 0))).length;
   const yuvarlaFiyat = (n: number) => {
     const adim = Number(yuvarla);
     return adim > 0 ? Math.max(adim, Math.round(n / adim) * adim) : Math.round(n * 100) / 100;
@@ -188,7 +214,8 @@ export default function FiyatListesiDuzenleyici({
 
   const zamUygula = () => {
     if (zamOrani === null || zamOrani === 0 || zamOrani <= -100) return;
-    setYedek({ satirlar, aciklama: `%${zamOrani.toLocaleString("tr-TR")} ${zamOrani > 0 ? "zam" : "indirim"}` });
+    const hedefAdi = !ikiFiyat || zamHedef === "HEPSI" ? "" : ` (yalnız ${zamHedef === "FIYAT1" ? fb1 : fb2})`;
+    setYedek({ satirlar, aciklama: `%${zamOrani.toLocaleString("tr-TR")} ${zamOrani > 0 ? "zam" : "indirim"}${hedefAdi}` });
     setSatirlar((s) =>
       s.map((r) => {
         if (!kapsamda(r)) return r;
@@ -196,8 +223,8 @@ export default function FiyatListesiDuzenleyici({
         const f2 = sayiOku(r.fiyat2);
         return {
           ...r,
-          fiyat: f > 0 ? fiyatMetni(yuvarlaFiyat(f * (1 + zamOrani / 100))) : r.fiyat,
-          fiyat2: ikiFiyat && f2 > 0 ? fiyatMetni(yuvarlaFiyat(f2 * (1 + zamOrani / 100))) : r.fiyat2,
+          fiyat: zam1 && f > 0 ? fiyatMetni(yuvarlaFiyat(f * (1 + zamOrani / 100))) : r.fiyat,
+          fiyat2: zam2 && f2 > 0 ? fiyatMetni(yuvarlaFiyat(f2 * (1 + zamOrani / 100))) : r.fiyat2,
           uyari: undefined,
         };
       })
@@ -267,6 +294,8 @@ export default function FiyatListesiDuzenleyici({
   };
 
   const iskontoSayi = Math.min(100, Math.max(0, sayiOku(iskonto)));
+  const [isk1, isk2] = sutunIskontolari({ iskontoYuzde: iskontoSayi, iskontoKapsam, fiyat2Baslik });
+  const ikinciFiyatVar = satirlar.some((r) => sayiOku(r.fiyat2) > 0);
   const json = JSON.stringify(
     satirlar.map((r) => ({
       bolum: r.bolum,
@@ -320,7 +349,7 @@ export default function FiyatListesiDuzenleyici({
           <label className={etiket}>Açıklama (başlığın altında görünür, opsiyonel)</label>
           <textarea name="aciklama" rows={2} maxLength={3000} defaultValue={ayarlar.aciklama} onChange={() => setDegisti(true)} className={kutu} />
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
           <div>
             <label className={etiket}>Para birimi</label>
             <select name="paraBirimi" value={paraBirimi} onChange={(e) => setParaBirimi(e.target.value)} className={kutu}>
@@ -337,10 +366,6 @@ export default function FiyatListesiDuzenleyici({
             </select>
           </div>
           <div>
-            <label className={etiket}>Liste iskontosu %</label>
-            <input name="iskontoYuzde" inputMode="decimal" value={iskonto} onChange={(e) => setIskonto(e.target.value)} placeholder="0" className={kutu} />
-          </div>
-          <div>
             <label className={etiket}>Görünüm</label>
             <select name="duzen" defaultValue={ayarlar.duzen} onChange={() => setDegisti(true)} className={kutu}>
               {DUZENLER.map((d) => (
@@ -351,20 +376,88 @@ export default function FiyatListesiDuzenleyici({
             </select>
           </div>
           <div>
-            <label className={etiket}>İkinci fiyat sütunu (ops.)</label>
-            <input name="fiyat2Baslik" value={fiyat2Baslik} maxLength={40} onChange={(e) => setFiyat2Baslik(e.target.value)} placeholder="örn. Kart" className={kutu} />
+            <label className={etiket}>Fiyat sütunları</label>
+            <select value={kalip} onChange={(e) => kalipSec(e.target.value)} className={kutu}>
+              {FIYAT_SUTUN_KALIPLARI.map((k) => (
+                <option key={k.kod} value={k.kod}>
+                  {k.ad}
+                </option>
+              ))}
+              <option value="OZEL">İki fiyat · adları ben yazayım</option>
+            </select>
           </div>
-          {ikiFiyat && (
-            <div>
-              <label className={etiket}>Birinci fiyat sütunu adı</label>
-              <input name="fiyatBaslik" defaultValue={ayarlar.fiyatBaslik || "Nakit"} maxLength={40} onChange={() => setDegisti(true)} className={kutu} />
-            </div>
-          )}
-          <label className="flex items-center gap-2 text-sm text-metin/80 pb-2">
-            <input type="checkbox" name="fiyatGoster" value="evet" defaultChecked={ayarlar.fiyatGoster} onChange={() => setDegisti(true)} className="accent-soguk" />
-            Fiyatları göster
-          </label>
         </div>
+        <input type="hidden" name="fiyatBaslik" value={ikiFiyat ? fiyatBaslik : ""} />
+        <input type="hidden" name="fiyat2Baslik" value={fiyat2Baslik} />
+        {ikiFiyat && (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+            <div>
+              <label className={etiket}>1. fiyat sütununun adı</label>
+              <input value={fiyatBaslik} maxLength={40} onChange={(e) => setFiyatBaslik(e.target.value)} placeholder="örn. Liste Fiyatı" className={kutu} />
+            </div>
+            <div>
+              <label className={etiket}>2. fiyat sütununun adı</label>
+              <input
+                value={fiyat2Baslik}
+                maxLength={40}
+                onChange={(e) => setFiyat2Baslik(e.target.value)}
+                placeholder="örn. Satış Fiyatı"
+                className={`${kutu} ${fiyat2Baslik.trim() ? "" : "border-sicak"}`}
+              />
+            </div>
+          </div>
+        )}
+        {!ikiFiyat && ikinciFiyatVar && (
+          <p className="text-[11px] text-sicak-dim font-medium">
+            Bu listede ikinci fiyatı girilmiş ürünler var. Tek fiyata geçip kaydederseniz ikinci fiyatlar silinir; vazgeçmek için yukarıdan iki fiyatlı
+            seçeneği geri seçin.
+          </p>
+        )}
+
+        {/* İSKONTO: PDF'te uygulanır; ürünlerdeki fiyatlar değişmez */}
+        <div className="border border-hat rounded-md p-3 space-y-2 bg-zemin/40">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="w-32">
+              <label className={etiket}>Liste iskontosu %</label>
+              <input name="iskontoYuzde" inputMode="decimal" value={iskonto} onChange={(e) => setIskonto(e.target.value)} placeholder="0" className={kutu} />
+            </div>
+            {ikiFiyat && (
+              <div className="min-w-[14rem]">
+                <label className={etiket}>İskonto hangi fiyata uygulansın?</label>
+                <select name="iskontoKapsam" value={iskontoKapsam} onChange={(e) => setIskontoKapsam(iskontoKapsamGecerli(e.target.value))} className={kutu}>
+                  <option value="HEPSI">Tüm fiyatlara</option>
+                  <option value="FIYAT1">Yalnız {fb1}</option>
+                  <option value="FIYAT2">Yalnız {fb2}</option>
+                </select>
+              </div>
+            )}
+            {!ikiFiyat && <input type="hidden" name="iskontoKapsam" value={iskontoKapsam} />}
+            {iskontoSayi > 0 && (
+              <button
+                type="button"
+                onClick={() => setIskonto("")}
+                className="focus-ring border border-sicak/50 text-sicak-dim rounded-md px-3 py-2 text-sm font-medium hover:bg-sicak-light"
+              >
+                ✕ İskontoyu sıfırla
+              </button>
+            )}
+          </div>
+          <p className="text-[11px] text-metin/55">
+            {iskontoSayi > 0
+              ? ikiFiyat
+                ? iskontoKapsam === "HEPSI"
+                  ? `PDF'te ${fb1} ve ${fb2} sütunlarının ikisi de %${iskontoSayi.toLocaleString("tr-TR")} iskontolu çıkar.`
+                  : `PDF'te yalnız ${iskontoKapsam === "FIYAT1" ? fb1 : fb2} sütunu %${iskontoSayi.toLocaleString("tr-TR")} iskontolu çıkar; ${iskontoKapsam === "FIYAT1" ? fb2 : fb1} olduğu gibi kalır.`
+                : `PDF'te fiyatlar %${iskontoSayi.toLocaleString("tr-TR")} iskontolu çıkar (üstü çizili eski fiyatla).`
+              : "İskonto yok."}{" "}
+            İskonto yalnız PDF'te uygulanır; aşağıdaki ürün fiyatları değişmez. Sıfırlayıp kaydedince liste eski hâline döner.
+          </p>
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-metin/80">
+          <input type="checkbox" name="fiyatGoster" value="evet" defaultChecked={ayarlar.fiyatGoster} onChange={() => setDegisti(true)} className="accent-soguk" />
+          Fiyatları göster
+        </label>
         <p className="text-[11px] text-metin/50">
           &quot;Fiyatları göster&quot; kapatılırsa liste, fiyatsız fotoğraflı ürün kataloğu olarak çıkar. Para birimini değiştirmek mevcut
           fiyatları çevirmez; yalnızca bundan sonra katalogdan eklenen ürünler yeni para birimine çevrilir.
@@ -427,7 +520,7 @@ export default function FiyatListesiDuzenleyici({
               listesi de saklanır.
             </p>
           </div>
-          <div className="grid sm:grid-cols-4 gap-3 items-end">
+          <div className={`grid gap-3 items-end ${ikiFiyat ? "sm:grid-cols-5" : "sm:grid-cols-4"}`}>
             <div>
               <label className={etiket}>Zam % (indirim için eksi: -5)</label>
               <input value={zam} onChange={(e) => setZam(e.target.value)} inputMode="decimal" placeholder="örn. 5 veya 2,5" className={kutu} />
@@ -443,6 +536,16 @@ export default function FiyatListesiDuzenleyici({
                 ))}
               </select>
             </div>
+            {ikiFiyat && (
+              <div>
+                <label className={etiket}>Hangi fiyata</label>
+                <select value={zamHedef} onChange={(e) => setZamHedef(e.target.value as "HEPSI" | "FIYAT1" | "FIYAT2")} className={kutu}>
+                  <option value="HEPSI">Tüm fiyatlara</option>
+                  <option value="FIYAT1">Yalnız {fb1}</option>
+                  <option value="FIYAT2">Yalnız {fb2}</option>
+                </select>
+              </div>
+            )}
             <div>
               <label className={etiket}>Yuvarlama</label>
               <select value={yuvarla} onChange={(e) => setYuvarla(e.target.value)} className={kutu}>
@@ -489,7 +592,10 @@ export default function FiyatListesiDuzenleyici({
                 </button>
               </span>
             )}
-            <span className="text-metin/40">Değişiklikler &quot;Listeyi Kaydet&quot; ile kalıcı olur.</span>
+            <span className="text-metin/40">
+              Bu bölüm fiyatların kendisini değiştirir; &quot;Listeyi Kaydet&quot; ile kalıcı olur. Fiyatlara dokunmadan yalnız PDF&apos;te indirim
+              göstermek için yukarıdaki &quot;Liste iskontosu&quot;nu kullanın.
+            </span>
           </div>
         </section>
       )}
@@ -554,23 +660,29 @@ export default function FiyatListesiDuzenleyici({
                   <input value={r.marka} onChange={(e) => guncelle(r.key, { marka: e.target.value })} placeholder="Marka" aria-label="Marka" className={kutu} />
                   <input value={r.kod} onChange={(e) => guncelle(r.key, { kod: e.target.value })} placeholder="Ürün kodu" aria-label="Ürün kodu" className={kutu} />
                   <input value={r.birim} onChange={(e) => guncelle(r.key, { birim: e.target.value })} placeholder="Birim" aria-label="Birim" className={kutu} />
-                  <input
-                    value={r.fiyat}
-                    onChange={(e) => guncelle(r.key, { fiyat: e.target.value, uyari: undefined })}
-                    inputMode="decimal"
-                    placeholder={ikiFiyat ? "1. fiyat" : `Fiyat (${paraBirimi})`}
-                    aria-label="Fiyat"
-                    className={`${kutu} text-right font-mono`}
-                  />
-                  {ikiFiyat && (
+                  {/* İki fiyatlı listede kutunun solunda sütun adı yazar (ör. Liste / Satış) */}
+                  <div className="relative">
+                    {ikiFiyat && <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-metin/45 max-w-[45%] truncate">{fb1}</span>}
                     <input
-                      value={r.fiyat2}
-                      onChange={(e) => guncelle(r.key, { fiyat2: e.target.value })}
+                      value={r.fiyat}
+                      onChange={(e) => guncelle(r.key, { fiyat: e.target.value, uyari: undefined })}
                       inputMode="decimal"
-                      placeholder={`${fiyat2Baslik.trim()} fiyatı`}
-                      aria-label={`${fiyat2Baslik.trim()} fiyatı`}
-                      className={`${kutu} text-right font-mono sm:col-start-4`}
+                      placeholder={ikiFiyat ? "" : `Fiyat (${paraBirimi})`}
+                      aria-label={ikiFiyat ? fb1 : "Fiyat"}
+                      className={`${kutu} text-right font-mono`}
                     />
+                  </div>
+                  {ikiFiyat && (
+                    <div className="relative sm:col-start-4">
+                      <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-metin/45 max-w-[45%] truncate">{fb2}</span>
+                      <input
+                        value={r.fiyat2}
+                        onChange={(e) => guncelle(r.key, { fiyat2: e.target.value })}
+                        inputMode="decimal"
+                        aria-label={fb2}
+                        className={`${kutu} text-right font-mono`}
+                      />
+                    </div>
                   )}
                 </div>
                 <textarea
@@ -584,7 +696,8 @@ export default function FiyatListesiDuzenleyici({
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                   <span className="text-metin/50">
                     {r.urunId ? "Katalogdan" : "Elle eklendi"}
-                    {fiyat > 0 && iskontoSayi > 0 && ` · iskontolu: ${flParaYaz(iskontoluFiyat(fiyat, iskontoSayi), paraBirimi)}`}
+                    {fiyat > 0 && isk1 > 0 && ` · ${ikiFiyat ? `${fb1} ` : ""}iskontolu: ${flParaYaz(iskontoluFiyat(fiyat, isk1), paraBirimi)}`}
+                    {ikiFiyat && sayiOku(r.fiyat2) > 0 && isk2 > 0 && ` · ${fb2} iskontolu: ${flParaYaz(iskontoluFiyat(sayiOku(r.fiyat2), isk2), paraBirimi)}`}
                     {r.uyari && <span className="text-sicak-dim font-medium"> · {r.uyari}</span>}
                   </span>
                   <span className="flex items-center gap-1">

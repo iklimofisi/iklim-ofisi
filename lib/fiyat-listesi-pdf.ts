@@ -2,7 +2,7 @@ import { jsPDF } from "jspdf";
 import { LIBERATION_SANS_NORMAL, LIBERATION_SANS_KALIN } from "@/lib/pdf-fontlari";
 import { PDF_LOGO_JPEG_BASE64, PDF_LOGO_ORAN } from "@/lib/pdf-logo";
 import { ISTIRAK_METNI } from "@/lib/kurumsal";
-import { iskontoluFiyat, fiyatBilgiCumlesi, paraSembolu, ikiFiyatli, FIYAT_SORUNUZ } from "@/lib/fiyat-listesi";
+import { iskontoluFiyat, fiyatBilgiCumlesi, paraSembolu, ikiFiyatli, sutunIskontolari, FIYAT_SORUNUZ } from "@/lib/fiyat-listesi";
 
 // -----------------------------------------------------------------------------
 // FOTOĞRAFLI FİYAT LİSTESİ PDF'İ (müşteriye gönderilir)
@@ -51,6 +51,7 @@ export type PdfListe = {
   paraBirimi: string;
   kdvDahil: boolean;
   iskontoYuzde: number;
+  iskontoKapsam?: string | null; // HEPSI | FIYAT1 | FIYAT2 (iki fiyatlı listede)
   fiyatGoster: boolean;
   duzen: string;
   fiyatBaslik?: string | null;
@@ -117,6 +118,8 @@ export function fiyatListesiPdfOlustur(
   const iki = ikiFiyatli(liste);
   const fb1 = metin(liste.fiyatBaslik) || "Fiyat";
   const fb2 = metin(liste.fiyat2Baslik) || "Fiyat 2";
+  // İki fiyatlı listede iskonto seçilen sütuna uygulanır
+  const [isk1, isk2] = sutunIskontolari(liste);
   const fiyatVar = (n: number | null | undefined): n is number => typeof n === "number" && n > 0;
 
   const yazi = (boyut: number, kalin: boolean, renk: Renk) => {
@@ -168,8 +171,8 @@ export function fiyatListesiPdfOlustur(
         return 4;
       }
       let yy = y;
-      for (const [etiket, f] of [[fb1, k.fiyat], [fb2, k.fiyat2]] as const) {
-        const deger = fiyatVar(f) ? `${sayi(iskontoluFiyat(f, liste.iskontoYuzde))} ${sembol}` : FIYAT_SORUNUZ;
+      for (const [etiket, f, isk] of [[fb1, k.fiyat, isk1], [fb2, k.fiyat2, isk2]] as const) {
+        const deger = fiyatVar(f) ? `${sayi(iskontoluFiyat(f, isk))} ${sembol}` : FIYAT_SORUNUZ;
         yazi(buyuk * 0.86, true, fiyatVar(f) ? SOGUK_DIM : METIN_50);
         doc.text(deger, sagX, yy, { align: "right" });
         const w = doc.getTextWidth(deger);
@@ -498,16 +501,16 @@ export function fiyatListesiPdfOlustur(
       x += TB_BIRIM_G;
     }
     const fiyatlar = tbFiyatSutun === 2 ? [k.fiyat, k.fiyat2] : tbFiyatSutun === 1 ? [k.fiyat] : [];
-    for (const f of fiyatlar) {
+    fiyatlar.forEach((f, i) => {
       x += TB_FIYAT_G;
       if (fiyatVar(f)) {
         yazi(8.6, true, SOGUK_DIM);
-        doc.text(`${sayi(iskontoluFiyat(f, liste.iskontoYuzde))} ${sembol}`, x - 2, fy, { align: "right" });
+        doc.text(`${sayi(iskontoluFiyat(f, i === 0 ? isk1 : isk2))} ${sembol}`, x - 2, fy, { align: "right" });
       } else {
         yazi(7.5, false, METIN_50);
         doc.text(FIYAT_SORUNUZ, x - 2, fy, { align: "right" });
       }
-    }
+    });
     y = y0 + h;
     cizgi(TB_X, y, SAG, y, HAT, 0.15);
   };

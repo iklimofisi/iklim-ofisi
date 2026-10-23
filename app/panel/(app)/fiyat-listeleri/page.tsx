@@ -5,6 +5,7 @@ import { HAZIR_LISTELER } from "@/lib/hazir-listeler";
 import { kaynakDurumOku, kayaDurumOzeti } from "@/lib/kaya-fiyat";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
 import KaydetButonu from "@/components/KaydetButonu";
+import { FIYAT_SUTUN_KALIPLARI, ikiFiyatli, iskontoKapsamGecerli } from "@/lib/fiyat-listesi";
 import SilButon from "@/components/SilButon";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,9 @@ export default async function FiyatListeleriSayfasi() {
       baslik: true,
       paraBirimi: true,
       iskontoYuzde: true,
+      iskontoKapsam: true,
+      fiyatBaslik: true,
+      fiyat2Baslik: true,
       fiyatGoster: true,
       gecerlilikTarihi: true,
       olusturanAdi: true,
@@ -67,6 +71,16 @@ export default async function FiyatListeleriSayfasi() {
             <option value="TRY">TL</option>
             <option value="EUR">EUR</option>
             <option value="USD">USD</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-metin/60 mb-1">Fiyat sütunları</label>
+          <select name="fiyatSutunlari" defaultValue="TEK" className="focus-ring border border-hat rounded-md px-3 py-2 text-sm bg-white">
+            {FIYAT_SUTUN_KALIPLARI.map((k) => (
+              <option key={k.kod} value={k.kod}>
+                {k.ad}
+              </option>
+            ))}
           </select>
         </div>
         <KaydetButonu basari={null} bekleme="Oluşturuluyor…">
@@ -166,7 +180,12 @@ export default async function FiyatListeleriSayfasi() {
                 })()}
                 <p className="text-xs text-metin/50 mt-1">
                   {l._count.kalemler} ürün · {l.paraBirimi}
-                  {l.iskontoYuzde > 0 && ` · %${l.iskontoYuzde.toLocaleString("tr-TR")} iskontolu`}
+                  {l.iskontoYuzde > 0 &&
+                    ` · %${l.iskontoYuzde.toLocaleString("tr-TR")} iskontolu${
+                      ikiFiyatli(l) && iskontoKapsamGecerli(l.iskontoKapsam) !== "HEPSI"
+                        ? ` (yalnız ${iskontoKapsamGecerli(l.iskontoKapsam) === "FIYAT1" ? l.fiyatBaslik || "1. fiyat" : l.fiyat2Baslik})`
+                        : ""
+                    }`}
                   {!l.fiyatGoster && " · fiyatsız katalog"}
                   {l.gecerlilikTarihi && ` · geçerlilik ${tarih(l.gecerlilikTarihi)}`}
                   {" · "}güncelleme {tarih(l.updatedAt)}

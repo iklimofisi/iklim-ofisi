@@ -254,6 +254,7 @@ model FiyatListesi {
   paraBirimi       String              @default("TRY")
   kdvDahil         Boolean             @default(false)
   iskontoYuzde     Float               @default(0)
+  iskontoKapsam    String              @default("HEPSI") // İki fiyatlı listede iskontonun uygulandığı sütun: HEPSI | FIYAT1 | FIYAT2
   fiyatGoster      Boolean             @default(true)
   duzen            String              @default("KART") // KART (3 sütun) | LISTE (satır satır) | TABLO (kompakt tablo)
   fiyatBaslik      String?             // İki fiyatlı listede birinci fiyat sütununun adı (ör. "Nakit")

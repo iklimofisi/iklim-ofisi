@@ -15,7 +15,7 @@ export const maxDuration = 60;
 
 const gun = (d: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 
-export default async function FiyatListesiSayfasi({ params }: { params: { id: string } }) {
+export default async function FiyatListesiSayfasi({ params, searchParams }: { params: { id: string }; searchParams?: { yenile?: string } }) {
   const [liste, urunler, kurlar] = await Promise.all([
     prisma.fiyatListesi.findUnique({
       where: { id: params.id },
@@ -99,9 +99,10 @@ export default async function FiyatListesiSayfasi({ params }: { params: { id: st
         </form>
       )}
 
-      {/* key: liste sunucuda değişince (ör. "Eksik bilgileri tamamla") düzenleyici yeni veriyle açılır */}
+      {/* key: "Eksik bilgileri tamamla" sonrası düzenleyici sunucudaki yeni bilgilerle yeniden açılır.
+          Normal kaydetmede değişmez (zam sonrası "Geri al" kaybolmasın). */}
       <FiyatListesiDuzenleyici
-        key={liste.updatedAt.getTime()}
+        key={String(searchParams?.yenile ?? "")}
         ayarlar={{
           id: liste.id,
           baslik: liste.baslik,
@@ -109,6 +110,7 @@ export default async function FiyatListesiSayfasi({ params }: { params: { id: st
           paraBirimi: liste.paraBirimi,
           kdvDahil: liste.kdvDahil,
           iskontoYuzde: liste.iskontoYuzde,
+          iskontoKapsam: liste.iskontoKapsam,
           fiyatGoster: liste.fiyatGoster,
           duzen: liste.duzen,
           fiyatBaslik: liste.fiyatBaslik ?? "",

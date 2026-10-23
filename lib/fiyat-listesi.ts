@@ -18,10 +18,28 @@ export type FLKalem = {
 export const DUZENLER = [
   { kod: "KART", ad: "Kartlar (sayfada 3 sütun, fotoğraf üstte)" },
   { kod: "LISTE", ad: "Liste (satır satır, uzun açıklamalara uygun)" },
-  { kod: "TABLO", ad: "Tablo (kompakt, fotoğrafsız; uzun fiyat listelerine uygun)" },
+  { kod: "TABLO", ad: "Tablo (kompakt, her bölümde bir fotoğraf; uzun fiyat listelerine uygun)" },
 ] as const;
 
 export const duzenGecerli = (v: unknown) => (v === "LISTE" || v === "TABLO" ? v : "KART");
+
+// Fiyat sütunu kalıpları (yeni liste oluştururken ve liste ayarlarında seçilir)
+export const FIYAT_SUTUN_KALIPLARI = [
+  { kod: "TEK", ad: "Tek fiyat", b1: "", b2: "" },
+  { kod: "LISTE_SATIS", ad: "Liste Fiyatı + Satış Fiyatı", b1: "Liste Fiyatı", b2: "Satış Fiyatı" },
+  { kod: "NAKIT_KART", ad: "Nakit + Kart", b1: "Nakit", b2: "Kart" },
+] as const;
+
+// İskonto hangi fiyata uygulanır (yalnız iki fiyatlı listede anlamlı; tek fiyatlı listede hep fiyata uygulanır)
+export type IskontoKapsam = "HEPSI" | "FIYAT1" | "FIYAT2";
+export const iskontoKapsamGecerli = (v: unknown): IskontoKapsam => (v === "FIYAT1" || v === "FIYAT2" ? v : "HEPSI");
+// [1. fiyata uygulanan %, 2. fiyata uygulanan %]
+export function sutunIskontolari(l: { iskontoYuzde: number; iskontoKapsam?: string | null; fiyat2Baslik?: string | null }): [number, number] {
+  const i = Math.min(100, Math.max(0, l.iskontoYuzde || 0));
+  if (!ikiFiyatli(l)) return [i, i];
+  const k = iskontoKapsamGecerli(l.iskontoKapsam);
+  return [k === "FIYAT2" ? 0 : i, k === "FIYAT1" ? 0 : i];
+}
 
 // İki fiyatlı liste mi (ör. Nakit / Kart)?
 export const ikiFiyatli = (l: { fiyat2Baslik?: string | null }) => Boolean(l.fiyat2Baslik?.trim());
@@ -74,10 +92,23 @@ export function flParaYaz(n: number, pb: string) {
 }
 
 // Fiyat listesi başındaki bilgi cümlesi: "Fiyatlar EUR cinsindendir ve KDV hariçtir. ..."
-export function fiyatBilgiCumlesi(l: { paraBirimi: string; kdvDahil: boolean; iskontoYuzde: number; fiyatGoster: boolean }) {
+export function fiyatBilgiCumlesi(l: {
+  paraBirimi: string;
+  kdvDahil: boolean;
+  iskontoYuzde: number;
+  fiyatGoster: boolean;
+  iskontoKapsam?: string | null;
+  fiyatBaslik?: string | null;
+  fiyat2Baslik?: string | null;
+}) {
   if (!l.fiyatGoster) return "";
   const pb = l.paraBirimi === "EUR" ? "Euro" : l.paraBirimi === "USD" ? "ABD Doları" : "Türk Lirası";
   let c = `Fiyatlar ${pb} cinsindendir ve KDV ${l.kdvDahil ? "dahildir" : "hariçtir"}.`;
-  if (l.iskontoYuzde > 0) c += ` Liste fiyatlarına %${l.iskontoYuzde.toLocaleString("tr-TR")} iskonto uygulanmıştır.`;
+  if (l.iskontoYuzde > 0) {
+    const yuzde = `%${l.iskontoYuzde.toLocaleString("tr-TR")}`;
+    const k = ikiFiyatli(l) ? iskontoKapsamGecerli(l.iskontoKapsam) : "HEPSI";
+    const sutun = k === "FIYAT1" ? l.fiyatBaslik?.trim() || "Fiyat" : k === "FIYAT2" ? l.fiyat2Baslik?.trim() || "Fiyat 2" : "";
+    c += sutun ? ` ${sutun} sütunundaki fiyatlara ${yuzde} iskonto uygulanmıştır.` : ` Liste fiyatlarına ${yuzde} iskonto uygulanmıştır.`;
+  }
   return c;
 }

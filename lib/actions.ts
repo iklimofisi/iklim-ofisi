@@ -23,7 +23,7 @@ import { donusumKalemleri } from "@/lib/satinalma-hesap";
 import { randomUUID, randomBytes } from "crypto";
 import { gecerliTur } from "@/lib/gorusme";
 import { gecerliRedNedeni } from "@/lib/teklif-durum";
-import { flKalemleriOku, metinAl, duzenGecerli } from "@/lib/fiyat-listesi";
+import { flKalemleriOku, metinAl, duzenGecerli, iskontoKapsamGecerli, FIYAT_SUTUN_KALIPLARI } from "@/lib/fiyat-listesi";
 import { birimNormal } from "@/lib/birimler";
 import { MUSTERISIZ_ID, musterisizMi, musterisizGoster } from "@/lib/musterisiz";
 import { musterisizKaydiHazirla } from "@/lib/musterisiz-sunucu";
@@ -1586,16 +1586,21 @@ export async function fiyatListesiOlustur(formData: FormData) {
   const giren = await yetki("fiyatListesiOlustur", formData);
   const baslik = metinAl(formData.get("baslik"), 200);
   if (!baslik) return;
+  // Fiyat sütunları: tek fiyat, "Liste Fiyatı + Satış Fiyatı" ya da "Nakit + Kart"
+  const kalip = FIYAT_SUTUN_KALIPLARI.find((k) => k.kod === formData.get("fiyatSutunlari"));
   const liste = await prisma.fiyatListesi.create({
-    data: { baslik, paraBirimi: paraBirimiDogrula(formData.get("paraBirimi")), olusturanAdi: giren?.ad ?? "" },
+    data: {
+      baslik,
+      paraBirimi: paraBirimiDogrula(formData.get("paraBirimi")),
+      olusturanAdi: giren?.ad ?? "",
+      ...(kalip && kalip.b2 ? { fiyatBaslik: kalip.b1, fiyat2Baslik: kalip.b2 } : {}),
+    },
     select: { id: true },
   });
   revalidatePath("/panel/fiyat-listeleri");
   redirect(`/panel/fiyat-listeleri/${liste.id}`);
 }
 
-// Hazır listeyi (ör. Niva hava perdeleri) fotoğraflarıyla birlikte panele ekler.
-// Eklenen liste normal bir listedir: düzenlenir, kopyalanır, PDF alınır.
 // Hazır listedeki ürünün açıklaması: tedarikçi listesindeki takılabilir genişlik / yükseklik
 function hazirAciklama(k: { genislik: string; yukseklik: string }) {
   return [k.genislik && `Takılabilir Genişlik ${k.genislik}`, k.yukseklik && `Takılabilir Yükseklik ${k.yukseklik}`].filter(Boolean).join("\n");
@@ -1633,13 +1638,16 @@ export async function hazirListeTamamla(formData: FormData) {
     if (!(s.aciklama ?? "").trim()) veri.aciklama = hazirAciklama(k);
     if (Object.keys(veri).length) islemler.push(prisma.fiyatListesiKalem.update({ where: { id: s.id }, data: veri }));
   }
-  // Liste de güncellenmiş sayılır: açık düzenleyici eski bilgilerle kalmasın
+  // Liste de güncellenmiş sayılır (listelerde güncelleme tarihi doğru görünsün)
   if (islemler.length) await prisma.$transaction([...islemler, prisma.fiyatListesi.update({ where: { id: liste.id }, data: { updatedAt: new Date() } })]);
   revalidatePath("/panel/fiyat-listeleri");
   revalidatePath(`/panel/fiyat-listeleri/${liste.id}`);
-  redirect(`/panel/fiyat-listeleri/${liste.id}?mesaj=hazir-liste-tamamlandi`);
+  // yenile: açık düzenleyici sunucudaki yeni bilgilerle yeniden açılsın
+  redirect(`/panel/fiyat-listeleri/${liste.id}?mesaj=hazir-liste-tamamlandi&yenile=${Date.now()}`);
 }
 
+// Hazır listeyi (ör. Niva hava perdeleri) fotoğraflarıyla birlikte panele ekler.
+// Eklenen liste normal bir listedir: düzenlenir, kopyalanır, PDF alınır.
 export async function hazirListeEkle(formData: FormData) {
   const giren = await yetki("hazirListeEkle", { kod: formData.get("kod") });
   const { hazirListeBul } = await import("@/lib/hazir-listeler");
@@ -1726,6 +1734,7 @@ export async function fiyatListesiKaydet(formData: FormData) {
         paraBirimi: paraBirimiDogrula(formData.get("paraBirimi")),
         kdvDahil: formData.get("kdvDahil") === "evet",
         iskontoYuzde: Math.min(100, Math.max(0, iskonto)),
+        iskontoKapsam: iskontoKapsamGecerli(formData.get("iskontoKapsam")),
         fiyatGoster: formData.get("fiyatGoster") === "evet",
         duzen,
         fiyatBaslik: fiyat2Baslik ? metinAl(formData.get("fiyatBaslik"), 40) || "Fiyat" : null,
@@ -1769,6 +1778,7 @@ export async function fiyatListesiKopyala(id: string) {
       paraBirimi: kaynak.paraBirimi,
       kdvDahil: kaynak.kdvDahil,
       iskontoYuzde: kaynak.iskontoYuzde,
+      iskontoKapsam: kaynak.iskontoKapsam,
       fiyatGoster: kaynak.fiyatGoster,
       duzen: kaynak.duzen,
       fiyatBaslik: kaynak.fiyatBaslik,
@@ -1853,6 +1863,7 @@ export async function fiyatListesiSecimdenKopyala(formData: FormData) {
       paraBirimi: kaynak.paraBirimi,
       kdvDahil: kaynak.kdvDahil,
       iskontoYuzde: kaynak.iskontoYuzde,
+      iskontoKapsam: kaynak.iskontoKapsam,
       fiyatGoster: kaynak.fiyatGoster,
       duzen: kaynak.duzen,
       fiyatBaslik: kaynak.fiyatBaslik,
