@@ -37,6 +37,7 @@ const ISLEM_ADI: Record<string, string> = {
   fiyatListesiSecimdenKopyala: "Fiyat listesinden seçilen ürünlerle kopya oluşturdu",
   notEkle: "Not / hatırlatma ekledi",
   hazirListeEkle: "Hazır fiyat listesini panele ekledi",
+  hazirListeTamamla: "Hazır fiyat listesinin eksik bilgilerini tamamladı",
   notDuzenle: "Notu düzenledi",
   notDurum: "Notu tamamladı / sabitledi",
   notSil: "Notu sildi",

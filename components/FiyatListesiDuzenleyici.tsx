@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { fiyatListesiKaydet } from "@/lib/actions";
 import KaydetButonu from "@/components/KaydetButonu";
 import { fotografYukle } from "@/lib/gorsel-yukle";
@@ -501,8 +501,20 @@ export default function FiyatListesiDuzenleyici({
         {satirlar.map((r, i) => {
           const foto = r.gorselId || r.urunGorselId;
           const fiyat = sayiOku(r.fiyat);
+          // Grup (bölüm) değiştiği yerde başlık: listedeki gruplar ayrı görünsün
+          const grup = r.bolum.trim();
+          const grupBasi = grup !== "" && (i === 0 || satirlar[i - 1].bolum.trim() !== grup);
+          let grupAdet = 0;
+          if (grupBasi) for (let j = i; j < satirlar.length && satirlar[j].bolum.trim() === grup; j++) grupAdet++;
           return (
-            <div key={r.key} className="bg-yuzey border border-hat rounded-lg p-4 flex flex-col sm:flex-row gap-4">
+            <Fragment key={r.key}>
+            {grupBasi && (
+              <h3 className={`flex items-center gap-2 bg-soguk-light/50 border-l-4 border-soguk rounded-r-md px-3 py-2 text-sm font-semibold text-soguk-dim ${i === 0 ? "" : "!mt-8"}`}>
+                {grup}
+                <span className="text-xs font-normal text-metin/50">· {grupAdet} ürün</span>
+              </h3>
+            )}
+            <div className="bg-yuzey border border-hat rounded-lg p-4 flex flex-col sm:flex-row gap-4">
               <div className="sm:w-36 shrink-0 space-y-2">
                 <div className="w-36 h-36 rounded-md bg-zemin border border-hat overflow-hidden flex items-center justify-center text-xs text-metin/30">
                   {r.yukleniyor ? (
@@ -593,6 +605,7 @@ export default function FiyatListesiDuzenleyici({
                 </div>
               </div>
             </div>
+            </Fragment>
           );
         })}
       </section>

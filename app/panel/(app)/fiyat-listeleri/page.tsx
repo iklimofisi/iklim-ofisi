@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { fiyatListesiOlustur, fiyatListesiKopyala, fiyatListesiSil, kayaFiyatListesiGuncelle, hazirListeEkle } from "@/lib/actions";
+import { fiyatListesiOlustur, fiyatListesiKopyala, fiyatListesiSil, kayaFiyatListesiGuncelle, hazirListeEkle, hazirListeTamamla } from "@/lib/actions";
 import { HAZIR_LISTELER } from "@/lib/hazir-listeler";
 import { kaynakDurumOku, kayaDurumOzeti } from "@/lib/kaya-fiyat";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
@@ -91,9 +91,17 @@ export default async function FiyatListeleriSayfasi() {
                   </p>
                 </div>
                 {ekli ? (
-                  <Link href={`/panel/fiyat-listeleri/${ekli.id}`} className="focus-ring text-sm font-medium text-soguk-dim hover:underline">
-                    Eklendi · Aç →
-                  </Link>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <form action={hazirListeTamamla} title="Boş kalan grup, ürün adı, marka, ürün kodu ve açıklama alanlarını doldurur. Fiyatlara ve sizin yazdıklarınıza dokunmaz.">
+                      <input type="hidden" name="kod" value={h.kod} />
+                      <KaydetButonu basari={null} bekleme="Tamamlanıyor…">
+                        Eksik bilgileri tamamla
+                      </KaydetButonu>
+                    </form>
+                    <Link href={`/panel/fiyat-listeleri/${ekli.id}`} className="focus-ring text-sm font-medium text-soguk-dim hover:underline">
+                      Eklendi · Aç →
+                    </Link>
+                  </div>
                 ) : (
                   <form action={hazirListeEkle}>
                     <input type="hidden" name="kod" value={h.kod} />

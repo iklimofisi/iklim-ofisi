@@ -1596,6 +1596,50 @@ export async function fiyatListesiOlustur(formData: FormData) {
 
 // Hazır listeyi (ör. Niva hava perdeleri) fotoğraflarıyla birlikte panele ekler.
 // Eklenen liste normal bir listedir: düzenlenir, kopyalanır, PDF alınır.
+// Hazır listedeki ürünün açıklaması: tedarikçi listesindeki takılabilir genişlik / yükseklik
+function hazirAciklama(k: { genislik: string; yukseklik: string }) {
+  return [k.genislik && `Takılabilir Genişlik ${k.genislik}`, k.yukseklik && `Takılabilir Yükseklik ${k.yukseklik}`].filter(Boolean).join("\n");
+}
+
+// Daha önce eklenmiş hazır listenin eksik bilgilerini tamamlar (ürün koduna göre eşleştirir).
+// Hiçbir satır silinmez, fiyatlara ve sıraya dokunulmaz; elle yazılmış bilgi korunur:
+// yalnız boş alanlar ile ilk eklemede otomatik yazılmış eski metinler (ör. "KLC-L85 · 85 cm") güncellenir.
+export async function hazirListeTamamla(formData: FormData) {
+  await yetki("hazirListeTamamla", { kod: formData.get("kod") });
+  const { hazirListeBul } = await import("@/lib/hazir-listeler");
+  const h = hazirListeBul(String(formData.get("kod") ?? ""));
+  if (!h) return;
+  const liste = await prisma.fiyatListesi.findFirst({
+    where: { baslik: h.baslik },
+    select: { id: true, kalemler: { select: { id: true, bolum: true, ad: true, kod: true, marka: true, aciklama: true } } },
+  });
+  if (!liste) redirect("/panel/fiyat-listeleri");
+
+  const bilgi = new Map<string, { b: (typeof h.bolumler)[number]; k: (typeof h.bolumler)[number]["kalemler"][number] }>();
+  for (const b of h.bolumler) for (const k of b.kalemler) bilgi.set(k.kod.toUpperCase(), { b, k });
+  const islemler: ReturnType<typeof prisma.fiyatListesiKalem.update>[] = [];
+  for (const s of liste.kalemler) {
+    const kod = ((s.kod ?? "").trim() || s.ad.split("·")[0].trim()).toUpperCase();
+    const e = bilgi.get(kod);
+    if (!e) continue; // listeye elle eklenmiş başka ürün: dokunulmaz
+    const { b, k } = e;
+    const veri: Record<string, string> = {};
+    const bolum = s.bolum.trim();
+    if (!bolum || bolum === `${b.ad} · ${b.bilgi}`.slice(0, 120)) veri.bolum = b.ad.slice(0, 120);
+    const ad = s.ad.trim();
+    if (!ad || ad === `${k.kod} · ${k.olcu}`) veri.ad = k.ad;
+    if (!(s.marka ?? "").trim()) veri.marka = h.marka;
+    if (!(s.kod ?? "").trim()) veri.kod = k.kod;
+    if (!(s.aciklama ?? "").trim()) veri.aciklama = hazirAciklama(k);
+    if (Object.keys(veri).length) islemler.push(prisma.fiyatListesiKalem.update({ where: { id: s.id }, data: veri }));
+  }
+  // Liste de güncellenmiş sayılır: açık düzenleyici eski bilgilerle kalmasın
+  if (islemler.length) await prisma.$transaction([...islemler, prisma.fiyatListesi.update({ where: { id: liste.id }, data: { updatedAt: new Date() } })]);
+  revalidatePath("/panel/fiyat-listeleri");
+  revalidatePath(`/panel/fiyat-listeleri/${liste.id}`);
+  redirect(`/panel/fiyat-listeleri/${liste.id}?mesaj=hazir-liste-tamamlandi`);
+}
+
 export async function hazirListeEkle(formData: FormData) {
   const giren = await yetki("hazirListeEkle", { kod: formData.get("kod") });
   const { hazirListeBul } = await import("@/lib/hazir-listeler");
@@ -1619,8 +1663,11 @@ export async function hazirListeEkle(formData: FormData) {
   const kalemler = h.bolumler.flatMap((b) =>
     b.kalemler.map((k) => ({
       sira: sira++,
-      bolum: `${b.ad} · ${b.bilgi}`.slice(0, 120),
-      ad: `${k.kod} · ${k.olcu}`,
+      bolum: b.ad.slice(0, 120),
+      ad: k.ad,
+      marka: h.marka,
+      kod: k.kod,
+      aciklama: hazirAciklama(k),
       birim: "Adet",
       fiyat: k.liste,
       fiyat2: k.satis,

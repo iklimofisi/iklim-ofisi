@@ -6,10 +6,12 @@
 // burada TUTULMAZ (müşteriye giden belgeye karışmasın diye).
 // -----------------------------------------------------------------------------
 
-export type HazirKalem = { kod: string; olcu: string; liste: number; satis: number };
+// genislik / yukseklik: tedarikçi listesindeki "Takılabilir Genişlik / Yükseklik" sütunları
+export type HazirKalem = { kod: string; ad: string; olcu: string; genislik: string; yukseklik: string; liste: number; satis: number };
 export type HazirBolum = { ad: string; bilgi: string; gorsel: string; kalemler: HazirKalem[] };
 export type HazirListe = {
   kod: string;
+  marka: string;
   baslik: string;
   aciklama: string;
   notlar: string;
@@ -24,6 +26,7 @@ export type HazirListe = {
 
 const NIVA: HazirListe = {
   kod: "niva-hava-perdeleri",
+  marka: "Niva",
   baslik: "Niva Hava Perdeleri Fiyat Listesi",
   aciklama: "Linda, Life, Smart Kaset, Lena, Dikey ve Turbo serisi hava perdeleri.",
   notlar: "Fiyatlara KDV dahil değildir.\nMontaj fiyata dahil değildir.",
@@ -38,13 +41,13 @@ const NIVA: HazirListe = {
       bilgi: "takılabilir yükseklik 300 cm",
       gorsel: "linda",
       kalemler: [
-      { kod: "KLC-L85", olcu: "85 cm", liste: 15855, satis: 14030 },
-      { kod: "KLC-L100", olcu: "100 cm", liste: 16615, satis: 14720 },
-      { kod: "KLC-L120", olcu: "120 cm", liste: 18680, satis: 16560 },
-      { kod: "KLC-L140", olcu: "140 cm", liste: 20480, satis: 18170 },
-      { kod: "KLC-L160", olcu: "160 cm", liste: 23245, satis: 20585 },
-      { kod: "KLC-L180", olcu: "180 cm", liste: 24340, satis: 21620 },
-      { kod: "KLC-L200", olcu: "200 cm", liste: 26300, satis: 23345 },
+      { kod: "KLC-L85", ad: "Linda Genel Tip Isıtıcısız Hava Perdesi 85 cm", olcu: "85 cm", genislik: "85 cm", yukseklik: "300 cm", liste: 15855, satis: 14030 },
+      { kod: "KLC-L100", ad: "Linda Genel Tip Isıtıcısız Hava Perdesi 100 cm", olcu: "100 cm", genislik: "100 cm", yukseklik: "300 cm", liste: 16615, satis: 14720 },
+      { kod: "KLC-L120", ad: "Linda Genel Tip Isıtıcısız Hava Perdesi 120 cm", olcu: "120 cm", genislik: "120 cm", yukseklik: "300 cm", liste: 18680, satis: 16560 },
+      { kod: "KLC-L140", ad: "Linda Genel Tip Isıtıcısız Hava Perdesi 140 cm", olcu: "140 cm", genislik: "140 cm", yukseklik: "300 cm", liste: 20480, satis: 18170 },
+      { kod: "KLC-L160", ad: "Linda Genel Tip Isıtıcısız Hava Perdesi 160 cm", olcu: "160 cm", genislik: "160 cm", yukseklik: "300 cm", liste: 23245, satis: 20585 },
+      { kod: "KLC-L180", ad: "Linda Genel Tip Isıtıcısız Hava Perdesi 180 cm", olcu: "180 cm", genislik: "180 cm", yukseklik: "300 cm", liste: 24340, satis: 21620 },
+      { kod: "KLC-L200", ad: "Linda Genel Tip Isıtıcısız Hava Perdesi 200 cm", olcu: "200 cm", genislik: "200 cm", yukseklik: "300 cm", liste: 26300, satis: 23345 },
       ],
     },
     {
@@ -52,13 +55,13 @@ const NIVA: HazirListe = {
       bilgi: "takılabilir yükseklik 250 cm",
       gorsel: "linda",
       kalemler: [
-      { kod: "KLC-LH85", olcu: "85 cm", liste: 23970, satis: 21275 },
-      { kod: "KLC-LH100", olcu: "100 cm", liste: 25280, satis: 22425 },
-      { kod: "KLC-LH120", olcu: "120 cm", liste: 28090, satis: 24955 },
-      { kod: "KLC-LH140", olcu: "140 cm", liste: 31645, satis: 28060 },
-      { kod: "KLC-LH160", olcu: "160 cm", liste: 34125, satis: 30245 },
-      { kod: "KLC-LH180", olcu: "180 cm", liste: 36555, satis: 32430 },
-      { kod: "KLC-LH200", olcu: "200 cm", liste: 39720, satis: 35075 },
+      { kod: "KLC-LH85", ad: "Linda Genel Tip Isıtıcılı Hava Perdesi 85 cm", olcu: "85 cm", genislik: "85 cm", yukseklik: "250 cm", liste: 23970, satis: 21275 },
+      { kod: "KLC-LH100", ad: "Linda Genel Tip Isıtıcılı Hava Perdesi 100 cm", olcu: "100 cm", genislik: "100 cm", yukseklik: "250 cm", liste: 25280, satis: 22425 },
+      { kod: "KLC-LH120", ad: "Linda Genel Tip Isıtıcılı Hava Perdesi 120 cm", olcu: "120 cm", genislik: "120 cm", yukseklik: "250 cm", liste: 28090, satis: 24955 },
+      { kod: "KLC-LH140", ad: "Linda Genel Tip Isıtıcılı Hava Perdesi 140 cm", olcu: "140 cm", genislik: "140 cm", yukseklik: "250 cm", liste: 31645, satis: 28060 },
+      { kod: "KLC-LH160", ad: "Linda Genel Tip Isıtıcılı Hava Perdesi 160 cm", olcu: "160 cm", genislik: "160 cm", yukseklik: "250 cm", liste: 34125, satis: 30245 },
+      { kod: "KLC-LH180", ad: "Linda Genel Tip Isıtıcılı Hava Perdesi 180 cm", olcu: "180 cm", genislik: "180 cm", yukseklik: "250 cm", liste: 36555, satis: 32430 },
+      { kod: "KLC-LH200", ad: "Linda Genel Tip Isıtıcılı Hava Perdesi 200 cm", olcu: "200 cm", genislik: "200 cm", yukseklik: "250 cm", liste: 39720, satis: 35075 },
       ],
     },
     {
@@ -66,13 +69,13 @@ const NIVA: HazirListe = {
       bilgi: "takılabilir yükseklik 400 cm",
       gorsel: "life",
       kalemler: [
-      { kod: "KLC-HS100", olcu: "100 cm", liste: 29320, satis: 22310 },
-      { kod: "KLC-HS120", olcu: "120 cm", liste: 31300, satis: 23805 },
-      { kod: "KLC-HS140", olcu: "140 cm", liste: 35920, satis: 27255 },
-      { kod: "KLC-HS160", olcu: "160 cm", liste: 37770, satis: 28750 },
-      { kod: "KLC-HS180", olcu: "180 cm", liste: 41350, satis: 31395 },
-      { kod: "KLC-HS200", olcu: "200 cm", liste: 45330, satis: 34500 },
-      { kod: "KLC-HS250", olcu: "250 cm", liste: 75615, satis: 57500 },
+      { kod: "KLC-HS100", ad: "Life Ticari Tip Isıtıcısız Hava Perdesi 100 cm", olcu: "100 cm", genislik: "100 cm", yukseklik: "400 cm", liste: 29320, satis: 22310 },
+      { kod: "KLC-HS120", ad: "Life Ticari Tip Isıtıcısız Hava Perdesi 120 cm", olcu: "120 cm", genislik: "120 cm", yukseklik: "400 cm", liste: 31300, satis: 23805 },
+      { kod: "KLC-HS140", ad: "Life Ticari Tip Isıtıcısız Hava Perdesi 140 cm", olcu: "140 cm", genislik: "140 cm", yukseklik: "400 cm", liste: 35920, satis: 27255 },
+      { kod: "KLC-HS160", ad: "Life Ticari Tip Isıtıcısız Hava Perdesi 160 cm", olcu: "160 cm", genislik: "160 cm", yukseklik: "400 cm", liste: 37770, satis: 28750 },
+      { kod: "KLC-HS180", ad: "Life Ticari Tip Isıtıcısız Hava Perdesi 180 cm", olcu: "180 cm", genislik: "180 cm", yukseklik: "400 cm", liste: 41350, satis: 31395 },
+      { kod: "KLC-HS200", ad: "Life Ticari Tip Isıtıcısız Hava Perdesi 200 cm", olcu: "200 cm", genislik: "200 cm", yukseklik: "400 cm", liste: 45330, satis: 34500 },
+      { kod: "KLC-HS250", ad: "Life Ticari Tip Isıtıcısız Hava Perdesi 250 cm", olcu: "250 cm", genislik: "250 cm", yukseklik: "400 cm", liste: 75615, satis: 57500 },
       ],
     },
     {
@@ -80,13 +83,13 @@ const NIVA: HazirListe = {
       bilgi: "takılabilir yükseklik 350 cm",
       gorsel: "life",
       kalemler: [
-      { kod: "KLC-H100", olcu: "100 cm", liste: 45495, satis: 34500 },
-      { kod: "KLC-H120", olcu: "120 cm", liste: 48780, satis: 37145 },
-      { kod: "KLC-H140", olcu: "140 cm", liste: 54630, satis: 41400 },
-      { kod: "KLC-H160", olcu: "160 cm", liste: 60230, satis: 45770 },
-      { kod: "KLC-H180", olcu: "180 cm", liste: 65500, satis: 49795 },
-      { kod: "KLC-H200", olcu: "200 cm", liste: 68280, satis: 51750 },
-      { kod: "KLC-H250", olcu: "250 cm", liste: 96200, satis: 73025 },
+      { kod: "KLC-H100", ad: "Life Ticari Tip Isıtıcılı Hava Perdesi 100 cm", olcu: "100 cm", genislik: "100 cm", yukseklik: "350 cm", liste: 45495, satis: 34500 },
+      { kod: "KLC-H120", ad: "Life Ticari Tip Isıtıcılı Hava Perdesi 120 cm", olcu: "120 cm", genislik: "120 cm", yukseklik: "350 cm", liste: 48780, satis: 37145 },
+      { kod: "KLC-H140", ad: "Life Ticari Tip Isıtıcılı Hava Perdesi 140 cm", olcu: "140 cm", genislik: "140 cm", yukseklik: "350 cm", liste: 54630, satis: 41400 },
+      { kod: "KLC-H160", ad: "Life Ticari Tip Isıtıcılı Hava Perdesi 160 cm", olcu: "160 cm", genislik: "160 cm", yukseklik: "350 cm", liste: 60230, satis: 45770 },
+      { kod: "KLC-H180", ad: "Life Ticari Tip Isıtıcılı Hava Perdesi 180 cm", olcu: "180 cm", genislik: "180 cm", yukseklik: "350 cm", liste: 65500, satis: 49795 },
+      { kod: "KLC-H200", ad: "Life Ticari Tip Isıtıcılı Hava Perdesi 200 cm", olcu: "200 cm", genislik: "200 cm", yukseklik: "350 cm", liste: 68280, satis: 51750 },
+      { kod: "KLC-H250", ad: "Life Ticari Tip Isıtıcılı Hava Perdesi 250 cm", olcu: "250 cm", genislik: "250 cm", yukseklik: "350 cm", liste: 96200, satis: 73025 },
       ],
     },
     {
@@ -94,11 +97,11 @@ const NIVA: HazirListe = {
       bilgi: "takılabilir yükseklik 380 cm",
       gorsel: "kaset",
       kalemler: [
-      { kod: "KLC-KST120", olcu: "120 cm", liste: 43050, satis: 32775 },
-      { kod: "KLC-KST140", olcu: "140 cm", liste: 45630, satis: 34730 },
-      { kod: "KLC-KST160", olcu: "160 cm", liste: 48980, satis: 37260 },
-      { kod: "KLC-KST180", olcu: "180 cm", liste: 52425, satis: 39790 },
-      { kod: "KLC-KST200", olcu: "200 cm", liste: 55890, satis: 42435 },
+      { kod: "KLC-KST120", ad: "Smart Kaset Tip Isıtıcısız Hava Perdesi 120 cm", olcu: "120 cm", genislik: "120 cm", yukseklik: "380 cm", liste: 43050, satis: 32775 },
+      { kod: "KLC-KST140", ad: "Smart Kaset Tip Isıtıcısız Hava Perdesi 140 cm", olcu: "140 cm", genislik: "140 cm", yukseklik: "380 cm", liste: 45630, satis: 34730 },
+      { kod: "KLC-KST160", ad: "Smart Kaset Tip Isıtıcısız Hava Perdesi 160 cm", olcu: "160 cm", genislik: "160 cm", yukseklik: "380 cm", liste: 48980, satis: 37260 },
+      { kod: "KLC-KST180", ad: "Smart Kaset Tip Isıtıcısız Hava Perdesi 180 cm", olcu: "180 cm", genislik: "180 cm", yukseklik: "380 cm", liste: 52425, satis: 39790 },
+      { kod: "KLC-KST200", ad: "Smart Kaset Tip Isıtıcısız Hava Perdesi 200 cm", olcu: "200 cm", genislik: "200 cm", yukseklik: "380 cm", liste: 55890, satis: 42435 },
       ],
     },
     {
@@ -106,11 +109,11 @@ const NIVA: HazirListe = {
       bilgi: "takılabilir yükseklik 350 cm",
       gorsel: "kaset",
       kalemler: [
-      { kod: "KLC-AKS120", olcu: "120 cm", liste: 67345, satis: 51175 },
-      { kod: "KLC-AKS140", olcu: "140 cm", liste: 69800, satis: 52900 },
-      { kod: "KLC-AKS160", olcu: "160 cm", liste: 73840, satis: 56120 },
-      { kod: "KLC-AKS180", olcu: "180 cm", liste: 77925, satis: 59225 },
-      { kod: "KLC-AKS200", olcu: "200 cm", liste: 81715, satis: 62100 },
+      { kod: "KLC-AKS120", ad: "Smart Kaset Tip Isıtıcılı Hava Perdesi 120 cm", olcu: "120 cm", genislik: "120 cm", yukseklik: "350 cm", liste: 67345, satis: 51175 },
+      { kod: "KLC-AKS140", ad: "Smart Kaset Tip Isıtıcılı Hava Perdesi 140 cm", olcu: "140 cm", genislik: "140 cm", yukseklik: "350 cm", liste: 69800, satis: 52900 },
+      { kod: "KLC-AKS160", ad: "Smart Kaset Tip Isıtıcılı Hava Perdesi 160 cm", olcu: "160 cm", genislik: "160 cm", yukseklik: "350 cm", liste: 73840, satis: 56120 },
+      { kod: "KLC-AKS180", ad: "Smart Kaset Tip Isıtıcılı Hava Perdesi 180 cm", olcu: "180 cm", genislik: "180 cm", yukseklik: "350 cm", liste: 77925, satis: 59225 },
+      { kod: "KLC-AKS200", ad: "Smart Kaset Tip Isıtıcılı Hava Perdesi 200 cm", olcu: "200 cm", genislik: "200 cm", yukseklik: "350 cm", liste: 81715, satis: 62100 },
       ],
     },
     {
@@ -118,9 +121,9 @@ const NIVA: HazirListe = {
       bilgi: "takılabilir yükseklik 600 cm",
       gorsel: "lena",
       kalemler: [
-      { kod: "KLC-EDS6010", olcu: "85 cm", liste: 44130, satis: 33580 },
-      { kod: "KLC-EDS6015", olcu: "100 cm", liste: 56439, satis: 42895 },
-      { kod: "KLC-EDS6020", olcu: "120 cm", liste: 67725, satis: 51405 },
+      { kod: "KLC-EDS6010", ad: "Lena Endüstriyel Tip Isıtıcısız Hava Perdesi 85 cm", olcu: "85 cm", genislik: "85 cm", yukseklik: "600 cm", liste: 44130, satis: 33580 },
+      { kod: "KLC-EDS6015", ad: "Lena Endüstriyel Tip Isıtıcısız Hava Perdesi 100 cm", olcu: "100 cm", genislik: "100 cm", yukseklik: "600 cm", liste: 56439, satis: 42895 },
+      { kod: "KLC-EDS6020", ad: "Lena Endüstriyel Tip Isıtıcısız Hava Perdesi 120 cm", olcu: "120 cm", genislik: "120 cm", yukseklik: "600 cm", liste: 67725, satis: 51405 },
       ],
     },
     {
@@ -128,9 +131,9 @@ const NIVA: HazirListe = {
       bilgi: "takılabilir yükseklik 600 cm",
       gorsel: "lena",
       kalemler: [
-      { kod: "KLC-EDSH6010", olcu: "85 cm", liste: 57380, satis: 43585 },
-      { kod: "KLC-EDSH6015", olcu: "100 cm", liste: 73415, satis: 55775 },
-      { kod: "KLC-EDSH6020", olcu: "120 cm", liste: 88200, satis: 67045 },
+      { kod: "KLC-EDSH6010", ad: "Lena Endüstriyel Tip Isıtıcılı Hava Perdesi 85 cm", olcu: "85 cm", genislik: "85 cm", yukseklik: "600 cm", liste: 57380, satis: 43585 },
+      { kod: "KLC-EDSH6015", ad: "Lena Endüstriyel Tip Isıtıcılı Hava Perdesi 100 cm", olcu: "100 cm", genislik: "100 cm", yukseklik: "600 cm", liste: 73415, satis: 55775 },
+      { kod: "KLC-EDSH6020", ad: "Lena Endüstriyel Tip Isıtıcılı Hava Perdesi 120 cm", olcu: "120 cm", genislik: "120 cm", yukseklik: "600 cm", liste: 88200, satis: 67045 },
       ],
     },
     {
@@ -138,9 +141,9 @@ const NIVA: HazirListe = {
       bilgi: "takılabilir genişlik 300 cm",
       gorsel: "dikey",
       kalemler: [
-      { kod: "KLC-DK200", olcu: "yükseklik 200 cm", liste: 97690, satis: 74175 },
-      { kod: "KLC-DK250", olcu: "yükseklik 250 cm", liste: 119090, satis: 90390 },
-      { kod: "KLC-DK300", olcu: "yükseklik 300 cm", liste: 127720, satis: 96945 },
+      { kod: "KLC-DK200", ad: "Dikey Ticari Tip Isıtıcısız Hava Perdesi 200 cm", olcu: "yükseklik 200 cm", genislik: "300 cm", yukseklik: "200 cm", liste: 97690, satis: 74175 },
+      { kod: "KLC-DK250", ad: "Dikey Ticari Tip Isıtıcısız Hava Perdesi 250 cm", olcu: "yükseklik 250 cm", genislik: "300 cm", yukseklik: "250 cm", liste: 119090, satis: 90390 },
+      { kod: "KLC-DK300", ad: "Dikey Ticari Tip Isıtıcısız Hava Perdesi 300 cm", olcu: "yükseklik 300 cm", genislik: "300 cm", yukseklik: "300 cm", liste: 127720, satis: 96945 },
       ],
     },
     {
@@ -148,9 +151,9 @@ const NIVA: HazirListe = {
       bilgi: "takılabilir genişlik 300 cm",
       gorsel: "dikey",
       kalemler: [
-      { kod: "KLC-DKH200", olcu: "yükseklik 200 cm", liste: 121170, satis: 92000 },
-      { kod: "KLC-DKH250", olcu: "yükseklik 250 cm", liste: 149125, satis: 113275 },
-      { kod: "KLC-DKH300", olcu: "yükseklik 300 cm", liste: 165680, satis: 125350 },
+      { kod: "KLC-DKH200", ad: "Dikey Ticari Tip Isıtıcılı Hava Perdesi 200 cm", olcu: "yükseklik 200 cm", genislik: "300 cm", yukseklik: "200 cm", liste: 121170, satis: 92000 },
+      { kod: "KLC-DKH250", ad: "Dikey Ticari Tip Isıtıcılı Hava Perdesi 250 cm", olcu: "yükseklik 250 cm", genislik: "300 cm", yukseklik: "250 cm", liste: 149125, satis: 113275 },
+      { kod: "KLC-DKH300", ad: "Dikey Ticari Tip Isıtıcılı Hava Perdesi 300 cm", olcu: "yükseklik 300 cm", genislik: "300 cm", yukseklik: "300 cm", liste: 165680, satis: 125350 },
       ],
     },
     {
@@ -158,7 +161,7 @@ const NIVA: HazirListe = {
       bilgi: "takılabilir yükseklik 12 m",
       gorsel: "turbo",
       kalemler: [
-      { kod: "KLC-EDS1000", olcu: "100 cm", liste: 52165, satis: 39675 },
+      { kod: "KLC-EDS1000", ad: "Turbo Endüstriyel Tip Isıtıcısız Hava Perdesi 100 cm", olcu: "100 cm", genislik: "100 cm", yukseklik: "12 metre", liste: 52165, satis: 39675 },
       ],
     },
   ],

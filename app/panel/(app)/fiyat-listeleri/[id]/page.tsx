@@ -5,6 +5,9 @@ import { getTcmbKurlari } from "@/lib/kur";
 import FiyatListesiDuzenleyici from "@/components/FiyatListesiDuzenleyici";
 import KayaFiyatListesi from "@/components/KayaFiyatListesi";
 import { kaynakDurumOku } from "@/lib/kaya-fiyat";
+import { HAZIR_LISTELER } from "@/lib/hazir-listeler";
+import { hazirListeTamamla } from "@/lib/actions";
+import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
 // "Şimdi güncelle" Kaya'nın PDF'ini indirip okur (birkaç saniye sürebilir)
@@ -65,6 +68,7 @@ export default async function FiyatListesiSayfasi({ params }: { params: { id: st
     );
   }
 
+  const hazir = HAZIR_LISTELER.find((h) => h.baslik === liste.baslik) ?? null;
   return (
     <div className="max-w-4xl">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -83,8 +87,21 @@ export default async function FiyatListesiSayfasi({ params }: { params: { id: st
       <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">Fiyat Listesi</p>
       <h1 className="font-display text-2xl font-semibold text-metin mb-1">{liste.baslik}</h1>
       <p className="text-xs text-metin/50 mb-6">PDF her zaman son kaydedilen hâli gösterir; değişiklik yaptıysanız önce kaydedin.</p>
+      {hazir && (
+        <form action={hazirListeTamamla} className="bg-soguk-light/40 border border-soguk/30 rounded-lg px-4 py-3 mb-6 flex flex-wrap items-center justify-between gap-3">
+          <input type="hidden" name="kod" value={hazir.kod} />
+          <p className="text-xs text-metin/70 max-w-xl">
+            Hazır listeden eklendi. Boş kalan grup, ürün adı, marka, ürün kodu ve takılabilir genişlik / yükseklik bilgilerini tek tıkla doldurabilirsiniz. Fiyatlara ve sizin yazdıklarınıza dokunulmaz. Kaydedilmemiş değişikliğiniz varsa önce kaydedin.
+          </p>
+          <KaydetButonu basari={null} bekleme="Tamamlanıyor…">
+            Eksik bilgileri tamamla
+          </KaydetButonu>
+        </form>
+      )}
 
+      {/* key: liste sunucuda değişince (ör. "Eksik bilgileri tamamla") düzenleyici yeni veriyle açılır */}
       <FiyatListesiDuzenleyici
+        key={liste.updatedAt.getTime()}
         ayarlar={{
           id: liste.id,
           baslik: liste.baslik,
