@@ -1646,6 +1646,33 @@ export async function hazirListeTamamla(formData: FormData) {
   redirect(`/panel/fiyat-listeleri/${liste.id}?mesaj=hazir-liste-tamamlandi&yenile=${Date.now()}`);
 }
 
+// Hazır listenin fiyatlarını ilk hâline döndürür (ör. toplu zam/indirim yanlışlıkla kaydedildiyse).
+// Ürün koduna göre eşleşen satırların 1. ve 2. fiyatı hazır listedeki değerlere döner
+// (Niva: Liste Fiyatı ve alış + %15 Satış Fiyatı). Başka hiçbir alana ve elle eklenmiş ürünlere dokunulmaz.
+export async function hazirListeFiyatGeriYukle(formData: FormData) {
+  await yetki("hazirListeFiyatGeriYukle", { kod: formData.get("kod") });
+  const { hazirListeBul } = await import("@/lib/hazir-listeler");
+  const h = hazirListeBul(String(formData.get("kod") ?? ""));
+  if (!h) return;
+  const liste = await prisma.fiyatListesi.findFirst({
+    where: { baslik: h.baslik },
+    select: { id: true, kalemler: { select: { id: true, ad: true, kod: true, fiyat: true, fiyat2: true } } },
+  });
+  if (!liste) redirect("/panel/fiyat-listeleri");
+  const fiyatlar = new Map<string, { liste: number; satis: number }>();
+  for (const b of h.bolumler) for (const k of b.kalemler) fiyatlar.set(k.kod.toUpperCase(), { liste: k.liste, satis: k.satis });
+  const islemler: ReturnType<typeof prisma.fiyatListesiKalem.update>[] = [];
+  for (const s of liste.kalemler) {
+    const f = fiyatlar.get(((s.kod ?? "").trim() || s.ad.split("·")[0].trim()).toUpperCase());
+    if (!f || (s.fiyat === f.liste && s.fiyat2 === f.satis)) continue;
+    islemler.push(prisma.fiyatListesiKalem.update({ where: { id: s.id }, data: { fiyat: f.liste, fiyat2: f.satis } }));
+  }
+  if (islemler.length) await prisma.$transaction([...islemler, prisma.fiyatListesi.update({ where: { id: liste.id }, data: { updatedAt: new Date() } })]);
+  revalidatePath("/panel/fiyat-listeleri");
+  revalidatePath(`/panel/fiyat-listeleri/${liste.id}`);
+  redirect(`/panel/fiyat-listeleri/${liste.id}?mesaj=hazir-liste-fiyat-geri&yenile=${Date.now()}`);
+}
+
 // Hazır listeyi (ör. Niva hava perdeleri) fotoğraflarıyla birlikte panele ekler.
 // Eklenen liste normal bir listedir: düzenlenir, kopyalanır, PDF alınır.
 export async function hazirListeEkle(formData: FormData) {

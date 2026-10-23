@@ -6,7 +6,8 @@ import FiyatListesiDuzenleyici from "@/components/FiyatListesiDuzenleyici";
 import KayaFiyatListesi from "@/components/KayaFiyatListesi";
 import { kaynakDurumOku } from "@/lib/kaya-fiyat";
 import { HAZIR_LISTELER } from "@/lib/hazir-listeler";
-import { hazirListeTamamla } from "@/lib/actions";
+import { hazirListeTamamla, hazirListeFiyatGeriYukle } from "@/lib/actions";
+import OnayliGonderButonu from "@/components/OnayliGonderButonu";
 import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
@@ -96,6 +97,21 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
           <KaydetButonu basari={null} bekleme="Tamamlanıyor…">
             Eksik bilgileri tamamla
           </KaydetButonu>
+        </form>
+      )}
+      {hazir && (
+        <form action={hazirListeFiyatGeriYukle} className="border border-hat rounded-lg px-4 py-3 -mt-3 mb-6 flex flex-wrap items-center justify-between gap-3">
+          <input type="hidden" name="kod" value={hazir.kod} />
+          <p className="text-xs text-metin/70 max-w-xl">
+            Toplu zam / indirim yüzünden fiyatlar bozulduysa: Liste Fiyatı ve Satış Fiyatı ilk hâline döner (Satış = alış + %15). Ürün adları, açıklamalar,
+            fotoğraflar ve sizin eklediğiniz başka ürünler değişmez.
+          </p>
+          <OnayliGonderButonu
+            bekleme="Geri yükleniyor…"
+            onayMesaji="Bu listedeki hazır ürünlerin Liste Fiyatı ve Satış Fiyatı ilk hâline döndürülecek. Elle değiştirdiğiniz fiyatlar da eski hâline döner. Devam edilsin mi?"
+          >
+            ↺ Fiyatları ilk hâline döndür
+          </OnayliGonderButonu>
         </form>
       )}
 

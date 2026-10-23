@@ -28,6 +28,7 @@ const MESAJLAR: Record<string, string> = {
   "not-kaydedildi": "Not kaydedildi.",
   "hazir-liste-eklendi": "Liste fotoğraflarıyla birlikte eklendi. PDF almak için yukarıdaki düğmeleri kullanın.",
   "hazir-liste-zaten-var": "Bu liste zaten ekli; mevcut liste açıldı.",
+  "hazir-liste-fiyat-geri": "Fiyatlar ilk hâline döndü (Liste Fiyatı ve Satış Fiyatı). Diğer bilgilere dokunulmadı.",
   "hazir-liste-tamamlandi": "Eksik bilgiler tamamlandı: grup, ürün adı, marka, ürün kodu ve takılabilir genişlik / yükseklik. Fiyatlara ve sizin yazdıklarınıza dokunulmadı.",
   "not-kaydedildi-gonderildi": "Not kaydedildi; hatırlatma günü geldiği için mail hemen gönderildi.",
   "isi-hesap-kopyalandi": "Hesap kopyalandı. Şu an kopyayı düzenliyorsunuz.",
