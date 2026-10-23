@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { fiyatListesiOlustur, fiyatListesiKopyala, fiyatListesiSil, kayaFiyatListesiGuncelle } from "@/lib/actions";
+import { fiyatListesiOlustur, fiyatListesiKopyala, fiyatListesiSil, kayaFiyatListesiGuncelle, hazirListeEkle } from "@/lib/actions";
+import { HAZIR_LISTELER } from "@/lib/hazir-listeler";
 import { kaynakDurumOku, kayaDurumOzeti } from "@/lib/kaya-fiyat";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
 import KaydetButonu from "@/components/KaydetButonu";
@@ -72,6 +73,40 @@ export default async function FiyatListeleriSayfasi() {
           + Oluştur
         </KaydetButonu>
       </form>
+
+      {/* HAZIR LİSTELER: tedarikçi listelerinden hazırlanmış, fotoğraflı listeler (tek tıkla eklenir) */}
+      <div className="bg-yuzey border border-hat rounded-lg p-5 mb-8">
+        <p className="font-display font-medium text-metin mb-1">Hazır listeler</p>
+        <p className="text-xs text-metin/55 mb-3">Tedarikçi listelerinden fotoğraflarıyla hazırlandı. Eklenince normal liste gibi düzenlenir ve PDF alınır.</p>
+        <div className="flex flex-col gap-2">
+          {HAZIR_LISTELER.map((h) => {
+            const ekli = listeler.find((l) => l.baslik === h.baslik);
+            const urunSayisi = h.bolumler.reduce((a, b) => a + b.kalemler.length, 0);
+            return (
+              <div key={h.kod} className="flex flex-wrap items-center justify-between gap-3 border border-hat rounded-md px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-metin">{h.baslik}</p>
+                  <p className="text-[11px] text-metin/50">
+                    {urunSayisi} ürün · {h.bolumler.length} bölüm · {h.kaynakAciklama}
+                  </p>
+                </div>
+                {ekli ? (
+                  <Link href={`/panel/fiyat-listeleri/${ekli.id}`} className="focus-ring text-sm font-medium text-soguk-dim hover:underline">
+                    Eklendi · Aç →
+                  </Link>
+                ) : (
+                  <form action={hazirListeEkle}>
+                    <input type="hidden" name="kod" value={h.kod} />
+                    <KaydetButonu basari={null} bekleme="Ekleniyor…">
+                      + Listeyi ekle
+                    </KaydetButonu>
+                  </form>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       {!kayaVar && (
         <div className="bg-soguk-light/40 border border-soguk/30 rounded-lg p-5 mb-8 flex flex-wrap items-center justify-between gap-3">

@@ -62,8 +62,8 @@ async function pdfYanit(id: string, haric: Set<string>, indir: boolean) {
       gorselId: k.gorselId || k.urun?.gorselId || null,
     }));
   const idler = Array.from(new Set(kalemler.map((k) => k.gorselId).filter(Boolean))) as string[];
-  // Tablo görünümünde fotoğraf kullanılmaz; boşuna okunmaz
-  const kayitlar = idler.length && liste.duzen !== "TABLO"
+  // Tablo görünümünde de bölüm fotoğrafı gösterilir (satırlarda fotoğraf yoksa hiç okunmaz)
+  const kayitlar = idler.length
     ? await prisma.gorsel.findMany({ where: { id: { in: idler } }, select: { id: true, veri: true, genislik: true, yukseklik: true } })
     : [];
   const gorseller = new Map<string, PdfGorsel>(

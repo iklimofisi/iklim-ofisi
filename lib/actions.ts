@@ -1594,6 +1594,59 @@ export async function fiyatListesiOlustur(formData: FormData) {
   redirect(`/panel/fiyat-listeleri/${liste.id}`);
 }
 
+// Hazır listeyi (ör. Niva hava perdeleri) fotoğraflarıyla birlikte panele ekler.
+// Eklenen liste normal bir listedir: düzenlenir, kopyalanır, PDF alınır.
+export async function hazirListeEkle(formData: FormData) {
+  const giren = await yetki("hazirListeEkle", { kod: formData.get("kod") });
+  const { hazirListeBul } = await import("@/lib/hazir-listeler");
+  const h = hazirListeBul(String(formData.get("kod") ?? ""));
+  if (!h) return;
+  // Aynı liste daha önce eklendiyse ikinci kez eklenmez; mevcut olan açılır
+  const mevcut = await prisma.fiyatListesi.findFirst({ where: { baslik: h.baslik }, select: { id: true } });
+  if (mevcut) redirect(`/panel/fiyat-listeleri/${mevcut.id}?mesaj=hazir-liste-zaten-var`);
+
+  // Bölüm fotoğrafları (her biri bir kez kaydedilir, o bölümdeki ürünlere bağlanır)
+  const gorselIdleri: Record<string, string> = {};
+  for (const [anahtar, g] of Object.entries(h.gorseller)) {
+    const veri = Buffer.from(g.b64, "base64");
+    const kayit = await prisma.gorsel.create({
+      data: { veri, tip: "image/jpeg", genislik: g.genislik, yukseklik: g.yukseklik, boyut: veri.length },
+      select: { id: true },
+    });
+    gorselIdleri[anahtar] = kayit.id;
+  }
+  let sira = 0;
+  const kalemler = h.bolumler.flatMap((b) =>
+    b.kalemler.map((k) => ({
+      sira: sira++,
+      bolum: `${b.ad} · ${b.bilgi}`.slice(0, 120),
+      ad: `${k.kod} · ${k.olcu}`,
+      birim: "Adet",
+      fiyat: k.liste,
+      fiyat2: k.satis,
+      gorselId: gorselIdleri[b.gorsel] ?? null,
+    }))
+  );
+  const liste = await prisma.fiyatListesi.create({
+    data: {
+      baslik: h.baslik,
+      aciklama: h.aciklama,
+      notlar: h.notlar,
+      paraBirimi: h.paraBirimi,
+      kdvDahil: h.kdvDahil,
+      fiyatGoster: true,
+      duzen: "TABLO",
+      fiyatBaslik: h.fiyatBaslik,
+      fiyat2Baslik: h.fiyat2Baslik,
+      olusturanAdi: giren?.ad ?? "",
+      kalemler: { create: kalemler },
+    },
+    select: { id: true },
+  });
+  revalidatePath("/panel/fiyat-listeleri");
+  redirect(`/panel/fiyat-listeleri/${liste.id}?mesaj=hazir-liste-eklendi`);
+}
+
 export async function fiyatListesiKaydet(formData: FormData) {
   await yetki("fiyatListesiKaydet", formData);
   const id = String(formData.get("listeId") ?? "");

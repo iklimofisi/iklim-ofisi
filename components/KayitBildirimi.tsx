@@ -26,6 +26,8 @@ const MESAJLAR: Record<string, string> = {
   "kaya-guncellendi": "Kaya'nın yeni listesi okundu; fiyatlar %5 eklenerek güncellendi. Değişen ürünler tabloda işaretli ve e-postayla bildirildi.",
   "kaya-degisiklik-yok": "Kaya'nın listesi kontrol edildi: fiyatlarda değişiklik yok.",
   "not-kaydedildi": "Not kaydedildi.",
+  "hazir-liste-eklendi": "Liste fotoğraflarıyla birlikte eklendi. PDF almak için yukarıdaki düğmeleri kullanın.",
+  "hazir-liste-zaten-var": "Bu liste zaten ekli; mevcut liste açıldı.",
   "not-kaydedildi-gonderildi": "Not kaydedildi; hatırlatma günü geldiği için mail hemen gönderildi.",
   "isi-hesap-kopyalandi": "Hesap kopyalandı. Şu an kopyayı düzenliyorsunuz.",
   "isi-hesap-teklif": "Isı pompası hesabından teklif taslağı oluşturuldu. Fiyatları girip kaydedin.",

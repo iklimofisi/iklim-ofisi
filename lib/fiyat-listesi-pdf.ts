@@ -404,13 +404,40 @@ export function fiyatListesiPdfOlustur(
   const birimVar = kalemler.some((k) => (metin(k.birim) || "Adet") !== "Adet");
   const TB_BIRIM_G = birimVar ? 15 : 0;
   const tbFiyatSutun = liste.fiyatGoster ? (iki ? 2 : 1) : 0;
-  const TB_AD_G = GENISLIK - TB_BIRIM_G - tbFiyatSutun * TB_FIYAT_G;
+  // Fotoğraflı tabloda solda "ürün görseli" sütunu: bölümün fotoğrafı, o bölümün satırları boyunca uzanır
+  const TB_FOTO_G = fotoVar ? 44 : 0;
+  const TB_X = SOL + TB_FOTO_G; // satır metni ve fiyat sütunları bu noktadan başlar
+  const TB_AD_G = GENISLIK - TB_FOTO_G - TB_BIRIM_G - tbFiyatSutun * TB_FIYAT_G;
+  const TB_FOTO_EN_AZ = 20; // fotoğraflı bölüm en az bu yükseklikte olur (mm)
+  let tbSeg: { id: string | null; y0: number } | null = null;
+  const tbFotoCiz = (id: string | null, x: number, yy: number, w: number, h: number) => {
+    const g = id ? gorseller.get(id) : undefined;
+    if (!g || !g.genislik || !g.yukseklik) return;
+    const olcek = Math.min(w / g.genislik, h / g.yukseklik);
+    const gw = g.genislik * olcek;
+    const gh = g.yukseklik * olcek;
+    try {
+      doc.addImage(g.veri, "JPEG", x + (w - gw) / 2, yy + (h - gh) / 2, gw, gh, `g-${id}`);
+    } catch {
+      /* bozuk fotoğraf: alan boş kalır */
+    }
+  };
+  // Bölümün bu sayfadaki parçası bitti: fotoğrafı satırların yanına yerleştir
+  const tbSegBitir = () => {
+    if (tbSeg && TB_FOTO_G) {
+      const h = y - tbSeg.y0;
+      if (h > 4) tbFotoCiz(tbSeg.id, SOL + 2, tbSeg.y0 + 2, TB_FOTO_G - 4, h - 4);
+      cizgi(TB_X, tbSeg.y0, TB_X, y, HAT, 0.15);
+    }
+    tbSeg = null;
+  };
   const tbBaslik = () => {
     doc.setFillColor(...FOTO_ZEMIN);
     doc.rect(SOL, y, GENISLIK, 6, "F");
     yazi(7, true, METIN_60);
-    doc.text("ÜRÜN", SOL + 2, y + 4.1, { charSpace: 0.3 });
-    let x = SOL + TB_AD_G;
+    if (TB_FOTO_G) doc.text("ÜRÜN GÖRSELİ", SOL + TB_FOTO_G / 2, y + 4.1, { align: "center", charSpace: 0.3 });
+    doc.text("ÜRÜN", TB_X + 2, y + 4.1, { charSpace: 0.3 });
+    let x = TB_X + TB_AD_G;
     if (TB_BIRIM_G) {
       doc.text("BİRİM", x + TB_BIRIM_G / 2, y + 4.1, { align: "center", charSpace: 0.3 });
       x += TB_BIRIM_G;
@@ -418,12 +445,13 @@ export function fiyatListesiPdfOlustur(
     const etiketler = tbFiyatSutun === 2 ? [fb1, fb2] : tbFiyatSutun === 1 ? ["FİYAT"] : [];
     for (const e of etiketler) {
       x += TB_FIYAT_G;
-      doc.text(metin(e).toLocaleUpperCase("tr-TR"), x - 2, y + 4.1, { align: "right", charSpace: 0.3 });
+      // charSpace sağa hizalamada taşma yapıyor; fiyat başlıklarında kullanılmaz
+      doc.text(metin(e).toLocaleUpperCase("tr-TR"), x - 2, y + 4.1, { align: "right" });
     }
     y += 6;
     cizgi(SOL, y, SAG, y, HAT, 0.3);
   };
-  const tbSatir = (k: PdfKalem, sira: number, bolumAd: string) => {
+  const tbSatir = (k: PdfKalem, sira: number, bolumAd: string, bolumFoto: string | null) => {
     const tw = TB_AD_G - 4;
     yazi(8.4, true, METIN);
     const ad = satirlar(k.ad, tw, 6);
@@ -434,6 +462,7 @@ export function fiyatListesiPdfOlustur(
     const ac = k.aciklama ? satirlar(k.aciklama, tw, 4) : [];
     const h = 1.6 + 3.6 * ad.length + (altS.length ? 3.1 : 0) + (ac.length ? 3 * ac.length + 0.4 : 0) + 1.0;
     if (y + h > ALT_SINIR) {
+      tbSegBitir();
       yeniSayfa();
       if (bolumAd) {
         yazi(7.5, true, SOGUK_DIM);
@@ -441,26 +470,27 @@ export function fiyatListesiPdfOlustur(
         y += 3;
       }
       tbBaslik();
+      if (TB_FOTO_G) tbSeg = { id: bolumFoto, y0: y };
     }
     const y0 = y;
     if (sira % 2 === 1) {
       doc.setFillColor(...FOTO_ZEMIN);
-      doc.rect(SOL, y0, GENISLIK, h, "F");
+      doc.rect(TB_X, y0, GENISLIK - TB_FOTO_G, h, "F");
     }
     let ty = y0 + 1.6 + 2.6;
     yazi(8.4, true, METIN);
-    doc.text(ad, SOL + 2, ty);
+    doc.text(ad, TB_X + 2, ty);
     ty += 3.6 * ad.length;
     if (altS.length) {
       yazi(7, false, METIN_50);
-      doc.text(altS, SOL + 2, ty - 0.4);
+      doc.text(altS, TB_X + 2, ty - 0.4);
       ty += 3.1;
     }
     if (ac.length) {
       yazi(7, false, METIN_60);
-      doc.text(ac, SOL + 2, ty - 0.2);
+      doc.text(ac, TB_X + 2, ty - 0.2);
     }
-    let x = SOL + TB_AD_G;
+    let x = TB_X + TB_AD_G;
     const fy = y0 + 1.6 + 2.6;
     if (TB_BIRIM_G) {
       yazi(7.5, false, METIN_60);
@@ -479,16 +509,25 @@ export function fiyatListesiPdfOlustur(
       }
     }
     y = y0 + h;
-    cizgi(SOL, y, SAG, y, HAT, 0.15);
+    cizgi(TB_X, y, SAG, y, HAT, 0.15);
   };
 
   for (const [ad, grup] of gruplar) {
     if (liste.duzen === "TABLO") {
-      yerAc(11 + 6 + 10);
+      yerAc(11 + 6 + (TB_FOTO_G ? TB_FOTO_EN_AZ : 10));
       if (ad) bolumBasligi(ad);
       else y += 1;
       tbBaslik();
-      grup.forEach((k, i) => tbSatir(k, i, ad));
+      const bolumFoto = grup.find((k) => k.gorselId && gorseller.has(k.gorselId))?.gorselId ?? null;
+      if (TB_FOTO_G) tbSeg = { id: bolumFoto, y0: y };
+      grup.forEach((k, i) => tbSatir(k, i, ad, bolumFoto));
+      // Az satırlı bölümde fotoğraf sığsın diye bölüm en az TB_FOTO_EN_AZ yüksekliğinde olur
+      if (tbSeg && y - tbSeg.y0 < TB_FOTO_EN_AZ) {
+        y = tbSeg.y0 + TB_FOTO_EN_AZ;
+        cizgi(TB_X, y, SAG, y, HAT, 0.15);
+      }
+      if (TB_FOTO_G) cizgi(SOL, y, TB_X, y, HAT, 0.15);
+      tbSegBitir();
       y += 6;
     } else if (liste.duzen === "LISTE") {
       if (ad) {
