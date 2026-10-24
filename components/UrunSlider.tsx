@@ -25,10 +25,10 @@ type Slayt = {
 // yerden ısıtma (Fraenkische) → kazan dairesi (Buderus) → mutfak çözümleri (AIRNEX, VERTA)
 const SLAYTLAR: Slayt[] = [
   {
-    etiket: "Mitsubishi Electric · TCL",
+    etiket: "TCL · TMV6+ Super",
     baslik: "VRF Merkezi İklimlendirme Sistemleri",
-    alt: "TCL VRF dış ünitesi — Mitsubishi Electric ve TCL VRF sistemleri",
-    href: "/hizmetler#vrf",
+    alt: "TCL TMV6+ Super Serisi VRF dış ünitesi",
+    href: "/tcl-vrf",
     gorsel: "/slider/slider-tcl-vrf.jpg",
   },
   {
@@ -39,7 +39,7 @@ const SLAYTLAR: Slayt[] = [
     gorsel: "/slider/slider-mitsubishi-city-multi.jpg",
   },
   {
-    etiket: "Mitsubishi Electric · TCL",
+    etiket: "Mitsubishi Electric",
     baslik: "Duvar Tipi ve Multi Klimalar",
     alt: "Oturma odasında Mitsubishi Electric duvar tipi iç ünite",
     href: "/hizmetler#klima",
@@ -60,13 +60,6 @@ const SLAYTLAR: Slayt[] = [
     gorsel: "/slider/slider-tcl-kaset.jpg",
   },
   {
-    etiket: "Isı Pompası · Buderus ve Diğer Markalar",
-    baslik: "Hava Kaynaklı Isı Pompası Sistemleri",
-    alt: "Hava kaynaklı ısı pompası dış üniteleri",
-    href: "/hizmetler#isi-pompasi",
-    gorsel: "/hizmetler/hizmet-isi-pompasi.jpg",
-  },
-  {
     etiket: "Fraenkische · Yerden Isıtma",
     baslik: "Yerden Isıtma Sistemleri",
     alt: "Spiral serimle döşenmiş yerden ısıtma boruları",
@@ -79,6 +72,13 @@ const SLAYTLAR: Slayt[] = [
     alt: "Duvara monte Buderus Logamax plus GB272 yoğuşmalı kazan",
     href: "/buderus",
     gorsel: "/buderus/gb272-slider.jpg",
+  },
+  {
+    etiket: "Ayen · Alüminyum Radyatör",
+    baslik: "Panel Radyatör ve Havlupan Modelleri",
+    alt: "Ahşap desenli Ayen Class alüminyum radyatör",
+    href: "/ayen",
+    gorsel: "/ayen/ayen-slider.jpg",
   },
   {
     etiket: "AIRNEX · Mutfak Havalandırma",

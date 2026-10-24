@@ -90,6 +90,17 @@ const urunKategorileri: {
     markalar: "Buderus",
   },
   {
+    id: "aluminyum-radyator",
+    gorsel: "/ayen/ayen-kart.jpg",
+    gorselAlt: "Ahşap desenli Ayen Class alüminyum radyatör",
+    detay: { href: "/ayen", etiket: "Ayen Ürün Detayları →" },
+    kategori: "RADYATÖR & HAVLUPAN",
+    baslik: "Ayen Alüminyum Radyatör ve Havlupanlar",
+    aciklama: "Hızlı ısınan, hafif ve uzun ömürlü alüminyum panel radyatörler ve havlupanlar. 300–1900 mm yükseklik, 30 renk seçeneği; ısı kaybı hesabıyla dilim seçimi ve montaj.",
+    urunler: ["9 Alüminyum Panel Radyatör Serisi", "9 Alüminyum Havlupan Modeli", "Termostatik Vana ve Elektrik Kitleri"],
+    markalar: "Ayen",
+  },
+  {
     id: "radyant-isitma",
     kategori: "ENDÜSTRİYEL ISITMA",
     baslik: "Radyant & Sıcak Hava Isıtma Sistemleri",
