@@ -20,7 +20,7 @@ const SAYFA = `${SITE}/tcl-vrf`;
 export const metadata: Metadata = {
   title: "TCL VRF Sistemleri — TMV6+ Super Serisi ve Mini VRF | İstanbul",
   description:
-    "TCL VRF klima sistemleri: TMV6+ Super tam DC inverter VRF (8–32 HP modül, 128 HP'ye kadar, 80 iç ünite) ve TCL Mini VRF (8–28 kW). Teknik veriler, iç ünite gamı, PDF katalog. İstanbul'da keşif, projelendirme ve montaj.",
+    "TCL VRF klima sistemleri: TMV6+ Super tam DC inverter VRF (tek ünite 8–32 HP, kombinasyonla 128 HP'ye kadar, 80 iç ünite) ve TCL Mini VRF (8–28 kW). Teknik veriler, iç ünite gamı, PDF katalog. İstanbul'da keşif, projelendirme ve montaj.",
   keywords: ["TCL VRF", "TCL VRF klima", "TCL TMV6+", "TCL TMV6 Super", "TCL Mini VRF", "TCL klima", "TCL VRF fiyat", "TCL VRF katalog", "VRF klima İstanbul"],
   alternates: { canonical: "/tcl-vrf" },
   openGraph: {
@@ -71,7 +71,7 @@ const MINI_VRF: [string, string, string, string, string, string][] = [
 ];
 
 const ONE_CIKANLAR: [string, string][] = [
-  ["128 HP", "8–32 HP modüllerin serbest kombinasyonu"],
+  ["128 HP", "Kombinasyonla; tek ünite 8–32 HP"],
   ["80 iç ünite", "Tek soğutucu akışkan sistemine bağlanabilen iç ünite"],
   ["SEER 7,35", "Soğutmada sezonsal verim; ısıtmada SCOP 4,50'ye kadar"],
   ["-30 °C ~ 56 °C", "Isıtmada -30 °C'ye, soğutmada 56 °C'ye kadar çalışma"],
@@ -117,7 +117,7 @@ const SSS: [string, string][] = [
   ],
   [
     "Bir TCL VRF sistemine kaç iç ünite bağlanabilir?",
-    "TMV6+ Super Serisinde 8–32 HP arası 13 dış ünite modülü birleştirilerek 128 HP'ye kadar sistem kurulur ve tek sisteme 80 adede kadar iç ünite bağlanabilir. 9 kategoride 100'den fazla iç ünite modeli arasından seçim yapılır.",
+    "TMV6+ Super Serisinde 8–32 HP arası 13 dış ünite modülü bulunur; tek ünite en fazla 32 HP'dir, üniteler birleştirilerek (kombinasyon) 128 HP'ye kadar çıkılır ve tek sisteme 80 adede kadar iç ünite bağlanabilir. 9 kategoride 100'den fazla iç ünite modeli arasından seçim yapılır.",
   ],
   [
     "TCL VRF hangi dış hava sıcaklıklarında çalışır?",
@@ -239,7 +239,7 @@ export default function TclVrfPage() {
                 TCL · TMV6+ SUPER SERİSİ
               </div>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900 leading-[1.15]">TCL VRF Sistemleri</h1>
-              <p className="text-lg font-semibold text-teal-700">Tam DC inverter akıllı VRF: 8–32 HP modül, 128 HP&apos;ye kadar tek sistem.</p>
+              <p className="text-lg font-semibold text-teal-700">Tam DC inverter akıllı VRF: tek ünite 8–32 HP, kombinasyonla 128 HP&apos;ye kadar.</p>
               <p className="text-base text-slate-600 leading-relaxed">
                 Otel, plaza, hastane, okul, AVM ve konut projelerinde her mahali bağımsız iklimlendiren TCL VRF ve TCL Mini VRF
                 sistemlerinin keşfini, ısı kazancı/kaybı hesabını, projelendirmesini, montajını ve devreye alınmasını İstanbul&apos;da tek
@@ -316,8 +316,8 @@ export default function TclVrfPage() {
                 <p className="text-xs font-bold tracking-widest text-teal-700 uppercase">DIŞ ÜNİTE GAMI</p>
                 <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">TCL VRF dış üniteleri: 8 – 32 HP</h2>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  13 temel modül, aynı yükseklikte yalnız 4 gövde boyutunda üretilir. Modüller serbestçe birleştirilerek 128 HP&apos;ye kadar
-                  tek sistem kurulur; kompresör ve modüller dönüşümlü çalışarak ömrü dengeler.
+                  13 temel modül, aynı yükseklikte yalnız 4 gövde boyutunda üretilir. Tek ünite en fazla 32 HP&apos;dir; üniteler serbestçe birleştirilerek
+                  kombinasyonla 128 HP&apos;ye kadar çıkılır; kompresör ve modüller dönüşümlü çalışarak ömrü dengeler.
                 </p>
               </div>
               <KatalogButonu />
