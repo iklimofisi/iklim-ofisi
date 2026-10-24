@@ -59,6 +59,7 @@ async function pdfYanit(id: string, haric: Set<string>, indir: boolean) {
       birim: k.birim,
       fiyat: k.fiyat,
       fiyat2: k.fiyat2,
+      fiyat3: k.fiyat3,
       gorselId: k.gorselId || k.urun?.gorselId || null,
     }));
   const idler = Array.from(new Set(kalemler.map((k) => k.gorselId).filter(Boolean))) as string[];

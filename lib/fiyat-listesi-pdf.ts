@@ -40,6 +40,7 @@ export type PdfKalem = {
   birim: string;
   fiyat: number;
   fiyat2?: number | null; // iki fiyatlı listede ikinci fiyat
+  fiyat3?: number | null; // 3. fiyat sütunu (PDF'te 1. fiyatın yanında)
   gorselId: string | null; // satırın ya da ürünün fotoğrafı (hangisi geçerliyse)
 };
 
@@ -56,10 +57,21 @@ export type PdfListe = {
   duzen: string;
   fiyatBaslik?: string | null;
   fiyat2Baslik?: string | null;
+  fiyat3Baslik?: string | null; // doluysa (iki fiyatlı listede) 3. fiyat sütunu
   gecerlilikTarihi: Date | null;
   notlar: string | null;
   updatedAt: Date;
 };
+
+// Başlıklar Türkçe kuralla büyütülür (i → İ); yabancı marka / seri adları bozulmasın diye
+// (Olefini → OLEFINI, Irigoni → IRIGONI) bu kelimeler Türkçe kurala göre çevrilmez.
+const YABANCI_KELIME = /^(olefini|irigoni|hi-tech|freedoor|intellect|clima|silver|mini|multi|linda|life|elit|rigel|capella|spica|venüs|vega|luna|star|stil)\b/i;
+function buyukHarf(s: string) {
+  return s
+    .split(" ")
+    .map((w) => (YABANCI_KELIME.test(w) ? w.toUpperCase() : w.toLocaleUpperCase("tr-TR")))
+    .join(" ");
+}
 
 // Yazı tipinde olmayan işaretler okunur karşılığına çevrilir
 function metin(str: string | null | undefined): string {
@@ -121,6 +133,17 @@ export function fiyatListesiPdfOlustur(
   // İki fiyatlı listede iskonto seçilen sütuna uygulanır
   const [isk1, isk2] = sutunIskontolari(liste);
   const fiyatVar = (n: number | null | undefined): n is number => typeof n === "number" && n > 0;
+  // 3. fiyat sütunu (ör. Kredi Kartı 9 Taksit) 1. fiyatın hemen yanında gösterilir; iskonto yalnız "tüm fiyatlara" seçiliyse uygulanır
+  const uc = iki && Boolean(liste.fiyat3Baslik?.trim());
+  const fb3 = metin(liste.fiyat3Baslik) || "Fiyat 3";
+  const isk3 = isk1 === isk2 ? isk1 : 0;
+  const sutunlar: { ad: string; f: (k: PdfKalem) => number | null | undefined; isk: number }[] = iki
+    ? [
+        { ad: fb1, f: (k) => k.fiyat, isk: isk1 },
+        ...(uc ? [{ ad: fb3, f: (k: PdfKalem) => k.fiyat3, isk: isk3 }] : []),
+        { ad: fb2, f: (k) => k.fiyat2, isk: isk2 },
+      ]
+    : [];
 
   const yazi = (boyut: number, kalin: boolean, renk: Renk) => {
     doc.setFont(YAZI_TIPI, kalin ? "bold" : "normal");
@@ -165,13 +188,14 @@ export function fiyatListesiPdfOlustur(
     if (!liste.fiyatGoster) return 0;
     if (iki) {
       // İki fiyat alt alta: "Nakit  37.538,00 TL" / "Kart  41.990,00 TL"
-      if (!fiyatVar(k.fiyat) && !fiyatVar(k.fiyat2)) {
+      if (!sutunlar.some((s) => fiyatVar(s.f(k)))) {
         yazi(8.5, true, METIN_50);
         doc.text(FIYAT_SORUNUZ, sagX, y, { align: "right" });
         return 4;
       }
       let yy = y;
-      for (const [etiket, f, isk] of [[fb1, k.fiyat, isk1], [fb2, k.fiyat2, isk2]] as const) {
+      for (const { ad: etiket, f: al, isk } of sutunlar) {
+        const f = al(k);
         const deger = fiyatVar(f) ? `${sayi(iskontoluFiyat(f, isk))} ${sembol}` : FIYAT_SORUNUZ;
         yazi(buyuk * 0.86, true, fiyatVar(f) ? SOGUK_DIM : METIN_50);
         doc.text(deger, sagX, yy, { align: "right" });
@@ -307,7 +331,7 @@ export function fiyatListesiPdfOlustur(
     doc.rect(SOL, y, GENISLIK, 7.5, "F");
     doc.setFillColor(...SOGUK);
     doc.rect(SOL, y, 1.2, 7.5, "F");
-    doc.text(metin(ad).toLocaleUpperCase("tr-TR"), SOL + 4, y + 5.1);
+    doc.text(buyukHarf(metin(ad)), SOL + 4, y + 5.1);
     y += 11;
   };
 
@@ -318,7 +342,7 @@ export function fiyatListesiPdfOlustur(
   const KART_FOTO = fotoVar ? 40 : 0;
   const KART_Y = fotoVar ? 82 : 46;
   const KART_ACIKLAMA_SATIR = 4; // kartta açıklamanın en fazla gösterilecek satırı
-  const kartFiyatPayi = liste.fiyatGoster ? (iki ? 15 : liste.iskontoYuzde > 0 ? 14 : 11) : 3;
+  const kartFiyatPayi = liste.fiyatGoster ? (iki ? (uc ? 19 : 15) : liste.iskontoYuzde > 0 ? 14 : 11) : 3;
   // Kartın metin bölümü (ad + marka/kod + açıklama) için gereken yükseklik
   const kartMetinYuksekligi = (k: PdfKalem) => {
     yazi(8.8, true, METIN);
@@ -359,7 +383,7 @@ export function fiyatListesiPdfOlustur(
       }
     }
     if (liste.fiyatGoster) {
-      const fy = ky + KART_Y - p - (iki ? (fiyatVar(k.fiyat) || fiyatVar(k.fiyat2) ? 11.2 : 4.4) : liste.iskontoYuzde > 0 && k.fiyat > 0 ? 7.4 : 4.4);
+      const fy = ky + KART_Y - p - (iki ? (sutunlar.some((s) => fiyatVar(s.f(k))) ? (uc ? 15.4 : 11.2) : 4.4) : liste.iskontoYuzde > 0 && k.fiyat > 0 ? 7.4 : 4.4);
       fiyatYaz(k, x + KART_G - p, fy, 10.5);
     }
   };
@@ -406,7 +430,7 @@ export function fiyatListesiPdfOlustur(
   const TB_FIYAT_G = 31;
   const birimVar = kalemler.some((k) => (metin(k.birim) || "Adet") !== "Adet");
   const TB_BIRIM_G = birimVar ? 15 : 0;
-  const tbFiyatSutun = liste.fiyatGoster ? (iki ? 2 : 1) : 0;
+  const tbFiyatSutun = liste.fiyatGoster ? (iki ? sutunlar.length : 1) : 0;
   // Fotoğraflı tabloda solda "ürün görseli" sütunu: bölümün fotoğrafı, o bölümün satırları boyunca uzanır
   const TB_FOTO_G = fotoVar ? 44 : 0;
   const TB_X = SOL + TB_FOTO_G; // satır metni ve fiyat sütunları bu noktadan başlar
@@ -445,11 +469,18 @@ export function fiyatListesiPdfOlustur(
       doc.text("BİRİM", x + TB_BIRIM_G / 2, y + 4.1, { align: "center", charSpace: 0.3 });
       x += TB_BIRIM_G;
     }
-    const etiketler = tbFiyatSutun === 2 ? [fb1, fb2] : tbFiyatSutun === 1 ? ["FİYAT"] : [];
+    const etiketler = !tbFiyatSutun ? [] : iki ? sutunlar.map((s) => s.ad) : ["FİYAT"];
     for (const e of etiketler) {
       x += TB_FIYAT_G;
-      // charSpace sağa hizalamada taşma yapıyor; fiyat başlıklarında kullanılmaz
-      doc.text(metin(e).toLocaleUpperCase("tr-TR"), x - 2, y + 4.1, { align: "right" });
+      // charSpace sağa hizalamada taşma yapıyor; fiyat başlıklarında kullanılmaz.
+      // Sütuna sığmayan başlık (ör. "KREDİ KARTI 9 TAKSİT") iki satıra bölünür.
+      const b = buyukHarf(metin(e));
+      if (doc.getTextWidth(b) <= TB_FIYAT_G - 3) doc.text(b, x - 2, y + 4.1, { align: "right" });
+      else {
+        yazi(5.8, true, METIN_60);
+        doc.text(doc.splitTextToSize(b, TB_FIYAT_G - 3).slice(0, 2), x - 2, y + 2.6, { align: "right", lineHeightFactor: 1.05 });
+        yazi(7, true, METIN_60);
+      }
     }
     y += 6;
     cizgi(SOL, y, SAG, y, HAT, 0.3);
@@ -469,7 +500,7 @@ export function fiyatListesiPdfOlustur(
       yeniSayfa();
       if (bolumAd) {
         yazi(7.5, true, SOGUK_DIM);
-        doc.text(`${metin(bolumAd).toLocaleUpperCase("tr-TR")} (devam)`, SOL, y);
+        doc.text(`${buyukHarf(metin(bolumAd))} (devam)`, SOL, y);
         y += 3;
       }
       tbBaslik();
@@ -500,12 +531,12 @@ export function fiyatListesiPdfOlustur(
       doc.text(metin(k.birim) || "Adet", x + TB_BIRIM_G / 2, fy, { align: "center" });
       x += TB_BIRIM_G;
     }
-    const fiyatlar = tbFiyatSutun === 2 ? [k.fiyat, k.fiyat2] : tbFiyatSutun === 1 ? [k.fiyat] : [];
-    fiyatlar.forEach((f, i) => {
+    const fiyatlar: [number | null | undefined, number][] = !tbFiyatSutun ? [] : iki ? sutunlar.map((s) => [s.f(k), s.isk]) : [[k.fiyat, isk1]];
+    fiyatlar.forEach(([f, isk]) => {
       x += TB_FIYAT_G;
       if (fiyatVar(f)) {
         yazi(8.6, true, SOGUK_DIM);
-        doc.text(`${sayi(iskontoluFiyat(f, i === 0 ? isk1 : isk2))} ${sembol}`, x - 2, fy, { align: "right" });
+        doc.text(`${sayi(iskontoluFiyat(f, isk))} ${sembol}`, x - 2, fy, { align: "right" });
       } else {
         yazi(7.5, false, METIN_50);
         doc.text(FIYAT_SORUNUZ, x - 2, fy, { align: "right" });

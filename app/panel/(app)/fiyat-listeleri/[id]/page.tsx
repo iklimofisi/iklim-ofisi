@@ -8,6 +8,7 @@ import { kaynakDurumOku } from "@/lib/kaya-fiyat";
 import { HAZIR_LISTELER } from "@/lib/hazir-listeler";
 import { hazirListeTamamla, hazirListeFiyatGeriYukle } from "@/lib/actions";
 import OnayliGonderButonu from "@/components/OnayliGonderButonu";
+import FiyatListesiSecim from "@/components/FiyatListesiSecim";
 import KaydetButonu from "@/components/KaydetButonu";
 
 export const dynamic = "force-dynamic";
@@ -88,7 +89,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
       <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">Fiyat Listesi</p>
       <h1 className="font-display text-2xl font-semibold text-metin mb-1">{liste.baslik}</h1>
       <p className="text-xs text-metin/50 mb-6">PDF her zaman son kaydedilen hâli gösterir; değişiklik yaptıysanız önce kaydedin.</p>
-      {hazir && (
+      {hazir && hazir.bolumler.some((b) => b.kalemler.some((k) => k.genislik)) && (
         <form action={hazirListeTamamla} className="bg-soguk-light/40 border border-soguk/30 rounded-lg px-4 py-3 mb-6 flex flex-wrap items-center justify-between gap-3">
           <input type="hidden" name="kod" value={hazir.kod} />
           <p className="text-xs text-metin/70 max-w-xl">
@@ -103,7 +104,8 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
         <form action={hazirListeFiyatGeriYukle} className="border border-hat rounded-lg px-4 py-3 -mt-3 mb-6 flex flex-wrap items-center justify-between gap-3">
           <input type="hidden" name="kod" value={hazir.kod} />
           <p className="text-xs text-metin/70 max-w-xl">
-            Toplu zam / indirim yüzünden fiyatlar bozulduysa: Liste Fiyatı ve Satış Fiyatı ilk hâline döner (Satış = alış + %15). Ürün adları, açıklamalar,
+            Toplu zam / indirim yüzünden fiyatlar bozulduysa: Liste Fiyatı ve Satış Fiyatı ilk hâline döner
+            {liste.satisIskontoYuzde !== null ? " (satış fiyatı güncel satış iskontosuyla hesaplanır)" : " (Satış = alış + %15)"}. Ürün adları, açıklamalar,
             fotoğraflar ve sizin eklediğiniz başka ürünler değişmez.
           </p>
           <OnayliGonderButonu
@@ -114,6 +116,15 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
           </OnayliGonderButonu>
         </form>
       )}
+
+      <FiyatListesiSecim
+        listeId={liste.id}
+        paraBirimi={liste.paraBirimi}
+        fiyatBaslik={liste.fiyatBaslik ?? ""}
+        fiyat2Baslik={liste.fiyat2Baslik ?? ""}
+        fiyat3Baslik={liste.fiyat3Baslik ?? ""}
+        satirlar={liste.kalemler.map((k) => ({ id: k.id, bolum: k.bolum, ad: k.ad, kod: k.kod, fiyat: k.fiyat, fiyat2: k.fiyat2, fiyat3: k.fiyat3 }))}
+      />
 
       {/* key: "Eksik bilgileri tamamla" sonrası düzenleyici sunucudaki yeni bilgilerle yeniden açılır.
           Normal kaydetmede değişmez (zam sonrası "Geri al" kaybolmasın). */}
@@ -127,10 +138,13 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
           kdvDahil: liste.kdvDahil,
           iskontoYuzde: liste.iskontoYuzde,
           iskontoKapsam: liste.iskontoKapsam,
+          alisIskontoYuzde: liste.alisIskontoYuzde,
+          satisIskontoYuzde: liste.satisIskontoYuzde,
           fiyatGoster: liste.fiyatGoster,
           duzen: liste.duzen,
           fiyatBaslik: liste.fiyatBaslik ?? "",
           fiyat2Baslik: liste.fiyat2Baslik ?? "",
+          fiyat3Baslik: liste.fiyat3Baslik ?? "",
           gecerlilikTarihi: gun(liste.gecerlilikTarihi),
           notlar: liste.notlar ?? "",
         }}
@@ -144,6 +158,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
           birim: k.birim,
           fiyat: k.fiyat,
           fiyat2: k.fiyat2,
+          fiyat3: k.fiyat3,
           gorselId: k.gorselId,
           urunGorselId: k.urun?.gorselId ?? null,
         }))}

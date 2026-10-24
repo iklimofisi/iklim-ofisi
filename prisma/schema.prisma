@@ -255,10 +255,13 @@ model FiyatListesi {
   kdvDahil         Boolean             @default(false)
   iskontoYuzde     Float               @default(0)
   iskontoKapsam    String              @default("HEPSI") // İki fiyatlı listede iskontonun uygulandığı sütun: HEPSI | FIYAT1 | FIYAT2
+  alisIskontoYuzde  Float?             // Liste fiyatından alış iskontosu (alış fiyatı yalnız panelde görünür; boş = kullanılmıyor)
+  satisIskontoYuzde Float?             // Doluysa 2. fiyat (satış) = 1. fiyat (liste) − bu iskonto, otomatik hesaplanır
   fiyatGoster      Boolean             @default(true)
   duzen            String              @default("KART") // KART (3 sütun) | LISTE (satır satır) | TABLO (kompakt tablo)
   fiyatBaslik      String?             // İki fiyatlı listede birinci fiyat sütununun adı (ör. "Nakit")
   fiyat2Baslik     String?             // Doluysa liste iki fiyatlıdır; ikinci sütunun adı (ör. "Kart")
+  fiyat3Baslik     String?             // Doluysa (iki fiyatlı listede) 3. fiyat sütunu; PDF'te 1. fiyatın yanında çıkar (ör. "Kredi Kartı 9 Taksit")
   kaynak           String?             // Otomatik güncellenen liste: "KAYA" (Kaya İklimlendirme). Boş = elle hazırlanan liste
   kaynakDurum      String?             // Otomatik güncelleme bilgisi (JSON: kaynak PDF, liste tarihi, son kontrol, değişiklik özeti, hata)
   gecerlilikTarihi DateTime?
@@ -284,6 +287,7 @@ model FiyatListesiKalem {
   birim    String       @default("Adet")
   fiyat    Float        @default(0)
   fiyat2   Float?       // İki fiyatlı listede ikinci fiyat (ör. kart fiyatı); 0 / boş = fiyat sorunuz
+  fiyat3   Float?       // 3. fiyat sütunu (ör. kredi kartı 9 taksit liste fiyatı); 0 / boş = fiyat sorunuz
   gorselId String?      // Bu satıra özel fotoğraf
 
   @@index([listeId])

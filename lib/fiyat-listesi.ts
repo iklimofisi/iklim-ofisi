@@ -12,6 +12,7 @@ export type FLKalem = {
   birim: string;
   fiyat: number; // liste para biriminde, iskontosuz (0 = fiyat sorunuz)
   fiyat2: number | null; // iki fiyatlı listede ikinci fiyat (ör. kart); 0 / boş = fiyat sorunuz
+  fiyat3?: number | null; // 3. fiyat sütunu (ör. kredi kartı 9 taksit); 0 / boş = fiyat sorunuz
   gorselId: string | null;
 };
 
@@ -29,6 +30,20 @@ export const FIYAT_SUTUN_KALIPLARI = [
   { kod: "LISTE_SATIS", ad: "Liste Fiyatı + Satış Fiyatı", b1: "Liste Fiyatı", b2: "Satış Fiyatı" },
   { kod: "NAKIT_KART", ad: "Nakit + Kart", b1: "Nakit", b2: "Kart" },
 ] as const;
+
+// Satış fiyatı = liste fiyatı − iskonto. TL'de tam sayıya, döviz listelerinde kuruşa yuvarlanır.
+export function iskontoUygula(fiyat: number, yuzde: number, paraBirimi: string) {
+  const i = Math.min(100, Math.max(0, yuzde || 0));
+  const n = fiyat * (1 - i / 100);
+  return paraBirimi === "TRY" ? Math.round(n) : Math.round(n * 100) / 100;
+}
+// "25", "%25", "12,5" → 0–100 arası sayı; boş ya da geçersizse null
+export function yuzdeOku(v: unknown): number | null {
+  const t = String(v ?? "").trim().replace("%", "").replace(",", ".");
+  if (!t) return null;
+  const n = Number(t);
+  return Number.isFinite(n) && n >= 0 && n <= 100 ? n : null;
+}
 
 // İskonto hangi fiyata uygulanır (yalnız iki fiyatlı listede anlamlı; tek fiyatlı listede hep fiyata uygulanır)
 export type IskontoKapsam = "HEPSI" | "FIYAT1" | "FIYAT2";
@@ -62,6 +77,7 @@ export function flKalemleriOku(json: string | null | undefined): FLKalem[] {
     .map((k: Record<string, unknown>) => {
       const fiyat = Number(k?.fiyat);
       const fiyat2 = k?.fiyat2 === null || k?.fiyat2 === undefined || k?.fiyat2 === "" ? NaN : Number(k?.fiyat2);
+      const fiyat3 = k?.fiyat3 === null || k?.fiyat3 === undefined || k?.fiyat3 === "" ? NaN : Number(k?.fiyat3);
       return {
         bolum: metinAl(k?.bolum, 120),
         urunId: metinAl(k?.urunId, 40) || null,
@@ -72,6 +88,7 @@ export function flKalemleriOku(json: string | null | undefined): FLKalem[] {
         birim: metinAl(k?.birim, 30) || "Adet",
         fiyat: Number.isFinite(fiyat) && fiyat >= 0 ? Math.round(fiyat * 100) / 100 : 0,
         fiyat2: Number.isFinite(fiyat2) && fiyat2 >= 0 ? Math.round(fiyat2 * 100) / 100 : null,
+        fiyat3: Number.isFinite(fiyat3) && fiyat3 > 0 ? Math.round(fiyat3 * 100) / 100 : null,
         gorselId: metinAl(k?.gorselId, 40) || null,
       };
     })

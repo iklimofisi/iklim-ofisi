@@ -2,13 +2,27 @@
 // HAZIR FİYAT LİSTELERİ
 // Tedarikçi listelerinden hazırlanmış listeler. Fiyat Listeleri sayfasındaki
 // "Hazır listeler" kutusundan tek tıkla panele eklenir (fotoğraflarıyla birlikte).
-// Satış fiyatları alış fiyatına kâr eklenerek hesaplanmıştır; alış fiyatları
-// burada TUTULMAZ (müşteriye giden belgeye karışmasın diye).
+// Alış fiyatları burada TUTULMAZ (müşteriye giden belgeye karışmasın diye);
+// alış iskontosu tanımlıysa alış fiyatı yalnız panelde hesaplanıp gösterilir.
 // -----------------------------------------------------------------------------
 
-// genislik / yukseklik: tedarikçi listesindeki "Takılabilir Genişlik / Yükseklik" sütunları
-export type HazirKalem = { kod: string; ad: string; olcu: string; genislik: string; yukseklik: string; liste: number; satis: number };
-export type HazirBolum = { ad: string; bilgi: string; gorsel: string; kalemler: HazirKalem[] };
+import { OLEFINI } from "@/lib/hazir-olefini";
+
+// genislik / yukseklik: tedarikçi listesindeki "Takılabilir Genişlik / Yükseklik" sütunları (Niva)
+// aciklama / marka: doğrudan yazılan açıklama ve marka (Olefini vb.)
+export type HazirKalem = {
+  kod: string;
+  ad: string;
+  olcu?: string;
+  genislik?: string;
+  yukseklik?: string;
+  aciklama?: string;
+  marka?: string;
+  liste: number;
+  satis: number;
+  kart?: number; // 3. fiyat (ör. kredi kartı 9 taksit liste fiyatı)
+};
+export type HazirBolum = { ad: string; bilgi?: string; gorsel?: string; kalemler: HazirKalem[] };
 export type HazirListe = {
   kod: string;
   marka: string;
@@ -20,6 +34,9 @@ export type HazirListe = {
   kdvDahil: boolean;
   fiyatBaslik: string;
   fiyat2Baslik: string;
+  fiyat3Baslik?: string; // doluysa 3. fiyat sütunu (kalemlerde "kart")
+  alisIskontoYuzde?: number; // liste fiyatından alış iskontosu (yalnız panelde)
+  satisIskontoYuzde?: number; // satış fiyatı = liste fiyatı − bu iskonto (otomatik hesap)
   bolumler: HazirBolum[];
   gorseller: Record<string, { b64: string; genislik: number; yukseklik: number }>;
 };
@@ -175,5 +192,5 @@ const NIVA: HazirListe = {
   },
 };
 
-export const HAZIR_LISTELER: HazirListe[] = [NIVA];
+export const HAZIR_LISTELER: HazirListe[] = [NIVA, OLEFINI];
 export const hazirListeBul = (kod: string) => HAZIR_LISTELER.find((l) => l.kod === kod) ?? null;

@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { fiyatListesiKaydet } from "@/lib/actions";
 import KaydetButonu from "@/components/KaydetButonu";
 import { fotografYukle } from "@/lib/gorsel-yukle";
-import { DUZENLER, FIYAT_SUTUN_KALIPLARI, iskontoluFiyat, flParaYaz, sutunIskontolari, iskontoKapsamGecerli } from "@/lib/fiyat-listesi";
+import { DUZENLER, FIYAT_SUTUN_KALIPLARI, iskontoluFiyat, flParaYaz, sutunIskontolari, iskontoKapsamGecerli, iskontoUygula, yuzdeOku } from "@/lib/fiyat-listesi";
 import { tutarOku } from "@/lib/toplam-dagit";
 
 // -----------------------------------------------------------------------------
@@ -37,17 +37,19 @@ export type DuzenlenenKalem = {
   birim: string;
   fiyat: number;
   fiyat2: number | null; // iki fiyatlı listede ikinci fiyat
+  fiyat3: number | null; // 3. fiyat sütunu (ör. kredi kartı 9 taksit)
   gorselId: string | null;
   urunGorselId: string | null; // katalogdaki ürünün fotoğrafı (satıra özel fotoğraf yoksa bu görünür)
 };
 
-type Satir = Omit<DuzenlenenKalem, "fiyat" | "fiyat2" | "kod" | "marka" | "aciklama"> & {
+type Satir = Omit<DuzenlenenKalem, "fiyat" | "fiyat2" | "fiyat3" | "kod" | "marka" | "aciklama"> & {
   key: number;
   kod: string;
   marka: string;
   aciklama: string;
   fiyat: string;
   fiyat2: string;
+  fiyat3: string;
   uyari?: string;
   yukleniyor?: boolean;
 };
@@ -60,10 +62,13 @@ type Ayarlar = {
   kdvDahil: boolean;
   iskontoYuzde: number;
   iskontoKapsam: string; // HEPSI | FIYAT1 | FIYAT2 (iki fiyatlı listede iskontonun uygulandığı sütun)
+  alisIskontoYuzde: number | null; // liste fiyatından alış iskontosu (yalnız panelde)
+  satisIskontoYuzde: number | null; // doluysa 2. fiyat = 1. fiyat − bu iskonto (otomatik)
   fiyatGoster: boolean;
   duzen: string;
   fiyatBaslik: string;
   fiyat2Baslik: string; // doluysa liste iki fiyatlı (ör. Nakit / Kart)
+  fiyat3Baslik: string; // doluysa (iki fiyatlı listede) 3. fiyat sütunu
   gecerlilikTarihi: string; // YYYY-MM-DD veya ""
   notlar: string;
 };
@@ -108,6 +113,7 @@ export default function FiyatListesiDuzenleyici({
       aciklama: k.aciklama ?? "",
       fiyat: k.fiyat ? String(k.fiyat).replace(".", ",") : "",
       fiyat2: k.fiyat2 ? String(k.fiyat2).replace(".", ",") : "",
+      fiyat3: k.fiyat3 ? String(k.fiyat3).replace(".", ",") : "",
     }))
   );
   const [fiyat2Baslik, setFiyat2Baslik] = useState(ayarlar.fiyat2Baslik);
@@ -115,7 +121,26 @@ export default function FiyatListesiDuzenleyici({
   const ikiFiyat = fiyat2Baslik.trim().length > 0;
   const fb1 = fiyatBaslik.trim() || "1. fiyat";
   const fb2 = fiyat2Baslik.trim() || "2. fiyat";
+  // 3. fiyat sütunu (ör. "Kredi Kartı 9 Taksit"): yalnız iki fiyatlı listede; PDF'te 1. fiyatın yanında çıkar
+  const [fiyat3Baslik, setFiyat3Baslik] = useState(ayarlar.fiyat3Baslik ?? "");
+  const ucFiyat = ikiFiyat && fiyat3Baslik.trim().length > 0;
+  const fb3 = fiyat3Baslik.trim() || "3. fiyat";
   const [iskontoKapsam, setIskontoKapsam] = useState(iskontoKapsamGecerli(ayarlar.iskontoKapsam));
+  // Alış / satış iskontosu: alış fiyatı yalnız burada görünür; satış iskontosu doluysa 2. fiyat otomatik hesaplanır
+  const yuzdeMetni = (n: number | null) => (n === null || n === undefined ? "" : String(n).replace(".", ","));
+  const [alisIsk, setAlisIsk] = useState(yuzdeMetni(ayarlar.alisIskontoYuzde));
+  const [satisIsk, setSatisIsk] = useState(yuzdeMetni(ayarlar.satisIskontoYuzde));
+  const alisY = yuzdeOku(alisIsk);
+  const satisY = ikiFiyat ? yuzdeOku(satisIsk) : null;
+  const satisOto = satisY !== null;
+  const alisHatali = alisIsk.trim() !== "" && alisY === null;
+  const satisHatali = ikiFiyat && satisIsk.trim() !== "" && satisY === null;
+  // 2. fiyatın değeri (satış iskontosu doluysa liste fiyatından hesaplanır)
+  const ikinciFiyat = (r: { fiyat: string; fiyat2: string }) => {
+    if (!satisOto) return sayiOku(r.fiyat2);
+    const f = sayiOku(r.fiyat);
+    return f > 0 ? iskontoUygula(f, satisY as number, paraBirimi) : 0;
+  };
   // Fiyat sütunu kalıbı: adlar bir kalıba uyuyorsa o, değilse "özel"
   const kalip = !ikiFiyat
     ? "TEK"
@@ -144,7 +169,7 @@ export default function FiyatListesiDuzenleyici({
       return;
     }
     setDegisti(true);
-  }, [satirlar, paraBirimi, iskonto, fiyat2Baslik, fiyatBaslik, iskontoKapsam]);
+  }, [satirlar, paraBirimi, iskonto, fiyat2Baslik, fiyatBaslik, fiyat3Baslik, iskontoKapsam, alisIsk, satisIsk]);
 
   // Kaydedilmemiş değişiklik varken sayfadan çıkmadan önce uyar
   useEffect(() => {
@@ -191,8 +216,9 @@ export default function FiyatListesiDuzenleyici({
   const [zamKapsam, setZamKapsam] = useState("__hepsi");
   // İki fiyatlı listede zam/indirimin uygulanacağı fiyat
   const [zamHedef, setZamHedef] = useState<"HEPSI" | "FIYAT1" | "FIYAT2">("HEPSI");
-  const zam1 = !ikiFiyat || zamHedef !== "FIYAT2";
-  const zam2 = ikiFiyat && zamHedef !== "FIYAT1";
+  const zam1 = !ikiFiyat || satisOto || zamHedef !== "FIYAT2";
+  // Satış iskontosu tanımlıysa satış fiyatı liste fiyatından hesaplanır; zam yalnız liste fiyatına yapılır
+  const zam2 = ikiFiyat && !satisOto && zamHedef !== "FIYAT1";
   const [yuvarla, setYuvarla] = useState("0");
   const [yedek, setYedek] = useState<{ satirlar: Satir[]; aciklama: string } | null>(null);
   const bolumler = Array.from(new Set(satirlar.map((r) => r.bolum.trim()).filter(Boolean)));
@@ -221,9 +247,12 @@ export default function FiyatListesiDuzenleyici({
         if (!kapsamda(r)) return r;
         const f = sayiOku(r.fiyat);
         const f2 = sayiOku(r.fiyat2);
+        const f3 = sayiOku(r.fiyat3);
         return {
           ...r,
           fiyat: zam1 && f > 0 ? fiyatMetni(yuvarlaFiyat(f * (1 + zamOrani / 100))) : r.fiyat,
+          // 3. fiyat (ör. kredi kartı) liste fiyatıyla birlikte güncellenir
+          fiyat3: ucFiyat && zam1 && f3 > 0 ? fiyatMetni(yuvarlaFiyat(f3 * (1 + zamOrani / 100))) : r.fiyat3,
           fiyat2: zam2 && f2 > 0 ? fiyatMetni(yuvarlaFiyat(f2 * (1 + zamOrani / 100))) : r.fiyat2,
           uyari: undefined,
         };
@@ -260,6 +289,7 @@ export default function FiyatListesiDuzenleyici({
         birim: u.birim || "Adet",
         fiyat: fiyat ? String(fiyat).replace(".", ",") : "",
         fiyat2: "",
+        fiyat3: "",
         gorselId: null,
         urunGorselId: u.gorselId,
         uyari,
@@ -270,7 +300,7 @@ export default function FiyatListesiDuzenleyici({
   const elleEkle = () =>
     setSatirlar((s) => [
       ...s,
-      { key: sayac++, bolum: yeniBolum.trim(), urunId: null, ad: "", kod: "", marka: "", aciklama: "", birim: "Adet", fiyat: "", fiyat2: "", gorselId: null, urunGorselId: null },
+      { key: sayac++, bolum: yeniBolum.trim(), urunId: null, ad: "", kod: "", marka: "", aciklama: "", birim: "Adet", fiyat: "", fiyat2: "", fiyat3: "", gorselId: null, urunGorselId: null },
     ]);
 
   const tasi = (i: number, yon: -1 | 1) =>
@@ -306,7 +336,8 @@ export default function FiyatListesiDuzenleyici({
       aciklama: r.aciklama,
       birim: r.birim,
       fiyat: sayiOku(r.fiyat),
-      fiyat2: ikiFiyat && sayiOku(r.fiyat2) > 0 ? sayiOku(r.fiyat2) : null,
+      fiyat2: ikiFiyat && ikinciFiyat(r) > 0 ? ikinciFiyat(r) : null,
+      fiyat3: ucFiyat && sayiOku(r.fiyat3) > 0 ? sayiOku(r.fiyat3) : null,
       gorselId: r.gorselId,
     }))
   );
@@ -389,6 +420,7 @@ export default function FiyatListesiDuzenleyici({
         </div>
         <input type="hidden" name="fiyatBaslik" value={ikiFiyat ? fiyatBaslik : ""} />
         <input type="hidden" name="fiyat2Baslik" value={fiyat2Baslik} />
+        <input type="hidden" name="fiyat3Baslik" value={ikiFiyat ? fiyat3Baslik : ""} />
         {ikiFiyat && (
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
             <div>
@@ -405,6 +437,16 @@ export default function FiyatListesiDuzenleyici({
                 className={`${kutu} ${fiyat2Baslik.trim() ? "" : "border-sicak"}`}
               />
             </div>
+            <div className="lg:col-span-2">
+              <label className={etiket}>3. fiyat sütunu (opsiyonel; PDF&apos;te 1. fiyatın yanında)</label>
+              <input
+                value={fiyat3Baslik}
+                maxLength={40}
+                onChange={(e) => setFiyat3Baslik(e.target.value)}
+                placeholder="örn. Kredi Kartı 9 Taksit — boş bırakılırsa yok"
+                className={kutu}
+              />
+            </div>
           </div>
         )}
         {!ikiFiyat && ikinciFiyatVar && (
@@ -413,6 +455,48 @@ export default function FiyatListesiDuzenleyici({
             seçeneği geri seçin.
           </p>
         )}
+
+        {/* ALIŞ / SATIŞ İSKONTOSU: alış fiyatı yalnız panelde görünür, PDF'e girmez */}
+        <div className="border border-soguk/30 rounded-md p-3 space-y-2 bg-soguk-light/30">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="w-52">
+              <label className={etiket}>Alış iskontom % (listeden)</label>
+              <input
+                name="alisIskontoYuzde"
+                inputMode="decimal"
+                value={alisIsk}
+                onChange={(e) => setAlisIsk(e.target.value)}
+                placeholder="örn. 25"
+                className={`${kutu} ${alisHatali ? "border-sicak" : ""}`}
+              />
+            </div>
+            {ikiFiyat ? (
+              <div className="w-52">
+                <label className={etiket}>Satış iskontosu % (listeden)</label>
+                <input
+                  name="satisIskontoYuzde"
+                  inputMode="decimal"
+                  value={satisIsk}
+                  onChange={(e) => setSatisIsk(e.target.value)}
+                  placeholder="boş: elle girilir"
+                  className={`${kutu} ${satisHatali ? "border-sicak" : ""}`}
+                />
+              </div>
+            ) : (
+              <input type="hidden" name="satisIskontoYuzde" value="" />
+            )}
+          </div>
+          <p className="text-[11px] text-metin/60">
+            {alisY !== null
+              ? `Alış fiyatı = ${fb1} − %${alisY.toLocaleString("tr-TR")}; her ürünün altında alış fiyatı ve kârı görünür. Alış fiyatı PDF'e ve müşteriye gitmez. `
+              : "Alış iskontosu girerseniz her ürünün altında alış fiyatı ve kârınız görünür (yalnız panelde). "}
+            {ikiFiyat &&
+              (satisOto
+                ? `${fb2} sütunu ${fb1} üzerinden %${(satisY as number).toLocaleString("tr-TR")} iskontoyla otomatik hesaplanır; iskontoyu değiştirip kaydedince tüm satış fiyatları güncellenir.`
+                : `${fb2} fiyatları elle girilir. Satış iskontosu yazarsanız hepsi ${fb1} üzerinden otomatik hesaplanır.`)}
+            {(alisHatali || satisHatali) && <span className="text-sicak-dim font-medium"> İskonto 0 ile 100 arasında bir sayı olmalı.</span>}
+          </p>
+        </div>
 
         {/* İSKONTO: PDF'te uygulanır; ürünlerdeki fiyatlar değişmez */}
         <div className="border border-hat rounded-md p-3 space-y-2 bg-zemin/40">
@@ -536,7 +620,7 @@ export default function FiyatListesiDuzenleyici({
                 ))}
               </select>
             </div>
-            {ikiFiyat && (
+            {ikiFiyat && !satisOto && (
               <div>
                 <label className={etiket}>Hangi fiyata</label>
                 <select value={zamHedef} onChange={(e) => setZamHedef(e.target.value as "HEPSI" | "FIYAT1" | "FIYAT2")} className={kutu}>
@@ -672,15 +756,29 @@ export default function FiyatListesiDuzenleyici({
                       className={`${kutu} text-right font-mono`}
                     />
                   </div>
+                  {ucFiyat && (
+                    <div className="relative sm:col-start-4">
+                      <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-metin/45 max-w-[45%] truncate">{fb3}</span>
+                      <input
+                        value={r.fiyat3}
+                        onChange={(e) => guncelle(r.key, { fiyat3: e.target.value })}
+                        inputMode="decimal"
+                        aria-label={fb3}
+                        className={`${kutu} text-right font-mono`}
+                      />
+                    </div>
+                  )}
                   {ikiFiyat && (
                     <div className="relative sm:col-start-4">
                       <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-metin/45 max-w-[45%] truncate">{fb2}</span>
                       <input
-                        value={r.fiyat2}
+                        value={satisOto ? (ikinciFiyat(r) > 0 ? fiyatMetni(ikinciFiyat(r)) : "") : r.fiyat2}
                         onChange={(e) => guncelle(r.key, { fiyat2: e.target.value })}
+                        readOnly={satisOto}
+                        title={satisOto ? `${fb1} − %${(satisY as number).toLocaleString("tr-TR")} (otomatik)` : undefined}
                         inputMode="decimal"
                         aria-label={fb2}
-                        className={`${kutu} text-right font-mono`}
+                        className={`${kutu} text-right font-mono ${satisOto ? "bg-zemin text-metin/70" : ""}`}
                       />
                     </div>
                   )}
@@ -697,7 +795,18 @@ export default function FiyatListesiDuzenleyici({
                   <span className="text-metin/50">
                     {r.urunId ? "Katalogdan" : "Elle eklendi"}
                     {fiyat > 0 && isk1 > 0 && ` · ${ikiFiyat ? `${fb1} ` : ""}iskontolu: ${flParaYaz(iskontoluFiyat(fiyat, isk1), paraBirimi)}`}
-                    {ikiFiyat && sayiOku(r.fiyat2) > 0 && isk2 > 0 && ` · ${fb2} iskontolu: ${flParaYaz(iskontoluFiyat(sayiOku(r.fiyat2), isk2), paraBirimi)}`}
+                    {ikiFiyat && ikinciFiyat(r) > 0 && isk2 > 0 && ` · ${fb2} iskontolu: ${flParaYaz(iskontoluFiyat(ikinciFiyat(r), isk2), paraBirimi)}`}
+                    {alisY !== null && fiyat > 0 && (() => {
+                      const alis = fiyat * (1 - alisY / 100);
+                      const satis = ikiFiyat ? ikinciFiyat(r) : fiyat;
+                      const kar = satis - alis;
+                      return (
+                        <span className={kar >= 0 ? "text-emerald-700" : "text-sicak-dim font-medium"}>
+                          {` · Alış: ${flParaYaz(alis, paraBirimi)}`}
+                          {satis > 0 && ` · Kâr: ${flParaYaz(kar, paraBirimi)} (%${((kar / alis) * 100).toLocaleString("tr-TR", { maximumFractionDigits: 1 })})`}
+                        </span>
+                      );
+                    })()}
                     {r.uyari && <span className="text-sicak-dim font-medium"> · {r.uyari}</span>}
                   </span>
                   <span className="flex items-center gap-1">

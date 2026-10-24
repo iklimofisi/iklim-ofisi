@@ -23,7 +23,7 @@ import { donusumKalemleri } from "@/lib/satinalma-hesap";
 import { randomUUID, randomBytes } from "crypto";
 import { gecerliTur } from "@/lib/gorusme";
 import { gecerliRedNedeni } from "@/lib/teklif-durum";
-import { flKalemleriOku, metinAl, duzenGecerli, iskontoKapsamGecerli, FIYAT_SUTUN_KALIPLARI } from "@/lib/fiyat-listesi";
+import { flKalemleriOku, metinAl, duzenGecerli, iskontoKapsamGecerli, FIYAT_SUTUN_KALIPLARI, iskontoUygula, yuzdeOku } from "@/lib/fiyat-listesi";
 import { birimNormal } from "@/lib/birimler";
 import { MUSTERISIZ_ID, musterisizMi, musterisizGoster } from "@/lib/musterisiz";
 import { musterisizKaydiHazirla } from "@/lib/musterisiz-sunucu";
@@ -1601,8 +1601,9 @@ export async function fiyatListesiOlustur(formData: FormData) {
   redirect(`/panel/fiyat-listeleri/${liste.id}`);
 }
 
-// Hazır listedeki ürünün açıklaması: tedarikçi listesindeki takılabilir genişlik / yükseklik
-function hazirAciklama(k: { genislik: string; yukseklik: string }) {
+// Hazır listedeki ürünün açıklaması: hazır metin (Olefini) ya da takılabilir genişlik / yükseklik (Niva)
+function hazirAciklama(k: { aciklama?: string; genislik?: string; yukseklik?: string }) {
+  if (k.aciklama !== undefined) return k.aciklama;
   return [k.genislik && `Takılabilir Genişlik ${k.genislik}`, k.yukseklik && `Takılabilir Yükseklik ${k.yukseklik}`].filter(Boolean).join("\n");
 }
 
@@ -1633,7 +1634,7 @@ export async function hazirListeTamamla(formData: FormData) {
     if (!bolum || bolum === `${b.ad} · ${b.bilgi}`.slice(0, 120)) veri.bolum = b.ad.slice(0, 120);
     const ad = s.ad.trim();
     if (!ad || ad === `${k.kod} · ${k.olcu}`) veri.ad = k.ad;
-    if (!(s.marka ?? "").trim()) veri.marka = h.marka;
+    if (!(s.marka ?? "").trim()) veri.marka = k.marka ?? h.marka;
     if (!(s.kod ?? "").trim()) veri.kod = k.kod;
     if (!(s.aciklama ?? "").trim()) veri.aciklama = hazirAciklama(k);
     if (Object.keys(veri).length) islemler.push(prisma.fiyatListesiKalem.update({ where: { id: s.id }, data: veri }));
@@ -1656,16 +1657,26 @@ export async function hazirListeFiyatGeriYukle(formData: FormData) {
   if (!h) return;
   const liste = await prisma.fiyatListesi.findFirst({
     where: { baslik: h.baslik },
-    select: { id: true, kalemler: { select: { id: true, ad: true, kod: true, fiyat: true, fiyat2: true } } },
+    select: { id: true, paraBirimi: true, satisIskontoYuzde: true, kalemler: { select: { id: true, ad: true, kod: true, fiyat: true, fiyat2: true, fiyat3: true } } },
   });
   if (!liste) redirect("/panel/fiyat-listeleri");
-  const fiyatlar = new Map<string, { liste: number; satis: number }>();
-  for (const b of h.bolumler) for (const k of b.kalemler) fiyatlar.set(k.kod.toUpperCase(), { liste: k.liste, satis: k.satis });
+  // Satış iskontosu tanımlı listede satış fiyatı güncel iskontoyla yeniden hesaplanır
+  const satisYuzde = liste.satisIskontoYuzde;
+  const fiyatlar = new Map<string, { liste: number; satis: number; kart: number | null }>();
+  for (const b of h.bolumler)
+    for (const k of b.kalemler)
+      fiyatlar.set(k.kod.toUpperCase(), {
+        liste: k.liste,
+        satis: satisYuzde !== null ? iskontoUygula(k.liste, satisYuzde, liste.paraBirimi) : k.satis,
+        kart: k.kart ?? null,
+      });
   const islemler: ReturnType<typeof prisma.fiyatListesiKalem.update>[] = [];
   for (const s of liste.kalemler) {
     const f = fiyatlar.get(((s.kod ?? "").trim() || s.ad.split("·")[0].trim()).toUpperCase());
-    if (!f || (s.fiyat === f.liste && s.fiyat2 === f.satis)) continue;
-    islemler.push(prisma.fiyatListesiKalem.update({ where: { id: s.id }, data: { fiyat: f.liste, fiyat2: f.satis } }));
+    if (!f || (s.fiyat === f.liste && s.fiyat2 === f.satis && (f.kart === null || s.fiyat3 === f.kart))) continue;
+    islemler.push(
+      prisma.fiyatListesiKalem.update({ where: { id: s.id }, data: { fiyat: f.liste, fiyat2: f.satis, ...(f.kart !== null ? { fiyat3: f.kart } : {}) } })
+    );
   }
   if (islemler.length) await prisma.$transaction([...islemler, prisma.fiyatListesi.update({ where: { id: liste.id }, data: { updatedAt: new Date() } })]);
   revalidatePath("/panel/fiyat-listeleri");
@@ -1700,13 +1711,14 @@ export async function hazirListeEkle(formData: FormData) {
       sira: sira++,
       bolum: b.ad.slice(0, 120),
       ad: k.ad,
-      marka: h.marka,
+      marka: k.marka ?? h.marka,
       kod: k.kod,
-      aciklama: hazirAciklama(k),
+      aciklama: hazirAciklama(k) || null,
       birim: "Adet",
       fiyat: k.liste,
       fiyat2: k.satis,
-      gorselId: gorselIdleri[b.gorsel] ?? null,
+      fiyat3: k.kart ?? null,
+      gorselId: (b.gorsel && gorselIdleri[b.gorsel]) || null,
     }))
   );
   const liste = await prisma.fiyatListesi.create({
@@ -1720,6 +1732,9 @@ export async function hazirListeEkle(formData: FormData) {
       duzen: "TABLO",
       fiyatBaslik: h.fiyatBaslik,
       fiyat2Baslik: h.fiyat2Baslik,
+      fiyat3Baslik: h.fiyat3Baslik ?? null,
+      alisIskontoYuzde: h.alisIskontoYuzde ?? null,
+      satisIskontoYuzde: h.satisIskontoYuzde ?? null,
       olusturanAdi: giren?.ad ?? "",
       kalemler: { create: kalemler },
     },
@@ -1751,6 +1766,12 @@ export async function fiyatListesiKaydet(formData: FormData) {
   const gecerlilik = String(formData.get("gecerlilikTarihi") ?? "");
   const duzen = duzenGecerli(String(formData.get("duzen") ?? ""));
   const fiyat2Baslik = metinAl(formData.get("fiyat2Baslik"), 40) || null;
+  // 3. fiyat sütunu yalnız iki fiyatlı listede olur
+  const fiyat3Baslik = fiyat2Baslik ? metinAl(formData.get("fiyat3Baslik"), 40) || null : null;
+  // Alış iskontosu yalnız panelde kullanılır; satış iskontosu doluysa 2. fiyat liste fiyatından hesaplanır
+  const alisIskontoYuzde = yuzdeOku(formData.get("alisIskontoYuzde"));
+  const satisIskontoYuzde = fiyat2Baslik ? yuzdeOku(formData.get("satisIskontoYuzde")) : null;
+  const paraBirimi = paraBirimiDogrula(formData.get("paraBirimi"));
 
   await prisma.$transaction([
     prisma.fiyatListesi.update({
@@ -1758,14 +1779,17 @@ export async function fiyatListesiKaydet(formData: FormData) {
       data: {
         baslik,
         aciklama: metinAl(formData.get("aciklama"), 3000) || null,
-        paraBirimi: paraBirimiDogrula(formData.get("paraBirimi")),
+        paraBirimi,
         kdvDahil: formData.get("kdvDahil") === "evet",
+        alisIskontoYuzde,
+        satisIskontoYuzde,
         iskontoYuzde: Math.min(100, Math.max(0, iskonto)),
         iskontoKapsam: iskontoKapsamGecerli(formData.get("iskontoKapsam")),
         fiyatGoster: formData.get("fiyatGoster") === "evet",
         duzen,
         fiyatBaslik: fiyat2Baslik ? metinAl(formData.get("fiyatBaslik"), 40) || "Fiyat" : null,
         fiyat2Baslik,
+        fiyat3Baslik,
         gecerlilikTarihi: /^\d{4}-\d{2}-\d{2}$/.test(gecerlilik) ? new Date(`${gecerlilik}T12:00:00Z`) : null,
         notlar: metinAl(formData.get("notlar"), 5000) || null,
       },
@@ -1783,7 +1807,8 @@ export async function fiyatListesiKaydet(formData: FormData) {
         aciklama: k.aciklama,
         birim: k.birim,
         fiyat: k.fiyat,
-        fiyat2: fiyat2Baslik ? k.fiyat2 : null,
+        fiyat2: !fiyat2Baslik ? null : satisIskontoYuzde !== null ? (k.fiyat > 0 ? iskontoUygula(k.fiyat, satisIskontoYuzde, paraBirimi) : null) : k.fiyat2,
+        fiyat3: fiyat3Baslik ? k.fiyat3 ?? null : null,
         gorselId: k.gorselId,
       })),
     }),
@@ -1806,10 +1831,13 @@ export async function fiyatListesiKopyala(id: string) {
       kdvDahil: kaynak.kdvDahil,
       iskontoYuzde: kaynak.iskontoYuzde,
       iskontoKapsam: kaynak.iskontoKapsam,
+      alisIskontoYuzde: kaynak.alisIskontoYuzde,
+      satisIskontoYuzde: kaynak.satisIskontoYuzde,
       fiyatGoster: kaynak.fiyatGoster,
       duzen: kaynak.duzen,
       fiyatBaslik: kaynak.fiyatBaslik,
       fiyat2Baslik: kaynak.fiyat2Baslik,
+      fiyat3Baslik: kaynak.fiyat3Baslik,
       gecerlilikTarihi: kaynak.gecerlilikTarihi,
       notlar: kaynak.notlar,
       olusturanAdi: giren?.ad ?? "",
@@ -1826,6 +1854,7 @@ export async function fiyatListesiKopyala(id: string) {
           birim: k.birim,
           fiyat: k.fiyat,
           fiyat2: k.fiyat2,
+          fiyat3: k.fiyat3,
           gorselId: k.gorselId,
         })),
       },
@@ -1891,10 +1920,13 @@ export async function fiyatListesiSecimdenKopyala(formData: FormData) {
       kdvDahil: kaynak.kdvDahil,
       iskontoYuzde: kaynak.iskontoYuzde,
       iskontoKapsam: kaynak.iskontoKapsam,
+      alisIskontoYuzde: kaynak.alisIskontoYuzde,
+      satisIskontoYuzde: kaynak.satisIskontoYuzde,
       fiyatGoster: kaynak.fiyatGoster,
       duzen: kaynak.duzen,
       fiyatBaslik: kaynak.fiyatBaslik,
       fiyat2Baslik: kaynak.fiyat2Baslik,
+      fiyat3Baslik: kaynak.fiyat3Baslik,
       gecerlilikTarihi: kaynak.gecerlilikTarihi,
       notlar: kaynak.notlar,
       olusturanAdi: giren?.ad ?? "",
@@ -1910,6 +1942,7 @@ export async function fiyatListesiSecimdenKopyala(formData: FormData) {
           birim: k.birim,
           fiyat: k.fiyat,
           fiyat2: k.fiyat2,
+          fiyat3: k.fiyat3,
           gorselId: k.gorselId,
         })),
       },

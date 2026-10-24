@@ -91,7 +91,7 @@ export default async function FiyatListeleriSayfasi() {
       {/* HAZIR LİSTELER: tedarikçi listelerinden hazırlanmış, fotoğraflı listeler (tek tıkla eklenir) */}
       <div className="bg-yuzey border border-hat rounded-lg p-5 mb-8">
         <p className="font-display font-medium text-metin mb-1">Hazır listeler</p>
-        <p className="text-xs text-metin/55 mb-3">Tedarikçi listelerinden fotoğraflarıyla hazırlandı. Eklenince normal liste gibi düzenlenir ve PDF alınır.</p>
+        <p className="text-xs text-metin/55 mb-3">Tedarikçi listelerinden hazırlandı. Eklenince normal liste gibi düzenlenir; ürün seçerek PDF alınabilir.</p>
         <div className="flex flex-col gap-2">
           {HAZIR_LISTELER.map((h) => {
             const ekli = listeler.find((l) => l.baslik === h.baslik);
