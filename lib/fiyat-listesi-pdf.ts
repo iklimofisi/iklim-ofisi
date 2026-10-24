@@ -2,7 +2,7 @@ import { jsPDF } from "jspdf";
 import { LIBERATION_SANS_NORMAL, LIBERATION_SANS_KALIN } from "@/lib/pdf-fontlari";
 import { PDF_LOGO_JPEG_BASE64, PDF_LOGO_ORAN } from "@/lib/pdf-logo";
 import { ISTIRAK_METNI } from "@/lib/kurumsal";
-import { iskontoluFiyat, fiyatBilgiCumlesi, paraSembolu, ikiFiyatli, sutunIskontolari, FIYAT_SORUNUZ } from "@/lib/fiyat-listesi";
+import { iskontoluFiyat, fiyatBilgiCumlesi, paraSembolu, ikiFiyatli, sutunIskontolari, iskontoUygula, FIYAT_SORUNUZ } from "@/lib/fiyat-listesi";
 
 // -----------------------------------------------------------------------------
 // FOTOĞRAFLI FİYAT LİSTESİ PDF'İ (müşteriye gönderilir)
@@ -58,6 +58,7 @@ export type PdfListe = {
   fiyatBaslik?: string | null;
   fiyat2Baslik?: string | null;
   fiyat3Baslik?: string | null; // doluysa (iki fiyatlı listede) 3. fiyat sütunu
+  satisIskontoYuzde?: number | null; // doluysa liste fiyatları (1. ve 3. sütun) PDF'te gizlenir, satış fiyatları gösterilir
   gecerlilikTarihi: Date | null;
   notlar: string | null;
   updatedAt: Date;
@@ -137,13 +138,24 @@ export function fiyatListesiPdfOlustur(
   const uc = iki && Boolean(liste.fiyat3Baslik?.trim());
   const fb3 = metin(liste.fiyat3Baslik) || "Fiyat 3";
   const isk3 = isk1 === isk2 ? isk1 : 0;
-  const sutunlar: { ad: string; f: (k: PdfKalem) => number | null | undefined; isk: number }[] = iki
-    ? [
-        { ad: fb1, f: (k) => k.fiyat, isk: isk1 },
-        ...(uc ? [{ ad: fb3, f: (k: PdfKalem) => k.fiyat3, isk: isk3 }] : []),
-        { ad: fb2, f: (k) => k.fiyat2, isk: isk2 },
-      ]
-    : [];
+  // Satış iskontosu tanımlı listede liste fiyatları müşteriye gösterilmez: 2. sütun (ör. Nakit) kayıtlı satış fiyatıdır,
+  // 3. sütun (ör. Kredi Kartı 9 Taksit) da kendi liste fiyatından aynı satış iskontosuyla hesaplanır.
+  const satisY = typeof liste.satisIskontoYuzde === "number" ? liste.satisIskontoYuzde : null;
+  const satisModu = iki && satisY !== null;
+  const sutunlar: { ad: string; f: (k: PdfKalem) => number | null | undefined; isk: number }[] = !iki
+    ? []
+    : satisModu
+      ? [
+          { ad: fb2, f: (k) => k.fiyat2, isk: isk2 },
+          ...(uc
+            ? [{ ad: fb3, f: (k: PdfKalem) => (fiyatVar(k.fiyat3) ? iskontoUygula(k.fiyat3, satisY as number, liste.paraBirimi) : null), isk: isk3 }]
+            : []),
+        ]
+      : [
+          { ad: fb1, f: (k) => k.fiyat, isk: isk1 },
+          ...(uc ? [{ ad: fb3, f: (k: PdfKalem) => k.fiyat3, isk: isk3 }] : []),
+          { ad: fb2, f: (k) => k.fiyat2, isk: isk2 },
+        ];
 
   const yazi = (boyut: number, kalin: boolean, renk: Renk) => {
     doc.setFont(YAZI_TIPI, kalin ? "bold" : "normal");
@@ -342,7 +354,7 @@ export function fiyatListesiPdfOlustur(
   const KART_FOTO = fotoVar ? 40 : 0;
   const KART_Y = fotoVar ? 82 : 46;
   const KART_ACIKLAMA_SATIR = 4; // kartta açıklamanın en fazla gösterilecek satırı
-  const kartFiyatPayi = liste.fiyatGoster ? (iki ? (uc ? 19 : 15) : liste.iskontoYuzde > 0 ? 14 : 11) : 3;
+  const kartFiyatPayi = liste.fiyatGoster ? (iki ? 7 + 4 * sutunlar.length : liste.iskontoYuzde > 0 ? 14 : 11) : 3;
   // Kartın metin bölümü (ad + marka/kod + açıklama) için gereken yükseklik
   const kartMetinYuksekligi = (k: PdfKalem) => {
     yazi(8.8, true, METIN);
@@ -383,7 +395,7 @@ export function fiyatListesiPdfOlustur(
       }
     }
     if (liste.fiyatGoster) {
-      const fy = ky + KART_Y - p - (iki ? (sutunlar.some((s) => fiyatVar(s.f(k))) ? (uc ? 15.4 : 11.2) : 4.4) : liste.iskontoYuzde > 0 && k.fiyat > 0 ? 7.4 : 4.4);
+      const fy = ky + KART_Y - p - (iki ? (sutunlar.some((s) => fiyatVar(s.f(k))) ? 2.8 + 4.2 * sutunlar.length : 4.4) : liste.iskontoYuzde > 0 && k.fiyat > 0 ? 7.4 : 4.4);
       fiyatYaz(k, x + KART_G - p, fy, 10.5);
     }
   };

@@ -3,8 +3,8 @@
 // Olefini ve FreeDoor hava perdeleri, Olefini klima / ısı pompası / nem alma,
 // Fral nem alma cihazları. 287 ürün. Liste fiyatı = listedeki NAKİT fiyat (KDV dahil),
 // kart = KREDİ KARTI / SANAL POS 9 TAKSİT fiyatı (3. sütun).
-// Satış fiyatı = liste fiyatı − %20 (panelde değiştirilebilir); alış iskontosu %25
-// (yalnız panelde görünür). "Fiyat sorunuz" ürünlerde fiyat 0'dır.
+// Müşteriye giden PDF'te liste fiyatları gizlidir; "Nakit" = nakit liste − %20, "Kredi Kartı 9 Taksit" = kart liste − %20
+// (satış iskontosu panelde değişir). Alış iskontosu %25, iki liste fiyatına da uygulanır (yalnız panelde görünür). "Fiyat sorunuz" ürünlerde fiyat 0'dır.
 // Bu dosya scratchpad/hazir.py ile değil, Olefini PDF'inden üretildi; elle düzenlenmez.
 // -----------------------------------------------------------------------------
 
@@ -16,11 +16,11 @@ export const OLEFINI: HazirListe = {
   baslik: "Olefini Fiyat Listesi",
   aciklama: "Olefini ve FreeDoor hava perdeleri; Olefini split klima, multi split, ısı pompası ve nem alma cihazları; Fral nem alma cihazları.",
   notlar: "Fiyatlara %20 KDV ve nakliye dahildir.\n\"Kredi Kartı 9 Taksit\" sütunu, kredi kartı / sanal POS ile 9 taksitli ödeme fiyatıdır.\nMontaj ve elektrik tesisatı fiyata dahil değildir; duvar tipi split klimalarda montaj dahildir.\nDuvar tipi split klimalar: Montaja 4 m bakır boru dahildir, montaj kiti bulunmaz. İlave bakır boru (1 m): OLE-09 ve OLE-12 DCM / DICW 900 TL, OLE-18 DCM 1.000 TL, OLE-18 DICW 900 TL, OLE-24 DCM 1.200 TL, OLE-24 DICW 1.000 TL. Elektrik hattının cihaza kadar getirilmesi ve tadilat işlemleri montaja dahil değildir.\nHi-Tech seri duvar tipi ve multi split duvar tipi klimalarda Wi-Fi opsiyoneldir (3.086 TL + KDV); Irigoni seride standarttır.\nIsı pompalarında devreye alma dahildir; montaj, elektrik ve tesisat işçiliği dahil değildir. Cihaz modeline göre 220/230 V 1 faz veya 380/420 V 3 faz (±%10) elektrik altyapısı gerekir.\nOlefini hava perdelerinin genel, ticari, endüstriyel tip ve Eco serisi modelleri INOX gövde olarak üretilebilir; fiyat farkı %20'dir.\nMINI-700, MINI-800 S ve FreeDoor ısıtıcısız hava perdeleri monofaze; FreeDoor elektrikli ısıtıcılı hava perdeleri trifaze elektrik gerektirir.\nIntellect serisi hem elektrikli ısıtıcı hem hava perdesi olarak çalışır; tel rezistanslı, paslanmaz çelik gövdeli olup oda termostatı, otomatik kapı bağlantı çıkışı ve uzaktan kumanda standarttır.\nSu ve buhar serpantinli hava perdelerinin montajında selenoid vana (220 V motorlu, tam açılan, 1\") kullanılmalıdır; basıncı düşük tesisatlarda sirkülasyon pompası önerilir.\nDekoratif C serisinde dış yüzeye isteğe göre baskı standarttır (yüksek çözünürlüklü görsel gerekir). A1 ve A2 modellerine tek taraflı LED aydınlatma eklenebilir: 6.115 TL (KDV dahil); siparişte bildirilmelidir. Dekoratif AN serisinde değiştirilebilir dış tasarım ve baskı standarttır.\nBMS sistemi için otomasyon (RS-485) kablosu ile altyapının ve bağlanacak bilgisayarın hazır olması gerekir.\nDöner kapı RV serisi fiyatlarına emiş menfezi, emiş menfez filtresi ve üfleme ağzı dahildir. Ankastre modellerde gövde boyasız galvanizdir; kapı üstü modellerde INOX ya da boyalı gövde seçilebilir.\nNem alma kapasiteleri: Olefini cihazlarda 30 °C ve %80 bağıl nem, Fral cihazlarda 32 °C ve %90 bağıl nem koşullarına göredir.\nYurt içi montajların yetkili servis tarafından yapılması garanti şartıdır.",
-  kaynakAciklama: "Olefini (OAC) listesi · alış: liste −%25 · satış: liste −%20 (ikisi de panelde değişir)",
+  kaynakAciklama: "Olefini (OAC) listesi · alış: liste −%25 · nakit ve kredi kartı satış: liste −%20 (panelde değişir) · PDF'te liste fiyatı görünmez",
   paraBirimi: "TRY",
   kdvDahil: true,
-  fiyatBaslik: "Liste Fiyatı",
-  fiyat2Baslik: "Satış Fiyatı",
+  fiyatBaslik: "Liste Fiyatı (Nakit)",
+  fiyat2Baslik: "Nakit",
   fiyat3Baslik: "Kredi Kartı 9 Taksit",
   alisIskontoYuzde: 25,
   satisIskontoYuzde: 20,

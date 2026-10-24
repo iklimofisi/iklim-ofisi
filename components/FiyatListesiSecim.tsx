@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { fiyatListesiSecimdenKopyala } from "@/lib/actions";
 import KaydetButonu from "@/components/KaydetButonu";
-import { flParaYaz, FIYAT_SORUNUZ } from "@/lib/fiyat-listesi";
+import { flParaYaz, FIYAT_SORUNUZ, iskontoUygula } from "@/lib/fiyat-listesi";
 
 // -----------------------------------------------------------------------------
 // ÜRÜN SEÇEREK PDF (elle düzenlenen listeler)
@@ -25,6 +25,7 @@ export default function FiyatListesiSecim({
   fiyatBaslik,
   fiyat2Baslik,
   fiyat3Baslik = "",
+  satisIskontoYuzde = null,
 }: {
   listeId: string;
   satirlar: SecimSatir[];
@@ -32,6 +33,7 @@ export default function FiyatListesiSecim({
   fiyatBaslik: string;
   fiyat2Baslik: string; // boşsa tek fiyatlı liste
   fiyat3Baslik?: string; // doluysa 3. fiyat sütunu (1. fiyatın yanında)
+  satisIskontoYuzde?: number | null; // doluysa PDF'teki gibi yalnız satış fiyatları gösterilir
 }) {
   const depo = `liste-haric:${listeId}`;
   const [haric, setHaric] = useState<Set<string>>(new Set());
@@ -39,6 +41,22 @@ export default function FiyatListesiSecim({
   const [yuklendi, setYuklendi] = useState(false);
   const iki = fiyat2Baslik.trim().length > 0;
   const uc = iki && fiyat3Baslik.trim().length > 0;
+  // PDF'te ne görünüyorsa o: satış iskontosu modunda liste fiyatları yerine satış fiyatları
+  const satisModu = iki && satisIskontoYuzde !== null;
+  const sutunlar: { ad: string; deger: (r: SecimSatir) => number | null }[] = !iki
+    ? [{ ad: fiyatBaslik || "Fiyat", deger: (r) => r.fiyat }]
+    : satisModu
+      ? [
+          { ad: fiyat2Baslik, deger: (r) => r.fiyat2 },
+          ...(uc
+            ? [{ ad: fiyat3Baslik, deger: (r: SecimSatir) => (r.fiyat3 && r.fiyat3 > 0 ? iskontoUygula(r.fiyat3, satisIskontoYuzde as number, paraBirimi) : null) }]
+            : []),
+        ]
+      : [
+          { ad: fiyatBaslik || "Fiyat", deger: (r) => r.fiyat },
+          ...(uc ? [{ ad: fiyat3Baslik, deger: (r: SecimSatir) => r.fiyat3 ?? null }] : []),
+          { ad: fiyat2Baslik, deger: (r) => r.fiyat2 },
+        ];
 
   useEffect(() => {
     try {
@@ -153,9 +171,11 @@ export default function FiyatListesiSecim({
               <tr>
                 <th className="w-10 py-2" />
                 <th className="text-left py-2 px-2 font-semibold">Ürün</th>
-                <th className="text-right py-2 px-3 font-semibold whitespace-nowrap">{fiyatBaslik || "Fiyat"}</th>
-                {uc && <th className="text-right py-2 px-3 font-semibold whitespace-nowrap">{fiyat3Baslik}</th>}
-                {iki && <th className="text-right py-2 px-3 font-semibold whitespace-nowrap">{fiyat2Baslik}</th>}
+                {sutunlar.map((s) => (
+                  <th key={s.ad} className="text-right py-2 px-3 font-semibold whitespace-nowrap">
+                    {s.ad}
+                  </th>
+                ))}
               </tr>
             </thead>
             {gruplar.map(([bolum, rows]) => {
@@ -177,7 +197,7 @@ export default function FiyatListesiSecim({
                         className="accent-soguk"
                       />
                     </td>
-                    <td colSpan={(iki ? 3 : 2) + (uc ? 1 : 0)} className="py-1.5 px-2 text-xs font-semibold text-soguk-dim uppercase tracking-wide">
+                    <td colSpan={1 + sutunlar.length} className="py-1.5 px-2 text-xs font-semibold text-soguk-dim uppercase tracking-wide">
                       {bolum} <span className="font-normal normal-case text-metin/50">({sec}/{gor.length})</span>
                     </td>
                   </tr>
@@ -192,9 +212,11 @@ export default function FiyatListesiSecim({
                           <span className={s ? "text-metin" : "line-through text-metin/60"}>{r.ad}</span>
                           {r.kod && <span className="ml-2 text-[11px] text-metin/50 font-mono">{r.kod}</span>}
                         </td>
-                        <td className="py-1.5 px-3 text-right font-mono whitespace-nowrap">{fiyat(r.fiyat)}</td>
-                        {uc && <td className="py-1.5 px-3 text-right font-mono whitespace-nowrap">{fiyat(r.fiyat3 ?? null)}</td>}
-                        {iki && <td className="py-1.5 px-3 text-right font-mono whitespace-nowrap">{fiyat(r.fiyat2)}</td>}
+                        {sutunlar.map((s) => (
+                          <td key={s.ad} className="py-1.5 px-3 text-right font-mono whitespace-nowrap">
+                            {fiyat(s.deger(r))}
+                          </td>
+                        ))}
                       </tr>
                     );
                   })}

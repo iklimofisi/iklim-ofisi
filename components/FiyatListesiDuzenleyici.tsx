@@ -136,6 +136,11 @@ export default function FiyatListesiDuzenleyici({
   const alisHatali = alisIsk.trim() !== "" && alisY === null;
   const satisHatali = ikiFiyat && satisIsk.trim() !== "" && satisY === null;
   // 2. fiyatın değeri (satış iskontosu doluysa liste fiyatından hesaplanır)
+  // 3. sütunun satış fiyatı (satış iskontosu modunda; ör. kredi kartı satış = kredi kartı liste − iskonto)
+  const ucuncuSatis = (r: { fiyat3: string }) => {
+    const f = sayiOku(r.fiyat3);
+    return satisOto && f > 0 ? iskontoUygula(f, satisY as number, paraBirimi) : 0;
+  };
   const ikinciFiyat = (r: { fiyat: string; fiyat2: string }) => {
     if (!satisOto) return sayiOku(r.fiyat2);
     const f = sayiOku(r.fiyat);
@@ -488,11 +493,11 @@ export default function FiyatListesiDuzenleyici({
           </div>
           <p className="text-[11px] text-metin/60">
             {alisY !== null
-              ? `Alış fiyatı = ${fb1} − %${alisY.toLocaleString("tr-TR")}; her ürünün altında alış fiyatı ve kârı görünür. Alış fiyatı PDF'e ve müşteriye gitmez. `
+              ? `Alış fiyatı = liste fiyatı − %${alisY.toLocaleString("tr-TR")}${ucFiyat ? ` (${fb1} ve ${fb3} için ayrı ayrı)` : ""}; her ürünün altında alış fiyatı ve kârı görünür. Alış fiyatı PDF'e ve müşteriye gitmez. `
               : "Alış iskontosu girerseniz her ürünün altında alış fiyatı ve kârınız görünür (yalnız panelde). "}
             {ikiFiyat &&
               (satisOto
-                ? `${fb2} sütunu ${fb1} üzerinden %${(satisY as number).toLocaleString("tr-TR")} iskontoyla otomatik hesaplanır; iskontoyu değiştirip kaydedince tüm satış fiyatları güncellenir.`
+                ? `${fb2} satış fiyatı ${fb1} üzerinden${ucFiyat ? `, ${fb3} satış fiyatı kendi liste fiyatı üzerinden` : ""} %${(satisY as number).toLocaleString("tr-TR")} iskontoyla otomatik hesaplanır. PDF'te liste fiyatları gösterilmez; müşteriye yalnız ${ucFiyat ? `${fb2} ve ${fb3}` : fb2} satış fiyatları gider.`
                 : `${fb2} fiyatları elle girilir. Satış iskontosu yazarsanız hepsi ${fb1} üzerinden otomatik hesaplanır.`)}
             {(alisHatali || satisHatali) && <span className="text-sicak-dim font-medium"> İskonto 0 ile 100 arasında bir sayı olmalı.</span>}
           </p>
@@ -758,7 +763,7 @@ export default function FiyatListesiDuzenleyici({
                   </div>
                   {ucFiyat && (
                     <div className="relative sm:col-start-4">
-                      <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-metin/45 max-w-[45%] truncate">{fb3}</span>
+                      <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-metin/45 max-w-[45%] truncate">{satisOto ? `${fb3} (liste)` : fb3}</span>
                       <input
                         value={r.fiyat3}
                         onChange={(e) => guncelle(r.key, { fiyat3: e.target.value })}
@@ -782,6 +787,18 @@ export default function FiyatListesiDuzenleyici({
                       />
                     </div>
                   )}
+                  {ucFiyat && satisOto && (
+                    <div className="relative sm:col-start-4">
+                      <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-metin/45 max-w-[45%] truncate">{fb3}</span>
+                      <input
+                        value={ucuncuSatis(r) > 0 ? fiyatMetni(ucuncuSatis(r)) : ""}
+                        readOnly
+                        title={`${fb3} (liste) − %${(satisY as number).toLocaleString("tr-TR")} (otomatik)`}
+                        aria-label={`${fb3} satış`}
+                        className={`${kutu} text-right font-mono bg-zemin text-metin/70`}
+                      />
+                    </div>
+                  )}
                 </div>
                 <textarea
                   value={r.aciklama}
@@ -796,17 +813,24 @@ export default function FiyatListesiDuzenleyici({
                     {r.urunId ? "Katalogdan" : "Elle eklendi"}
                     {fiyat > 0 && isk1 > 0 && ` · ${ikiFiyat ? `${fb1} ` : ""}iskontolu: ${flParaYaz(iskontoluFiyat(fiyat, isk1), paraBirimi)}`}
                     {ikiFiyat && ikinciFiyat(r) > 0 && isk2 > 0 && ` · ${fb2} iskontolu: ${flParaYaz(iskontoluFiyat(ikinciFiyat(r), isk2), paraBirimi)}`}
-                    {alisY !== null && fiyat > 0 && (() => {
-                      const alis = fiyat * (1 - alisY / 100);
-                      const satis = ikiFiyat ? ikinciFiyat(r) : fiyat;
-                      const kar = satis - alis;
-                      return (
-                        <span className={kar >= 0 ? "text-emerald-700" : "text-sicak-dim font-medium"}>
-                          {` · Alış: ${flParaYaz(alis, paraBirimi)}`}
-                          {satis > 0 && ` · Kâr: ${flParaYaz(kar, paraBirimi)} (%${((kar / alis) * 100).toLocaleString("tr-TR", { maximumFractionDigits: 1 })})`}
-                        </span>
-                      );
-                    })()}
+                    {alisY !== null &&
+                      // Alış ve kâr: liste fiyatı (nakit) ve varsa 3. sütun (ör. kredi kartı) için ayrı ayrı
+                      (
+                        [
+                          [fiyat, ikiFiyat ? ikinciFiyat(r) : fiyat, ucFiyat ? `${fb2} ` : ""],
+                          ...(ucFiyat && satisOto ? [[sayiOku(r.fiyat3), ucuncuSatis(r), `${fb3} `] as [number, number, string]] : []),
+                        ] as [number, number, string][]
+                      ).map(([liste, satis, etk]) => {
+                        if (!(liste > 0)) return null;
+                        const alis = liste * (1 - alisY / 100);
+                        const kar = satis - alis;
+                        return (
+                          <span key={etk} className={kar >= 0 ? "text-emerald-700" : "text-sicak-dim font-medium"}>
+                            {` · ${etk}alış: ${flParaYaz(alis, paraBirimi)}`}
+                            {satis > 0 && ` · kâr: ${flParaYaz(kar, paraBirimi)} (%${((kar / alis) * 100).toLocaleString("tr-TR", { maximumFractionDigits: 1 })})`}
+                          </span>
+                        );
+                      })}
                     {r.uyari && <span className="text-sicak-dim font-medium"> · {r.uyari}</span>}
                   </span>
                   <span className="flex items-center gap-1">
