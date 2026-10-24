@@ -101,6 +101,17 @@ const urunKategorileri: {
     markalar: "Ayen",
   },
   {
+    id: "hava-perdesi",
+    gorsel: "/hava-perdesi/olefini-giris.jpg",
+    gorselAlt: "Cam giriş kapısı üzerinde Olefini hava perdesi",
+    detay: { href: "/hava-perdesi", etiket: "Hava Perdesi Modelleri →" },
+    kategori: "HAVA PERDESİ",
+    baslik: "Niva ve Olefini Hava Perdeleri",
+    aciklama: "Mağaza, restoran, otel, AVM ve endüstriyel kapılar için ısıtıcılı ve ısıtıcısız hava perdeleri. Kapı açıkken bile ısıtılan ya da soğutulan hava içeride kalır.",
+    urunler: ["Genel ve Ticari Tip Hava Perdeleri", "Tavana Gömme Kaset Tip", "Endüstriyel Tip (12 m'ye kadar)", "Dikey Hava Perdeleri"],
+    markalar: "Niva, Olefini",
+  },
+  {
     id: "radyant-isitma",
     kategori: "ENDÜSTRİYEL ISITMA",
     baslik: "Radyant & Sıcak Hava Isıtma Sistemleri",

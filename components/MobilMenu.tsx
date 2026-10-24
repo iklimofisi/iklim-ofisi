@@ -10,6 +10,7 @@ const links = [
   { href: "/tcl-vrf", label: "TCL VRF Sistemleri" },
   { href: "/buderus", label: "Buderus Yoğuşmalı Kazanlar" },
   { href: "/ayen", label: "Ayen Alüminyum Radyatör" },
+  { href: "/hava-perdesi", label: "Niva & Olefini Hava Perdeleri" },
   { href: "/referanslar", label: "Referanslar" },
   { href: "/hesaplama", label: "Kapasite Hesaplama" },
   { href: "/airnex", label: "AIRNEX Mutfak Havalandırma" },

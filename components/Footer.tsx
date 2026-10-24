@@ -36,6 +36,7 @@ export default async function Footer() {
             <Link href="/tcl-vrf" className="hover:text-white transition-colors">TCL VRF Sistemleri</Link>
             <Link href="/buderus" className="hover:text-white transition-colors">Buderus Yoğuşmalı Kazanlar</Link>
             <Link href="/ayen" className="hover:text-white transition-colors">Ayen Alüminyum Radyatör</Link>
+            <Link href="/hava-perdesi" className="hover:text-white transition-colors">Niva &amp; Olefini Hava Perdeleri</Link>
             <Link href="/airnex" className="hover:text-white transition-colors">AIRNEX Mutfak Havalandırma</Link>
             <Link href="/verta" className="hover:text-white transition-colors">VERTA Konveksiyonel Fırınlar</Link>
             <Link href="/referanslar" className="hover:text-white transition-colors">Referans Projeler</Link>
