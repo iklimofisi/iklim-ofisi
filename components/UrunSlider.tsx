@@ -81,6 +81,13 @@ const SLAYTLAR: Slayt[] = [
     gorsel: "/ayen/ayen-slider.jpg",
   },
   {
+    etiket: "Niva · Hava Perdesi",
+    baslik: "Isıtıcılı ve Isıtıcısız Hava Perdeleri",
+    alt: "Duvar tipi Niva hava perdesi",
+    href: "/hava-perdesi",
+    gorsel: "/hava-perdesi/niva-slider.jpg",
+  },
+  {
     etiket: "AIRNEX · Mutfak Havalandırma",
     baslik: "Elektrostatik Hücreli Aspiratör",
     alt: "Endüstriyel mutfakta AIRNEX elektrostatik hücreli aspiratör",
