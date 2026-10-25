@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     title: "Ayen Alüminyum Radyatör | İklim Ofisi",
     description: "Panel radyatör ve havlupan modelleri, 30 renk seçeneği. Satış, keşif ve montaj.",
     url: SAYFA,
-    images: [{ url: "/ayen/ayen-slider.jpg", width: 1200, height: 750, alt: "Ayen alüminyum radyatör" }],
+    images: [{ url: "/og/ayen.jpg", width: 1200, height: 630, alt: "Ayen alüminyum radyatör ve havlupan" }],
   },
 };
 
@@ -316,7 +316,11 @@ export default function AyenPage() {
                 <Link href="/hesaplama" className="text-teal-300 underline underline-offset-2">
                   kapasite hesaplama
                 </Link>{" "}
-                aracımızı kullanabilirsiniz.
+                aracımızı kullanabilirsiniz. Alüminyum ve çelik panel radyatör farklarını{" "}
+                <Link href="/blog/aluminyum-radyator-mu-celik-panel-radyator-mu" className="text-teal-300 underline underline-offset-2">
+                  bu yazımızda
+                </Link>{" "}
+                anlattık.
               </p>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-10 space-y-5">

@@ -1,6 +1,7 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 import { MAKALELER } from "./data";
 
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Blog & Teknik Makaleler",
   description:
-    "VRF, klima, ısıtma, havalandırma ve endüstriyel mutfak egzozu hakkında İklim Ofisi mühendislerinin hazırladığı teknik rehber yazılar.",
+    "TCL VRF, split klima, hava perdesi, radyatör, ısıtma, havalandırma ve endüstriyel mutfak egzozu hakkında İklim Ofisi mühendislerinin hazırladığı teknik rehber yazılar.",
   alternates: { canonical: "/blog" },
 };
 
@@ -33,7 +34,7 @@ export default function BlogPage() {
               </span>
             </h1>
             <p className="text-base text-slate-600 leading-relaxed pt-2">
-              Mitsubishi Electric ve TCL VRF teknolojileri, Buderus ısıtma çözümleri, AIRNEX mutfak havalandırma ve mekanik tesisat hakkında uzman mühendislerimizin hazırladığı rehber yazılar.
+              Mitsubishi Electric ve TCL VRF teknolojileri, Buderus ısıtma çözümleri, Niva ve Olefini hava perdeleri, Ayen alüminyum radyatörler, AIRNEX mutfak havalandırma ve mekanik tesisat hakkında uzman mühendislerimizin hazırladığı rehber yazılar.
             </p>
           </div>
 
@@ -45,6 +46,15 @@ export default function BlogPage() {
                 className="bg-white border border-slate-200/90 rounded-2xl p-8 hover:shadow-lg hover:border-teal-500/40 transition-all duration-300 space-y-4 flex flex-col justify-between"
               >
                 <div className="space-y-3">
+                  <Link href={`/blog/${m.slug}`} className={`-mx-8 -mt-8 mb-2 block relative aspect-[16/9] overflow-hidden rounded-t-2xl ${m.gorselSigdir ? "bg-white" : "bg-slate-100"}`}>
+                    <Image
+                      src={m.gorsel}
+                      alt={m.gorselAlt}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 600px"
+                      className={m.gorselSigdir ? "object-contain p-6" : "object-cover"}
+                    />
+                  </Link>
                   <div className="flex justify-between items-center">
                     <span className="text-[11px] font-bold tracking-wider text-teal-700 uppercase">
                       {m.kategori}

@@ -1,9 +1,10 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
-import { MAKALELER, makaleIsoTarihi } from "../data";
+import { MAKALELER, makaleIsoTarihi, makaleOgGorseli } from "../data";
 import { JsonLd, SITE } from "@/components/YapisalVeri";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,7 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
       url: `${SITE}/blog/${makale.slug}`,
       siteName: "İklim Ofisi Mühendislik",
       locale: "tr_TR",
-      images: [{ url: "/og-image.png", width: 1200, height: 630, alt: makale.baslik }],
+      images: [{ url: makaleOgGorseli(makale.slug), width: 1200, height: 630, alt: makale.baslik }],
       ...(makaleIsoTarihi(makale.tarih) ? { publishedTime: makaleIsoTarihi(makale.tarih)! } : {}),
     },
   };
@@ -57,7 +58,7 @@ export default function BlogDetayPage({ params }: { params: { slug: string } }) 
               ...(makaleIsoTarihi(makale.tarih) ? { datePublished: makaleIsoTarihi(makale.tarih) } : {}),
               inLanguage: "tr-TR",
               mainEntityOfPage: `${SITE}/blog/${makale.slug}`,
-              image: `${SITE}/og-image.png`,
+              image: [`${SITE}${makaleOgGorseli(makale.slug)}`, `${SITE}${makale.gorsel}`],
               author: { "@type": "Organization", name: "İklim Ofisi Mühendislik", url: SITE },
               publisher: {
                 "@type": "Organization",
@@ -80,6 +81,18 @@ export default function BlogDetayPage({ params }: { params: { slug: string } }) 
             <p className="text-xs text-slate-400 font-mono">
               Yayınlanma: {makale.tarih} · {makale.okumaSuresi}
             </p>
+          </div>
+
+          {/* KAPAK FOTOĞRAFI */}
+          <div className={`relative aspect-[16/9] rounded-2xl overflow-hidden border border-slate-200/90 ${makale.gorselSigdir ? "bg-white" : "bg-slate-100"}`}>
+            <Image
+              src={makale.gorsel}
+              alt={makale.gorselAlt}
+              fill
+              priority
+              sizes="(max-width: 768px) 100vw, 768px"
+              className={makale.gorselSigdir ? "object-contain p-6" : "object-cover"}
+            />
           </div>
 
           {/* İÇERİK METNİ */}

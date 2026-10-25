@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     title: "Niva ve Olefini Hava Perdeleri | İklim Ofisi",
     description: "Isıtıcılı ve ısıtıcısız hava perdeleri; satış, keşif ve montaj.",
     url: SAYFA,
-    images: [{ url: "/hava-perdesi/olefini-giris.jpg", width: 768, height: 633, alt: "Cam giriş kapısı üzerinde Olefini hava perdesi" }],
+    images: [{ url: "/og/hava-perdesi.jpg", width: 1200, height: 630, alt: "Niva ve Olefini hava perdeleri" }],
   },
 };
 
@@ -244,6 +244,12 @@ export default function HavaPerdesiPage() {
                 </div>
               ))}
             </div>
+            <p className="text-xs text-slate-500">
+              Seçim ve montaj ipuçlarını daha ayrıntılı anlattığımız yazı:{" "}
+              <Link href="/blog/hava-perdesi-nedir-nasil-secilir" className="text-teal-700 underline underline-offset-2">
+                Hava Perdesi Nedir, Nasıl Seçilir?
+              </Link>
+            </p>
           </div>
         </section>
 

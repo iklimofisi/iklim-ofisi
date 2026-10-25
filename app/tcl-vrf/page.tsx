@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     title: "TCL VRF Sistemleri — TMV6+ Super Serisi | İklim Ofisi",
     description: "Tam DC inverter TCL VRF: 128 HP'ye kadar kombinasyon, tek sistemde 80 iç ünite, SEER 7,35. Teknik veriler ve PDF katalog.",
     url: SAYFA,
-    images: [{ url: "/slider/slider-tcl-vrf.jpg", alt: "TCL TMV6+ Super Serisi VRF dış ünitesi" }],
+    images: [{ url: "/og/tcl-vrf.jpg", width: 1200, height: 630, alt: "TCL VRF Sistemleri — TMV6+ Super Serisi" }],
   },
 };
 
@@ -495,12 +495,23 @@ export default function TclVrfPage() {
                 </details>
               ))}
             </div>
-            <p className="text-xs text-slate-500">
-              VRF sistemlerini daha geniş anlattığımız yazı:{" "}
+            <p className="text-xs text-slate-500 leading-relaxed">
+              İlgili yazılar:{" "}
+              <Link href="/blog/tcl-vrf-nedir-tmv6-super-serisi" className="text-teal-700 underline underline-offset-2">
+                TCL VRF Nedir?
+              </Link>
+              {" · "}
+              <Link href="/blog/vrf-mi-split-klima-mi" className="text-teal-700 underline underline-offset-2">
+                VRF mi, Split Klima mı?
+              </Link>
+              {" · "}
+              <Link href="/blog/vrf-klima-maliyetini-belirleyen-etkenler" className="text-teal-700 underline underline-offset-2">
+                VRF Klima Maliyetini Neler Belirler?
+              </Link>
+              {" · "}
               <Link href="/blog/vrf-rehberi-mitsubishi-electric-ve-tcl" className="text-teal-700 underline underline-offset-2">
                 VRF İklimlendirme Rehberi
               </Link>
-              .
             </p>
           </div>
         </section>
