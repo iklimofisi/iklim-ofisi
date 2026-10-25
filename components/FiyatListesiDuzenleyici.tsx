@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { fiyatListesiKaydet } from "@/lib/actions";
 import KaydetButonu from "@/components/KaydetButonu";
 import { fotografYukle } from "@/lib/gorsel-yukle";
-import { DUZENLER, FIYAT_SUTUN_KALIPLARI, iskontoluFiyat, flParaYaz, sutunIskontolari, iskontoKapsamGecerli, iskontoUygula, yuzdeOku } from "@/lib/fiyat-listesi";
+import { DUZENLER, FIYAT_SUTUN_KALIPLARI, iskontoluFiyat, flParaYaz, sutunIskontolari, iskontoKapsamGecerli, iskontoUygula, yuzdeOku, YUVARLAMALAR, yuvarlamaGecerli } from "@/lib/fiyat-listesi";
 import { tutarOku } from "@/lib/toplam-dagit";
 
 // -----------------------------------------------------------------------------
@@ -64,6 +64,7 @@ type Ayarlar = {
   iskontoKapsam: string; // HEPSI | FIYAT1 | FIYAT2 (iki fiyatlı listede iskontonun uygulandığı sütun)
   alisIskontoYuzde: number | null; // liste fiyatından alış iskontosu (yalnız panelde)
   satisIskontoYuzde: number | null; // doluysa 2. fiyat = 1. fiyat − bu iskonto (otomatik)
+  yuvarlamaAdim: number | null; // iskontolu fiyatların yuvarlanacağı adım (boş/0 = yok)
   fiyatGoster: boolean;
   duzen: string;
   fiyatBaslik: string;
@@ -135,16 +136,18 @@ export default function FiyatListesiDuzenleyici({
   const satisOto = satisY !== null;
   const alisHatali = alisIsk.trim() !== "" && alisY === null;
   const satisHatali = ikiFiyat && satisIsk.trim() !== "" && satisY === null;
+  // İskontolu fiyatların yuvarlanması (satış iskontosu ve liste iskontosu için ortak)
+  const [yuvarlamaAdim, setYuvarlamaAdim] = useState(yuvarlamaGecerli(ayarlar.yuvarlamaAdim));
   // 2. fiyatın değeri (satış iskontosu doluysa liste fiyatından hesaplanır)
   // 3. sütunun satış fiyatı (satış iskontosu modunda; ör. kredi kartı satış = kredi kartı liste − iskonto)
   const ucuncuSatis = (r: { fiyat3: string }) => {
     const f = sayiOku(r.fiyat3);
-    return satisOto && f > 0 ? iskontoUygula(f, satisY as number, paraBirimi) : 0;
+    return satisOto && f > 0 ? iskontoUygula(f, satisY as number, paraBirimi, yuvarlamaAdim) : 0;
   };
   const ikinciFiyat = (r: { fiyat: string; fiyat2: string }) => {
     if (!satisOto) return sayiOku(r.fiyat2);
     const f = sayiOku(r.fiyat);
-    return f > 0 ? iskontoUygula(f, satisY as number, paraBirimi) : 0;
+    return f > 0 ? iskontoUygula(f, satisY as number, paraBirimi, yuvarlamaAdim) : 0;
   };
   // Fiyat sütunu kalıbı: adlar bir kalıba uyuyorsa o, değilse "özel"
   const kalip = !ikiFiyat
@@ -174,7 +177,7 @@ export default function FiyatListesiDuzenleyici({
       return;
     }
     setDegisti(true);
-  }, [satirlar, paraBirimi, iskonto, fiyat2Baslik, fiyatBaslik, fiyat3Baslik, iskontoKapsam, alisIsk, satisIsk]);
+  }, [satirlar, paraBirimi, iskonto, fiyat2Baslik, fiyatBaslik, fiyat3Baslik, iskontoKapsam, alisIsk, satisIsk, yuvarlamaAdim]);
 
   // Kaydedilmemiş değişiklik varken sayfadan çıkmadan önce uyar
   useEffect(() => {
@@ -490,6 +493,16 @@ export default function FiyatListesiDuzenleyici({
             ) : (
               <input type="hidden" name="satisIskontoYuzde" value="" />
             )}
+            <div className="w-52">
+              <label className={etiket}>İskontolu fiyat yuvarlama</label>
+              <select name="yuvarlamaAdim" value={yuvarlamaAdim} onChange={(e) => setYuvarlamaAdim(yuvarlamaGecerli(e.target.value))} className={kutu}>
+                {YUVARLAMALAR.map((y) => (
+                  <option key={y.adim} value={y.adim}>
+                    {y.ad}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <p className="text-[11px] text-metin/60">
             {alisY !== null
@@ -499,6 +512,8 @@ export default function FiyatListesiDuzenleyici({
               (satisOto
                 ? `${fb2} satış fiyatı ${fb1} üzerinden${ucFiyat ? `, ${fb3} satış fiyatı kendi liste fiyatı üzerinden` : ""} %${(satisY as number).toLocaleString("tr-TR")} iskontoyla otomatik hesaplanır. PDF'te liste fiyatları gösterilmez; müşteriye yalnız ${ucFiyat ? `${fb2} ve ${fb3}` : fb2} satış fiyatları gider.`
                 : `${fb2} fiyatları elle girilir. Satış iskontosu yazarsanız hepsi ${fb1} üzerinden otomatik hesaplanır.`)}
+            {yuvarlamaAdim > 0 &&
+              ` İskontoyla hesaplanan fiyatlar (satış iskontosu ve PDF'teki liste iskontosu) ${(YUVARLAMALAR.find((y) => y.adim === yuvarlamaAdim)?.ad ?? "").toLocaleLowerCase("tr-TR")} yuvarlanır.`}
             {(alisHatali || satisHatali) && <span className="text-sicak-dim font-medium"> İskonto 0 ile 100 arasında bir sayı olmalı.</span>}
           </p>
         </div>
@@ -539,6 +554,7 @@ export default function FiyatListesiDuzenleyici({
                   : `PDF'te yalnız ${iskontoKapsam === "FIYAT1" ? fb1 : fb2} sütunu %${iskontoSayi.toLocaleString("tr-TR")} iskontolu çıkar; ${iskontoKapsam === "FIYAT1" ? fb2 : fb1} olduğu gibi kalır.`
                 : `PDF'te fiyatlar %${iskontoSayi.toLocaleString("tr-TR")} iskontolu çıkar (üstü çizili eski fiyatla).`
               : "İskonto yok."}{" "}
+            {iskontoSayi > 0 && yuvarlamaAdim > 0 && "İskontolu fiyatlar yukarıda seçilen yuvarlamayla yuvarlanır. "}
             İskonto yalnız PDF'te uygulanır; aşağıdaki ürün fiyatları değişmez. Sıfırlayıp kaydedince liste eski hâline döner.
           </p>
         </div>
@@ -811,8 +827,8 @@ export default function FiyatListesiDuzenleyici({
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                   <span className="text-metin/50">
                     {r.urunId ? "Katalogdan" : "Elle eklendi"}
-                    {fiyat > 0 && isk1 > 0 && ` · ${ikiFiyat ? `${fb1} ` : ""}iskontolu: ${flParaYaz(iskontoluFiyat(fiyat, isk1), paraBirimi)}`}
-                    {ikiFiyat && ikinciFiyat(r) > 0 && isk2 > 0 && ` · ${fb2} iskontolu: ${flParaYaz(iskontoluFiyat(ikinciFiyat(r), isk2), paraBirimi)}`}
+                    {fiyat > 0 && isk1 > 0 && ` · ${ikiFiyat ? `${fb1} ` : ""}iskontolu: ${flParaYaz(iskontoluFiyat(fiyat, isk1, yuvarlamaAdim), paraBirimi)}`}
+                    {ikiFiyat && ikinciFiyat(r) > 0 && isk2 > 0 && ` · ${fb2} iskontolu: ${flParaYaz(iskontoluFiyat(ikinciFiyat(r), isk2, yuvarlamaAdim), paraBirimi)}`}
                     {alisY !== null &&
                       // Alış ve kâr: liste fiyatı (nakit) ve varsa 3. sütun (ör. kredi kartı) için ayrı ayrı
                       (

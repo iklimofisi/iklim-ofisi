@@ -257,6 +257,7 @@ model FiyatListesi {
   iskontoKapsam    String              @default("HEPSI") // İki fiyatlı listede iskontonun uygulandığı sütun: HEPSI | FIYAT1 | FIYAT2
   alisIskontoYuzde  Float?             // Liste fiyatından alış iskontosu (alış fiyatı yalnız panelde görünür; boş = kullanılmıyor)
   satisIskontoYuzde Float?             // Doluysa 2. fiyat (satış) = 1. fiyat (liste) − bu iskonto, otomatik hesaplanır
+  yuvarlamaAdim    Int?                // İskontolu fiyatların yuvarlanacağı adım: 1, 5, 10, 50, 100 (boş/0 = yuvarlama yok)
   fiyatGoster      Boolean             @default(true)
   duzen            String              @default("KART") // KART (3 sütun) | LISTE (satır satır) | TABLO (kompakt tablo)
   fiyatBaslik      String?             // İki fiyatlı listede birinci fiyat sütununun adı (ör. "Nakit")

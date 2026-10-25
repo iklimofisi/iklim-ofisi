@@ -59,6 +59,7 @@ export type PdfListe = {
   fiyat2Baslik?: string | null;
   fiyat3Baslik?: string | null; // doluysa (iki fiyatlı listede) 3. fiyat sütunu
   satisIskontoYuzde?: number | null; // doluysa liste fiyatları (1. ve 3. sütun) PDF'te gizlenir, satış fiyatları gösterilir
+  yuvarlamaAdim?: number | null; // iskontolu fiyatların yuvarlanacağı adım (boş/0 = yok)
   gecerlilikTarihi: Date | null;
   notlar: string | null;
   updatedAt: Date;
@@ -148,7 +149,7 @@ export function fiyatListesiPdfOlustur(
       ? [
           { ad: fb2, f: (k) => k.fiyat2, isk: isk2 },
           ...(uc
-            ? [{ ad: fb3, f: (k: PdfKalem) => (fiyatVar(k.fiyat3) ? iskontoUygula(k.fiyat3, satisY as number, liste.paraBirimi) : null), isk: isk3 }]
+            ? [{ ad: fb3, f: (k: PdfKalem) => (fiyatVar(k.fiyat3) ? iskontoUygula(k.fiyat3, satisY as number, liste.paraBirimi, liste.yuvarlamaAdim) : null), isk: isk3 }]
             : []),
         ]
       : [
@@ -208,7 +209,7 @@ export function fiyatListesiPdfOlustur(
       let yy = y;
       for (const { ad: etiket, f: al, isk } of sutunlar) {
         const f = al(k);
-        const deger = fiyatVar(f) ? `${sayi(iskontoluFiyat(f, isk))} ${sembol}` : FIYAT_SORUNUZ;
+        const deger = fiyatVar(f) ? `${sayi(iskontoluFiyat(f, isk, liste.yuvarlamaAdim))} ${sembol}` : FIYAT_SORUNUZ;
         yazi(buyuk * 0.86, true, fiyatVar(f) ? SOGUK_DIM : METIN_50);
         doc.text(deger, sagX, yy, { align: "right" });
         const w = doc.getTextWidth(deger);
@@ -235,7 +236,7 @@ export function fiyatListesiPdfOlustur(
       yy += buyuk * 0.42 + 0.6;
     }
     yazi(buyuk, true, SOGUK_DIM);
-    doc.text(`${sayi(iskontoluFiyat(k.fiyat, liste.iskontoYuzde))} ${sembol}`, sagX, yy, { align: "right" });
+    doc.text(`${sayi(iskontoluFiyat(k.fiyat, liste.iskontoYuzde, liste.yuvarlamaAdim))} ${sembol}`, sagX, yy, { align: "right" });
     yy += 3.6;
     yazi(6.8, false, METIN_50);
     doc.text(`/ ${metin(k.birim) || "Adet"}${liste.kdvDahil ? " · KDV dahil" : " + KDV"}`, sagX, yy, { align: "right" });
@@ -548,7 +549,7 @@ export function fiyatListesiPdfOlustur(
       x += TB_FIYAT_G;
       if (fiyatVar(f)) {
         yazi(8.6, true, SOGUK_DIM);
-        doc.text(`${sayi(iskontoluFiyat(f, isk))} ${sembol}`, x - 2, fy, { align: "right" });
+        doc.text(`${sayi(iskontoluFiyat(f, isk, liste.yuvarlamaAdim))} ${sembol}`, x - 2, fy, { align: "right" });
       } else {
         yazi(7.5, false, METIN_50);
         doc.text(FIYAT_SORUNUZ, x - 2, fy, { align: "right" });

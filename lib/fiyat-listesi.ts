@@ -31,11 +31,31 @@ export const FIYAT_SUTUN_KALIPLARI = [
   { kod: "NAKIT_KART", ad: "Nakit + Kart", b1: "Nakit", b2: "Kart" },
 ] as const;
 
-// Satış fiyatı = liste fiyatı − iskonto. TL'de tam sayıya, döviz listelerinde kuruşa yuvarlanır.
-export function iskontoUygula(fiyat: number, yuzde: number, paraBirimi: string) {
+// İskontolu fiyatların yuvarlanması (liste ayarı). 0 = yuvarlama yok (varsayılan davranış).
+export const YUVARLAMALAR = [
+  { adim: 0, ad: "Yok" },
+  { adim: 1, ad: "Tam sayıya" },
+  { adim: 5, ad: "5'in katına" },
+  { adim: 10, ad: "10'un katına" },
+  { adim: 50, ad: "50'nin katına" },
+  { adim: 100, ad: "100'ün katına" },
+] as const;
+export const yuvarlamaGecerli = (v: unknown): number => {
+  const n = Number(v);
+  return YUVARLAMALAR.some((y) => y.adim === n) ? n : 0;
+};
+// En yakın adım katına yuvarlar (0'a düşmez); adım 0 ise null döner (çağıran kendi varsayılanını uygular)
+function adimaYuvarla(n: number, adim: number | null | undefined) {
+  const a = yuvarlamaGecerli(adim);
+  return a > 0 ? Math.max(a, Math.round(n / a) * a) : null;
+}
+
+// Satış fiyatı = liste fiyatı − iskonto. Yuvarlama seçilmemişse TL'de tam sayıya,
+// döviz listelerinde kuruşa yuvarlanır.
+export function iskontoUygula(fiyat: number, yuzde: number, paraBirimi: string, yuvarlama: number | null = 0) {
   const i = Math.min(100, Math.max(0, yuzde || 0));
   const n = fiyat * (1 - i / 100);
-  return paraBirimi === "TRY" ? Math.round(n) : Math.round(n * 100) / 100;
+  return adimaYuvarla(n, yuvarlama) ?? (paraBirimi === "TRY" ? Math.round(n) : Math.round(n * 100) / 100);
 }
 // "25", "%25", "12,5" → 0–100 arası sayı; boş ya da geçersizse null
 export function yuzdeOku(v: unknown): number | null {
@@ -95,9 +115,12 @@ export function flKalemleriOku(json: string | null | undefined): FLKalem[] {
     .filter((k) => k.ad);
 }
 
-export function iskontoluFiyat(fiyat: number, iskontoYuzde: number) {
+// Liste iskontosu (PDF). Yuvarlama yalnız iskonto uygulanan fiyatlara yapılır;
+// iskontosuz fiyat olduğu gibi kalır.
+export function iskontoluFiyat(fiyat: number, iskontoYuzde: number, yuvarlama: number | null = 0) {
   const i = Math.min(100, Math.max(0, iskontoYuzde || 0));
-  return Math.round(fiyat * (1 - i / 100) * 100) / 100;
+  const n = fiyat * (1 - i / 100);
+  return (i > 0 ? adimaYuvarla(n, yuvarlama) : null) ?? Math.round(n * 100) / 100;
 }
 
 export function paraSembolu(pb: string) {
