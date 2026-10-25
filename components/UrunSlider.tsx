@@ -81,7 +81,7 @@ const SLAYTLAR: Slayt[] = [
     gorsel: "/ayen/ayen-slider.jpg",
   },
   {
-    etiket: "Niva · Hava Perdesi",
+    etiket: "Niva · Olefini",
     baslik: "Isıtıcılı ve Isıtıcısız Hava Perdeleri",
     alt: "Duvar tipi Niva hava perdesi",
     href: "/hava-perdesi",
