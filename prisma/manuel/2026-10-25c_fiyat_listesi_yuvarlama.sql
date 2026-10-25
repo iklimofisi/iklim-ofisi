@@ -3,8 +3,8 @@
 --
 -- BU BETİK YALNIZCA EKLEME YAPAR:
 --   * "FiyatListesi" tablosuna boş bırakılabilir 1 sütun:
---       yuvarlamaAdim (iskontoyla hesaplanan fiyatların yuvarlanacağı adım:
---                      1, 5, 10, 50 veya 100; boş = yuvarlama yok)
+--       yuvarlamaAdim (PDF'te liste iskontosu uygulanan fiyatların yuvarlanacağı
+--                      adım: 1, 5, 10, 50 veya 100; boş = yuvarlama yok)
 --   Mevcut listelerde boş kalır; hiçbir liste ve fiyat değişmez.
 -- Mevcut hiçbir tablo, sütun veya kayıt SİLİNMEZ ya da DEĞİŞTİRİLMEZ.
 -- İki kez çalıştırılırsa zarar vermez ("IF NOT EXISTS").

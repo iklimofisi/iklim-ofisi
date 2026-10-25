@@ -124,7 +124,6 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
         fiyat2Baslik={liste.fiyat2Baslik ?? ""}
         fiyat3Baslik={liste.fiyat3Baslik ?? ""}
         satisIskontoYuzde={liste.satisIskontoYuzde}
-        yuvarlamaAdim={liste.yuvarlamaAdim}
         satirlar={liste.kalemler.map((k) => ({ id: k.id, bolum: k.bolum, ad: k.ad, kod: k.kod, fiyat: k.fiyat, fiyat2: k.fiyat2, fiyat3: k.fiyat3 }))}
       />
 

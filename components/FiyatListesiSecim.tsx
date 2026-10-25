@@ -26,7 +26,6 @@ export default function FiyatListesiSecim({
   fiyat2Baslik,
   fiyat3Baslik = "",
   satisIskontoYuzde = null,
-  yuvarlamaAdim = null,
 }: {
   listeId: string;
   satirlar: SecimSatir[];
@@ -35,7 +34,6 @@ export default function FiyatListesiSecim({
   fiyat2Baslik: string; // boşsa tek fiyatlı liste
   fiyat3Baslik?: string; // doluysa 3. fiyat sütunu (1. fiyatın yanında)
   satisIskontoYuzde?: number | null; // doluysa PDF'teki gibi yalnız satış fiyatları gösterilir
-  yuvarlamaAdim?: number | null; // iskontolu fiyat yuvarlaması (PDF ile aynı)
 }) {
   const depo = `liste-haric:${listeId}`;
   const [haric, setHaric] = useState<Set<string>>(new Set());
@@ -51,7 +49,7 @@ export default function FiyatListesiSecim({
       ? [
           { ad: fiyat2Baslik, deger: (r) => r.fiyat2 },
           ...(uc
-            ? [{ ad: fiyat3Baslik, deger: (r: SecimSatir) => (r.fiyat3 && r.fiyat3 > 0 ? iskontoUygula(r.fiyat3, satisIskontoYuzde as number, paraBirimi, yuvarlamaAdim) : null) }]
+            ? [{ ad: fiyat3Baslik, deger: (r: SecimSatir) => (r.fiyat3 && r.fiyat3 > 0 ? iskontoUygula(r.fiyat3, satisIskontoYuzde as number, paraBirimi) : null) }]
             : []),
         ]
       : [
