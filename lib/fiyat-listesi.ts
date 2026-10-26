@@ -81,6 +81,68 @@ export const ikiFiyatli = (l: { fiyat2Baslik?: string | null }) => Boolean(l.fiy
 
 export const FIYAT_SORUNUZ = "Fiyat sorunuz";
 
+// -----------------------------------------------------------------------------
+// LİSTE SONU NOTLARI — ürüne bağlı notlar
+// Not satırı "[anahtar] metin" biçimindeyse o not yalnız PDF'e giren ürünlerden birinin
+// bölüm / ad / kod / markası bu anahtarı içeriyorsa çıkar (büyük-küçük harf ve Türkçe
+// karakter farkı önemsizdir). Birden çok anahtar ";" ile ayrılır (biri yeterli);
+// "a+b" yazılırsa aynı üründe ikisi birden aranır. Etiketsiz notlar her zaman çıkar.
+// Köşeli parantezdeki anahtar müşteriye gösterilmez.
+// -----------------------------------------------------------------------------
+const NOT_ETIKETI = /^\s*\[([^\]\n]*)\]\s*/;
+const sadeMetin = (m: string) =>
+  m
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ı/g, "i")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c")
+    .replace(/\s+/g, " ");
+
+// Notlardaki [anahtar] etiketlerini kaldırır (tüm notlar, etiketsiz)
+export function notEtiketsiz(notlar: string) {
+  return notlar
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((s) => s.replace(NOT_ETIKETI, ""))
+    .join("\n");
+}
+
+// Ürün seçerek alınan PDF'te başlık altındaki açıklama: seçilen ürünlerin bölüm adlarından
+// ("FreeDoor Hava Perdeleri · Isıtıcısız Silver Serisi" → "FreeDoor Hava Perdeleri") kurulur.
+export function secimAciklamasi(kalemler: { bolum: string }[]) {
+  const adlar: string[] = [];
+  for (const k of kalemler) {
+    const ad = k.bolum.split(" · ")[0].trim();
+    if (ad && !adlar.includes(ad)) adlar.push(ad);
+  }
+  if (!adlar.length) return "";
+  return (adlar.length === 1 ? adlar[0] : `${adlar.slice(0, -1).join(", ")} ve ${adlar[adlar.length - 1]}`) + ".";
+}
+
+// PDF'e giren ürünlere göre notları süzer; etiketler kaldırılmış metni döner
+export function notlariSuz(notlar: string, kalemler: { bolum: string; ad: string; kod: string | null; marka: string | null }[]) {
+  const metinler = kalemler.map((k) => sadeMetin(`${k.bolum} ${k.ad} ${k.kod ?? ""} ${k.marka ?? ""}`));
+  return notlar
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .flatMap((satir) => {
+      const m = satir.match(NOT_ETIKETI);
+      if (!m) return [satir];
+      const metin = satir.slice(m[0].length);
+      const anahtarlar = m[1]
+        .split(";")
+        .map((a) => a.split("+").map((p) => sadeMetin(p).trim()).filter(Boolean))
+        .filter((a) => a.length);
+      if (!anahtarlar.length) return [metin];
+      return anahtarlar.some((parcalar) => metinler.some((t) => parcalar.every((p) => t.includes(p)))) ? [metin] : [];
+    })
+    .join("\n")
+    .trim();
+}
+
 export const metinAl = (v: unknown, sinir: number) => String(v ?? "").trim().slice(0, sinir);
 
 // Formdan gelen JSON'u güvenle okur

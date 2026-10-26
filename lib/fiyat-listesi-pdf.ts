@@ -2,7 +2,7 @@ import { jsPDF } from "jspdf";
 import { LIBERATION_SANS_NORMAL, LIBERATION_SANS_KALIN } from "@/lib/pdf-fontlari";
 import { PDF_LOGO_JPEG_BASE64, PDF_LOGO_ORAN } from "@/lib/pdf-logo";
 import { ISTIRAK_METNI } from "@/lib/kurumsal";
-import { iskontoluFiyat, fiyatBilgiCumlesi, paraSembolu, ikiFiyatli, sutunIskontolari, iskontoUygula, FIYAT_SORUNUZ } from "@/lib/fiyat-listesi";
+import { iskontoluFiyat, fiyatBilgiCumlesi, paraSembolu, ikiFiyatli, sutunIskontolari, iskontoUygula, notlariSuz, FIYAT_SORUNUZ } from "@/lib/fiyat-listesi";
 
 // -----------------------------------------------------------------------------
 // FOTOĞRAFLI FİYAT LİSTESİ PDF'İ (müşteriye gönderilir)
@@ -610,9 +610,11 @@ export function fiyatListesiPdfOlustur(
   // ---------------------------------------------------------------------------
   // NOTLAR
   // ---------------------------------------------------------------------------
-  if (liste.notlar) {
+  // Ürüne bağlı ([anahtar] etiketli) notlar yalnız ilgili ürün PDF'teyse çıkar
+  const notlar = liste.notlar ? notlariSuz(liste.notlar, kalemler) : "";
+  if (notlar) {
     yazi(8.5, false, METIN_60);
-    const n = satirlar(liste.notlar, GENISLIK);
+    const n = satirlar(notlar, GENISLIK);
     yerAc(10 + Math.min(n.length, 6) * 3.9);
     yazi(7, true, METIN_50);
     doc.text("NOTLAR", SOL, y, { charSpace: 0.35 });

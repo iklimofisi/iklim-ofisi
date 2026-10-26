@@ -3,6 +3,7 @@ import { suankiKullanici } from "@/lib/oturum";
 import { prisma } from "@/lib/prisma";
 import { getSirketAyarlari } from "@/lib/sirket";
 import { fiyatListesiPdfOlustur, type PdfGorsel } from "@/lib/fiyat-listesi-pdf";
+import { notEtiketsiz, secimAciklamasi } from "@/lib/fiyat-listesi";
 
 // Fotoğraflı fiyat listesi PDF'i (panel). ?indir=1 → dosya olarak indirir.
 export const dynamic = "force-dynamic";
@@ -71,8 +72,23 @@ async function pdfYanit(id: string, haric: Set<string>, indir: boolean) {
     kayitlar.map((g) => [g.id, { veri: new Uint8Array(g.veri), genislik: g.genislik, yukseklik: g.yukseklik }])
   );
 
+  // Hazır listeden eklenmiş ve notları değiştirilmemiş listede (notlar ürüne bağlı etiketler
+  // gelmeden önce eklendiyse) hazır listenin etiketli notları kullanılır: PDF'te yalnız
+  // seçilen ürünlerle ilgili notlar çıkar. Notlar elle değiştirildiyse kayıtlı notlar kullanılır.
+  let notlar = liste.notlar;
+  if (notlar) {
+    const { HAZIR_LISTELER } = await import("@/lib/hazir-listeler");
+    const kayitli = notlar.replace(/\r\n/g, "\n").trim();
+    const h = HAZIR_LISTELER.find((x) => x.baslik === liste.baslik && x.notlar && notEtiketsiz(x.notlar).trim() === kayitli && x.notlar.trim() !== kayitli);
+    if (h) notlar = h.notlar;
+  }
+
+  // Ürün seçerek alınan PDF'te başlık altındaki açıklama yalnız seçilen ürünlerin bölümlerini sayar
+  // (listenin tamamı basılıyorsa kayıtlı açıklama olduğu gibi kalır)
+  const aciklama = liste.aciklama && kalemler.length > 0 && kalemler.length < liste.kalemler.length ? secimAciklamasi(kalemler) || liste.aciklama : liste.aciklama;
+
   const sirket = await getSirketAyarlari();
-  const pdf = fiyatListesiPdfOlustur(liste, kalemler, gorseller, sirket);
+  const pdf = fiyatListesiPdfOlustur({ ...liste, aciklama, notlar }, kalemler, gorseller, sirket);
 
   return new Response(new Uint8Array(pdf), {
     headers: {
