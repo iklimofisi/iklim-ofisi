@@ -143,12 +143,6 @@ export function fiyatBilgiCumlesi(l: {
 }) {
   if (!l.fiyatGoster) return "";
   const pb = l.paraBirimi === "EUR" ? "Euro" : l.paraBirimi === "USD" ? "ABD Doları" : "Türk Lirası";
-  let c = `Fiyatlar ${pb} cinsindendir ve KDV ${l.kdvDahil ? "dahildir" : "hariçtir"}.`;
-  if (l.iskontoYuzde > 0) {
-    const yuzde = `%${l.iskontoYuzde.toLocaleString("tr-TR")}`;
-    const k = ikiFiyatli(l) ? iskontoKapsamGecerli(l.iskontoKapsam) : "HEPSI";
-    const sutun = k === "FIYAT1" ? l.fiyatBaslik?.trim() || "Fiyat" : k === "FIYAT2" ? l.fiyat2Baslik?.trim() || "Fiyat 2" : "";
-    c += sutun ? ` ${sutun} sütunundaki fiyatlara ${yuzde} iskonto uygulanmıştır.` : ` Liste fiyatlarına ${yuzde} iskonto uygulanmıştır.`;
-  }
-  return c;
+  // Uygulanan iskonto oranı müşteriye yazılmaz; PDF'te yalnız iskontolu fiyatlar görünür.
+  return `Fiyatlar ${pb} cinsindendir ve KDV ${l.kdvDahil ? "dahildir" : "hariçtir"}.`;
 }
