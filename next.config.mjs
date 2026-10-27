@@ -10,6 +10,10 @@ const nextConfig = {
   async redirects() {
     const tclklima = [{ type: "host", value: "(www\\.)?tclklima\\.com" }];
     return [
+      // VERTA fırınlar siteden kaldırıldı: eski adresler (Google'daki kayıtlar dahil) Ürünler sayfasına gider
+      { source: "/verta", destination: "/urunler", permanent: true },
+      { source: "/kataloglar/verta-firin-katalogu-iklim-ofisi.pdf", destination: "/urunler", permanent: true },
+      { source: "/kataloglar/verta-konveksiyonel-firin-katalog.pdf", destination: "/urunler", permanent: true },
       { source: "/", has: tclklima, destination: "https://iklimofisi.com/tcl-vrf", permanent: true },
       { source: "/:yol*", has: tclklima, destination: "https://iklimofisi.com/:yol*", permanent: true },
     ];

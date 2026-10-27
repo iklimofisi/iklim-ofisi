@@ -22,7 +22,7 @@ type Slayt = {
 };
 
 // Sıra = önem sırası: VRF ve klima (Mitsubishi Electric, TCL) → ısı pompası →
-// yerden ısıtma (Fraenkische) → kazan dairesi (Buderus) → mutfak çözümleri (AIRNEX, VERTA)
+// yerden ısıtma (Fraenkische) → kazan dairesi (Buderus) → mutfak havalandırma (AIRNEX)
 const SLAYTLAR: Slayt[] = [
   {
     etiket: "TCL · TMV6+ Super",
@@ -100,13 +100,6 @@ const SLAYTLAR: Slayt[] = [
     alt: "AIRNEX çalışma prensibi: ön filtre, iyonizasyon, toplama hücresi ve fan",
     href: "/airnex",
     gorsel: "/airnex/airnex-calisma-prensibi.jpg",
-  },
-  {
-    etiket: "VERTA · Endüstriyel Mutfak",
-    baslik: "Konveksiyonel Fırınlar: 4, 6 ve 10 Tepsi",
-    alt: "Profesyonel mutfakta VERTA konveksiyonel fırın",
-    href: "/verta",
-    gorsel: "/slider/slider-verta-firin.jpg",
   },
 ];
 

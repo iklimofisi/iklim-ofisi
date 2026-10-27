@@ -246,7 +246,7 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* 5. ENDÜSTRİYEL MUTFAK ÇÖZÜMLERİ (AIRNEX, VERTA) — ana işlerden sonra, daha sade */}
+        {/* 5. ENDÜSTRİYEL MUTFAK ÇÖZÜMLERİ (AIRNEX) — ana işlerden sonra, daha sade */}
         <section className="py-16 bg-white border-t border-slate-200">
           <div className="max-w-7xl mx-auto px-6">
             <div className="mb-8">
@@ -262,17 +262,6 @@ export default async function Home() {
                   <p className="text-[11px] font-bold tracking-wider text-teal-700 uppercase">AIRNEX · Mutfak Havalandırma</p>
                   <h3 className="font-bold text-slate-900">Elektrostatik Hücreli Aspiratör</h3>
                   <p className="text-xs text-slate-600 leading-relaxed">Mutfak egzozunda yağ, duman ve kokunun elektrostatik filtrasyonla kontrolü.</p>
-                  <span className="inline-block text-xs font-semibold text-teal-700 group-hover:underline">İncele →</span>
-                </div>
-              </Link>
-              <Link href="/verta" className="group bg-slate-50 border border-slate-200 rounded-xl overflow-hidden flex hover:border-teal-500/40 hover:shadow-md transition-all">
-                <div className="relative w-32 sm:w-40 shrink-0 bg-slate-900">
-                  <Image src="/slider/slider-verta-firin.jpg" alt="VERTA konveksiyonel fırın" fill sizes="160px" className="object-cover" />
-                </div>
-                <div className="p-5 space-y-2">
-                  <p className="text-[11px] font-bold tracking-wider text-teal-700 uppercase">VERTA · Endüstriyel Mutfak</p>
-                  <h3 className="font-bold text-slate-900">Konveksiyonel Fırınlar</h3>
-                  <p className="text-xs text-slate-600 leading-relaxed">Pastane, restoran ve oteller için 4, 6 ve 10 tepsili profesyonel fırınlar.</p>
                   <span className="inline-block text-xs font-semibold text-teal-700 group-hover:underline">İncele →</span>
                 </div>
               </Link>
