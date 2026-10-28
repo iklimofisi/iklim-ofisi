@@ -34,7 +34,7 @@ export default function BlogPage() {
               </span>
             </h1>
             <p className="text-base text-slate-600 leading-relaxed pt-2">
-              Mitsubishi Electric ve TCL VRF teknolojileri, Buderus ısıtma çözümleri, Niva ve Olefini hava perdeleri, Ayen alüminyum radyatörler, AIRNEX mutfak havalandırma ve mekanik tesisat hakkında uzman mühendislerimizin hazırladığı rehber yazılar.
+              TCL ve Mitsubishi Electric VRF teknolojileri, Buderus ısıtma çözümleri, Niva ve Olefini hava perdeleri, Ayen alüminyum radyatörler, AIRNEX mutfak havalandırma ve mekanik tesisat hakkında uzman mühendislerimizin hazırladığı rehber yazılar.
             </p>
           </div>
 

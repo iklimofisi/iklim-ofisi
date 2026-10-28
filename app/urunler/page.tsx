@@ -8,9 +8,9 @@ import { getSirketAyarlari } from "@/lib/sirket";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Ürünler — Mitsubishi Electric, TCL VRF & Klima, Isı Pompası, Yerden Isıtma",
+  title: "Ürünler — TCL, Mitsubishi Electric VRF & Klima, Isı Pompası, Yerden Isıtma",
   description:
-    "Mitsubishi Electric ve TCL VRF, klima ve multi klima sistemleri, Buderus ve diğer markalarda ısı pompaları, Fraenkische yerden ısıtma, Buderus yoğuşmalı kazanlar, havalandırma ve AIRNEX mutfak aspiratörleri.",
+    "TCL ve Mitsubishi Electric VRF, klima ve multi klima sistemleri, Buderus ve diğer markalarda ısı pompaları, Fraenkische yerden ısıtma, Buderus yoğuşmalı kazanlar, havalandırma ve AIRNEX mutfak aspiratörleri.",
   alternates: { canonical: "/urunler" },
 };
 
@@ -32,10 +32,10 @@ const urunKategorileri: {
     gorsel: "/urunler/urun-vrf.jpg",
     gorselAlt: "TCL TMV6+ Super Serisi VRF dış ünitesi",
     kategori: "MERKEZİ İKLİMLENDİRME",
-    baslik: "Mitsubishi Electric & TCL VRF Sistemleri",
-    aciklama: "Otel, plaza, hastane ve binalarda her odayı bağımsız iklimlendiren Mitsubishi Electric City Multi ve TCL TMV serisi VRF dış/iç ünite grupları.",
-    urunler: ["Mitsubishi Electric City Multi VRF", "TCL TMV Serisi VRF Sistemleri", "Heat Pump & Heat Recovery Dış Üniteler", "Y-Branch & Joint Bağlantı Kitleri"],
-    markalar: "Mitsubishi Electric, TCL",
+    baslik: "TCL & Mitsubishi Electric VRF Sistemleri",
+    aciklama: "Otel, plaza, hastane ve binalarda her odayı bağımsız iklimlendiren TCL TMV serisi ve Mitsubishi Electric City Multi VRF dış/iç ünite grupları.",
+    urunler: ["TCL TMV Serisi VRF Sistemleri", "Mitsubishi Electric City Multi VRF", "Heat Pump & Heat Recovery Dış Üniteler", "Y-Branch & Joint Bağlantı Kitleri"],
+    markalar: "TCL, Mitsubishi Electric",
     detay: { href: "/tcl-vrf", etiket: "TCL VRF Ürün Detayları →", katalog: "/kataloglar/tcl-vrf-tmv6-super-katalog-2026.pdf" },
   },
   {
@@ -43,10 +43,10 @@ const urunKategorileri: {
     gorsel: "/urunler/urun-bireysel-klima.jpg",
     gorselAlt: "Oturma odasında duvar tipi klima iç ünitesi",
     kategori: "BİREYSEL İKLİMLENDİRME",
-    baslik: "Mitsubishi Electric & TCL Klima ve Multi Klima",
-    aciklama: "Konut ve ofisler için Mitsubishi Electric ve TCL yüksek verimli Inverter duvar tipi klimalar ve tek dış üniteye birden çok iç ünite bağlanan multi klima sistemleri.",
-    urunler: ["Mitsubishi Electric Inverter Duvar Tipi Klimalar", "TCL Inverter Duvar Tipi Klimalar", "Multi-Split Çoklu İç Ünite Sistemleri"],
-    markalar: "Mitsubishi Electric, TCL",
+    baslik: "TCL & Mitsubishi Electric Klima ve Multi Klima",
+    aciklama: "Konut ve ofisler için TCL ve Mitsubishi Electric yüksek verimli Inverter duvar tipi klimalar ve tek dış üniteye birden çok iç ünite bağlanan multi klima sistemleri.",
+    urunler: ["TCL Inverter Duvar Tipi Klimalar", "Mitsubishi Electric Inverter Duvar Tipi Klimalar", "Multi-Split Çoklu İç Ünite Sistemleri"],
+    markalar: "TCL, Mitsubishi Electric",
   },
   {
     id: "ticari-klima",
@@ -56,7 +56,7 @@ const urunKategorileri: {
     baslik: "Ticari Tip Klimalar",
     aciklama: "Mağaza, cafe, restoran ve açık ofis alanları için 4 yöne üflemeli kaset, kanallı gizli tavan, konsol ve salon tipi cihazlar.",
     urunler: ["4 Yöne Üflemeli Kaset Tipi Klimalar", "Gizli Tavan Tipi Kanallı Klimalar", "Konsol Tipi Klimalar", "Salon Tipi Klimalar"],
-    markalar: "Mitsubishi Electric, TCL",
+    markalar: "TCL, Mitsubishi Electric",
   },
   {
     id: "isi-pompasi",
@@ -148,13 +148,13 @@ export default async function UrunlerPage() {
               MEKANİK TESİSAT & İKLİMLENDİRME ÜRÜNLERİ
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900 leading-[1.15]">
-              Mitsubishi Electric ve TCL <br />
+              TCL ve Mitsubishi Electric <br />
               <span className="text-teal-700 underline decoration-teal-300/80 decoration-4 underline-offset-8">
                 VRF, Klima ve Isı Pompası.
               </span>
             </h1>
             <p className="text-base text-slate-600 leading-relaxed pt-2">
-              {sirket.unvan}; Mitsubishi Electric ve TCL VRF ve klima sistemlerinden ısı pompalarına, Fraenkische yerden ısıtmadan Buderus yoğuşmalı kazanlara, havalandırmadan AIRNEX mutfak aspiratörlerine kadar projenizin ürün ihtiyacını mühendislik güvencesiyle sağlar.
+              {sirket.unvan}; TCL ve Mitsubishi Electric VRF ve klima sistemlerinden ısı pompalarına, Fraenkische yerden ısıtmadan Buderus yoğuşmalı kazanlara, havalandırmadan AIRNEX mutfak aspiratörlerine kadar projenizin ürün ihtiyacını mühendislik güvencesiyle sağlar.
             </p>
           </div>
 

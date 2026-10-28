@@ -43,7 +43,7 @@ export default async function Home() {
                   </h1>
 
                   <p className="text-sm sm:text-base text-slate-600 max-w-2xl leading-relaxed">
-                    {sirket.unvan}; konut, ofis, otel ve ticari yapılarda Mitsubishi Electric ve TCL VRF ve klima sistemleri, multi klima, ısı pompası, Fraenkische yerden ısıtma ve kazan dairesi yenileme projelerini keşiften montaja anahtar teslim yürütür.
+                    {sirket.unvan}; konut, ofis, otel ve ticari yapılarda TCL ve Mitsubishi Electric VRF ve klima sistemleri, multi klima, ısı pompası, Fraenkische yerden ısıtma ve kazan dairesi yenileme projelerini keşiften montaja anahtar teslim yürütür.
                   </p>
 
                   {/* Butonlar */}
@@ -69,25 +69,26 @@ export default async function Home() {
                 <div className="bg-slate-900 text-white rounded-2xl p-8 shadow-xl border border-slate-800 space-y-6">
                   <div className="flex justify-between items-center border-b border-slate-800 pb-4">
                     <div>
-                      <p className="text-[11px] font-bold text-teal-400 uppercase tracking-widest">İklim Ofisi Çalışma Aralığı</p>
-                      <h3 className="text-lg font-bold text-white mt-0.5">-20°C ile +55°C Arası Tam Kontrol</h3>
+                      <p className="text-[11px] font-bold text-teal-400 uppercase tracking-widest">TCL VRF Çalışma Aralığı</p>
+                      <h3 className="text-lg font-bold text-white mt-0.5">-30°C ile +56°C Arası Tam Kontrol</h3>
                     </div>
                     <span className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50" />
                   </div>
 
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    Dış hava koşulları ne olursa olsun, Inverter VRF ve Isı Pompası teknolojisiyle iç mekanlarda ideal nem ve sıcaklık dengesini sabit tutuyoruz.
+                    TCL TMV6+ Super VRF, ısıtmada -30°C&apos;ye, soğutmada +56°C&apos;ye kadar dış hava sıcaklığında çalışır. Dış hava koşulları ne olursa olsun iç mekânda ideal nem ve sıcaklık dengesini sabit tutuyoruz.
                   </p>
 
                   {/* Sıcaklık Skalası */}
                   <div className="bg-slate-950 p-4 rounded-xl border border-slate-800/80 space-y-3">
                     <div className="flex justify-between text-[11px] font-mono font-bold text-slate-400">
-                      <span className="text-cyan-400">-20°C Soğuk</span>
+                      <span className="text-cyan-400">-30°C Soğuk</span>
                       <span className="text-teal-300">İdeal 22°C</span>
-                      <span className="text-amber-400">+55°C Sıcak</span>
+                      <span className="text-amber-400">+56°C Sıcak</span>
                     </div>
                     <div className="h-2 w-full bg-gradient-to-r from-cyan-500 via-teal-400 to-amber-500 rounded-full relative">
-                      <div className="absolute left-1/2 -top-1 w-4 h-4 rounded-full bg-white border-2 border-slate-900 shadow-md transform -translate-x-1/2" />
+                      {/* 22°C, -30…+56°C skalasında %60 noktası */}
+                      <div style={{ left: "60%" }} className="absolute -top-1 w-4 h-4 rounded-full bg-white border-2 border-slate-900 shadow-md transform -translate-x-1/2" />
                     </div>
                     <p className="text-[10px] text-center text-slate-400 font-mono">
                       Akıllı Termostat & Inverter Kompresör Hassasiyeti
@@ -97,7 +98,7 @@ export default async function Home() {
                   <div className="grid grid-cols-2 gap-3 text-xs pt-1">
                     <div className="p-3 rounded-lg bg-slate-800/60 border border-slate-800">
                       <p className="font-bold text-slate-200">VRF Merkezi Sistem</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">Mitsubishi Electric · TCL</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">TCL · Mitsubishi Electric</p>
                     </div>
                     <div className="p-3 rounded-lg bg-slate-800/60 border border-slate-800">
                       <p className="font-bold text-slate-200">Klima & Multi Klima</p>
@@ -134,7 +135,7 @@ export default async function Home() {
                 <p className="text-xs font-bold tracking-widest text-teal-700 uppercase">20+ YILLIK MÜHENDİSLİK GÜCÜ</p>
                 <h2 className="text-3xl font-bold text-slate-900">Mühendislik Kökenli Yönetim Anlayışı</h2>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  20 yılı aşkın kıdemli Makine Mühendisi ve Proje Mühendisi kurucu ortaklarımızın öncülüğünde; Mitsubishi Electric ve TCL VRF ve klima sistemleri, ısı pompaları, Fraenkische yerden ısıtma ve Buderus kazan dairesi çözümleriyle yapının ısı kayıp/kazanç hesabına tam uygun iklimlendirme ve ısıtma sistemleri kuruyoruz.
+                  20 yılı aşkın kıdemli Makine Mühendisi ve Proje Mühendisi kurucu ortaklarımızın öncülüğünde; TCL ve Mitsubishi Electric VRF ve klima sistemleri, ısı pompaları, Fraenkische yerden ısıtma ve Buderus kazan dairesi çözümleriyle yapının ısı kayıp/kazanç hesabına tam uygun iklimlendirme ve ısıtma sistemleri kuruyoruz.
                 </p>
                 <div>
                   <Link href="/hakkimizda" className="inline-block text-xs font-bold text-teal-700 hover:underline">
@@ -147,7 +148,7 @@ export default async function Home() {
                 <h4 className="font-bold text-slate-900 text-sm">Disiplinli Mühendislik İlkelerimiz</h4>
                 <div className="space-y-2 text-xs text-slate-600">
                   <p>✓ 20+ yıllık saha tecrübesiyle hatasız kapasite seçimi</p>
-                  <p>✓ Mitsubishi Electric ve TCL VRF & klima uzmanlığı</p>
+                  <p>✓ TCL ve Mitsubishi Electric VRF & klima uzmanlığı</p>
                   <p>✓ Isı pompası, Fraenkische yerden ısıtma ve kazan dairesi yenileme</p>
                   <p>✓ AutoCAD tabanlı çizim, metraj ve şeffaf bütçelendirme</p>
                   <p>✓ Tesisatta azot basınç testi, vakumlama ve 2 yıl tam garanti</p>
@@ -175,8 +176,8 @@ export default async function Home() {
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
-                { no: "01", baslik: "VRF / VRV Sistemleri", metin: "Mitsubishi Electric City Multi ve TCL VRF ile otel, plaza, hastane ve konut projelerinde merkezi iklimlendirme.", href: "/hizmetler#vrf", one: true },
-                { no: "02", baslik: "Klima & Multi Klima", metin: "Mitsubishi Electric ve TCL duvar tipi, multi split, kaset ve kanallı klimalarda keşif, kapasite hesabı ve montaj.", href: "/hizmetler#klima", one: true },
+                { no: "01", baslik: "VRF / VRV Sistemleri", metin: "TCL VRF ve Mitsubishi Electric City Multi ile otel, plaza, hastane ve konut projelerinde merkezi iklimlendirme.", href: "/hizmetler#vrf", one: true },
+                { no: "02", baslik: "Klima & Multi Klima", metin: "TCL ve Mitsubishi Electric duvar tipi, multi split, kaset ve kanallı klimalarda keşif, kapasite hesabı ve montaj.", href: "/hizmetler#klima", one: true },
                 { no: "03", baslik: "Isı Pompası", metin: "Konut ve villalar için hava kaynaklı ısı pompaları. Buderus ve projeye uygun diğer markalarla anahtar teslim.", href: "/hizmetler#isi-pompasi", one: true },
                 { no: "04", baslik: "Yerden Isıtma Sistemleri", metin: "Fraenkische yerden ısıtma boru ve kolektör sistemleri; ısı pompası ve kazanla birlikte projelendirme.", href: "/hizmetler#yerden-isitma", one: true },
                 { no: "05", baslik: "Kazan Dairesi Yenileme", metin: "Eski kazan dairelerinin Buderus yoğuşmalı kaskad kazanlarla yenilenmesi, pompa ve kollektör grupları.", href: "/hizmetler#kazan-dairesi", one: false },

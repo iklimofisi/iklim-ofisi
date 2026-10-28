@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Hizmetlerimiz — VRF, Klima, Isı Pompası & Yerden Isıtma",
   description:
-    "Mitsubishi Electric ve TCL VRF sistemleri, klima ve multi klima, ısı pompası (Buderus ve diğer markalar), Fraenkische yerden ısıtma, kazan dairesi yenileme, havalandırma ve mekanik tesisatta anahtar teslim hizmet.",
+    "TCL ve Mitsubishi Electric VRF sistemleri, klima ve multi klima, ısı pompası (Buderus ve diğer markalar), Fraenkische yerden ısıtma, kazan dairesi yenileme, havalandırma ve mekanik tesisatta anahtar teslim hizmet.",
   alternates: { canonical: "/hizmetler" },
 };
 
@@ -38,7 +38,7 @@ export default async function HizmetlerPage() {
               </span>
             </h1>
             <p className="text-base text-slate-600 leading-relaxed pt-2">
-              {sirket.unvan}; Mitsubishi Electric ve TCL VRF ve klima sistemlerinden ısı pompalarına, Fraenkische yerden ısıtmadan kazan dairesi yenilemeye, havalandırmadan endüstriyel mutfak egzozuna kadar mühendislik standartlarında anahtar teslim çözümler sunar.
+              {sirket.unvan}; TCL ve Mitsubishi Electric VRF ve klima sistemlerinden ısı pompalarına, Fraenkische yerden ısıtmadan kazan dairesi yenilemeye, havalandırmadan endüstriyel mutfak egzozuna kadar mühendislik standartlarında anahtar teslim çözümler sunar.
             </p>
           </div>
 
@@ -71,13 +71,13 @@ export default async function HizmetlerPage() {
                     VRF / VRV Merkezi Sistemler
                   </h2>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Plaza, otel, hastane ve binalarda her odayı bağımsız iklimlendiren Mitsubishi Electric City Multi ve TCL TMV VRF sistemleri; Heat Pump ve Heat Recovery dış/iç ünite grupları ve azot testli borulama.
+                    Plaza, otel, hastane ve binalarda her odayı bağımsız iklimlendiren TCL TMV ve Mitsubishi Electric City Multi VRF sistemleri; Heat Pump ve Heat Recovery dış/iç ünite grupları ve azot testli borulama.
                   </p>
 
                   <div className="pt-3 border-t border-slate-100 space-y-2">
                     <div className="flex items-start gap-2 text-xs text-slate-700">
                       <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
-                      <span>Mitsubishi Electric & TCL VRF dış ve iç ünite montajı</span>
+                      <span>TCL & Mitsubishi Electric VRF dış ve iç ünite montajı</span>
                     </div>
                     <div className="flex items-start gap-2 text-xs text-slate-700">
                       <span className="w-4 h-4 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 font-bold text-[10px]">✓</span>
@@ -127,7 +127,7 @@ export default async function HizmetlerPage() {
                     Klima & Multi Klima Sistemleri
                   </h2>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Mitsubishi Electric ve TCL duvar tipi, multi-split, kaset tipi, kanallı gizli tavan, konsol ve salon tipi klimaların keşfi, kapasite hesabı ve montajı.
+                    TCL ve Mitsubishi Electric duvar tipi, multi-split, kaset tipi, kanallı gizli tavan, konsol ve salon tipi klimaların keşfi, kapasite hesabı ve montajı.
                   </p>
 
                   <div className="pt-3 border-t border-slate-100 space-y-2">

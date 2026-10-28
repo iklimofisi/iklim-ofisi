@@ -281,25 +281,25 @@ export const MAKALELER: Makale[] = [
   },
   {
     slug: "vrf-rehberi-mitsubishi-electric-ve-tcl",
-    baslik: "VRF İklimlendirme Rehberi: Mitsubishi Electric ve TCL VRF Teknolojileri",
+    baslik: "VRF İklimlendirme Rehberi: TCL ve Mitsubishi Electric VRF Teknolojileri",
     kategori: "VRF MERKEZİ SİSTEM",
     tarih: "01 Eylül 2026",
     okumaSuresi: "5 dk okuma",
     gorsel: "/urunler/urun-vrf.jpg",
     gorselAlt: "TCL VRF dış ünitesi",
-    ozet: "Otel, plaza ve konut projelerinde iklimlendirme maliyetini düşüren Mitsubishi Electric City Multi ve TCL TMV serisi VRF sistemlerinin mühendislik bakışıyla değerlendirmesi.",
+    ozet: "Otel, plaza ve konut projelerinde iklimlendirme maliyetini düşüren TCL TMV serisi ve Mitsubishi Electric City Multi VRF sistemlerinin mühendislik bakışıyla değerlendirmesi.",
     icerikHtml: `
       <h2>VRF / VRV İklimlendirme Nedir?</h2>
       <p>VRF (Variable Refrigerant Flow) sistemler, değişken debili soğutucu akışkan teknolojisiyle tek bir dış ünite grubuna onlarca iç ünite bağlayarak her odayı bağımsız iklimlendirmenizi sağlar.</p>
 
-      <h2>Mitsubishi Electric City Multi VRF Üstünlükleri</h2>
-      <p>Mitsubishi Electric VRF sistemleri, Inverter kompresör yapısı ve yüksek COP/EER verimlilik değerleri ile öne çıkar. Düşük dış hava sıcaklıklarında dahi yüksek ısıtma performansı sunan Zubadan teknolojisi, otel ve plaza projelerinde güçlü bir konfor sağlar.</p>
-
       <h2>TCL TMV Serisi VRF Sistemleri</h2>
       <p>TCL'in yeni nesil TMV serisi VRF sistemleri, Inverter kompresör ve akıllı kontrol altyapısıyla ofis, mağaza, otel ve konut projelerinde yüksek verim ile rekabetçi yatırım maliyetini bir arada sunar. Geniş iç ünite seçenekleri sayesinde farklı mahal tiplerine esnek çözüm üretir. Model ve teknik veriler için <a href="/tcl-vrf">TCL VRF sistemleri</a> sayfamıza bakabilirsiniz.</p>
 
+      <h2>Mitsubishi Electric City Multi VRF Üstünlükleri</h2>
+      <p>Mitsubishi Electric VRF sistemleri, Inverter kompresör yapısı ve yüksek COP/EER verimlilik değerleri ile öne çıkar. Düşük dış hava sıcaklıklarında dahi yüksek ısıtma performansı sunan Zubadan teknolojisi, otel ve plaza projelerinde güçlü bir konfor sağlar.</p>
+
       <h2>Projenizde Hangi Sistemi Seçmelisiniz?</h2>
-      <p>Mühendis kadromuz; binanızın cephe yönü, cam alanları ve kullanım amacına göre m² bazlı ısı kazancı/kaybı hesabı yaparak Mitsubishi Electric veya TCL VRF sistemlerinden projenize ve bütçenize en uygun olanı projelendirir.</p>
+      <p>Mühendis kadromuz; binanızın cephe yönü, cam alanları ve kullanım amacına göre m² bazlı ısı kazancı/kaybı hesabı yaparak TCL veya Mitsubishi Electric VRF sistemlerinden projenize ve bütçenize en uygun olanı projelendirir.</p>
     `,
   },
   {
@@ -347,13 +347,13 @@ export const MAKALELER: Makale[] = [
     okumaSuresi: "3 dk okuma",
     gorsel: "/slider/slider-mitsubishi-duvar.jpg",
     gorselAlt: "Oturma odasında duvar tipi klima",
-    ozet: "Sadece metrekareye göre klima seçerken yapılan hatalar, cam yüzey faktörü ve Mitsubishi Electric / TCL Inverter teknolojisinin elektrik faturasına etkisi.",
+    ozet: "Sadece metrekareye göre klima seçerken yapılan hatalar, cam yüzey faktörü ve TCL / Mitsubishi Electric Inverter teknolojisinin elektrik faturasına etkisi.",
     icerikHtml: `
       <h2>Metrekareye Göre Klima Seçimi Neden Hatalıdır?</h2>
       <p>Aynı metrekareye sahip çatı katı bir oda ile zemin kat ara oda arasında %50 ısı yükü farkı vardır. Cam alanı, binanın yalıtımı ve cephe yönü hesaplanmadan alınan klimalar ya yetersiz kalır ya da gereksiz fazla elektrik tüketir.</p>
 
       <h2>Inverter Kompresör Nasıl Tasarruf Sağlar?</h2>
-      <p>Eski tip klimalar sürekli dur-kalk yaparak yüksek demeraj akımı çeker. Mitsubishi Electric ve TCL Inverter klimalar ise ortam sıcaklığına göre devrini ayarlayarak kesintisiz ve A+++ verimle çalışır.</p>
+      <p>Eski tip klimalar sürekli dur-kalk yaparak yüksek demeraj akımı çeker. TCL ve Mitsubishi Electric Inverter klimalar ise ortam sıcaklığına göre devrini ayarlayarak kesintisiz ve A+++ verimle çalışır.</p>
     `,
   },
 ];

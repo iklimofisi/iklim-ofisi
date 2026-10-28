@@ -21,7 +21,7 @@ type Slayt = {
   cizim?: Cizim;
 };
 
-// Sıra = önem sırası: VRF ve klima (Mitsubishi Electric, TCL) → ısı pompası →
+// Sıra = önem sırası: VRF ve klima (TCL, Mitsubishi Electric) → ısı pompası →
 // yerden ısıtma (Fraenkische) → kazan dairesi (Buderus) → mutfak havalandırma (AIRNEX)
 const SLAYTLAR: Slayt[] = [
   {
@@ -30,20 +30,6 @@ const SLAYTLAR: Slayt[] = [
     alt: "TCL TMV6+ Super Serisi VRF dış ünitesi",
     href: "/tcl-vrf",
     gorsel: "/slider/slider-tcl-vrf.jpg",
-  },
-  {
-    etiket: "Mitsubishi Electric · City Multi",
-    baslik: "City Multi VRF Sistemleri",
-    alt: "Mitsubishi Electric City Multi VRF dış üniteleri",
-    href: "/urunler",
-    gorsel: "/slider/slider-mitsubishi-city-multi.jpg",
-  },
-  {
-    etiket: "Mitsubishi Electric",
-    baslik: "Duvar Tipi ve Multi Klimalar",
-    alt: "Oturma odasında Mitsubishi Electric duvar tipi iç ünite",
-    href: "/hizmetler#klima",
-    gorsel: "/slider/slider-mitsubishi-duvar.jpg",
   },
   {
     etiket: "TCL · Mini VRF",
@@ -58,6 +44,20 @@ const SLAYTLAR: Slayt[] = [
     alt: "Tavana monte TCL kaset tipi iç ünite",
     href: "/tcl-vrf#ic-uniteler",
     gorsel: "/slider/slider-tcl-kaset.jpg",
+  },
+  {
+    etiket: "Mitsubishi Electric · City Multi",
+    baslik: "City Multi VRF Sistemleri",
+    alt: "Mitsubishi Electric City Multi VRF dış üniteleri",
+    href: "/urunler",
+    gorsel: "/slider/slider-mitsubishi-city-multi.jpg",
+  },
+  {
+    etiket: "Mitsubishi Electric",
+    baslik: "Duvar Tipi ve Multi Klimalar",
+    alt: "Oturma odasında Mitsubishi Electric duvar tipi iç ünite",
+    href: "/hizmetler#klima",
+    gorsel: "/slider/slider-mitsubishi-duvar.jpg",
   },
   {
     etiket: "Fraenkische · Yerden Isıtma",
