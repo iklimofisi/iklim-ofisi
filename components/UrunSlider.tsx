@@ -75,10 +75,17 @@ const SLAYTLAR: Slayt[] = [
   },
   {
     etiket: "Ayen · Alüminyum Radyatör",
-    baslik: "Panel Radyatör ve Havlupan Modelleri",
+    baslik: "Alüminyum Panel Radyatör Modelleri",
     alt: "Ahşap desenli Ayen Class alüminyum radyatör",
-    href: "/ayen",
+    href: "/ayen#panel",
     gorsel: "/ayen/ayen-slider.jpg",
+  },
+  {
+    etiket: "Ayen · Alüminyum Havlupan",
+    baslik: "Havlupan Modelleri: 9 Tasarım, 30 Renk",
+    alt: "Beyaz, gold ve siyah Ayen alüminyum havlupanlar",
+    href: "/ayen#havlupan",
+    gorsel: "/ayen/ayen-havlupan-slider.jpg",
   },
   {
     etiket: "Niva · Olefini",
