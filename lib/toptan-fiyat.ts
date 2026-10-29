@@ -230,8 +230,12 @@ export function toptanKalemleri(d: ToptanDurum): ToptanKalem[] {
 // alt gruptan ürün PDF'e girerse çıkar (lib/fiyat-listesi.ts → notlariSuz). Markanın tüm
 // sayfalarında geçen not her grubun altında tekrar eder (o grubun da koşuludur).
 export const urunGrubu = (bolum: string) => bolum.split(" · ")[0].trim();
-export function toptanGrupNotlari(d: ToptanDurum): { grup: string; notlar: string }[] {
-  const sonuc: { grup: string; notlar: string }[] = [];
+// Netsa PDF'indeki gibi: bir alt bölüme ait not (ör. "İç ünitelerin içerisinden kablosuz kumanda
+// çıkmaktadır") o bölümün hemen altına (bolum: true, grup = bölüm adı), sayfanın notları ürün
+// grubunun son bölümünün altına gelir.
+export type ToptanGrupNotu = { grup: string; notlar: string; bolum?: boolean };
+export function toptanGrupNotlari(d: ToptanDurum): ToptanGrupNotu[] {
+  const sonuc: ToptanGrupNotu[] = [];
   for (const m of markaSirala(d.markalar)) {
     const gruplar: string[] = [];
     for (const u of m.urunler) {
@@ -245,11 +249,19 @@ export function toptanGrupNotlari(d: ToptanDurum): { grup: string; notlar: strin
           satirlar.push(n.metin);
           continue;
         }
-        const ilgili = n.etiketler.filter((e) => e === g || e.startsWith(`${g} · `));
-        if (!ilgili.length) continue;
-        satirlar.push(ilgili.includes(g) ? n.metin : `[${ilgili.join("; ")}] ${n.metin}`);
+        if (n.etiketler.includes(g)) satirlar.push(n.metin);
       }
       if (satirlar.length) sonuc.push({ grup: g, notlar: satirlar.join("\n") });
+      // Bu ürün grubunun alt bölümlerine ait notlar (bölüm adı kalemlerdeki gibi 120 karakter)
+      const bolumler: string[] = [];
+      for (const u of m.urunler) {
+        const b = u.bolum.slice(0, 120).trim();
+        if (urunGrubu(b) === g && !bolumler.includes(b)) bolumler.push(b);
+      }
+      for (const b of bolumler) {
+        const bn = m.notlar.filter((n) => !n.etiketler.includes(g) && n.etiketler.some((e) => e.slice(0, 120).trim() === b)).map((n) => n.metin);
+        if (bn.length) sonuc.push({ grup: b, notlar: bn.join("\n"), bolum: true });
+      }
     }
   }
   return sonuc;

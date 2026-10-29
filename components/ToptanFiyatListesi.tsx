@@ -60,7 +60,7 @@ export default function ToptanFiyatListesi({
   liste: { id: string; baslik: string; aciklama: string; notlar: string; duzen: string; fiyatBaslik: string; fiyat2Baslik: string; paraBirimi: string };
   durum: ToptanDurum;
   satirlar: ToptanSatir[];
-  grupNotlari: { grup: string; notlar: string }[];
+  grupNotlari: { grup: string; notlar: string; bolum?: boolean }[];
 }) {
   const router = useRouter();
   const tl = (n: number | null | undefined) => (n && n > 0 ? flParaYaz(n, liste.paraBirimi) : FIYAT_SORUNUZ);
@@ -619,12 +619,12 @@ export default function ToptanFiyatListesi({
           <details className="mt-4 text-xs text-metin/65">
             <summary className="cursor-pointer">PDF&apos;lerden alınan ürün grubu notları (her yüklemede yenilenir)</summary>
             <p className="mt-2 text-[11px] text-metin/45">
-              Her ürün grubunun notları PDF&apos;te o grubun ürünlerinin hemen altında çıkar. Köşeli parantezdeki etiket müşteriye görünmez: o not yalnız
-              PDF&apos;e o alt gruptan ürün girerse çıkar.
+              Netsa PDF&apos;indeki gibi: bölüme ait not o bölümün tablosunun hemen altında, sayfanın notları da ürün grubunun son bölümünün altında
+              çıkar. PDF&apos;e yalnız seçtiğiniz ürünlerin notları girer.
             </p>
             {grupNotlari.map((m) => (
-              <div key={m.grup} className="mt-3">
-                <p className="font-semibold text-metin">{m.grup}</p>
+              <div key={`${m.bolum ? "b" : "g"}:${m.grup}`} className={m.bolum ? "mt-2 pl-4" : "mt-3"}>
+                <p className={m.bolum ? "text-metin/80" : "font-semibold text-metin"}>{m.bolum ? `${m.grup} (bölümün altında)` : `${m.grup} (grubun sonunda)`}</p>
                 <ul className="mt-1 space-y-1 list-disc pl-5">
                   {m.notlar.split("\n").map((n, i) => (
                     <li key={i}>{n}</li>

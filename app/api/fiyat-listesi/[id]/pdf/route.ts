@@ -84,7 +84,7 @@ async function pdfYanit(id: string, haric: Set<string>, indir: boolean) {
   }
   // Toptan listede PDF'lerden alınan notlar her ürün grubunun kendi ürünlerinin altında çıkar
   // (yalnız seçilen ürünlerle ilgili olanlar); kendi notlarımız en sonda kalır
-  let grupNotlari: { grup: string; notlar: string }[] | null = null;
+  let grupNotlari: { grup: string; notlar: string; bolum?: boolean }[] | null = null;
   if (liste.kaynak === "TOPTAN") {
     const { toptanGrupNotlari, toptanDurumOku } = await import("@/lib/toptan-fiyat");
     grupNotlari = toptanGrupNotlari(toptanDurumOku(liste.kaynakDurum));

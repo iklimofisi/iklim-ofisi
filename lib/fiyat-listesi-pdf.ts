@@ -64,7 +64,8 @@ export type PdfListe = {
   notlar: string | null;
   // Doluysa her ürün grubunun notları o grubun son bölümünün hemen altında çıkar (toptan liste).
   // Ürün grubu = bölüm adının " · " öncesi (ör. "Sakura Duvar Tipi Split Klima")
-  grupNotlari?: { grup: string; notlar: string }[] | null;
+  // bolum: true → not o bölümün (grup = bölüm adı) tablosunun hemen altında çıkar
+  grupNotlari?: { grup: string; notlar: string; bolum?: boolean }[] | null;
   updatedAt: Date;
 };
 
@@ -582,12 +583,33 @@ export function fiyatListesiPdfOlustur(
   const grupListesi = [...gruplar.entries()];
   const urunGrubu = (bolum: string) => bolum.split(" · ")[0].trim();
   const grupNotlariniYaz = (grup: string) => {
-    const m = liste.grupNotlari?.find((x) => x.grup === grup);
+    const m = liste.grupNotlari?.find((x) => !x.bolum && x.grup === grup);
     if (!m) return;
     const metni = notlariSuz(m.notlar, kalemler.filter((k) => urunGrubu(k.bolum || "") === grup));
     if (!metni) return;
     notBlogu(`${buyukHarf(metin(grup))} · NOTLAR`, metni);
     y += 6;
+  };
+  // Bölüme ait kısa not ("Not: ...") tablonun hemen altında
+  const bolumNotuYaz = (bolum: string) => {
+    const m = liste.grupNotlari?.find((x) => x.bolum && x.grup === bolum);
+    if (!m || !m.notlar.trim()) return;
+    y -= 2;
+    yazi(7.8, false, METIN_60);
+    const n = satirlar(
+      m.notlar
+        .split("\n")
+        .filter((s) => s.trim())
+        .map((s) => `Not: ${s.trim()}`)
+        .join("\n"),
+      GENISLIK
+    );
+    for (const s of n) {
+      yerAc(4);
+      doc.text(s, SOL, y);
+      y += 3.6;
+    }
+    y += 4;
   };
 
   for (const [gi, [ad, grup]] of grupListesi.entries()) {
@@ -632,6 +654,7 @@ export function fiyatListesiPdfOlustur(
     }
     // Ürün grubunun son bölümü bittiyse o grubun notları
     if (liste.grupNotlari?.length) {
+      if (ad) bolumNotuYaz(ad);
       const g = urunGrubu(ad);
       const sonraki = grupListesi[gi + 1];
       if (g && (!sonraki || urunGrubu(sonraki[0]) !== g)) grupNotlariniYaz(g);
