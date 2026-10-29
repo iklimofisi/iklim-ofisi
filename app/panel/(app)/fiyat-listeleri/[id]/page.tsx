@@ -5,7 +5,7 @@ import { getTcmbKurlari } from "@/lib/kur";
 import FiyatListesiDuzenleyici from "@/components/FiyatListesiDuzenleyici";
 import KayaFiyatListesi from "@/components/KayaFiyatListesi";
 import ToptanFiyatListesi from "@/components/ToptanFiyatListesi";
-import { TOPTAN_KAYNAK, toptanDurumOku, toptanNotlari, anahtarla } from "@/lib/toptan-fiyat";
+import { TOPTAN_KAYNAK, toptanDurumOku, toptanGrupNotlari, anahtarla } from "@/lib/toptan-fiyat";
 import { kaynakDurumOku } from "@/lib/kaya-fiyat";
 import { HAZIR_LISTELER } from "@/lib/hazir-listeler";
 import { hazirListeTamamla, hazirListeFiyatGeriYukle } from "@/lib/actions";
@@ -81,7 +81,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
           }}
           durum={durum}
           satirlar={satirlar}
-          uretilenNotlar={toptanNotlari(durum)}
+          grupNotlari={toptanGrupNotlari(durum)}
         />
       </div>
     );

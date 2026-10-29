@@ -224,22 +224,46 @@ export function toptanKalemleri(d: ToptanDurum): ToptanKalem[] {
   );
 }
 
-// Liste sonu notları (ürüne bağlı etiketlerle). Bir markanın tüm sayfalarında geçen not o
-// markaya bağlanır; aynı not birden çok markada geçiyorsa tek satırda birleşir. PDF'e
-// yalnız seçilen ürünlerle ilgili notlar girer (lib/fiyat-listesi.ts → notlariSuz).
-export function toptanNotlari(d: ToptanDurum): string {
-  const harita = new Map<string, string[]>();
-  for (const m of markaSirala(d.markalar))
-    for (const n of m.notlar) {
-      const etk = n.etiketler.length ? n.etiketler : [m.marka];
-      const l = harita.get(n.metin) ?? [];
-      for (const e of etk) if (!l.includes(e)) l.push(e);
-      harita.set(n.metin, l);
+// Ürün grubu notları: her ürün grubunun (ör. "Sakura Duvar Tipi Split Klima" — bölüm adının
+// " · " öncesi) koşulları ayrı tutulur ve PDF'te o grubun ürünlerinin hemen altında çıkar.
+// Grubun içindeki alt gruba ait not (ör. yalnız kaset tipi iç üniteler) etiketli kalır: yalnız o
+// alt gruptan ürün PDF'e girerse çıkar (lib/fiyat-listesi.ts → notlariSuz). Markanın tüm
+// sayfalarında geçen not her grubun altında tekrar eder (o grubun da koşuludur).
+export const urunGrubu = (bolum: string) => bolum.split(" · ")[0].trim();
+export function toptanGrupNotlari(d: ToptanDurum): { grup: string; notlar: string }[] {
+  const sonuc: { grup: string; notlar: string }[] = [];
+  for (const m of markaSirala(d.markalar)) {
+    const gruplar: string[] = [];
+    for (const u of m.urunler) {
+      const g = urunGrubu(u.bolum);
+      if (g && !gruplar.includes(g)) gruplar.push(g);
     }
-  return [...harita.entries()].map(([metin, e]) => `[${e.join("; ")}] ${metin}`).join("\n");
+    for (const g of gruplar) {
+      const satirlar: string[] = [];
+      for (const n of m.notlar) {
+        if (!n.etiketler.length) {
+          satirlar.push(n.metin);
+          continue;
+        }
+        const ilgili = n.etiketler.filter((e) => e === g || e.startsWith(`${g} · `));
+        if (!ilgili.length) continue;
+        satirlar.push(ilgili.includes(g) ? n.metin : `[${ilgili.join("; ")}] ${n.metin}`);
+      }
+      if (satirlar.length) sonuc.push({ grup: g, notlar: satirlar.join("\n") });
+    }
+  }
+  return sonuc;
 }
 
-// PDF'e ve kopyalara giden notlar: kendi notlarımız + (toptan listede) PDF'lerden alınan marka notları
+// Tek not alanına yazılacak hâli (düzenlenebilir kopya için): her not markasıyla başlar ve
+// yalnız o markanın (grubunun) ürünü listede kalırsa çıkar
+export function toptanNotlari(d: ToptanDurum): string {
+  return markaSirala(d.markalar)
+    .flatMap((m) => m.notlar.map((n) => `[${(n.etiketler.length ? n.etiketler : [m.marka]).join("; ")}] ${m.marka}: ${n.metin}`))
+    .join("\n");
+}
+
+// Düzenlenebilir kopyaya giden notlar: kendi notlarımız + (toptan listede) PDF'lerden alınan marka notları
 export function listeNotlari(l: { kaynak: string | null; kaynakDurum: string | null; notlar: string | null }): string | null {
   if (l.kaynak !== TOPTAN_KAYNAK) return l.notlar;
   return [l.notlar?.trim(), toptanNotlari(toptanDurumOku(l.kaynakDurum))].filter(Boolean).join("\n") || null;

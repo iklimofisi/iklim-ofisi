@@ -82,11 +82,12 @@ async function pdfYanit(id: string, haric: Set<string>, indir: boolean) {
     const h = HAZIR_LISTELER.find((x) => x.baslik === liste.baslik && x.notlar && notEtiketsiz(x.notlar).trim() === kayitli && x.notlar.trim() !== kayitli);
     if (h) notlar = h.notlar;
   }
-  // Toptan listede PDF'lerden alınan marka notları kendi notlarımızdan sonra eklenir
-  // (etiketli: yalnız seçilen ürünlerin marka / grubuyla ilgili notlar çıkar)
+  // Toptan listede PDF'lerden alınan notlar her ürün grubunun kendi ürünlerinin altında çıkar
+  // (yalnız seçilen ürünlerle ilgili olanlar); kendi notlarımız en sonda kalır
+  let grupNotlari: { grup: string; notlar: string }[] | null = null;
   if (liste.kaynak === "TOPTAN") {
-    const { listeNotlari } = await import("@/lib/toptan-fiyat");
-    notlar = listeNotlari(liste);
+    const { toptanGrupNotlari, toptanDurumOku } = await import("@/lib/toptan-fiyat");
+    grupNotlari = toptanGrupNotlari(toptanDurumOku(liste.kaynakDurum));
   }
 
   // Ürün seçerek alınan PDF'te başlık altındaki açıklama yalnız seçilen ürünlerin bölümlerini sayar
@@ -94,7 +95,7 @@ async function pdfYanit(id: string, haric: Set<string>, indir: boolean) {
   const aciklama = liste.aciklama && kalemler.length > 0 && kalemler.length < liste.kalemler.length ? secimAciklamasi(kalemler) || liste.aciklama : liste.aciklama;
 
   const sirket = await getSirketAyarlari();
-  const pdf = fiyatListesiPdfOlustur({ ...liste, aciklama, notlar }, kalemler, gorseller, sirket);
+  const pdf = fiyatListesiPdfOlustur({ ...liste, aciklama, notlar, grupNotlari }, kalemler, gorseller, sirket);
 
   return new Response(new Uint8Array(pdf), {
     headers: {

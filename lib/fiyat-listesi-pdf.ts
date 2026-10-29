@@ -62,12 +62,15 @@ export type PdfListe = {
   yuvarlamaAdim?: number | null; // liste iskontosu uygulanan fiyatların yuvarlanacağı adım (boş/0 = yok)
   gecerlilikTarihi: Date | null;
   notlar: string | null;
+  // Doluysa her ürün grubunun notları o grubun son bölümünün hemen altında çıkar (toptan liste).
+  // Ürün grubu = bölüm adının " · " öncesi (ör. "Sakura Duvar Tipi Split Klima")
+  grupNotlari?: { grup: string; notlar: string }[] | null;
   updatedAt: Date;
 };
 
 // Başlıklar Türkçe kuralla büyütülür (i → İ); yabancı marka / seri adları bozulmasın diye
 // (Olefini → OLEFINI, Irigoni → IRIGONI) bu kelimeler Türkçe kurala göre çevrilmez.
-const YABANCI_KELIME = /^(olefini|irigoni|hi-tech|freedoor|intellect|clima|silver|mini|multi|linda|life|elit|rigel|capella|spica|venüs|vega|luna|star|stil)\b/i;
+const YABANCI_KELIME = /^(carrier|olefini|irigoni|hi-tech|freedoor|intellect|clima|silver|mini|multi|linda|life|elit|rigel|capella|spica|venüs|vega|luna|star|stil)\b/i;
 function buyukHarf(s: string) {
   return s
     .split(" ")
@@ -344,7 +347,9 @@ export function fiyatListesiPdfOlustur(
     doc.rect(SOL, y, GENISLIK, 7.5, "F");
     doc.setFillColor(...SOGUK);
     doc.rect(SOL, y, 1.2, 7.5, "F");
-    doc.text(buyukHarf(metin(ad)), SOL + 4, y + 5.1);
+    // Kutuya sığmayan uzun bölüm adı "…" ile kısaltılır (taşmasın)
+    yazi(10, true, SOGUK_DIM);
+    doc.text(satirlar(buyukHarf(metin(ad)), GENISLIK - 7, 1)[0] ?? "", SOL + 4, y + 5.1);
     y += 11;
   };
 
@@ -559,7 +564,33 @@ export function fiyatListesiPdfOlustur(
     cizgi(TB_X, y, SAG, y, HAT, 0.15);
   };
 
-  for (const [ad, grup] of gruplar) {
+  // Marka notları bloğu (başlık + satırlar; sayfaya sığmayan satır yeni sayfaya geçer)
+  const notBlogu = (baslik: string, metni: string) => {
+    yazi(8.5, false, METIN_60);
+    const n = satirlar(metni, GENISLIK);
+    yerAc(10 + Math.min(n.length, 6) * 3.9);
+    yazi(7, true, METIN_50);
+    doc.text(baslik, SOL, y, { charSpace: 0.35 });
+    y += 5;
+    yazi(8.5, false, METIN_60);
+    for (const s of n) {
+      yerAc(4);
+      doc.text(s, SOL, y);
+      y += 3.9;
+    }
+  };
+  const grupListesi = [...gruplar.entries()];
+  const urunGrubu = (bolum: string) => bolum.split(" · ")[0].trim();
+  const grupNotlariniYaz = (grup: string) => {
+    const m = liste.grupNotlari?.find((x) => x.grup === grup);
+    if (!m) return;
+    const metni = notlariSuz(m.notlar, kalemler.filter((k) => urunGrubu(k.bolum || "") === grup));
+    if (!metni) return;
+    notBlogu(`${buyukHarf(metin(grup))} · NOTLAR`, metni);
+    y += 6;
+  };
+
+  for (const [gi, [ad, grup]] of grupListesi.entries()) {
     if (liste.duzen === "TABLO") {
       yerAc(11 + 6 + (TB_FOTO_G ? TB_FOTO_EN_AZ : 10));
       if (ad) bolumBasligi(ad);
@@ -598,6 +629,12 @@ export function fiyatListesiPdfOlustur(
         y += h + KART_ARA;
       }
       y += 2;
+    }
+    // Ürün grubunun son bölümü bittiyse o grubun notları
+    if (liste.grupNotlari?.length) {
+      const g = urunGrubu(ad);
+      const sonraki = grupListesi[gi + 1];
+      if (g && (!sonraki || urunGrubu(sonraki[0]) !== g)) grupNotlariniYaz(g);
     }
   }
 

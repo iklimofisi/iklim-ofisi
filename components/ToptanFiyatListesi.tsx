@@ -55,12 +55,12 @@ export default function ToptanFiyatListesi({
   liste,
   durum,
   satirlar,
-  uretilenNotlar,
+  grupNotlari,
 }: {
   liste: { id: string; baslik: string; aciklama: string; notlar: string; duzen: string; fiyatBaslik: string; fiyat2Baslik: string; paraBirimi: string };
   durum: ToptanDurum;
   satirlar: ToptanSatir[];
-  uretilenNotlar: string;
+  grupNotlari: { grup: string; notlar: string }[];
 }) {
   const router = useRouter();
   const tl = (n: number | null | undefined) => (n && n > 0 ? flParaYaz(n, liste.paraBirimi) : FIYAT_SORUNUZ);
@@ -610,22 +610,28 @@ export default function ToptanFiyatListesi({
             <textarea name="aciklama" rows={2} maxLength={3000} defaultValue={liste.aciklama} className={kutu} />
           </div>
           <div>
-            <label className={etiket}>Kendi notlarınız (opsiyonel) — ödeme, teslim, geçerlilik koşulları; PDF&apos;te marka notlarından önce çıkar</label>
+            <label className={etiket}>Kendi notlarınız (opsiyonel) — ödeme, teslim, geçerlilik koşulları; PDF&apos;in sonunda genel notlar olarak çıkar</label>
             <textarea name="notlar" rows={3} maxLength={5000} defaultValue={liste.notlar} className={kutu} />
           </div>
           <KaydetButonu basari={null}>Ayarları Kaydet</KaydetButonu>
         </form>
-        {uretilenNotlar && (
+        {grupNotlari.length > 0 && (
           <details className="mt-4 text-xs text-metin/65">
-            <summary className="cursor-pointer">PDF&apos;lerden alınan marka notları (her yüklemede yenilenir)</summary>
+            <summary className="cursor-pointer">PDF&apos;lerden alınan ürün grubu notları (her yüklemede yenilenir)</summary>
             <p className="mt-2 text-[11px] text-metin/45">
-              Köşeli parantezdeki etiket müşteriye görünmez: not yalnız PDF&apos;e o marka / ürün grubundan ürün girerse çıkar.
+              Her ürün grubunun notları PDF&apos;te o grubun ürünlerinin hemen altında çıkar. Köşeli parantezdeki etiket müşteriye görünmez: o not yalnız
+              PDF&apos;e o alt gruptan ürün girerse çıkar.
             </p>
-            <ul className="mt-2 space-y-1 list-disc pl-5">
-              {uretilenNotlar.split("\n").map((n, i) => (
-                <li key={i}>{n}</li>
-              ))}
-            </ul>
+            {grupNotlari.map((m) => (
+              <div key={m.grup} className="mt-3">
+                <p className="font-semibold text-metin">{m.grup}</p>
+                <ul className="mt-1 space-y-1 list-disc pl-5">
+                  {m.notlar.split("\n").map((n, i) => (
+                    <li key={i}>{n}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </details>
         )}
       </details>
