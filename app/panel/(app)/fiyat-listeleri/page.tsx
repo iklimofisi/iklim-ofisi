@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { fiyatListesiOlustur, fiyatListesiKopyala, fiyatListesiSil, kayaFiyatListesiGuncelle, hazirListeEkle, hazirListeTamamla } from "@/lib/actions";
 import { HAZIR_LISTELER } from "@/lib/hazir-listeler";
 import { kaynakDurumOku, kayaDurumOzeti } from "@/lib/kaya-fiyat";
+import { toptanListeOlustur } from "@/lib/toptan-actions";
+import { TOPTAN_KAYNAK, TOPTAN_BASLIK, toptanDurumOku } from "@/lib/toptan-fiyat";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
 import KaydetButonu from "@/components/KaydetButonu";
 import { FIYAT_SUTUN_KALIPLARI, ikiFiyatli, iskontoKapsamGecerli } from "@/lib/fiyat-listesi";
@@ -38,6 +40,7 @@ export default async function FiyatListeleriSayfasi() {
   // Otomatik liste en üstte
   listeler.sort((a, b) => Number(Boolean(b.kaynak)) - Number(Boolean(a.kaynak)));
   const kayaVar = listeler.some((l) => l.kaynak === "KAYA");
+  const toptanVar = listeler.some((l) => l.kaynak === TOPTAN_KAYNAK);
 
   const dugme = "focus-ring text-xs text-metin/50 hover:text-soguk-dim font-medium";
 
@@ -147,6 +150,23 @@ export default async function FiyatListeleriSayfasi() {
         </div>
       )}
 
+      {!toptanVar && (
+        <div className="bg-soguk-light/40 border border-soguk/30 rounded-lg p-5 mb-8 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-sm">
+            <p className="font-medium text-metin">{TOPTAN_BASLIK} (Netsa: Sakura · Bosch · Carrier)</p>
+            <p className="text-xs text-metin/60 mt-0.5">
+              Netsa&apos;nın aylık PDF listeleri panelden yüklenir; üç marka tek listede toplanır. PDF&apos;teki fiyatlar alış fiyatınız olarak yalnız
+              panelde görünür, müşteriye giden PDF&apos;te marka başına kâr eklenmiş satış fiyatı çıkar.
+            </p>
+          </div>
+          <form action={toptanListeOlustur}>
+            <KaydetButonu basari={null} bekleme="Oluşturuluyor…">
+              Listeyi oluştur
+            </KaydetButonu>
+          </form>
+        </div>
+      )}
+
       <HizliAramaListesi
         yerTutucu="Hızlı ara: liste adı, hazırlayan…"
         bosMetin="Henüz fiyat listesi yok."
@@ -158,14 +178,28 @@ export default async function FiyatListeleriSayfasi() {
             <div className="bg-yuzey border border-hat rounded-lg p-4 flex flex-wrap items-center justify-between gap-3 shadow-sm hover:border-soguk transition-colors">
               <Link href={`/panel/fiyat-listeleri/${l.id}`} className="focus-ring min-w-0 flex-1">
                 <p className="font-medium text-metin text-sm truncate">
-                  {l.kaynak && (
+                  {l.kaynak === TOPTAN_KAYNAK ? (
+                    <span className="mr-2 inline-block rounded bg-soguk-light text-soguk-dim border border-soguk/30 px-1.5 text-[10px] font-semibold align-middle">
+                      TOPTAN · NETSA PDF
+                    </span>
+                  ) : l.kaynak ? (
                     <span className="mr-2 inline-block rounded bg-soguk-light text-soguk-dim border border-soguk/30 px-1.5 text-[10px] font-semibold align-middle">
                       ↻ OTOMATİK · KAYA +%5
                     </span>
-                  )}
+                  ) : null}
                   {l.baslik}
                 </p>
-                {l.kaynak && (() => {
+                {l.kaynak === TOPTAN_KAYNAK && (() => {
+                  const d = toptanDurumOku(l.kaynakDurum);
+                  return (
+                    <p className="text-[11px] mt-0.5 text-metin/50 whitespace-normal">
+                      {d.markalar.length
+                        ? d.markalar.map((m) => `${m.marka} ${m.tarih || "—"}`).join(" · ")
+                        : "Henüz Netsa listesi yüklenmedi"}
+                    </p>
+                  );
+                })()}
+                {l.kaynak && l.kaynak !== TOPTAN_KAYNAK && (() => {
                   const o = kayaDurumOzeti(kaynakDurumOku(l.kaynakDurum));
                   const renk = { yesil: "text-emerald-700", turuncu: "text-amber-700", sari: "text-amber-700", kirmizi: "text-sicak-dim" }[o.renk];
                   const isaret = { yesil: "✓", turuncu: "●", sari: "!", kirmizi: "⚠" }[o.renk];

@@ -875,7 +875,7 @@ export default function FiyatListesiDuzenleyici({
       {/* NOTLAR */}
       <section className="bg-yuzey border border-hat rounded-lg p-5">
         <label className={etiket}>Liste sonu notları (opsiyonel) — ödeme, teslim, garanti koşulları vb.</label>
-        <textarea name="notlar" rows={4} maxLength={5000} defaultValue={ayarlar.notlar} onChange={() => setDegisti(true)} className={kutu} />
+        <textarea name="notlar" rows={4} maxLength={20000} defaultValue={ayarlar.notlar} onChange={() => setDegisti(true)} className={kutu} />
         <p className="text-[11px] text-metin/55 mt-1">
           Her satır ayrı bir nottur. Bir notu yalnız belirli ürünler PDF&apos;teyken göstermek için satırın başına köşeli parantezle anahtar yazın, örn.{" "}
           <span className="font-mono">[Nem Alma] Nem alma kapasiteleri…</span> — o not yalnız bölüm, ad veya kodunda &quot;Nem Alma&quot; geçen bir ürün seçiliyse

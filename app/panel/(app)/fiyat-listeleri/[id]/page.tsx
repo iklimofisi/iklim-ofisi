@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { getTcmbKurlari } from "@/lib/kur";
 import FiyatListesiDuzenleyici from "@/components/FiyatListesiDuzenleyici";
 import KayaFiyatListesi from "@/components/KayaFiyatListesi";
+import ToptanFiyatListesi from "@/components/ToptanFiyatListesi";
+import { TOPTAN_KAYNAK, toptanDurumOku, toptanNotlari, anahtarla } from "@/lib/toptan-fiyat";
 import { kaynakDurumOku } from "@/lib/kaya-fiyat";
 import { HAZIR_LISTELER } from "@/lib/hazir-listeler";
 import { hazirListeTamamla, hazirListeFiyatGeriYukle } from "@/lib/actions";
@@ -42,6 +44,48 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
   if (!liste) notFound();
 
   const dugme = "focus-ring text-sm font-medium border px-4 py-2 rounded-md transition-colors";
+
+  // İklimOfisi Toptan listesi (Netsa PDF'lerinden): alış fiyatları yalnız burada görünür
+  if (liste.kaynak === TOPTAN_KAYNAK) {
+    const durum = toptanDurumOku(liste.kaynakDurum);
+    const alislar = new Map(anahtarla(durum.markalar.flatMap((m) => m.urunler)).map((x) => [x.anahtar, x.deger]));
+    const satirlar = anahtarla(liste.kalemler).map(({ anahtar, deger: k }) => ({
+      id: k.id,
+      bolum: k.bolum,
+      ad: k.ad,
+      kod: k.kod,
+      marka: k.marka ?? "",
+      aciklama: k.aciklama,
+      fiyat: k.fiyat,
+      fiyat2: k.fiyat2,
+      alis: alislar.get(anahtar)?.alis ?? null,
+      alis2: alislar.get(anahtar)?.alis2 ?? null,
+    }));
+    return (
+      <div className="max-w-5xl">
+        <Link href="/panel/fiyat-listeleri" className="focus-ring text-sm text-metin/60 hover:text-metin inline-block mb-6">
+          ← Fiyat listelerine dön
+        </Link>
+        <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">Fiyat Listesi · Toptan (Netsa)</p>
+        <h1 className="font-display text-2xl font-semibold text-metin mb-6">{liste.baslik}</h1>
+        <ToptanFiyatListesi
+          liste={{
+            id: liste.id,
+            baslik: liste.baslik,
+            aciklama: liste.aciklama ?? "",
+            notlar: liste.notlar ?? "",
+            duzen: liste.duzen,
+            fiyatBaslik: liste.fiyatBaslik ?? "Nakit",
+            fiyat2Baslik: liste.fiyat2Baslik ?? "Kredi Kartı",
+            paraBirimi: liste.paraBirimi,
+          }}
+          durum={durum}
+          satirlar={satirlar}
+          uretilenNotlar={toptanNotlari(durum)}
+        />
+      </div>
+    );
+  }
 
   // Otomatik güncellenen liste (Kaya İklimlendirme): ürünler düzenlenmez, gönderirken seçilir
   if (liste.kaynak) {

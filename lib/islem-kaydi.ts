@@ -35,6 +35,9 @@ const SILME_KAYNAKLARI: Record<string, { model: string; include?: Record<string,
   fiyatListesiSil: { model: "fiyatListesi", include: { kalemler: true } },
   // Kalemler yeniden yazıldığı için düzenlemeden önceki hâl de saklanır
   fiyatListesiKaydet: { model: "fiyatListesi", include: { kalemler: true } },
+  // Toptan listede kalemler yeniden yazıldığı için önceki hâl de saklanır
+  toptanListeUygula: { model: "fiyatListesi", include: { kalemler: true } },
+  toptanKarKaydet: { model: "fiyatListesi", include: { kalemler: true } },
   // Kalemler yeniden yazıldığı için düzenlemeden önceki hâl de saklanır
   satinalmaTeklifiGuncelle: { model: "satinalmaTeklifi", include: { kalemler: true } },
   kesifSil: { model: "kesifFormu" },

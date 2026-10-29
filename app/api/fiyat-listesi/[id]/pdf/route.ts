@@ -82,6 +82,12 @@ async function pdfYanit(id: string, haric: Set<string>, indir: boolean) {
     const h = HAZIR_LISTELER.find((x) => x.baslik === liste.baslik && x.notlar && notEtiketsiz(x.notlar).trim() === kayitli && x.notlar.trim() !== kayitli);
     if (h) notlar = h.notlar;
   }
+  // Toptan listede PDF'lerden alınan marka notları kendi notlarımızdan sonra eklenir
+  // (etiketli: yalnız seçilen ürünlerin marka / grubuyla ilgili notlar çıkar)
+  if (liste.kaynak === "TOPTAN") {
+    const { listeNotlari } = await import("@/lib/toptan-fiyat");
+    notlar = listeNotlari(liste);
+  }
 
   // Ürün seçerek alınan PDF'te başlık altındaki açıklama yalnız seçilen ürünlerin bölümlerini sayar
   // (listenin tamamı basılıyorsa kayıtlı açıklama olduğu gibi kalır)

@@ -25,6 +25,7 @@ import { gecerliTur } from "@/lib/gorusme";
 import { gecerliRedNedeni } from "@/lib/teklif-durum";
 import { flKalemleriOku, metinAl, duzenGecerli, iskontoKapsamGecerli, FIYAT_SUTUN_KALIPLARI, iskontoUygula, yuzdeOku, yuvarlamaGecerli } from "@/lib/fiyat-listesi";
 import { birimNormal } from "@/lib/birimler";
+import { listeNotlari } from "@/lib/toptan-fiyat";
 import { MUSTERISIZ_ID, musterisizMi, musterisizGoster } from "@/lib/musterisiz";
 import { musterisizKaydiHazirla } from "@/lib/musterisiz-sunucu";
 
@@ -1794,7 +1795,7 @@ export async function fiyatListesiKaydet(formData: FormData) {
         fiyat2Baslik,
         fiyat3Baslik,
         gecerlilikTarihi: /^\d{4}-\d{2}-\d{2}$/.test(gecerlilik) ? new Date(`${gecerlilik}T12:00:00Z`) : null,
-        notlar: metinAl(formData.get("notlar"), 5000) || null,
+        notlar: metinAl(formData.get("notlar"), 20000) || null,
       },
     }),
     prisma.fiyatListesiKalem.deleteMany({ where: { listeId: id } }),
@@ -1843,7 +1844,7 @@ export async function fiyatListesiKopyala(id: string) {
       fiyat2Baslik: kaynak.fiyat2Baslik,
       fiyat3Baslik: kaynak.fiyat3Baslik,
       gecerlilikTarihi: kaynak.gecerlilikTarihi,
-      notlar: kaynak.notlar,
+      notlar: listeNotlari(kaynak), // toptan listede PDF'lerden alınan marka notları da kopyaya geçer
       olusturanAdi: giren?.ad ?? "",
       // Kopya elle düzenlenebilir bir listedir; otomatik güncellenmez (kaynak bilgisi kopyalanmaz)
       kalemler: {
@@ -1898,7 +1899,7 @@ export async function fiyatListesiAyarKaydet(formData: FormData) {
     data: {
       baslik,
       aciklama: metinAl(formData.get("aciklama"), 3000) || null,
-      notlar: metinAl(formData.get("notlar"), 5000) || null,
+      notlar: metinAl(formData.get("notlar"), 20000) || null,
       duzen: duzenGecerli(String(formData.get("duzen") ?? "")),
       ...(mevcut?.kaynakDurum != null && formData.has("bildirim") ? { kaynakDurum: JSON.stringify(durum) } : {}),
     },
@@ -1933,7 +1934,7 @@ export async function fiyatListesiSecimdenKopyala(formData: FormData) {
       fiyat2Baslik: kaynak.fiyat2Baslik,
       fiyat3Baslik: kaynak.fiyat3Baslik,
       gecerlilikTarihi: kaynak.gecerlilikTarihi,
-      notlar: kaynak.notlar,
+      notlar: listeNotlari(kaynak), // toptan listede PDF'lerden alınan marka notları da kopyaya geçer
       olusturanAdi: giren?.ad ?? "",
       kalemler: {
         create: kalan.map((k, sira) => ({
