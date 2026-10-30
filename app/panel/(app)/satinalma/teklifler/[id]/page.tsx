@@ -5,7 +5,8 @@ import Link from "next/link";
 import { satinalmaTeklifiniDonustur, satinalmaTeklifiGuncelle } from "@/lib/actions";
 import KaydetButonu from "@/components/KaydetButonu";
 import SatinalmaKalemGirisi from "@/components/SatinalmaKalemGirisi";
-import { satinalmaToplami, kalemToplami } from "@/lib/satinalma-hesap";
+import { satinalmaToplami, kalemToplami, iskontoGecerli, netAlis, satinalmaNetToplami } from "@/lib/satinalma-hesap";
+import { satinalmaIskontoKaydet } from "@/lib/tcl-teklif-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,10 @@ export default async function SatinalmaTeklifiDetay({ params }: { params: { id: 
   const goturu = satinalmaTeklifi.toplamTutar != null && satinalmaTeklifi.toplamTutar > 0;
   const fiyatliToplam = kalemToplami(satinalmaTeklifi.kalemler);
   const fiyatsizVar = satinalmaTeklifi.kalemler.some((k) => !(k.birimFiyat > 0));
+  // Fiyatlar liste fiyatıysa alış iskontosu düşülür (net alış)
+  const isk = iskontoGecerli(satinalmaTeklifi.alisIskontoYuzde);
+  const netToplam = satinalmaNetToplami(satinalmaTeklifi);
+  const sutun = isk > 0 ? 5 : 4;
 
   return (
     <div className="max-w-3xl">
@@ -45,8 +50,9 @@ export default async function SatinalmaTeklifiDetay({ params }: { params: { id: 
             <tr className="text-left text-xs text-metin/50 border-b border-hat">
               <th className="py-2 font-medium">Açıklama</th>
               <th className="py-2 font-medium text-right">Adet</th>
-              <th className="py-2 font-medium text-right">Birim Fiyat</th>
-              <th className="py-2 font-medium text-right">Tutar</th>
+              <th className="py-2 font-medium text-right">{isk > 0 ? "Liste Fiyatı" : "Birim Fiyat"}</th>
+              {isk > 0 && <th className="py-2 font-medium text-right text-soguk-dim">Net Alış</th>}
+              <th className="py-2 font-medium text-right">{isk > 0 ? "Net Tutar" : "Tutar"}</th>
             </tr>
           </thead>
           <tbody>
@@ -54,7 +60,7 @@ export default async function SatinalmaTeklifiDetay({ params }: { params: { id: 
               // PDF'ten okunan teklifte ürün grubu başlığı
               k.bolum && k.bolum !== satinalmaTeklifi.kalemler[i - 1]?.bolum ? (
                 <tr key={`b-${k.id}`} className="bg-soguk-light/40">
-                  <td colSpan={4} className="py-1.5 px-2 text-xs font-semibold text-soguk-dim">
+                  <td colSpan={sutun} className="py-1.5 px-2 text-xs font-semibold text-soguk-dim">
                     {k.bolum}
                   </td>
                 </tr>
@@ -65,14 +71,19 @@ export default async function SatinalmaTeklifiDetay({ params }: { params: { id: 
                 <td className="py-3 text-right font-mono text-metin/70">
                   {k.birimFiyat > 0 ? paraFormat(k.birimFiyat, satinalmaTeklifi.paraBirimi) : "—"}
                 </td>
+                {isk > 0 && (
+                  <td className="py-3 text-right font-mono text-soguk-dim">
+                    {k.birimFiyat > 0 ? paraFormat(netAlis(k.birimFiyat, isk), satinalmaTeklifi.paraBirimi) : "—"}
+                  </td>
+                )}
                 <td className="py-3 text-right font-mono text-metin">
-                  {k.birimFiyat > 0 ? paraFormat(k.adet * k.birimFiyat, satinalmaTeklifi.paraBirimi) : "—"}
+                  {k.birimFiyat > 0 ? paraFormat(k.adet * (isk > 0 ? netAlis(k.birimFiyat, isk) : k.birimFiyat), satinalmaTeklifi.paraBirimi) : "—"}
                 </td>
               </tr>,
             ])}
             {satinalmaTeklifi.kalemler.length === 0 && (
               <tr>
-                <td colSpan={4} className="py-3 text-sm text-metin/50">Kalem girilmemiş. Aşağıdan ekleyebilirsiniz.</td>
+                <td colSpan={sutun} className="py-3 text-sm text-metin/50">Kalem girilmemiş. Aşağıdan ekleyebilirsiniz.</td>
               </tr>
             )}
           </tbody>
@@ -81,11 +92,43 @@ export default async function SatinalmaTeklifiDetay({ params }: { params: { id: 
           {goturu && fiyatliToplam > 0 && (
             <p className="text-xs text-metin/50">Birim fiyatlı kalemler: {paraFormat(fiyatliToplam, satinalmaTeklifi.paraBirimi)}</p>
           )}
-          <p className="font-mono text-lg text-metin">
+          <p className={isk > 0 ? "font-mono text-sm text-metin/60" : "font-mono text-lg text-metin"}>
             {goturu && <span className="font-sans text-xs text-metin/50 mr-2">Tedarikçinin verdiği toplam</span>}
+            {isk > 0 && !goturu && <span className="font-sans text-xs text-metin/50 mr-2">Liste toplamı</span>}
             {paraFormat(toplam, satinalmaTeklifi.paraBirimi)}
           </p>
+          {isk > 0 && (
+            <p className="font-mono text-lg text-metin">
+              <span className="font-sans text-xs text-soguk-dim mr-2">%{isk.toLocaleString("tr-TR")} iskontolu net alış</span>
+              {paraFormat(netToplam, satinalmaTeklifi.paraBirimi)}
+            </p>
+          )}
         </div>
+
+        {/* ALIŞ İSKONTOSU: fiyatlar liste fiyatıysa firmanın verdiği iskonto oranı */}
+        <form
+          key={String(satinalmaTeklifi.alisIskontoYuzde ?? "")}
+          action={satinalmaIskontoKaydet}
+          className="mt-4 border-t border-hat pt-3 flex flex-wrap items-end gap-3"
+        >
+          <input type="hidden" name="satinalmaTeklifiId" value={satinalmaTeklifi.id} />
+          <div>
+            <label className="block text-xs font-medium text-metin/60 mb-1">Alış iskontosu (%)</label>
+            <input
+              name="alisIskontoYuzde"
+              inputMode="decimal"
+              defaultValue={isk > 0 ? String(isk).replace(".", ",") : ""}
+              placeholder="örn. 35"
+              className="focus-ring w-28 border border-hat rounded-md px-3 py-2 text-sm text-right bg-white"
+            />
+          </div>
+          <KaydetButonu basari={null} bekleme="Kaydediliyor…">
+            İskontoyu kaydet
+          </KaydetButonu>
+          <p className="text-[11px] text-metin/50 max-w-xs">
+            Fiyatlar liste fiyatıysa firmanın verdiği iskontoyu yazın; net alış = liste × (1 − iskonto). Boş bırakırsanız iskonto uygulanmaz.
+          </p>
+        </form>
 
         <details className="group mt-4 border-t border-hat pt-3" open={satinalmaTeklifi.kalemler.length === 0 && !goturu}>
           <summary className="cursor-pointer text-sm font-medium text-soguk-dim hover:underline list-none">
@@ -124,7 +167,7 @@ export default async function SatinalmaTeklifiDetay({ params }: { params: { id: 
         <input type="hidden" name="satinalma" value={satinalmaTeklifi.id} />
         <h2 className="font-display font-medium text-metin mb-1">Kâr ekleyip teklif formunda aç</h2>
         <p className="text-sm text-metin/60 mb-4">
-          Kalemler ürün gruplarıyla (bölüm), kâr eklenmiş fiyatla ve aynı para biriminde yeni teklif formuna gelir. Müşteriyi, notları ve
+          Kalemler ürün gruplarıyla (bölüm), {isk > 0 ? `%${isk.toLocaleString("tr-TR")} alış iskontosu düşülüp ` : ""}kâr eklenmiş fiyatla ve aynı para biriminde yeni teklif formuna gelir. Müşteriyi, notları ve
           fiyatları orada düzenleyip kaydedersiniz; kaydetmeden hiçbir teklif oluşmaz.
         </p>
         <div className="grid sm:grid-cols-3 gap-3 items-end">
@@ -157,7 +200,7 @@ export default async function SatinalmaTeklifiDetay({ params }: { params: { id: 
       <div className="bg-yuzey border border-hat rounded-lg p-5">
         <h2 className="font-display font-medium text-metin mb-1">Doğrudan Teklife Dönüştür</h2>
         <p className="text-sm text-metin/60 mb-4">
-          Buradaki kalemler, girdiğin kâr marjı eklenerek yeni bir teklife
+          Buradaki kalemler{isk > 0 ? ` (%${isk.toLocaleString("tr-TR")} alış iskontosu düşülerek)` : ""}, girdiğin kâr marjı eklenerek yeni bir teklife
           kopyalanır. Bu teklif "satınalma teklifinden oluşturuldu" olarak
           işaretlenir.
         </p>

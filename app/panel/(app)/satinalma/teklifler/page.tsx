@@ -5,7 +5,7 @@ import SilButon from "@/components/SilButon";
 import Link from "next/link";
 import KaydetButonu from "@/components/KaydetButonu";
 import SatinalmaKalemGirisi from "@/components/SatinalmaKalemGirisi";
-import { satinalmaToplami } from "@/lib/satinalma-hesap";
+import { satinalmaToplami, satinalmaNetToplami, iskontoGecerli } from "@/lib/satinalma-hesap";
 import TclTeklifYukle from "@/components/TclTeklifYukle";
 
 export const dynamic = "force-dynamic";
@@ -218,7 +218,9 @@ export default async function SatinalmaTekliflerPage() {
                   </thead>
                   <tbody className="divide-y divide-hat bg-white">
                     {satinalmaListesi.map((st) => {
-                      const toplam = satinalmaToplami(st);
+                      const isk = iskontoGecerli(st.alisIskontoYuzde);
+                      // Liste fiyatlı teklifte alış iskontosu düşülmüş net tutar gösterilir
+                      const toplam = isk > 0 ? satinalmaNetToplami(st) : satinalmaToplami(st);
                       const goturu = st.toplamTutar != null && st.toplamTutar > 0;
 
                       return (
@@ -239,6 +241,11 @@ export default async function SatinalmaTekliflerPage() {
                           <td className="py-3 px-4 text-right font-mono font-bold text-sm text-metin">
                             {toplam > 0 ? paraFormat(toplam, st.paraBirimi) : "—"}
                             {goturu && <span className="block text-[10px] font-normal text-metin/50">toplam fiyat</span>}
+                            {isk > 0 && (
+                              <span className="block text-[10px] font-normal text-metin/50">
+                                liste {paraFormat(satinalmaToplami(st), st.paraBirimi)} · %{isk.toLocaleString("tr-TR")} iskontolu net
+                              </span>
+                            )}
                           </td>
 
                           {/* MALİYET PDF */}

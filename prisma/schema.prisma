@@ -425,6 +425,7 @@ model SatinalmaTeklifi {
   maliyetExcelAdi   String?
   maliyetExcelTipi  String?
   toplamTutar Float?                  // Tedarikçi birim fiyat vermeyip sadece toplam verdiyse (boşsa kalemlerden hesaplanır)
+  alisIskontoYuzde Float?             // Fiyatlar liste fiyatıysa bize özel alış iskontosu (%); net alış = liste × (1 − iskonto). Boş = yok
   kalemler    SatinalmaTeklifKalemi[]
   tekliflar   Teklif[]
 }

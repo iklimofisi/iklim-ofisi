@@ -18,6 +18,15 @@ export function satinalmaToplami(st: { toplamTutar: number | null; kalemler: { a
   return st.toplamTutar != null && st.toplamTutar > 0 ? st.toplamTutar : kalemToplami(st.kalemler);
 }
 
+// ALIŞ İSKONTOSU: tedarikçi (ör. TCL) liste fiyatı verir, bize özel iskonto oranını ayrıca
+// söyler. Kalemlerde liste fiyatı saklanır; net alış = liste × (1 − iskonto %).
+export const iskontoGecerli = (v: number | null | undefined) => (typeof v === "number" && Number.isFinite(v) && v > 0 && v < 100 ? v : 0);
+export const netAlis = (listeFiyati: number, iskontoYuzde: number | null | undefined) =>
+  Math.round(listeFiyati * (1 - iskontoGecerli(iskontoYuzde) / 100) * 100) / 100;
+export function satinalmaNetToplami(st: { toplamTutar: number | null; alisIskontoYuzde?: number | null; kalemler: { adet: number; birimFiyat: number }[] }) {
+  return Math.round(satinalmaToplami(st) * (1 - iskontoGecerli(st.alisIskontoYuzde) / 100) * 100) / 100;
+}
+
 // Tedarikçi teklifinden BİZİM teklifimize geçecek kalemler.
 //   * Birim fiyatlı kalemler: fiyat × (1 + kâr marjı)
 //   * Fiyatsız kalemler: tedarikçinin toplamından kalan tutar (+ marj), adetlerine
@@ -28,11 +37,12 @@ export function satinalmaToplami(st: { toplamTutar: number | null; kalemler: { a
 // birim fiyatlar müşteriye gitmesin; müşteri kalemleri ve genel toplamı görür).
 // Kalemdeki diğer alanlar (ör. bolum) olduğu gibi korunur.
 type DonusumKalemi<K extends Kalem> = Kalem & Partial<Omit<K, keyof Kalem>>;
+// alisIskontoYuzde: liste fiyatlarından düşülecek alış iskontosu (önce iskonto, sonra kâr)
 export function donusumKalemleri<K extends Kalem>(
-  st: { baslik: string; toplamTutar: number | null; kalemler: K[] },
+  st: { baslik: string; toplamTutar: number | null; kalemler: K[]; alisIskontoYuzde?: number | null },
   marjYuzdesi: number
 ): { kalemler: DonusumKalemi<K>[]; fiyatsizVar: boolean } {
-  const carpan = 1 + marjYuzdesi / 100;
+  const carpan = (1 - iskontoGecerli(st.alisIskontoYuzde) / 100) * (1 + marjYuzdesi / 100);
   const elleToplam = st.toplamTutar != null && st.toplamTutar > 0 ? st.toplamTutar : null;
 
   if (st.kalemler.length === 0) {

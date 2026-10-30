@@ -27,6 +27,7 @@ const MESAJLAR: Record<string, string> = {
   "kaya-degisiklik-yok": "Kaya'nın listesi kontrol edildi: fiyatlarda değişiklik yok.",
   "toptan-kar-kaydedildi": "Kâr oranları kaydedildi; satış fiyatları yeniden hesaplandı.",
   "tcl-teklif-okundu": "TCL teklifi okundu ve satınalma teklifi olarak kaydedildi. Kâr oranını yazıp teklif formunu açabilirsiniz.",
+  "satinalma-iskonto-kaydedildi": "Alış iskontosu kaydedildi; net alış fiyatları güncellendi.",
   "not-kaydedildi": "Not kaydedildi.",
   "hazir-liste-eklendi": "Liste fotoğraflarıyla birlikte eklendi. PDF almak için yukarıdaki düğmeleri kullanın.",
   "hazir-liste-zaten-var": "Bu liste zaten ekli; mevcut liste açıldı.",

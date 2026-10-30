@@ -39,6 +39,7 @@ const ISLEM_ADI: Record<string, string> = {
   toptanListeUygula: "Toptan fiyat listesine Netsa PDF'lerini işledi",
   toptanKarKaydet: "Toptan fiyat listesinin kâr oranlarını değiştirdi",
   tclSatinalmaKaydet: "TCL teklif PDF'inden satınalma teklifi ekledi",
+  satinalmaIskontoKaydet: "Satınalma teklifinin alış iskontosunu değiştirdi",
   notEkle: "Not / hatırlatma ekledi",
   hazirListeEkle: "Hazır fiyat listesini panele ekledi",
   hazirListeTamamla: "Hazır fiyat listesinin eksik bilgilerini tamamladı",

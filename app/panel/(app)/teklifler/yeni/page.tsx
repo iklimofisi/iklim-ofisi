@@ -94,7 +94,13 @@ export default async function YeniTeklifSayfasi({
       {satinalma && (
         <div className="bg-soguk-light/40 border border-soguk/30 rounded-md p-3 text-xs text-metin/80 mb-4">
           <strong className="text-soguk-dim">{satinalma.tedarikci.ad}</strong> teklifinden aktarıldı ({satinalma.baslik}):{" "}
-          {aktarimKalemleri?.length ?? 0} kalem, fiyatlara <strong>%{marj.toLocaleString("tr-TR")} kâr</strong> eklendi. Müşteriyi, notları ve
+          {aktarimKalemleri?.length ?? 0} kalem,{" "}
+          {satinalma.alisIskontoYuzde ? (
+            <>
+              liste fiyatlarından <strong>%{satinalma.alisIskontoYuzde.toLocaleString("tr-TR")} alış iskontosu</strong> düşüldü ve{" "}
+            </>
+          ) : null}
+          fiyatlara <strong>%{marj.toLocaleString("tr-TR")} kâr</strong> eklendi. Müşteriyi, notları ve
           fiyatları kontrol edip &quot;Teklifi Kaydet&quot;e basın.
           {aktarimFiyatsiz && " Tedarikçi birim fiyat vermediği için toplam kalemlere paylaştırıldı ve PDF'te kalem fiyatları gizlendi."}
         </div>

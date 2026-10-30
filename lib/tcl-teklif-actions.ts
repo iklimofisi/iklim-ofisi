@@ -5,6 +5,7 @@
 //   tclTeklifPdfOku    : yüklenen PDF'i okur, önizleme için döner (veritabanına YAZMAZ)
 //   tclSatinalmaKaydet : PDF'i yeniden okuyup satınalma teklifi olarak kaydeder
 //                        (ürün grupları bölüm olarak, PDF maliyet dosyası olarak saklanır)
+//   satinalmaIskontoKaydet : satınalma teklifinin alış iskontosunu (%) değiştirir
 // Kâr eklenip müşteri teklifine dönüştürme satınalma teklifi sayfasından yapılır.
 // -----------------------------------------------------------------------------
 import { prisma } from "@/lib/prisma";
@@ -16,6 +17,14 @@ import type { PdfSayfa } from "@/lib/netsa-ayikla";
 import { tclTeklifAyikla, tclKalemAciklamasi, type TclSonuc } from "@/lib/tcl-teklif-ayikla";
 
 const EN_BUYUK = 10 * 1024 * 1024;
+
+// "35", "%35", "37,5" → 0 < x < 100; boş ya da geçersizse null (iskonto yok)
+function iskontoOku(v: FormDataEntryValue | null): number | null {
+  const t = String(v ?? "").trim().replace("%", "").replace(",", ".");
+  if (!t) return null;
+  const n = Number(t);
+  return Number.isFinite(n) && n > 0 && n < 100 ? Math.round(n * 100) / 100 : null;
+}
 
 // PDF → sayfalar (metin parçaları konumlarıyla; y sayfanın üstünden)
 async function pdfSayfalari(pdf: Buffer): Promise<PdfSayfa[]> {
@@ -80,11 +89,14 @@ export async function tclSatinalmaKaydet(formData: FormData) {
     redirect("/panel/satinalma/teklifler?mesaj=tcl-teklif-okunamadi");
   }
   const { sonuc } = r;
+  const alisIskontoYuzde = iskontoOku(formData.get("alisIskontoYuzde"));
   const st = await prisma.satinalmaTeklifi.create({
     data: {
       tedarikciId,
       baslik,
       paraBirimi: sonuc.paraBirimi,
+      // PDF'teki fiyatlar liste fiyatıdır; kalemlerde liste fiyatı saklanır, net alış iskontoyla hesaplanır
+      alisIskontoYuzde,
       maliyetPdf: r.pdf,
       maliyetPdfAdi: r.ad || "tedarikci-teklifi.pdf",
       maliyetPdfTipi: r.tip,
@@ -108,7 +120,22 @@ export async function tclSatinalmaKaydet(formData: FormData) {
     kalemSayisi: sonuc.kalemler.length,
     netTutar: sonuc.netTutar,
     paraBirimi: sonuc.paraBirimi,
+    alisIskontoYuzde,
   });
   revalidatePath("/panel/satinalma/teklifler");
   redirect(`/panel/satinalma/teklifler/${st.id}?mesaj=tcl-teklif-okundu`);
+}
+
+// Satınalma teklifinin alış iskontosu (liste fiyatlarından düşülecek %). Kalemler değişmez.
+export async function satinalmaIskontoKaydet(formData: FormData) {
+  const kullanici = await girisZorunlu();
+  const id = String(formData.get("satinalmaTeklifiId") ?? "");
+  const st = id ? await prisma.satinalmaTeklifi.findUnique({ where: { id }, select: { id: true, alisIskontoYuzde: true } }) : null;
+  if (!st) redirect("/panel/satinalma/teklifler");
+  const alisIskontoYuzde = iskontoOku(formData.get("alisIskontoYuzde"));
+  await prisma.satinalmaTeklifi.update({ where: { id: st.id }, data: { alisIskontoYuzde } });
+  await islemKaydet(kullanici, "satinalmaIskontoKaydet", { satinalmaTeklifiId: st.id, eski: st.alisIskontoYuzde, yeni: alisIskontoYuzde });
+  revalidatePath("/panel/satinalma/teklifler");
+  revalidatePath(`/panel/satinalma/teklifler/${st.id}`);
+  redirect(`/panel/satinalma/teklifler/${st.id}?mesaj=satinalma-iskonto-kaydedildi`);
 }
