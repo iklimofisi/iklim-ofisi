@@ -79,14 +79,16 @@ export async function tclSatinalmaKaydet(formData: FormData) {
   const kullanici = await girisZorunlu();
   const baslik = String(formData.get("baslik") ?? "").trim().slice(0, 300);
   const tedarikciId = String(formData.get("tedarikciId") ?? "");
-  if (!baslik || !tedarikciId) redirect("/panel/satinalma/teklifler?mesaj=tcl-teklif-eksik");
+  // Hata olursa kullanıcı yüklemeyi yaptığı sayfaya döner
+  const geri = formData.get("sonra") === "teklif" ? "/panel/teklifler/yeni" : "/panel/satinalma/teklifler";
+  if (!baslik || !tedarikciId) redirect(`${geri}?mesaj=tcl-teklif-eksik`);
   const tedarikci = await prisma.tedarikci.findUnique({ where: { id: tedarikciId }, select: { id: true } });
-  if (!tedarikci) redirect("/panel/satinalma/teklifler?mesaj=tcl-teklif-eksik");
+  if (!tedarikci) redirect(`${geri}?mesaj=tcl-teklif-eksik`);
 
   const r = await dosyayiOku(formData.get("pdf"));
   if ("hata" in r) {
     await islemKaydet(kullanici, "tclSatinalmaKaydet", { baslik, hata: r.hata, dosya: r.ad });
-    redirect("/panel/satinalma/teklifler?mesaj=tcl-teklif-okunamadi");
+    redirect(`${geri}?mesaj=tcl-teklif-okunamadi`);
   }
   const { sonuc } = r;
   const alisIskontoYuzde = iskontoOku(formData.get("alisIskontoYuzde"));
@@ -123,6 +125,12 @@ export async function tclSatinalmaKaydet(formData: FormData) {
     alisIskontoYuzde,
   });
   revalidatePath("/panel/satinalma/teklifler");
+  // Yeni Teklif sayfasından yüklendiyse doğrudan dolu teklif formuna dönülür
+  if (formData.get("sonra") === "teklif") {
+    const marj = Number(String(formData.get("marj") ?? "").replace(",", "."));
+    const m = Number.isFinite(marj) && marj >= 0 && marj <= 1000 ? marj : 0;
+    redirect(`/panel/teklifler/yeni?satinalma=${encodeURIComponent(st.id)}&marj=${m}`);
+  }
   redirect(`/panel/satinalma/teklifler/${st.id}?mesaj=tcl-teklif-okundu`);
 }
 

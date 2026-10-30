@@ -20,10 +20,13 @@ export default function TclTeklifYukle({
   tedarikciler,
   konular = [],
   sabitKonu,
+  teklifeAktar = false,
 }: {
   tedarikciler: { id: string; ad: string }[];
   konular?: string[];
   sabitKonu?: string; // proje kartındaki "bu projeye ekle" penceresinde konu sabittir
+  // Yeni Teklif sayfasında: kâr % da sorulur; kaydedince doğrudan dolu teklif formu açılır
+  teklifeAktar?: boolean;
 }) {
   const [okunuyor, setOkunuyor] = useState(false);
   const [sonuc, setSonuc] = useState<TclSonuc | null>(null);
@@ -73,7 +76,8 @@ export default function TclTeklifYukle({
 
   return (
     <form action={tclSatinalmaKaydet} className="space-y-3">
-      <div className="grid sm:grid-cols-4 gap-3">
+      {teklifeAktar && <input type="hidden" name="sonra" value="teklif" />}
+      <div className={`grid gap-3 ${teklifeAktar ? "sm:grid-cols-5" : "sm:grid-cols-4"}`}>
         <div>
           <label className="block text-xs font-medium text-metin/60 mb-1">TCL teklif PDF&apos;i *</label>
           <input
@@ -130,6 +134,13 @@ export default function TclTeklifYukle({
           />
           <p className="text-[10px] text-metin/45 mt-0.5">PDF&apos;teki liste fiyatlarından düşülür; sonradan değiştirilebilir.</p>
         </div>
+        {teklifeAktar && (
+          <div>
+            <label className="block text-xs font-medium text-metin/60 mb-1">Kâr (%) *</label>
+            <input name="marj" type="number" step="0.1" min="0" required defaultValue={15} className={kutu} />
+            <p className="text-[10px] text-metin/45 mt-0.5">Net alış fiyatının üstüne eklenir.</p>
+          </div>
+        )}
       </div>
       {iskontoHatali && <p className="text-xs text-sicak-dim">İskonto 0 ile 100 arasında bir yüzde olmalı (örn. 35 ya da 37,5).</p>}
 
@@ -220,11 +231,13 @@ export default function TclTeklifYukle({
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <KaydetButonu basari={null} bekleme="Kaydediliyor…">
-          Satınalma teklifi olarak kaydet →
+        <KaydetButonu basari={null} bekleme={teklifeAktar ? "Hazırlanıyor…" : "Kaydediliyor…"}>
+          {teklifeAktar ? "Teklif formunu doldur →" : "Satınalma teklifi olarak kaydet →"}
         </KaydetButonu>
         <p className="text-[11px] text-metin/50">
-          Kaydedince teklif sayfası açılır; orada kâr oranını yazıp müşteri teklif formuna aktarırsınız. PDF maliyet dosyası olarak saklanır.
+          {teklifeAktar
+            ? "Teklif satınalma tarafına da kaydedilir (PDF maliyet dosyası olarak saklanır); ardından bu sayfa kalemler dolu olarak açılır."
+            : "Kaydedince teklif sayfası açılır; orada kâr oranını yazıp müşteri teklif formuna aktarırsınız. PDF maliyet dosyası olarak saklanır."}
         </p>
       </div>
     </form>

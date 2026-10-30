@@ -10,6 +10,7 @@ import KaydetButonu from "@/components/KaydetButonu";
 import Link from "next/link";
 import { donusumKalemleri } from "@/lib/satinalma-hesap";
 import type { Satir } from "@/components/TeklifKalemleri";
+import TclTeklifYukle from "@/components/TclTeklifYukle";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export default async function YeniTeklifSayfasi({
     marj?: string; // kâr %
   };
 }) {
-  const [musteriler, sablonlar, markalar, urunler, projeler, kurlar] = await Promise.all([
+  const [musteriler, sablonlar, markalar, urunler, projeler, kurlar, tedarikciler, konuKayitlari] = await Promise.all([
     prisma.musteri.findMany({ where: GERCEK_MUSTERI,
       orderBy: { ad: "asc" },
       include: { yetkililer: { orderBy: { ad: "asc" }, select: { id: true, ad: true, unvan: true } } },
@@ -37,6 +38,9 @@ export default async function YeniTeklifSayfasi({
     prisma.urun.findMany({ orderBy: { ad: "asc" } }),
     prisma.proje.findMany({ orderBy: { ad: "asc" } }),
     getTcmbKurlari(), // para birimi değişince fiyat çevirme için (alınamazsa null)
+    // TCL teklif PDF'inden doldurma kutusu için
+    prisma.tedarikci.findMany({ orderBy: { ad: "asc" }, select: { id: true, ad: true } }),
+    prisma.satinalmaTeklifi.findMany({ select: { baslik: true }, distinct: ["baslik"], orderBy: { baslik: "asc" } }),
   ]);
 
   // --- Tedarikçi teklifinden aktarma (ör. TCL teklif PDF'i): kalemler bölümleriyle, kâr eklenmiş fiyatla gelir ---
@@ -89,6 +93,22 @@ export default async function YeniTeklifSayfasi({
         <div className="bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-md p-3 text-xs font-semibold mb-4">
           ✓ Yeni müşteri başarıyla eklendi ve formda otomatik seçildi!
         </div>
+      )}
+
+      {/* TCL TEKLİF PDF'İNDEN DOLDUR: PDF + iskonto + kâr → satınalma teklifi kaydedilir, form dolu açılır */}
+      {!satinalma && (
+        <details className="group bg-soguk-light/30 border border-soguk/40 rounded-lg p-4 mb-5">
+          <summary className="cursor-pointer list-none flex items-center justify-between gap-3">
+            <span className="text-sm font-semibold text-soguk-dim">📄 TCL teklif PDF&apos;inden doldur</span>
+            <span className="text-xs text-metin/50 group-open:hidden">Aç</span>
+            <span className="text-xs text-metin/50 hidden group-open:inline">Kapat</span>
+          </summary>
+          <p className="text-xs text-metin/60 mt-2 mb-3">
+            PDF&apos;i seçin, alış iskontosu ve kâr oranını yazın: kalemler ürün gruplarıyla, iskonto düşülüp kâr eklenmiş fiyatla aşağıdaki forma
+            gelir. Tedarikçi teklifi Satınalma bölümüne de kaydedilir.
+          </p>
+          <TclTeklifYukle tedarikciler={tedarikciler} konular={konuKayitlari.map((k) => k.baslik).filter(Boolean)} teklifeAktar />
+        </details>
       )}
 
       {satinalma && (
