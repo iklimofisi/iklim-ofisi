@@ -56,6 +56,7 @@ export default function BlogDetayPage({ params }: { params: { slug: string } }) 
               headline: makale.baslik,
               description: makale.ozet,
               ...(makaleIsoTarihi(makale.tarih) ? { datePublished: makaleIsoTarihi(makale.tarih) } : {}),
+              ...(makale.guncelleme && makaleIsoTarihi(makale.guncelleme) ? { dateModified: makaleIsoTarihi(makale.guncelleme) } : {}),
               inLanguage: "tr-TR",
               mainEntityOfPage: `${SITE}/blog/${makale.slug}`,
               image: [`${SITE}${makaleOgGorseli(makale.slug)}`, `${SITE}${makale.gorsel}`],

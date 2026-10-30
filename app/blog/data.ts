@@ -9,12 +9,66 @@ export interface Makale {
   gorsel: string; // kapak fotoğrafı (public/ altından)
   gorselAlt: string;
   gorselSigdir?: boolean; // beyaz zeminli ürün fotoğrafı: kırpmadan sığdır
+  guncelleme?: string; // içerik sonradan önemli ölçüde güncellendiyse ("30 Ekim 2026")
 }
 
 // Paylaşım görseli (1200x630, logo + başlık): public/og/blog/<slug>.jpg
 export const makaleOgGorseli = (slug: string) => `/og/blog/${slug}.jpg`;
 
 export const MAKALELER: Makale[] = [
+  {
+    slug: "tcl-mini-vrf-nedir-villa-ve-kucuk-ofis",
+    baslik: "TCL Mini VRF Nedir? Villa, Dubleks ve Küçük Ofisler İçin Rehber",
+    kategori: "TCL VRF",
+    tarih: "30 Ekim 2026",
+    okumaSuresi: "5 dk okuma",
+    gorsel: "/tcl/tcl-mini-vrf.jpg",
+    gorselAlt: "TCL Mini VRF tam DC inverter dış ünitesi",
+    gorselSigdir: true,
+    ozet: "TCL Mini VRF nedir, split ve multi split klimadan farkı ne? 8–28 kW kapasite, tek ve üç fazlı modeller, SEER/SCOP değerleri, çalışma sıcaklıkları ve villa, dubleks, küçük ofis projelerinde doğru kapasite seçimi.",
+    icerikHtml: `
+      <h2>Mini VRF Nedir?</h2>
+      <p>Mini VRF, büyük binalarda kullanılan VRF teknolojisinin daha küçük projeler için tasarlanmış hâlidir. Tek bir dış üniteye birden fazla iç ünite bağlanır; sistem her odaya ihtiyacı kadar soğutucu akışkan göndererek odaları bağımsız olarak ısıtır ve soğutur. Böylece bir villanın veya küçük bir ofisin bütün odaları tek bir dış üniteyle, cepheye sıra sıra klima dış ünitesi asmadan iklimlendirilir.</p>
+
+      <h2>TCL Mini VRF Serisi</h2>
+      <p>TCL Mini VRF, tam DC inverter ikiz rotary kompresörlü dış ünitelerden oluşur ve <strong>8 kW ile 28 kW</strong> arasında 9 kapasitede üretilir:</p>
+      <ul>
+        <li><strong>Tek fazlı (220–240 V):</strong> 8,0 – 9,0 – 12,1 – 14,0 – 15,5 kW soğutma kapasiteli modeller</li>
+        <li><strong>Üç fazlı:</strong> 18,0 – 22,4 – 25,2 – 28,0 kW soğutma kapasiteli modeller</li>
+      </ul>
+      <p>Tek fazlı modeller, üç fazlı elektrik aboneliği olmayan konutlarda büyük kolaylık sağlar. Katalog değerlerine göre sezonsal soğutma verimi (SEER) modele göre 5,4 ile 7,0, sezonsal ısıtma verimi (SCOP) 3,8 ile 4,4 arasındadır.</p>
+
+      <h2>Çalışma Sıcaklık Aralığı</h2>
+      <ul>
+        <li><strong>Soğutma:</strong> -15 °C ile 55 °C dış hava sıcaklığı arasında</li>
+        <li><strong>Isıtma:</strong> -20 °C ile 24 °C dış hava sıcaklığı arasında</li>
+      </ul>
+      <p>Bu aralık, İstanbul ve benzeri iklimlerde Mini VRF'nin yalnız yazın değil, kışın da ısıtmada kullanılabilmesini sağlar.</p>
+
+      <h2>Split, Multi Split ve Mini VRF Farkı</h2>
+      <h3>Split klima</h3>
+      <p>Her iç ünitenin kendi dış ünitesi vardır. Bir veya iki oda için en ekonomik çözümdür; ancak oda sayısı arttıkça cephede çok sayıda dış ünite olur.</p>
+      <h3>Multi split</h3>
+      <p>Bir dış üniteye birkaç iç ünite bağlanır. Bağlanabilecek iç ünite sayısı ve boru mesafeleri sınırlıdır; küçük daireler için uygundur.</p>
+      <h3>Mini VRF</h3>
+      <p>Multi splite göre genellikle daha fazla iç ünite bağlanabilir, daha uzun boru mesafelerine izin verir ve kapasiteyi her odanın anlık ihtiyacına göre daha hassas ayarlar. Projeye göre kaset, kanallı (gizli tavan) ve duvar tipi gibi farklı iç ünite tipleri bir arada kullanılabilir; dış üniteye uygun iç ünite seçeneklerini keşifte modele göre belirliyoruz. Villa, dubleks ve çok odalı ofislerde hem görünüm hem de konfor açısından daha esnek bir çözümdür.</p>
+
+      <h2>Hangi Projelere Uygun?</h2>
+      <ul>
+        <li><strong>Villa ve dubleksler:</strong> Tüm odalar tek dış üniteyle, cephede tek dış ünite</li>
+        <li><strong>Küçük ofisler ve muayenehaneler:</strong> Odaların bağımsız kontrolü, düzenli kullanım saatleri</li>
+        <li><strong>Mağaza ve kafeler:</strong> Asma tavanda kaset veya kanallı üniteler ile görünmez montaj</li>
+        <li><strong>Klinikler:</strong> Her odanın farklı sıcaklıkta tutulabilmesi</li>
+      </ul>
+      <p>Daha büyük binalarda (plaza, otel, çok katlı ofis) ise 8–32 HP dış ünite modülleri birleştirilerek 128 HP'ye kadar çıkılabilen TCL TMV6+ Super Serisi kullanılır.</p>
+
+      <h2>Kapasite Nasıl Seçilir?</h2>
+      <p>Mini VRF kapasitesi, her odanın ayrı ayrı hesaplanan ısı kazancı ve kaybına göre belirlenir. Oda kapasiteleri toplanır, ardından odaların aynı anda çalışma oranı (eş zamanlılık) dikkate alınarak dış ünite seçilir. Cephe yönü, cam oranı, yalıtım ve kullanım yoğunluğu sonucu doğrudan etkiler; bu yüzden "metrekareye göre" seçim çoğu zaman yanıltıcıdır. Kabaca bir fikir için <a href="/hesaplama">kapasite hesaplama</a> aracımızı kullanabilirsiniz.</p>
+
+      <h2>İklim Ofisi ile TCL Mini VRF</h2>
+      <p>Keşifte odalarınızı tek tek inceleyip kapasite hesabını yapıyor, dış ünite yerini ve boru güzergâhını belirliyor; satış, montaj ve devreye almayı tek elden yürütüyoruz. Tüm modeller ve teknik tablolar için <a href="/tcl-vrf#mini-vrf">TCL VRF sistemleri</a> sayfamıza bakabilir, <a href="/blog/vrf-mi-split-klima-mi">VRF mi, split klima mı?</a> yazımızda iki sistemin karşılaştırmasını okuyabilirsiniz. Projeniz için <a href="/iletisim">ücretsiz keşif</a> isteyin.</p>
+    `,
+  },
   {
     slug: "tcl-vrf-nedir-tmv6-super-serisi",
     baslik: "TCL VRF Nedir? TMV6+ Super Serisi Hakkında Bilmeniz Gerekenler",
@@ -173,22 +227,34 @@ export const MAKALELER: Makale[] = [
   },
   {
     slug: "hava-perdesi-nedir-nasil-secilir",
-    baslik: "Hava Perdesi Nedir, Nasıl Seçilir? Kapınıza Uygun Model İçin Rehber",
+    baslik: "Hava Perdesi Nedir, Ne İşe Yarar, Nasıl Seçilir?",
     kategori: "HAVA PERDESİ",
     tarih: "25 Ekim 2026",
-    okumaSuresi: "4 dk okuma",
+    guncelleme: "30 Ekim 2026",
+    okumaSuresi: "5 dk okuma",
     gorsel: "/hava-perdesi/olefini-kapi.jpg",
     gorselAlt: "Ahşap giriş kapısı üzerine monte edilmiş hava perdesi",
-    ozet: "Hava perdesinin nasıl çalıştığı, sağladığı enerji tasarrufu ve doğru model seçimi: kapı genişliği, montaj yüksekliği, ısıtıcılı veya ısıtıcısız tercih ve montajda dikkat edilmesi gerekenler.",
+    ozet: "Hava perdesi ne işe yarar, nasıl çalışır, nerelerde kullanılır? Enerji tasarrufu, girişte konfor ve doğru model seçimi: kapı genişliği, montaj yüksekliği, ısıtıcılı veya ısıtıcısız tercih ve montajda dikkat edilecekler.",
     icerikHtml: `
       <h2>Hava Perdesi Nedir?</h2>
       <p>Hava perdesi, kapının üst kısmına monte edilen ve aşağıya doğru güçlü, düzgün bir hava akımı üfleyen cihazdır. Bu hava akımı kapı açıkken iç ve dış ortam arasında görünmez bir bariyer oluşturur. Böylece kışın ısıtılmış, yazın soğutulmuş hava içeride kalır.</p>
 
-      <h2>Ne Kazandırır?</h2>
+      <h2>Hava Perdesi Ne İşe Yarar?</h2>
+      <p>Kısaca: kapı açıkken içerideki ısıtılmış ya da soğutulmuş havanın dışarı kaçmasını, dışarıdaki soğuk veya sıcak havanın içeri dolmasını azaltır. Bunun sağladığı faydalar şunlardır:</p>
       <ul>
-        <li><strong>Enerji tasarrufu:</strong> Kapıdan kaçan şartlandırılmış hava azaldığı için klima ve ısıtma sistemi daha az çalışır.</li>
-        <li><strong>Girişte konfor:</strong> Kapı önündeki soğuk hava akımı ve cereyan azalır; kasa ve karşılama alanında çalışanlar rahat eder.</li>
-        <li><strong>Açık kapı:</strong> Mağaza ve restoranlar kapılarını açık tutabilir; müşteri girişi kolaylaşır, iklimlendirme bozulmaz.</li>
+        <li><strong>Enerji tasarrufu:</strong> Kapıdan kaçan şartlandırılmış hava azaldığı için klima ve ısıtma sistemi daha az çalışır. Gün boyu kapısı açılıp kapanan işletmelerde fark belirgindir.</li>
+        <li><strong>Girişte konfor:</strong> Kapı önündeki soğuk hava akımı ve cereyan azalır; kasa, danışma ve karşılama alanında çalışanlar rahat eder.</li>
+        <li><strong>Kapıyı açık tutabilme:</strong> Mağaza ve restoranlar kapılarını açık tutabilir; müşteri girişi kolaylaşır, içerideki iklimlendirme bozulmaz.</li>
+        <li><strong>Kışın girişi ısıtma:</strong> Isıtıcılı hava perdeleri kapı önüne sıcak bir hava bariyeri oluşturur; giriş bölümü için ayrı bir ısıtıcıya gerek kalmayabilir.</li>
+        <li><strong>Dış ortamın etkisini azaltma:</strong> Hava akımı; dışarıdan gelen tozun, egzoz kokusunun ve uçan haşerelerin içeri girmesini azaltmaya yardımcı olur.</li>
+      </ul>
+
+      <h2>Nerelerde Kullanılır?</h2>
+      <ul>
+        <li><strong>Ticari girişler:</strong> Mağaza, market, eczane, banka, kafe ve restoranlar</li>
+        <li><strong>Otel ve AVM girişleri:</strong> Yoğun insan trafiği olan, kapısı sık açılan alanlar</li>
+        <li><strong>Ofis ve konut girişleri:</strong> Bina lobileri ve ana girişler</li>
+        <li><strong>Endüstriyel kapılar:</strong> Depo, atölye, fabrika ve hangar kapıları; yüksek kapılar için endüstriyel seriler kullanılır</li>
       </ul>
 
       <h2>Doğru Hava Perdesi Nasıl Seçilir?</h2>
@@ -304,22 +370,61 @@ export const MAKALELER: Makale[] = [
   },
   {
     slug: "buderus-ile-merkezi-ve-bireysel-isitma",
-    baslik: "Buderus Isıtma Teknolojileri: Kaskad Kazan ve Isı Pompası Verimliliği",
+    baslik: "Kaskad Kazan Nedir? Buderus Yoğuşmalı Kazanlarla Merkezi Isıtma Rehberi",
     kategori: "ISITMA & KASKAD",
     tarih: "28 Ağustos 2026",
-    okumaSuresi: "4 dk okuma",
+    guncelleme: "30 Ekim 2026",
+    okumaSuresi: "6 dk okuma",
     gorsel: "/buderus/gb272-slider.jpg",
-    gorselAlt: "Buderus yoğuşmalı kazan",
-    ozet: "Buderus duvar tipi yoğuşmalı kaskad kazanlar ve ısı pompası sistemleri ile binalarda doğalgaz ve elektrik tüketimini %35 oranında düşürme yöntemleri.",
+    gorselAlt: "Duvara monte Buderus Logamax plus GB272 yoğuşmalı kazan",
+    ozet: "Kaskad kazan nedir, tek büyük kazana göre avantajları nelerdir? Buderus Logamax plus GB272 yoğuşmalı kazanla 49 kW'tan 2.400 kW'a kaskad sistem kurulumu, kapasite seçimi ve kazan dairesinde dikkat edilecekler.",
     icerikHtml: `
-      <h2>Isıtmada Alman Mühendisliği: Buderus</h2>
-      <p>Buderus, 280 yılı aşan döküm ve iklimlendirme tecrübesiyle merkezi ve bireysel ısıtma sistemlerinde dünya standardıdır. Özel alüminyum-silisyum döküm eşanjör yapısı sayesinde kireçlenmeye ve korozyona karşı maksimum dayanıklılık sağlar.</p>
+      <h2>Kaskad Kazan Nedir?</h2>
+      <p>Kaskad kazan sistemi, bir binanın ısıtma ihtiyacının tek bir büyük kazan yerine <strong>birden fazla kazanın birlikte çalışmasıyla</strong> karşılanmasıdır. Kazanlar ortak bir kumanda altında toplanır; ısı ihtiyacı azken yalnız bir veya iki kazan çalışır, hava soğudukça ve ihtiyaç arttıkça sırayla diğer kazanlar devreye girer.</p>
+      <p>Apartman, site, otel, okul, hastane, ofis binası gibi merkezi ısıtma yapılan yapılarda kaskad sistemler giderek tek büyük kazanın yerini alıyor. Bunun nedeni basit: bir bina yılın çok küçük bir bölümünde tam kapasite ısıya ihtiyaç duyar; geri kalan zamanın büyük kısmını kısmi yükte geçirir.</p>
 
-      <h2>Buderus Yoğuşmalı Kaskad Kazan Sistemleri</h2>
-      <p>Büyük binalarda ve sitelerde tek bir dev kazan yerine, birden fazla Buderus duvar tipi yoğuşmalı kazanın paralel çalıştırıldığı kaskad sistemler tercih edilir. Bina ısı ihtiyacına göre kazanlar sırayla devreye girerek gereksiz gaz tüketimini önler.</p>
+      <h2>Tek Büyük Kazan mı, Kaskad mı?</h2>
+      <h3>1. Kısmi yükte verim</h3>
+      <p>Tek büyük kazan, ilkbahar ve sonbahar gibi düşük ihtiyaç dönemlerinde kapasitesinin çok altında çalışmak zorunda kalır. Kaskad sistemde ise o an gereken kadar kazan çalışır; her kazan kendi verimli aralığında kalır. Buderus Logamax plus GB272'nin 1:6 modülasyon oranı da her kazanın kapasitesini anlık ihtiyaca göre ayrıca ayarlamasını sağlar.</p>
+      <h3>2. Yedeklilik</h3>
+      <p>Tek kazanlı bir sistemde kazan arızalanırsa bina ısıtmasız kalır. Kaskad sistemde bir kazan arıza veya bakım nedeniyle devre dışıyken diğer kazanlar çalışmaya devam ederek ısıtmayı sürdürebilir.</p>
+      <h3>3. Yer ve taşıma kolaylığı</h3>
+      <p>Duvar tipi kazanlar kompakttır; dar merdivenlerden ve kapılardan rahatça taşınır. GB272 ile dar veya alçak tavanlı kazan dairelerinde bile 2 m²'den az alanda 900 kW kurulu güç sağlanabilir. Kazanlar duvara asılabilir ya da yer montaj kitiyle zemine yan yana dizilebilir.</p>
+      <h3>4. Aşamalı yatırım ve genişleme</h3>
+      <p>Bina büyüdüğünde veya yeni bir blok eklendiğinde sisteme kazan eklemek mümkündür. Eski bir merkezi sistemin yenilenmesinde de mevcut kazan dairesine uyum sağlamak kolaylaşır.</p>
 
-      <h2>Buderus Hava Kaynaklı Isı Pompaları</h2>
-      <p>Müstakil villa ve konutlarda fosil yakıtlara bağımlılığı bitiren Buderus ısı pompaları, dış havadaki ücretsiz ısı enerjisini çekerek yerden ısıtma ve kullanım sıcak suyu üretir.</p>
+      <h2>Yoğuşmalı Kazan Neden Daha Verimli?</h2>
+      <p>Doğal gaz yandığında oluşan baca gazının içinde su buharı vardır. Klasik kazanlarda bu buhar bacadan atılır ve içindeki ısı kaybolur. <strong>Yoğuşmalı kazan</strong> ise baca gazını soğutarak bu buharı yoğuşturur ve açığa çıkan gizli ısıyı da tesisat suyuna aktarır. Bu yüzden yoğuşmalı kazanların verimi, alt ısıl değere göre %100'ün üzerine çıkar.</p>
+      <p>Yoğuşmanın gerçekleşmesi için kazana dönen suyun soğuk olması gerekir. Dönüş suyu sıcaklığı ne kadar düşükse kazan o kadar verimli çalışır. Buderus GB272'nin norm kullanma verimi 40/30 °C işletmede %109,7–110,6, 75/60 °C işletmede %106–107,3 aralığındadır (alt ısıl değere göre). Bu nedenle yoğuşmalı kazanlı tesisatlarda radyatörlerin ve yerden ısıtmanın düşük su sıcaklığına göre boyutlandırılması verimi doğrudan artırır.</p>
+
+      <h2>Buderus Logamax plus GB272 ile Kaskad</h2>
+      <p>Buderus Logamax plus GB272, konutlar, kamu ve ticari binalar için geliştirilmiş duvar tipi gaz yoğuşmalı kazandır:</p>
+      <ul>
+        <li><strong>Kapasiteler:</strong> 49, 69, 100, 125 ve 150 kW</li>
+        <li><strong>Kaskad:</strong> 16 kazana kadar, toplamda 2.400 kW</li>
+        <li><strong>Gidiş suyu:</strong> tam kapasitede 85 °C'ye kadar</li>
+        <li><strong>Emisyon:</strong> NOx sınıf 6</li>
+        <li><strong>Eşanjör:</strong> yüzey kaplamalı ALU plus alüminyum ısı eşanjörü</li>
+        <li><strong>Yakıt:</strong> doğal gaz ve propan</li>
+        <li><strong>Kontrol:</strong> Logamatic BC30 kumanda; Logamatic 5000 ile Modbus TCP/IP, 0–10 V BMS sinyali ve uzaktan erişim</li>
+      </ul>
+      <p>125 ve 150 kW modellerde kaskad baca gazı klapesi kazanla birlikte gelir. Kazanlar yan yana bitişik dizilebildiği için kaskad grubu kazan dairesinde az yer kaplar.</p>
+
+      <h2>Kapasite Nasıl Belirlenir?</h2>
+      <p>Kazan seçiminin ilk adımı binanın <strong>ısı kaybı hesabıdır</strong>. Hesap; dış duvar, çatı, döşeme ve pencere alanlarını, yalıtım durumunu ve binanın bulunduğu ilin dış tasarım sıcaklığını dikkate alır. Sıcak su da kazandan hazırlanacaksa (boyler) bu ihtiyaç ayrıca eklenir.</p>
+      <p>Toplam kapasite belirlendikten sonra kazan sayısına karar verilir. Örneğin 300 kW ihtiyacı olan bir bina 2 × 150 kW veya 3 × 100 kW kaskadla karşılanabilir. Daha çok sayıda küçük kazan, düşük yükte daha hassas çalışma ve daha iyi yedeklilik sağlar; daha az sayıda büyük kazan ise ilk yatırımı ve bağlantı sayısını azaltır. Doğru dengeyi binanın kullanım profiline göre kuruyoruz.</p>
+
+      <h2>Kazan Dairesinde Dikkat Edilecekler</h2>
+      <ul>
+        <li><strong>Hidrolik ayırma:</strong> Kaskad sistemlerde kazan devresi ile bina devresi genellikle denge kabı (hidrolik ayırıcı) veya plakalı eşanjörle ayrılır; böylece her kazan doğru debiyle çalışır.</li>
+        <li><strong>Baca:</strong> Kaskad baca sistemi kazan sayısına ve kapasitesine göre boyutlandırılmalıdır.</li>
+        <li><strong>Yoğuşma suyu:</strong> Yoğuşmalı kazanlar çalışırken yoğuşma suyu oluşur (GB272'de modele göre saatte 6–16 litreye kadar); uygun bir gidere bağlanmalıdır.</li>
+        <li><strong>Tesisat suyu:</strong> Eski tesisatlarda sistem temizlenmeli ve su kalitesi üreticinin belirttiği değerlerde tutulmalıdır.</li>
+        <li><strong>Otomasyon:</strong> Dış hava sıcaklığına göre çalışma (dış hava kompanzasyonu) ve bina otomasyonu bağlantısı işletme maliyetini düşürür.</li>
+      </ul>
+
+      <h2>İklim Ofisi ile Buderus Kazan Projesi</h2>
+      <p>Isı kaybı hesabından kaskad tasarımına, kazan dairesi projesinden montaj ve devreye almaya kadar Buderus kazan projelerini tek elden yürütüyoruz. Model, teknik tablolar ve katalog için <a href="/buderus">Buderus kazan</a> sayfamıza bakabilirsiniz. Radyatör seçiminde düşük su sıcaklığının etkisini <a href="/blog/aluminyum-radyator-mu-celik-panel-radyator-mu">alüminyum ve çelik panel radyatör karşılaştırmamızda</a> anlattık. Binanız için <a href="/iletisim">keşif ve teklif</a> isteyebilirsiniz.</p>
     `,
   },
   {

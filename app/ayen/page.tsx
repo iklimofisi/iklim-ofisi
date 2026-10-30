@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { JsonLd, SITE } from "@/components/YapisalVeri";
+import SikSorulanSorular, { sssYapisalVeri, type Sss } from "@/components/SikSorulanSorular";
 
 // -----------------------------------------------------------------------------
 // AYEN ALÜMİNYUM RADYATÖR SAYFASI (/ayen)
@@ -17,10 +18,19 @@ export const dynamic = "force-dynamic";
 const SAYFA = `${SITE}/ayen`;
 
 export const metadata: Metadata = {
-  title: "Ayen Alüminyum Radyatör ve Havlupan Modelleri | İstanbul",
+  title: "Ayen Radyatör — Alüminyum Panel Radyatör ve Havlupan Modelleri | İstanbul",
   description:
     "Ayen alüminyum radyatör: 9 dilimli panel serisi (300–1900 mm), 9 alüminyum havlupan modeli, 30 renk seçeneği. %98 alüminyum, EN 442 ve TSE belgeli, her radyatör 15 bar testli. İstanbul'da satış, keşif ve montaj.",
-  keywords: ["Ayen radyatör", "Ayen alüminyum radyatör", "alüminyum radyatör", "alüminyum havlupan", "dekoratif radyatör", "renkli radyatör", "alüminyum radyatör İstanbul"],
+  keywords: [
+    "Ayen radyatör",
+    "Ayen alüminyum radyatör",
+    "Ayen havlupan",
+    "alüminyum radyatör",
+    "alüminyum havlupan",
+    "dekoratif radyatör",
+    "renkli radyatör",
+    "alüminyum radyatör İstanbul",
+  ],
   alternates: { canonical: "/ayen" },
   openGraph: {
     title: "Ayen Alüminyum Radyatör | İklim Ofisi",
@@ -85,6 +95,38 @@ const RENKLER: [string, string][] = [
   ["Açık ahşap", "repeating-linear-gradient(100deg,#b58a55 0 6px,#a37b47 6px 9px)"], ["Koyu ahşap", "repeating-linear-gradient(100deg,#93683a 0 6px,#7e5830 6px 9px)"],
 ];
 
+// Cevaplar yalnız bu sayfadaki Ayen katalog bilgilerine dayanır
+const SSS: Sss[] = [
+  [
+    "Ayen radyatör nasıl bir radyatördür?",
+    "Ayen, İstanbul'da üretilen yerli bir alüminyum radyatör ve havlupan markasıdır. Radyatörler %98 alüminyum (AlMgSi0,5) alaşımdan ekstrüzyonla tek parça profil olarak üretilir; EN 442 normuna uygundur ve TSE belgelidir. Her radyatör 15 bar sızdırmazlık testinden geçer.",
+  ],
+  [
+    "Ayen radyatör modelleri nelerdir?",
+    "Panel radyatörde 9 seri vardır: Class, Orkide, Lale, Alya, Electra, Anka, Heka, Açelya ve Akasya. Havlupanda da 9 model bulunur: Stil, Rigel, Elit, Capella, Luna, Vega, Venüs, Spica ve Star.",
+  ],
+  [
+    "Ayen radyatörün bir dilimi kaç watt ısı verir?",
+    "600 mm yükseklikte, Δt 60 koşulunda (90/70 °C su, 20 °C oda) dilim başına ısıl güç modele göre 98 W ile 163 W arasındadır. Örneğin Class ve Açelya 151 W, Alya ve Electra 163 W, Lale, Anka ve Heka 98 W verir.",
+  ],
+  [
+    "Bir oda için kaç dilim radyatör gerekir?",
+    "Odanın ısı kaybı, seçilen modelin dilim gücüne bölünerek bulunur. Örneğin 1.500 W ısı kaybı olan bir oda için dilim başına 151 W veren bir model seçilirse yaklaşık 10 dilim gerekir. Kesin sayı için oda oda ısı kaybı hesabı yapıyoruz.",
+  ],
+  [
+    "Ayen radyatör kombi ve yoğuşmalı kazanla kullanılır mı?",
+    "Evet; kombi, yoğuşmalı kazan veya ısı pompası ile kullanılabilir. Yoğuşmalı kazan ve ısı pompası gibi düşük su sıcaklığında çalışan sistemlerde radyatörün verdiği ısı azaldığı için dilim sayısı bu sıcaklığa göre hesaplanmalıdır.",
+  ],
+  [
+    "Hangi renk seçenekleri var?",
+    "RAL renkleri, antrasit, siyah, gold, krom ve açık/koyu ahşap desenleri dahil 30 renk seçeneği vardır. Renkler elektrostatik toz boya ile uygulanır.",
+  ],
+  [
+    "Ayen havlupan elektrikle çalışır mı?",
+    "Havlupanlar kalorifer tesisatına bağlanır; istenirse elektrikli ısıtıcı kiti ile de kullanılabilir. Havlupanlarda üstten, ortadan ve alttan bağlantı seçenekleri vardır.",
+  ],
+];
+
 export default function AyenPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased selection:bg-teal-700 selection:text-white">
@@ -136,6 +178,7 @@ export default function AyenPage() {
                 image: `${SITE}/ayen/ayen-havlupan-${g}.jpg`,
               })),
             },
+            sssYapisalVeri(SSS),
           ],
         }}
       />
@@ -299,7 +342,18 @@ export default function AyenPage() {
           </div>
         </section>
 
-        {/* 7. CTA */}
+        {/* 7. SIK SORULAN SORULAR */}
+        <SikSorulanSorular
+          baslik="Ayen radyatör hakkında merak edilenler"
+          sss={SSS}
+          zemin="bg-white border-y border-slate-200/80"
+          ilgili={[
+            { href: "/blog/aluminyum-radyator-mu-celik-panel-radyator-mu", ad: "Alüminyum Radyatör mü, Çelik Panel Radyatör mü?" },
+            { href: "/blog/buderus-ile-merkezi-ve-bireysel-isitma", ad: "Kaskad Kazan Nedir?" },
+          ]}
+        />
+
+        {/* 8. CTA */}
         <section className="py-16 md:py-20 bg-slate-950 text-white">
           <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-10 items-center">
             <div className="space-y-5">

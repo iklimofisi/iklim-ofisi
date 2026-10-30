@@ -18,7 +18,7 @@ const KATALOG = "/kataloglar/tcl-vrf-tmv6-super-katalog-2026.pdf";
 const SAYFA = `${SITE}/tcl-vrf`;
 
 export const metadata: Metadata = {
-  title: "TCL VRF Sistemleri — TMV6+ Super Serisi ve Mini VRF | İstanbul",
+  title: "TCL VRF Klima Sistemleri — TMV6+ Super Serisi ve Mini VRF | İstanbul",
   description:
     "TCL VRF klima sistemleri: TMV6+ Super tam DC inverter VRF (tek ünite 8–32 HP, kombinasyonla 128 HP'ye kadar, 80 iç ünite) ve TCL Mini VRF (8–28 kW). Teknik veriler, iç ünite gamı, PDF katalog. İstanbul'da keşif, projelendirme ve montaj.",
   keywords: ["TCL VRF", "TCL VRF klima", "TCL TMV6+", "TCL TMV6 Super", "TCL Mini VRF", "TCL klima", "TCL VRF fiyat", "TCL VRF katalog", "VRF klima İstanbul"],
@@ -136,6 +136,14 @@ const SSS: [string, string][] = [
     "Evet. WiFi modülü ve Tsmart mobil uygulamasıyla sistem telefondan yönetilir; ayrıca 7 ve 10,1 inç merkezi dokunmatik kumandalarla bina genelinde merkezi kontrol yapılır.",
   ],
   [
+    "TCL VRF hangi binalar için uygundur?",
+    "Çok odalı ve odaların farklı saatlerde kullanıldığı yapılar için uygundur: ofis katları, plazalar, oteller, klinikler, okullar, mağazalar ve villalar. Cephede çok sayıda split dış ünite istenmeyen binalarda tek dış ünite grubu ile temiz bir görünüm sağlanır. Villa, dubleks ve küçük ofisler için 8–28 kW TCL Mini VRF serisi vardır.",
+  ],
+  [
+    "İstanbul'da TCL VRF keşif ve montajını kim yapıyor?",
+    "İklim Ofisi olarak İstanbul'da TCL VRF sistemlerinin keşif, mahal bazlı kapasite hesabı, projelendirme, bakır borulama, devreye alma ve periyodik bakımını tek elden yapıyoruz. Keşif için iletişim sayfamızdan bize ulaşabilirsiniz.",
+  ],
+  [
     "TCL VRF fiyatı nasıl belirlenir?",
     "Fiyat; binanın ısı kazancı/kaybı hesabıyla belirlenen dış ünite kapasitesine (HP), iç ünite tipleri ve adedine, boru hattı uzunluğuna ve kontrol sistemine göre değişir. Keşif ve kapasite hesabından sonra projeye özel teklif hazırlıyoruz.",
   ],
@@ -238,7 +246,7 @@ export default function TclVrfPage() {
                 <span className="w-2 h-2 rounded-full bg-red-600" />
                 TCL · TMV6+ SUPER SERİSİ
               </div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900 leading-[1.15]">TCL VRF Sistemleri</h1>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900 leading-[1.15]">TCL VRF Klima Sistemleri</h1>
               <p className="text-lg font-semibold text-teal-700">Tam DC inverter akıllı VRF: tek ünite 8–32 HP, kombinasyonla 128 HP&apos;ye kadar.</p>
               <p className="text-base text-slate-600 leading-relaxed">
                 Otel, plaza, hastane, okul, AVM ve konut projelerinde her mahali bağımsız iklimlendiren TCL VRF ve TCL Mini VRF
@@ -499,6 +507,10 @@ export default function TclVrfPage() {
               İlgili yazılar:{" "}
               <Link href="/blog/tcl-vrf-nedir-tmv6-super-serisi" className="text-teal-700 underline underline-offset-2">
                 TCL VRF Nedir?
+              </Link>
+              {" · "}
+              <Link href="/blog/tcl-mini-vrf-nedir-villa-ve-kucuk-ofis" className="text-teal-700 underline underline-offset-2">
+                TCL Mini VRF Nedir?
               </Link>
               {" · "}
               <Link href="/blog/vrf-mi-split-klima-mi" className="text-teal-700 underline underline-offset-2">

@@ -23,7 +23,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     ...sayfalar.map((s) => ({ url: `${taban}${s.yol}`, priority: s.oncelik })),
     ...MAKALELER.map((m) => {
-      const tarih = makaleIsoTarihi(m.tarih);
+      const tarih = makaleIsoTarihi(m.guncelleme ?? m.tarih);
       return {
         url: `${taban}/blog/${m.slug}`,
         priority: 0.5,

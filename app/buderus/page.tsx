@@ -4,18 +4,30 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { JsonLd, SITE } from "@/components/YapisalVeri";
+import SikSorulanSorular, { sssYapisalVeri, type Sss } from "@/components/SikSorulanSorular";
 
 export const dynamic = "force-dynamic";
 
 const KATALOG = "/kataloglar/buderus-logamax-plus-gb272-katalog.pdf";
 
 export const metadata: Metadata = {
-  title: "Buderus Logamax plus GB272 Yoğuşmalı Kazan — 49–150 kW, Kaskad",
+  title: "Buderus Kazan — Logamax plus GB272 Yoğuşmalı ve Kaskad Kazan (49–150 kW)",
   description:
-    "Buderus Logamax plus GB272 duvar tipi yoğuşmalı kazan: 49, 69, 100, 125 ve 150 kW, 16 kazana kadar kaskad ile 2.400 kW. Teknik veriler, kaskad çözümleri ve PDF katalog. İstanbul'da projelendirme ve montaj.",
+    "Buderus kazan: Logamax plus GB272 duvar tipi yoğuşmalı kazan, 49, 69, 100, 125 ve 150 kW. 16 kazana kadar kaskad kazan sistemi ile 2.400 kW. Teknik veriler, PDF katalog; İstanbul'da projelendirme, montaj ve devreye alma.",
+  keywords: [
+    "Buderus kazan",
+    "Buderus GB272",
+    "Buderus Logamax plus GB272",
+    "Buderus kaskad kazan",
+    "kaskad kazan",
+    "yoğuşmalı kazan",
+    "duvar tipi yoğuşmalı kazan",
+    "merkezi ısıtma kazanı",
+    "Buderus kazan İstanbul",
+  ],
   alternates: { canonical: "/buderus" },
   openGraph: {
-    title: "Buderus Logamax plus GB272 | İklim Ofisi",
+    title: "Buderus Kazan — Logamax plus GB272 | İklim Ofisi",
     description: "49–150 kW duvar tipi yoğuşmalı kazan; kaskad ile 2.400 kW'a kadar merkezi ısıtma çözümleri.",
     url: "https://iklimofisi.com/buderus",
     images: [{ url: "/buderus/gb272-slider.jpg", width: 1200, height: 750, alt: "Buderus Logamax plus GB272 yoğuşmalı kazan" }],
@@ -81,6 +93,38 @@ const TEKNOLOJI = [
 
 const KULLANIM = ["Çok daireli konutlar", "Kamu binaları", "Ticari binalar", "Oteller & tesisler"];
 
+// Cevaplar yalnız bu sayfadaki katalog bilgilerine dayanır
+const SSS: Sss[] = [
+  [
+    "Buderus Logamax plus GB272 kaç kW?",
+    "GB272 beş kapasitede üretilir: 49, 69, 100, 125 ve 150 kW. 50/30 °C tam yükte kazan kapasitesi modele göre 49,9 kW ile 146 kW arasındadır. Daha büyük ihtiyaçlarda kazanlar kaskad bağlanır.",
+  ],
+  [
+    "Kaskad kazan nedir?",
+    "Kaskad, birden fazla kazanın tek bir kumanda altında birlikte çalıştırılmasıdır. Isı ihtiyacı azken az sayıda kazan, ihtiyaç arttıkça daha fazla kazan devreye girer; böylece sistem her yükte verimli çalışır. Buderus GB272 ile 16 kazana kadar kaskad yapılarak toplam 2.400 kW'a çıkılır.",
+  ],
+  [
+    "Buderus kazan hangi binalar için uygundur?",
+    "GB272; çok daireli konutlar, siteler, kamu binaları, ticari binalar, oteller ve tesisler gibi merkezi ısıtma yapılan yapılar için tasarlanmıştır. Kompakt yapısı sayesinde dar veya alçak tavanlı kazan dairelerinde 2 m²'den az alanda 900 kW kurulu güç sağlanabilir.",
+  ],
+  [
+    "Yoğuşmalı kazan neden daha verimlidir?",
+    "Yoğuşmalı kazan, baca gazındaki su buharını yoğuşturarak açığa çıkan ısıyı da tesisata kazandırır. Bu yüzden verimi alt ısıl değere göre %100'ün üzerine çıkar: GB272'de norm kullanma verimi (40/30 °C) %109,7 ile %110,6 arasındadır. Dönüş suyu sıcaklığı ne kadar düşükse yoğuşma o kadar artar.",
+  ],
+  [
+    "Buderus GB272 hangi yakıtla çalışır?",
+    "Gaz ön karışımlı brülörü doğal gaz ve propan ile kullanıma uygundur.",
+  ],
+  [
+    "GB272 yere de kurulabilir mi?",
+    "Evet. Kazan duvara monte edilebildiği gibi yer montaj kiti ile doğrudan zemine de kurulabilir. Kaskad sistemlerde kazanlar yan yana bitişik dizilebilir.",
+  ],
+  [
+    "Binam için kaç kW kazan gerekir?",
+    "Kazan kapasitesi binanın ısı kaybı hesabına ve sıcak su ihtiyacına göre belirlenir. Keşifte binayı inceleyip ısı kaybını hesaplıyor, tek kazan mı yoksa kaskad mı olacağına ve kazan sayısına birlikte karar veriyoruz. Kabaca bir fikir için kapasite hesaplama aracımızı kullanabilirsiniz.",
+  ],
+];
+
 function KatalogButonu({ koyu = false }: { koyu?: boolean }) {
   return (
     <a
@@ -109,24 +153,35 @@ export default function BuderusPage() {
       <JsonLd
         veri={{
           "@context": "https://schema.org",
-          "@graph": MODELLER.map((m, i) => ({
-            "@type": "Product",
-            "@id": `${SITE}/buderus#gb272-${m}`,
-            name: `Buderus Logamax plus GB272-${m}`,
-            brand: { "@type": "Brand", name: "Buderus" },
-            category: "Duvar tipi gaz yoğuşmalı kazan",
-            description: `${m} kW Buderus Logamax plus GB272 duvar tipi yoğuşmalı kazan. 16 kazana kadar kaskad, 85 °C gidiş suyu, NOx sınıf 6.`,
-            image: `${SITE}/buderus/gb272-kapak.jpg`,
-            url: `${SITE}/buderus`,
-            additionalProperty: TEKNIK.flatMap((g) =>
-              g.satirlar.map(([ad, birim, degerler]) => ({
-                "@type": "PropertyValue",
-                name: ad,
-                value: degerler[i],
-                ...(birim !== "–" ? { unitText: birim } : {}),
-              }))
-            ),
-          })),
+          "@graph": [
+            {
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: SITE },
+                { "@type": "ListItem", position: 2, name: "Ürünler", item: `${SITE}/urunler` },
+                { "@type": "ListItem", position: 3, name: "Buderus Kazan", item: `${SITE}/buderus` },
+              ],
+            },
+            ...MODELLER.map((m, i) => ({
+              "@type": "Product",
+              "@id": `${SITE}/buderus#gb272-${m}`,
+              name: `Buderus Logamax plus GB272-${m}`,
+              brand: { "@type": "Brand", name: "Buderus" },
+              category: "Duvar tipi gaz yoğuşmalı kazan",
+              description: `${m} kW Buderus Logamax plus GB272 duvar tipi yoğuşmalı kazan. 16 kazana kadar kaskad, 85 °C gidiş suyu, NOx sınıf 6.`,
+              image: `${SITE}/buderus/gb272-kapak.jpg`,
+              url: `${SITE}/buderus`,
+              additionalProperty: TEKNIK.flatMap((g) =>
+                g.satirlar.map(([ad, birim, degerler]) => ({
+                  "@type": "PropertyValue",
+                  name: ad,
+                  value: degerler[i],
+                  ...(birim !== "–" ? { unitText: birim } : {}),
+                }))
+              ),
+            })),
+            sssYapisalVeri(SSS),
+          ],
         }}
       />
 
@@ -137,10 +192,10 @@ export default function BuderusPage() {
             <div className="space-y-5">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-teal-50 border border-teal-200 text-teal-800 text-xs font-semibold tracking-wider uppercase">
                 <span className="w-2 h-2 rounded-full bg-teal-600" />
-                BUDERUS · YOĞUŞMALI KAZAN
+                BUDERUS KAZAN · YOĞUŞMALI · KASKAD
               </div>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900 leading-[1.15]">
-                Buderus Logamax plus GB272
+                Buderus Logamax plus GB272 Yoğuşmalı Kazan
               </h1>
               <p className="text-lg font-semibold text-teal-700">Kompakt ısı merkezi: 49–150 kW, kaskad ile 2.400 kW.</p>
               <p className="text-base text-slate-600 leading-relaxed">
@@ -245,9 +300,9 @@ export default function BuderusPage() {
               </div>
               <div className="space-y-3">
                 <p className="text-xs font-bold tracking-widest text-teal-700 uppercase">KASKAD</p>
-                <h2 className="text-xl font-bold text-slate-900">Büyük binalar için kaskad sistemler</h2>
+                <h2 className="text-xl font-bold text-slate-900">Buderus kaskad kazan sistemleri</h2>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  16 kazana kadar kaskad bağlantıyla toplam 2.400 kW. Kazanlar yan yana bitişik dizilebilir; ihtiyaca göre
+                  Kaskad, birden fazla kazanın tek kumanda altında birlikte çalışmasıdır. GB272 ile 16 kazana kadar kaskad bağlantıyla toplam 2.400 kW. Kazanlar yan yana bitişik dizilebilir; ihtiyaca göre
                   devreye girip çıkarak her yükte verimli çalışır. Güneş enerjisi veya ısı pompası gibi yenilenebilir
                   kaynaklarla birlikte daha da verimli çalışır.
                 </p>
@@ -317,7 +372,17 @@ export default function BuderusPage() {
           </div>
         </section>
 
-        {/* 6. KULLANIM ALANLARI + CTA */}
+        {/* 6. SIK SORULAN SORULAR */}
+        <SikSorulanSorular
+          baslik="Buderus kazan hakkında merak edilenler"
+          sss={SSS}
+          ilgili={[
+            { href: "/blog/buderus-ile-merkezi-ve-bireysel-isitma", ad: "Kaskad Kazan Nedir?" },
+            { href: "/blog/aluminyum-radyator-mu-celik-panel-radyator-mu", ad: "Alüminyum Radyatör mü, Çelik Panel mi?" },
+          ]}
+        />
+
+        {/* 7. KULLANIM ALANLARI + CTA */}
         <section className="py-16 md:py-20 bg-slate-950 text-white">
           <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-10 items-center">
             <div className="space-y-5">

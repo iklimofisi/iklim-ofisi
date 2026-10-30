@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { JsonLd, SITE } from "@/components/YapisalVeri";
+import SikSorulanSorular, { sssYapisalVeri, type Sss } from "@/components/SikSorulanSorular";
 
 // -----------------------------------------------------------------------------
 // HAVA PERDESİ SAYFASI (/hava-perdesi) — Niva ve Olefini
@@ -16,10 +17,20 @@ export const dynamic = "force-dynamic";
 const SAYFA = `${SITE}/hava-perdesi`;
 
 export const metadata: Metadata = {
-  title: "Hava Perdesi — Niva ve Olefini Hava Perdeleri | İstanbul",
+  title: "Hava Perdesi — Isıtıcılı ve Isıtıcısız Niva, Olefini Modelleri | İstanbul",
   description:
-    "Niva ve Olefini hava perdeleri: ısıtıcılı ve ısıtıcısız modeller, 85–250 cm boy, 12 m'ye kadar montaj yüksekliği. Mağaza, restoran, otel, AVM ve endüstriyel kapılar için İstanbul'da satış, keşif ve montaj.",
-  keywords: ["hava perdesi", "ısıtıcılı hava perdesi", "Niva hava perdesi", "Olefini hava perdesi", "endüstriyel hava perdesi", "kapı hava perdesi", "hava perdesi İstanbul"],
+    "Hava perdesi nedir, ne işe yarar? Niva ve Olefini hava perdeleri: ısıtıcılı ve ısıtıcısız modeller, 85–250 cm boy, 12 m'ye kadar montaj yüksekliği. Mağaza, restoran, otel, AVM ve endüstriyel kapılar için İstanbul'da satış, keşif ve montaj.",
+  keywords: [
+    "hava perdesi",
+    "hava perdesi nedir",
+    "hava perdesi ne işe yarar",
+    "ısıtıcılı hava perdesi",
+    "Niva hava perdesi",
+    "Olefini hava perdesi",
+    "endüstriyel hava perdesi",
+    "kapı hava perdesi",
+    "hava perdesi İstanbul",
+  ],
   alternates: { canonical: "/hava-perdesi" },
   openGraph: {
     title: "Niva ve Olefini Hava Perdeleri | İklim Ofisi",
@@ -53,6 +64,34 @@ const SECIM: [string, string][] = [
   ["Montaj yüksekliği", "Cihazın takılacağı yükseklik seriyi belirler: 3 m'ye kadar Linda, 4 m'ye kadar Life, 6 m'ye kadar Lena, 12 m'ye kadar Turbo."],
   ["Isıtıcılı mı, ısıtıcısız mı", "Yalnız klimalı ortamlar için ısıtıcısız; kışın girişin ısınması isteniyorsa ısıtıcılı model seçilir."],
   ["Elektrik altyapısı", "Isıtıcılı modeller daha yüksek güç çeker; keşifte sigorta ve kablo kesitini birlikte kontrol ediyoruz."],
+];
+
+// Cevaplar yalnız bu sayfadaki Niva / Olefini bilgilerine dayanır
+const SSS: Sss[] = [
+  [
+    "Hava perdesi ne işe yarar?",
+    "Hava perdesi, kapının üstünden aşağıya doğru güçlü bir hava akımı üfleyerek kapı açıkken iç ve dış ortam arasında görünmez bir bariyer oluşturur. Böylece kışın ısıtılmış, yazın soğutulmuş hava içeride kalır; kapı önündeki cereyan azalır ve iş yerleri kapılarını açık tutabilir.",
+  ],
+  [
+    "Hava perdesi enerji tasarrufu sağlar mı?",
+    "Evet. Kapıdan kaçan şartlandırılmış hava azaldığı için klima ve kalorifer daha az çalışır. Kapısı gün boyu açılıp kapanan mağaza, restoran ve market gibi işletmelerde tasarruf daha belirgindir.",
+  ],
+  [
+    "Isıtıcılı mı, ısıtıcısız hava perdesi mi almalıyım?",
+    "Mekân zaten klima veya kaloriferle iyi ısıtılıyorsa ısıtıcısız model yeterli olabilir. Kışın giriş bölümünün de ısınması isteniyorsa ısıtıcılı model seçilir. Isıtıcılı modeller daha yüksek elektrik gücü çektiği için sigorta ve kablo kesiti keşifte kontrol edilir.",
+  ],
+  [
+    "Hava perdesi boyu nasıl seçilir?",
+    "Hava perdesinin boyu kapı genişliğine eşit ya da biraz fazla olmalıdır; hava akımı kapının tamamını kapsamazsa kenarlardan hava kaçar. Niva modelleri seriye göre 85 cm ile 250 cm arasında boylarda üretilir; daha geniş kapılarda birden fazla cihaz yan yana monte edilir.",
+  ],
+  [
+    "Hava perdesi kaç metre yüksekliğe takılabilir?",
+    "Montaj yüksekliği seriyi belirler. Niva ısıtıcısız modellerde Linda 3 m'ye, Smart Kaset 3,8 m'ye, Life 4 m'ye, endüstriyel Lena 6 m'ye ve Turbo 12 m'ye kadar uygundur. Isıtıcılı modellerde bu yükseklikler biraz daha düşüktür (ör. Linda 2,5 m, Life 3,5 m).",
+  ],
+  [
+    "Kapının üstünde yer yoksa ne yapılır?",
+    "Asma tavanlı mekânlarda tavana gömme Smart Kaset modeli görünmez bir çözüm sunar. Kapı üstünde hiç yer yoksa Niva Dikey modeli kapının yanına dikey olarak monte edilir.",
+  ],
 ];
 
 export default function HavaPerdesiPage() {
@@ -95,6 +134,7 @@ export default function HavaPerdesiPage() {
               image: `${SITE}/hava-perdesi/olefini-giris.jpg`,
               url: `${SAYFA}#olefini`,
             },
+            sssYapisalVeri(SSS),
           ],
         }}
       />
@@ -148,7 +188,7 @@ export default function HavaPerdesiPage() {
           <div className="max-w-7xl mx-auto px-6 space-y-8">
             <div className="max-w-3xl space-y-2">
               <p className="text-xs font-bold tracking-widest text-teal-700 uppercase">NEDEN HAVA PERDESİ</p>
-              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Kapı açık, enerji içeride</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Hava perdesi ne işe yarar?</h2>
               <p className="text-sm text-slate-600 leading-relaxed">
                 Hava perdesi kapının üstünden aşağıya doğru güçlü bir hava akımı üfler. Bu görünmez bariyer iç ve dış ortam arasındaki
                 hava geçişini azaltır.
@@ -247,13 +287,20 @@ export default function HavaPerdesiPage() {
             <p className="text-xs text-slate-500">
               Seçim ve montaj ipuçlarını daha ayrıntılı anlattığımız yazı:{" "}
               <Link href="/blog/hava-perdesi-nedir-nasil-secilir" className="text-teal-700 underline underline-offset-2">
-                Hava Perdesi Nedir, Nasıl Seçilir?
+                Hava Perdesi Nedir, Ne İşe Yarar, Nasıl Seçilir?
               </Link>
             </p>
           </div>
         </section>
 
-        {/* 6. CTA */}
+        {/* 6. SIK SORULAN SORULAR */}
+        <SikSorulanSorular
+          baslik="Hava perdesi hakkında merak edilenler"
+          sss={SSS}
+          ilgili={[{ href: "/blog/hava-perdesi-nedir-nasil-secilir", ad: "Hava Perdesi Nedir, Ne İşe Yarar, Nasıl Seçilir?" }]}
+        />
+
+        {/* 7. CTA */}
         <section className="py-16 md:py-20 bg-slate-950 text-white">
           <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-10 items-center">
             <div className="space-y-5">
