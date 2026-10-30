@@ -75,16 +75,27 @@ export function tclTeklifAyikla(sayfalar: PdfSayfa[]): TclSonuc {
         const t = s.metin.match(/Tarih\s*:?\s*(\d{1,2})[./](\d{1,2})[./](20\d\d)/i);
         if (t) tarih = `${t[1].padStart(2, "0")}.${t[2].padStart(2, "0")}.${t[3]}`;
       }
-      if (!projeAdi && /^Proje Adı/i.test(s.metin)) {
-        projeAdi = sade(s.metin.replace(/^Proje Adı\s*:?/i, "").replace(/\s+için\s+.*$/i, ""));
-      }
+    }
+    // Proje adı: "Proje Adı" etiketinin sağındaki yazı. Uzun adlar iki satıra bölünebilir
+    // (etiketin üstünde ve altında); etiket hizasındaki ±10 birimlik satırlar birleştirilir.
+    const projeEt = !projeAdi ? tum.find((p) => /^Proje Adı/i.test(p.s)) : undefined;
+    if (projeEt) {
+      const ad = tum
+        .filter((p) => p !== projeEt && p.x >= projeEt.x2 - 2 && Math.abs(p.y - projeEt.y) <= 10)
+        .sort((a, b) => a.y - b.y || a.x - b.x)
+        .map((p) => p.s)
+        .join(" ");
+      projeAdi = sade(ad.replace(/^:\s*/, "").replace(/\s+için\s+.*$/i, "").replace(/\s+(TCL\s+)?(VRF\s+)?(Klima\s+Sistemi\s+)?Fiyat\s+Teklifi$/i, ""));
     }
     // Tablo sütunları (başlık satırı)
-    const kodB = tum.find((p) => /^Poz\.?\s*No/i.test(p.s));
+    // Sütun başlıkları aynı satırda aranır ("Proje Adı" altındaki "Fiyat Teklifi" gibi
+    // yazılar fiyat sütunu sanılmasın)
     const adB = tum.find((p) => /^Ürün Adı/i.test(p.s));
-    const adetB = tum.find((p) => /^Mik/i.test(p.s));
-    const fiyatB = tum.find((p) => /^(Birim\s*)?Fiyat/i.test(p.s));
-    const tutarB = tum.find((p) => /^Tutar/i.test(p.s));
+    const ayniSatir = (p: Parca) => !!adB && Math.abs(p.y - adB.y) <= 4;
+    const kodB = tum.find((p) => ayniSatir(p) && /^Poz\.?\s*No/i.test(p.s));
+    const adetB = tum.find((p) => ayniSatir(p) && /^(Mik|Miktar|Adet)/i.test(p.s));
+    const fiyatB = tum.find((p) => ayniSatir(p) && /^(Birim\s*)?Fiyat/i.test(p.s));
+    const tutarB = tum.find((p) => ayniSatir(p) && /^Tutar/i.test(p.s));
     if (!adB || !adetB) continue;
     tabloVar = true;
     const pbMetin = `${fiyatB?.s ?? ""} ${tutarB?.s ?? ""}`;
@@ -128,6 +139,8 @@ export function tclTeklifAyikla(sayfalar: PdfSayfa[]): TclSonuc {
       // Sıra numarası sütunu (yalnız sayı) koda karışmasın
       const kodTemiz = kod.replace(/^\d{1,3}\s+/, "");
       if (sayilar.adet !== null && sayilar.adet > 0) {
+        if (!Number.isInteger(sayilar.adet) && sayilar.adet > 50)
+          uyarilar.push(`${kodTemiz || ad}: adet ${sayilar.adet} okundu; sütunlar karışmış olabilir, kontrol edin.`);
         const birimFiyat = sayilar.fiyat ?? 0;
         const tutar = sayilar.tutar ?? birimFiyat * sayilar.adet;
         if (birimFiyat > 0 && sayilar.tutar !== null && Math.abs(birimFiyat * sayilar.adet - sayilar.tutar) > Math.max(1, sayilar.tutar * 0.002))
