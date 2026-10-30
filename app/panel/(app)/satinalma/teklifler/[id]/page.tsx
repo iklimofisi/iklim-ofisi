@@ -17,7 +17,7 @@ export default async function SatinalmaTeklifiDetay({ params }: { params: { id: 
   const [satinalmaTeklifi, musteriler] = await Promise.all([
     prisma.satinalmaTeklifi.findUnique({
       where: { id: params.id },
-      include: { tedarikci: true, kalemler: true, tekliflar: { include: { musteri: true } } },
+      include: { tedarikci: true, kalemler: { orderBy: { id: "asc" } }, tekliflar: { include: { musteri: true } } },
     }),
     prisma.musteri.findMany({ where: GERCEK_MUSTERI, orderBy: { ad: "asc" } }),
   ]);
@@ -50,7 +50,15 @@ export default async function SatinalmaTeklifiDetay({ params }: { params: { id: 
             </tr>
           </thead>
           <tbody>
-            {satinalmaTeklifi.kalemler.map((k) => (
+            {satinalmaTeklifi.kalemler.map((k, i) => [
+              // PDF'ten okunan teklifte ürün grubu başlığı
+              k.bolum && k.bolum !== satinalmaTeklifi.kalemler[i - 1]?.bolum ? (
+                <tr key={`b-${k.id}`} className="bg-soguk-light/40">
+                  <td colSpan={4} className="py-1.5 px-2 text-xs font-semibold text-soguk-dim">
+                    {k.bolum}
+                  </td>
+                </tr>
+              ) : null,
               <tr key={k.id} className="border-b border-hat last:border-0">
                 <td className="py-3 text-metin">{k.aciklama}</td>
                 <td className="py-3 text-right font-mono text-metin/70">{k.adet}</td>
@@ -60,8 +68,8 @@ export default async function SatinalmaTeklifiDetay({ params }: { params: { id: 
                 <td className="py-3 text-right font-mono text-metin">
                   {k.birimFiyat > 0 ? paraFormat(k.adet * k.birimFiyat, satinalmaTeklifi.paraBirimi) : "—"}
                 </td>
-              </tr>
-            ))}
+              </tr>,
+            ])}
             {satinalmaTeklifi.kalemler.length === 0 && (
               <tr>
                 <td colSpan={4} className="py-3 text-sm text-metin/50">Kalem girilmemiş. Aşağıdan ekleyebilirsiniz.</td>
@@ -88,7 +96,7 @@ export default async function SatinalmaTeklifiDetay({ params }: { params: { id: 
             <input type="hidden" name="satinalmaTeklifiId" value={satinalmaTeklifi.id} />
             <SatinalmaKalemGirisi
               sabitParaBirimi={satinalmaTeklifi.paraBirimi}
-              baslangic={satinalmaTeklifi.kalemler.map((k) => ({ aciklama: k.aciklama, adet: k.adet, birimFiyat: k.birimFiyat }))}
+              baslangic={satinalmaTeklifi.kalemler.map((k) => ({ aciklama: k.aciklama, adet: k.adet, birimFiyat: k.birimFiyat, bolum: k.bolum }))}
               baslangicToplam={satinalmaTeklifi.toplamTutar}
             />
             <div className="flex justify-end">
@@ -111,8 +119,43 @@ export default async function SatinalmaTeklifiDetay({ params }: { params: { id: 
         </div>
       )}
 
+      {/* ÖNERİLEN: kâr eklenmiş kalemlerle teklif formunu aç (müşteri, notlar ve fiyatlar kaydetmeden önce düzenlenir) */}
+      <form action="/panel/teklifler/yeni" method="get" className="bg-soguk-light/30 border border-soguk/40 rounded-lg p-5 mb-6">
+        <input type="hidden" name="satinalma" value={satinalmaTeklifi.id} />
+        <h2 className="font-display font-medium text-metin mb-1">Kâr ekleyip teklif formunda aç</h2>
+        <p className="text-sm text-metin/60 mb-4">
+          Kalemler ürün gruplarıyla (bölüm), kâr eklenmiş fiyatla ve aynı para biriminde yeni teklif formuna gelir. Müşteriyi, notları ve
+          fiyatları orada düzenleyip kaydedersiniz; kaydetmeden hiçbir teklif oluşmaz.
+        </p>
+        <div className="grid sm:grid-cols-3 gap-3 items-end">
+          <div>
+            <label className="block text-xs font-medium text-metin/60 mb-1">Kâr (%)</label>
+            <input name="marj" type="number" step="0.1" min="0" defaultValue={15} required className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-metin/60 mb-1">Müşteri (opsiyonel)</label>
+            <select name="seciliMusteriId" defaultValue="" className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
+              <option value="">— Formda seçeceğim —</option>
+              {musteriler.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.ad}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button type="submit" className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
+            Teklif formunu aç →
+          </button>
+        </div>
+        {goturu && fiyatsizVar && (
+          <p className="text-xs text-amber-800 mt-3">
+            Birim fiyatı olmayan kalemler var: tedarikçinin toplamı (+ kâr) kalemlere paylaştırılır ve PDF&apos;te kalem fiyatları gizlenir.
+          </p>
+        )}
+      </form>
+
       <div className="bg-yuzey border border-hat rounded-lg p-5">
-        <h2 className="font-display font-medium text-metin mb-1">Bizim Teklife Dönüştür</h2>
+        <h2 className="font-display font-medium text-metin mb-1">Doğrudan Teklife Dönüştür</h2>
         <p className="text-sm text-metin/60 mb-4">
           Buradaki kalemler, girdiğin kâr marjı eklenerek yeni bir teklife
           kopyalanır. Bu teklif "satınalma teklifinden oluşturuldu" olarak

@@ -8,6 +8,8 @@ import MusteriYetkiliSecici from "@/components/MusteriYetkiliSecici";
 import SablonSecici from "@/components/SablonSecici";
 import KaydetButonu from "@/components/KaydetButonu";
 import Link from "next/link";
+import { donusumKalemleri } from "@/lib/satinalma-hesap";
+import type { Satir } from "@/components/TeklifKalemleri";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +23,8 @@ export default async function YeniTeklifSayfasi({
     seciliProjeId?: string;
     seciliMusteriId?: string; // Hızlı eklenen / projeden gelen müşteri
     basarili?: string;
+    satinalma?: string; // Tedarikçi (satınalma) teklifinden: kalemler kâr eklenerek forma gelir
+    marj?: string; // kâr %
   };
 }) {
   const [musteriler, sablonlar, markalar, urunler, projeler, kurlar] = await Promise.all([
@@ -35,9 +39,39 @@ export default async function YeniTeklifSayfasi({
     getTcmbKurlari(), // para birimi değişince fiyat çevirme için (alınamazsa null)
   ]);
 
-  const varsayilanBaslik = searchParams.proje || "";
+  // --- Tedarikçi teklifinden aktarma (ör. TCL teklif PDF'i): kalemler bölümleriyle, kâr eklenmiş fiyatla gelir ---
+  const satinalma = searchParams.satinalma
+    ? await prisma.satinalmaTeklifi.findUnique({
+        where: { id: searchParams.satinalma },
+        include: { tedarikci: { select: { ad: true } }, kalemler: { orderBy: { id: "asc" } } },
+      })
+    : null;
+  const marjHam = Number(String(searchParams.marj ?? "").replace(",", "."));
+  const marj = Number.isFinite(marjHam) && marjHam > -100 && marjHam <= 1000 ? marjHam : 0;
+  let aktarimKalemleri: Satir[] | undefined;
+  let aktarimFiyatsiz = false;
+  if (satinalma) {
+    const d = donusumKalemleri(satinalma, marj);
+    aktarimFiyatsiz = d.fiyatsizVar;
+    // TCL ürünleri (tedarikçi adı ya da TCL model kodu) panelde TCL markasıyla gelir
+    const tclMi = /tcl/i.test(satinalma.tedarikci.ad) || satinalma.kalemler.some((k) => /^TMV-/i.test(k.aciklama));
+    const tclMarka = tclMi ? markalar.find((m) => m.ad.trim().toLocaleUpperCase("tr-TR") === "TCL") : undefined;
+    aktarimKalemleri = d.kalemler.map((k, i) => ({
+      key: `aktarim-${i}`,
+      bolum: k.bolum || "Genel Kalemler",
+      aciklama: k.aciklama,
+      adet: k.adet,
+      birimFiyat: Math.round(k.birimFiyat * 100) / 100,
+      iskontoYuzde: 0,
+      markaId: tclMarka?.id ?? null,
+    }));
+  }
+
+  const varsayilanBaslik = searchParams.proje || satinalma?.baslik || "";
   const varsayilanMusteriId = searchParams.seciliMusteriId || searchParams.musteri || "";
-  const varsayilanProjeId = searchParams.seciliProjeId || "";
+  const varsayilanProjeId =
+    searchParams.seciliProjeId ||
+    (satinalma ? projeler.find((p) => p.ad.trim().toLocaleLowerCase("tr-TR") === satinalma.baslik.trim().toLocaleLowerCase("tr-TR"))?.id ?? "" : "");
 
   return (
     <div>
@@ -57,8 +91,18 @@ export default async function YeniTeklifSayfasi({
         </div>
       )}
 
+      {satinalma && (
+        <div className="bg-soguk-light/40 border border-soguk/30 rounded-md p-3 text-xs text-metin/80 mb-4">
+          <strong className="text-soguk-dim">{satinalma.tedarikci.ad}</strong> teklifinden aktarıldı ({satinalma.baslik}):{" "}
+          {aktarimKalemleri?.length ?? 0} kalem, fiyatlara <strong>%{marj.toLocaleString("tr-TR")} kâr</strong> eklendi. Müşteriyi, notları ve
+          fiyatları kontrol edip &quot;Teklifi Kaydet&quot;e basın.
+          {aktarimFiyatsiz && " Tedarikçi birim fiyat vermediği için toplam kalemlere paylaştırıldı ve PDF'te kalem fiyatları gizlendi."}
+        </div>
+      )}
+
       {/* YENİ TEKLİF FORMU */}
       <form action={teklifEkle} className="bg-yuzey border border-hat rounded-lg p-5">
+        {satinalma && <input type="hidden" name="kaynakSatinalmaTeklifiId" value={satinalma.id} />}
         <label className="block text-xs font-medium text-metin/60 mb-1">Teklif / Proje Adı *</label>
         <input
           name="baslik"
@@ -95,7 +139,7 @@ export default async function YeniTeklifSayfasi({
         <div className="grid sm:grid-cols-4 gap-3 mb-5">
           <div>
             <label className="block text-xs font-medium text-metin/60 mb-1">Para Birimi</label>
-            <select name="paraBirimi" defaultValue="TRY" className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
+            <select name="paraBirimi" defaultValue={satinalma?.paraBirimi ?? "TRY"} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
               <option value="TRY">₺ TRY</option>
               <option value="USD">$ USD</option>
               <option value="EUR">€ EUR</option>
@@ -129,6 +173,8 @@ export default async function YeniTeklifSayfasi({
         </div>
 
         <TeklifKalemleri
+          baslangic={aktarimKalemleri}
+          paraBirimi={satinalma?.paraBirimi ?? "TRY"}
           kurlar={kurlar}
           markalar={markalar.map((m) => ({ id: m.id, ad: m.ad }))}
           urunler={urunler.map((u) => ({
@@ -143,7 +189,7 @@ export default async function YeniTeklifSayfasi({
         />
 
         <label className="flex items-center gap-2 text-sm text-metin/80 mb-4 bg-soguk-light/20 p-2.5 rounded border border-hat">
-          <input type="checkbox" name="birimFiyatGoster" value="hayir" className="accent-soguk" />
+          <input type="checkbox" name="birimFiyatGoster" value="hayir" defaultChecked={aktarimFiyatsiz} className="accent-soguk" />
           <span className="font-semibold text-metin">PDF çıktısında tüm kalem fiyatlarını gizle</span>
           <span className="text-xs text-metin/60">(Müşteri kalem fiyatlarını göremez, sadece dip toplam görünür)</span>
         </label>

@@ -38,6 +38,7 @@ const ISLEM_ADI: Record<string, string> = {
   toptanListeOlustur: "Toptan fiyat listesini oluşturdu",
   toptanListeUygula: "Toptan fiyat listesine Netsa PDF'lerini işledi",
   toptanKarKaydet: "Toptan fiyat listesinin kâr oranlarını değiştirdi",
+  tclSatinalmaKaydet: "TCL teklif PDF'inden satınalma teklifi ekledi",
   notEkle: "Not / hatırlatma ekledi",
   hazirListeEkle: "Hazır fiyat listesini panele ekledi",
   hazirListeTamamla: "Hazır fiyat listesinin eksik bilgilerini tamamladı",

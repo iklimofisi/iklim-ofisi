@@ -7,7 +7,8 @@ import { tutarOku } from "@/lib/toplam-dagit";
 // Birim fiyat zorunlu değil: tedarikçi sadece toplam verdiyse kalemleri
 // fiyatsız yazıp "Tedarikçinin verdiği toplam" kutusunu doldurmanız yeterli.
 
-type Satir = { key: number; aciklama: string; adet: string; birimFiyat: string };
+// bolum: PDF'ten okunan tekliflerdeki ürün grubu ("Heat-Pump Dış Üniteler"…); düzenlemede korunur
+type Satir = { key: number; aciklama: string; adet: string; birimFiyat: string; bolum?: string };
 
 const sayi = (v: string) => tutarOku(v) ?? 0;
 const para = (n: number) => n.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -21,7 +22,7 @@ export default function SatinalmaKalemGirisi({
   paraBirimiSecici = 'select[name="paraBirimi"]',
   sabitParaBirimi,
 }: {
-  baslangic?: { aciklama: string; adet: number; birimFiyat: number }[];
+  baslangic?: { aciklama: string; adet: number; birimFiyat: number; bolum?: string | null }[];
   baslangicToplam?: number | null;
   paraBirimiSecici?: string;
   sabitParaBirimi?: string;
@@ -33,6 +34,7 @@ export default function SatinalmaKalemGirisi({
             aciklama: k.aciklama,
             adet: String(k.adet).replace(".", ","),
             birimFiyat: k.birimFiyat > 0 ? String(k.birimFiyat).replace(".", ",") : "",
+            bolum: k.bolum ?? "",
           })
         )
       : [yeniSatir()]
@@ -96,8 +98,10 @@ export default function SatinalmaKalemGirisi({
             key={s.key}
             className="grid grid-cols-[1fr_64px_28px] sm:grid-cols-[1fr_70px_120px_110px_28px] gap-2 items-center pb-2 border-b border-hat sm:pb-0 sm:border-0"
           >
+            <input type="hidden" name="kalemBolum" value={s.bolum ?? ""} />
             <input
               name="kalemAciklama"
+              title={s.bolum ? `Bölüm: ${s.bolum}` : undefined}
               value={s.aciklama}
               onChange={(e) => guncelle(s.key, "aciklama", e.target.value)}
               placeholder="Ürün / iş kalemi"

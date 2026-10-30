@@ -433,6 +433,7 @@ model SatinalmaTeklifKalemi {
   id                 String           @id @default(cuid())
   satinalmaTeklifi   SatinalmaTeklifi @relation(fields: [satinalmaTeklifiId], references: [id], onDelete: Cascade)
   satinalmaTeklifiId String
+  bolum              String?          // PDF'ten okunan teklifte ürün grubu (ör. "Heat-Pump Dış Üniteler"); müşteri teklifine bölüm olarak geçer
   aciklama           String
   adet               Float            @default(1)
   birimFiyat         Float

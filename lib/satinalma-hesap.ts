@@ -26,16 +26,18 @@ export function satinalmaToplami(st: { toplamTutar: number | null; kalemler: { a
 // Toplam her durumda = tedarikçi toplamı × (1 + marj).
 // fiyatsizVar: true ise müşteri belgesinde birim fiyatlar gizlenmeli (uydurma
 // birim fiyatlar müşteriye gitmesin; müşteri kalemleri ve genel toplamı görür).
-export function donusumKalemleri(
-  st: { baslik: string; toplamTutar: number | null; kalemler: Kalem[] },
+// Kalemdeki diğer alanlar (ör. bolum) olduğu gibi korunur.
+type DonusumKalemi<K extends Kalem> = Kalem & Partial<Omit<K, keyof Kalem>>;
+export function donusumKalemleri<K extends Kalem>(
+  st: { baslik: string; toplamTutar: number | null; kalemler: K[] },
   marjYuzdesi: number
-): { kalemler: Kalem[]; fiyatsizVar: boolean } {
+): { kalemler: DonusumKalemi<K>[]; fiyatsizVar: boolean } {
   const carpan = 1 + marjYuzdesi / 100;
   const elleToplam = st.toplamTutar != null && st.toplamTutar > 0 ? st.toplamTutar : null;
 
   if (st.kalemler.length === 0) {
     return elleToplam
-      ? { kalemler: [{ aciklama: st.baslik, adet: 1, birimFiyat: Math.round(elleToplam * carpan * 100) / 100 }], fiyatsizVar: false }
+      ? { kalemler: [{ aciklama: st.baslik, adet: 1, birimFiyat: Math.round(elleToplam * carpan * 100) / 100 } as DonusumKalemi<K>], fiyatsizVar: false }
       : { kalemler: [], fiyatsizVar: false };
   }
 
@@ -57,6 +59,7 @@ export function donusumKalemleri(
   // Başlangıç fiyatları: fiyatlılar marjlı; fiyatsızlar kalan tutarı adet başına eşit paylaşır
   const birimKalan = kalan > 0 && fiyatsizAdet > 0 ? (kalan * carpan) / fiyatsizAdet : 0;
   const tohum = st.kalemler.map((k, i) => ({
+    ...k,
     aciklama: k.aciklama,
     adet: k.adet > 0 ? k.adet : 1,
     birimFiyat: fiyatli[i] ? k.birimFiyat * carpan : birimKalan,

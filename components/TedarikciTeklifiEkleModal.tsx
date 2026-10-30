@@ -4,6 +4,7 @@ import { useState } from "react";
 import { satinalmaTeklifiEkle } from "@/lib/actions";
 import KaydetButonu from "@/components/KaydetButonu";
 import SatinalmaKalemGirisi from "@/components/SatinalmaKalemGirisi";
+import TclTeklifYukle from "@/components/TclTeklifYukle";
 
 export default function TedarikciTeklifiEkleModal({
   konuBasligi,
@@ -40,6 +41,13 @@ export default function TedarikciTeklifiEkleModal({
                 ✕
               </button>
             </div>
+
+            {/* TCL TEKLİF PDF'İNDEN OTOMATİK */}
+            <div className="bg-soguk-light/30 border border-soguk/30 rounded-md p-3 space-y-2">
+              <p className="text-xs font-bold text-soguk-dim">📄 TCL teklif PDF&apos;inden otomatik ekle</p>
+              <TclTeklifYukle tedarikciler={tedarikciler} sabitKonu={konuBasligi} />
+            </div>
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">ya da elle girin</p>
 
             <form action={satinalmaTeklifiEkle} className="space-y-4 text-xs">
               <input type="hidden" name="baslik" value={konuBasligi} />

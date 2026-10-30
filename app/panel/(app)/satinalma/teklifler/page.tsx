@@ -6,6 +6,7 @@ import Link from "next/link";
 import KaydetButonu from "@/components/KaydetButonu";
 import SatinalmaKalemGirisi from "@/components/SatinalmaKalemGirisi";
 import { satinalmaToplami } from "@/lib/satinalma-hesap";
+import TclTeklifYukle from "@/components/TclTeklifYukle";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,21 @@ export default async function SatinalmaTekliflerPage() {
           <h1 className="font-display text-2xl font-bold text-metin">Gelen Tedarikçi Teklifleri & İhale Kıyaslama</h1>
           <p className="text-xs text-metin/60 mt-1">Bir proje için aldığınız tüm tedarikçi fiyatlarını yan yana kıyaslayabilir, maliyet dosyalarını açabilirsiniz.</p>
         </div>
+      </div>
+
+      {/* 0. TCL TEKLİF PDF'İNDEN OTOMATİK TEDARİKÇİ TEKLİFİ */}
+      <div className="bg-soguk-light/30 border border-soguk/40 rounded-lg p-5 space-y-3 shadow-sm">
+        <div>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-soguk-dim">📄 TCL Teklif PDF&apos;inden Otomatik Ekle</h2>
+          <p className="text-xs text-metin/60 mt-1">
+            TCL&apos;den gelen teklif PDF&apos;ini seçin: ürün grupları, model kodları, adetler ve fiyatlar okunur. Kaydettikten sonra kâr oranını
+            yazıp tek tıkla müşteri teklif formuna aktarırsınız.
+          </p>
+        </div>
+        <TclTeklifYukle
+          tedarikciler={tedarikciler.map((t) => ({ id: t.id, ad: t.ad }))}
+          konular={[...new Set([...satisTeklifleri.map((st) => st.proje?.ad || st.baslik), ...satinalmaTeklifleri.map((s) => s.baslik)].filter(Boolean))]}
+        />
       </div>
 
       {/* 1. YENİ TEDARİKÇİ TEKLİFİ / PROJE GİRİŞ FORMU */}

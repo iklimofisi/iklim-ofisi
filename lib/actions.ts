@@ -226,6 +226,8 @@ export async function teklifEkle(formData: FormData) {
   const projeId = String(formData.get("projeId") ?? "");
   const yetkiliIdHam = String(formData.get("yetkiliId") ?? "");
   const kopyaKaynakTeklifId = String(formData.get("kopyaKaynakTeklifId") ?? "");
+  // Tedarikçi (satınalma) teklifinden aktarıldıysa bağlantısı saklanır (yalnız panelde görünür)
+  const kaynakSatinalmaHam = String(formData.get("kaynakSatinalmaTeklifiId") ?? "").trim();
   // Müşterisiz teklif: müşteri yerine PDF'e yazılacak serbest metin (isteğe bağlı)
   const muhatap = musterisizMi(musteriId) ? String(formData.get("muhatap") ?? "").trim().slice(0, 200) || null : null;
   const paraBirimi = String(formData.get("paraBirimi") ?? "TRY");
@@ -257,6 +259,10 @@ export async function teklifEkle(formData: FormData) {
     });
   }
 
+  const kaynakSatinalma = kaynakSatinalmaHam
+    ? await prisma.satinalmaTeklifi.findUnique({ where: { id: kaynakSatinalmaHam }, select: { id: true } })
+    : null;
+
   let teklif: { id: string };
   try {
   teklif = await prisma.teklif.create({
@@ -269,6 +275,7 @@ export async function teklifEkle(formData: FormData) {
       yetkiliId,
       kopyaKaynakTeklifId: kopyaKaynak?.id ?? null,
       kopyaKaynakTeklifNo: kopyaKaynak?.teklifNo ?? null,
+      ...(kaynakSatinalma ? { kaynakSatinalmaTeklifiId: kaynakSatinalma.id } : {}),
       paraBirimi,
       kdvOrani,
       kdvDahil,
@@ -1152,11 +1159,15 @@ function satinalmaKalemleriOku(formData: FormData) {
   const aciklamalar = formData.getAll("kalemAciklama") as string[];
   const adetler = formData.getAll("kalemAdet") as string[];
   const fiyatlar = formData.getAll("kalemFiyat") as string[];
+  // Bölüm (PDF'ten okunan tekliflerde ürün grubu). Eski formlarda alan yoksa boş kalır.
+  const bolumler = formData.getAll("kalemBolum") as string[];
+  const bolumHizali = bolumler.length === aciklamalar.length;
   const kalemler = aciklamalar
     .map((aciklama, i) => ({
       aciklama: String(aciklama ?? "").trim(),
       adet: parseSayi(adetler[i]) || 1,
       birimFiyat: tutarOku(String(fiyatlar[i] ?? "")) ?? 0,
+      bolum: (bolumHizali ? String(bolumler[i] ?? "").trim().slice(0, 200) : "") || null,
     }))
     .filter((k) => k.aciklama);
   const toplam = tutarOku(String(formData.get("toplamTutar") ?? ""));
@@ -1272,6 +1283,8 @@ export async function satinalmaTeklifiniDonustur(formData: FormData) {
       kalemler: {
         create: kalemler.map((k, sira) => ({
           sira,
+          // PDF'ten okunan tedarikçi teklifinde ürün grubu bölüm olarak geçer
+          ...(k.bolum ? { bolum: k.bolum } : {}),
           aciklama: k.aciklama,
           adet: k.adet,
           birimFiyat: k.birimFiyat,
