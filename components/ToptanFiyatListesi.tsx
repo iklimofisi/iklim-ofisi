@@ -20,9 +20,12 @@ import {
   type ToptanNotGrubu,
 } from "@/lib/toptan-fiyat";
 import type { NetsaSonuc } from "@/lib/netsa-ayikla";
+import { baranAyikla } from "@/lib/baran-ayikla";
 
 // -----------------------------------------------------------------------------
 // İKLİMOFİSİ TOPTAN FİYAT LİSTESİ (Netsa: Sakura, Bosch, Carrier — tek liste)
+// Aynı sayfa Baran Isı listesi için de kullanılır (kaynak="BARAN"): Baran'ın HTML dosyası
+// tarayıcıda okunur (dosya büyük; sunucuya yalnız okunan ürünler gider), dosya tüm markaları getirir.
 // Her ay Netsa'nın PDF'leri buradan yüklenir; okunan fiyatlar ALIŞ fiyatımızdır ve
 // yalnız bu sayfada görünür. Müşteriye giden PDF'te yalnız satış fiyatı (alış + kâr %) çıkar.
 // -----------------------------------------------------------------------------
@@ -57,13 +60,16 @@ export default function ToptanFiyatListesi({
   durum,
   satirlar,
   notGruplari,
+  kaynak = "NETSA",
 }: {
   liste: { id: string; baslik: string; aciklama: string; notlar: string; duzen: string; fiyatBaslik: string; fiyat2Baslik: string; paraBirimi: string };
   durum: ToptanDurum;
   satirlar: ToptanSatir[];
   notGruplari: ToptanNotGrubu[];
+  kaynak?: "NETSA" | "BARAN";
 }) {
   const router = useRouter();
+  const baran = kaynak === "BARAN";
   const tl = (n: number | null | undefined) => (n && n > 0 ? flParaYaz(n, liste.paraBirimi) : FIYAT_SORUNUZ);
 
   // ---------------- PDF YÜKLEME ----------------
@@ -72,14 +78,38 @@ export default function ToptanFiyatListesi({
   const [okumaHatalari, setOkumaHatalari] = useState<{ dosya: string; hata: string }[]>([]);
   const [okunuyor, setOkunuyor] = useState<string | null>(null);
   const [karlar, setKarlar] = useState<Record<string, string>>(() =>
-    Object.fromEntries(TOPTAN_MARKALAR.map((m) => [m, durum.kar[m] !== undefined ? String(durum.kar[m]).replace(".", ",") : ""]))
+    Object.fromEntries(
+      [...new Set([...TOPTAN_MARKALAR, ...Object.keys(durum.kar)])].map((m) => [m, durum.kar[m] !== undefined ? String(durum.kar[m]).replace(".", ",") : ""])
+    )
   );
   const [yuvarlama, setYuvarlama] = useState(String(durum.yuvarlama));
   const [uygulaHata, setUygulaHata] = useState<string | null>(null);
   const [uygulaniyor, baslat] = useTransition();
 
+  // Baran: tek HTML dosyası tarayıcıda okunur; dosyadaki tüm markalar önizlemeye gelir
+  async function baranDosyasiOku(f: File) {
+    setUygulaHata(null);
+    setOkunuyor(f.name);
+    try {
+      if (!/\.html?$/i.test(f.name)) throw new Error("Baran'ın fiyat listesi dosyasını (.html) seçin.");
+      if (f.size > 40 * 1024 * 1024) throw new Error("Dosya çok büyük (40 MB üstü).");
+      const r = baranAyikla(await f.text(), f.name);
+      if (!r.markalar.length) throw new Error(r.uyarilar[0] ?? "Dosyada ürün bulunamadı.");
+      const ilk = r.markalar[0];
+      setOkunanlar(r.markalar.map((s) => ({ dosya: f.name, sonuc: s === ilk ? { ...s, uyarilar: [...r.uyarilar, ...s.uyarilar] } : s })));
+      setOkumaHatalari([]);
+    } catch (e) {
+      setOkunanlar([]);
+      setOkumaHatalari([{ dosya: f.name, hata: e instanceof Error ? e.message : "Dosya okunamadı." }]);
+    } finally {
+      setOkunuyor(null);
+      if (dosyaRef.current) dosyaRef.current.value = "";
+    }
+  }
+
   async function dosyalariOku(dosyalar: FileList | null) {
     if (!dosyalar?.length) return;
+    if (baran) return baranDosyasiOku(dosyalar[0]);
     setUygulaHata(null);
     const hatalar: { dosya: string; hata: string }[] = [];
     let yeni = [...okunanlar];
@@ -112,11 +142,16 @@ export default function ToptanFiyatListesi({
       }),
     [okunanlar, durum.markalar]
   );
-  // Kârı girilmesi gereken markalar: listede kalacak tüm markalar
-  const kalacakMarkalar = markaSirala([
-    ...durum.markalar.map((m) => ({ marka: m.marka })),
-    ...okunanlar.filter((o) => !durum.markalar.some((m) => m.marka === o.sonuc.marka)).map((o) => ({ marka: o.sonuc.marka })),
-  ]).map((m) => m.marka);
+  // Kârı girilmesi gereken markalar: listede kalacak tüm markalar (Baran: dosyadaki markalar)
+  const kalacakMarkalar = baran
+    ? okunanlar.map((o) => o.sonuc.marka)
+    : markaSirala([
+        ...durum.markalar.map((m) => ({ marka: m.marka })),
+        ...okunanlar.filter((o) => !durum.markalar.some((m) => m.marka === o.sonuc.marka)).map((o) => ({ marka: o.sonuc.marka })),
+      ]).map((m) => m.marka);
+  // Baran dosyasında artık olmayan markalar (güncellenince ürünleri listeden çıkar)
+  const cikanMarkalar = baran && okunanlar.length ? durum.markalar.filter((m) => !okunanlar.some((o) => o.sonuc.marka === m.marka)) : [];
+  const [topluKar, setTopluKar] = useState("");
   const eksikKar = kalacakMarkalar.filter((m) => karOku(karlar[m]) === null);
 
   function uygula() {
@@ -230,10 +265,11 @@ export default function ToptanFiyatListesi({
       <section className="bg-yuzey border border-hat rounded-lg p-5 space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="text-sm space-y-1">
-            <p className="font-display font-medium text-metin">Netsa listelerinden hazırlanan toptan liste</p>
+            <p className="font-display font-medium text-metin">{baran ? "Baran Isı fiyat listesinden hazırlanan liste" : "Netsa listelerinden hazırlanan toptan liste"}</p>
             <p className="text-xs text-metin/60">
-              Netsa PDF&apos;indeki nakit ve kredi kartı fiyatları <strong>alış fiyatınızdır</strong>; yalnız bu sayfada görünür. Müşteriye giden PDF&apos;te
-              yalnız satış fiyatı (alış + kâr %) çıkar; Netsa adı ve bayi bilgileri geçmez.
+              {baran ? "Baran dosyasındaki" : "Netsa PDF'indeki"} nakit ve kredi kartı fiyatları <strong>alış fiyatınızdır</strong>; yalnız bu sayfada
+              görünür. Müşteriye giden PDF&apos;te yalnız satış fiyatı (alış + kâr %) ve sizin firma bilgileriniz çıkar; {baran ? "Baran" : "Netsa"} adı ve
+              bayi bilgileri geçmez.
             </p>
             <p className="text-xs text-metin/60">
               {toplamUrun} ürün · son güncelleme {zaman(durum.sonGuncelleme)}
@@ -255,7 +291,11 @@ export default function ToptanFiyatListesi({
             ))}
           </div>
         ) : (
-          <p className="text-sm text-metin/60">Henüz liste yüklenmedi. Aşağıdan Netsa&apos;nın Sakura, Bosch ve Carrier PDF&apos;lerini yükleyin.</p>
+          <p className="text-sm text-metin/60">
+            {baran
+              ? "Henüz liste yüklenmedi. Aşağıdan Baran Isı'nın fiyat listesi dosyasını (.html) yükleyin."
+              : "Henüz liste yüklenmedi. Aşağıdan Netsa'nın Sakura, Bosch ve Carrier PDF'lerini yükleyin."}
+          </p>
         )}
         {cikanlar.length > 0 && (
           <details className="text-xs text-metin/70">
@@ -276,17 +316,18 @@ export default function ToptanFiyatListesi({
       {/* PDF YÜKLEME */}
       <section className="bg-yuzey border border-hat rounded-lg p-5 space-y-4">
         <div>
-          <h2 className="font-display font-medium text-metin">Yeni ay listelerini yükle</h2>
+          <h2 className="font-display font-medium text-metin">{baran ? "Yeni Baran listesini yükle" : "Yeni ay listelerini yükle"}</h2>
           <p className="text-xs text-metin/55 mt-0.5">
-            Netsa&apos;nın Sakura, Bosch ve Carrier PDF&apos;lerini seçin (birini ya da üçünü birden). Önce önizleme çıkar; &quot;Listeyi güncelle&quot;ye basmadan
-            hiçbir şey değişmez. Yalnız yüklediğiniz markaların ürünleri yenilenir.
+            {baran
+              ? "Baran Isı'nın gönderdiği fiyat listesi dosyasını (.html) seçin; dosya bu bilgisayarda okunur. Önce önizleme çıkar; \"Listeyi güncelle\"ye basmadan hiçbir şey değişmez. Dosya bütün markaları getirir; dosyada olmayan markanın ürünleri listeden çıkar."
+              : "Netsa'nın Sakura, Bosch ve Carrier PDF'lerini seçin (birini ya da üçünü birden). Önce önizleme çıkar; \"Listeyi güncelle\"ye basmadan hiçbir şey değişmez. Yalnız yüklediğiniz markaların ürünleri yenilenir."}
           </p>
         </div>
         <input
           ref={dosyaRef}
           type="file"
-          accept="application/pdf,.pdf"
-          multiple
+          accept={baran ? "text/html,.html,.htm" : "application/pdf,.pdf"}
+          multiple={!baran}
           disabled={!!okunuyor || uygulaniyor}
           onChange={(e) => dosyalariOku(e.target.files)}
           className="block text-sm text-metin/70 file:mr-3 file:rounded-md file:border file:border-soguk file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-soguk-dim hover:file:bg-soguk-light"
@@ -310,9 +351,11 @@ export default function ToptanFiyatListesi({
                       <strong>{o.sonuc.marka}</strong> · {o.sonuc.tarih || "tarih okunamadı"} · {o.sonuc.urunler.length} ürün
                       <span className="text-metin/45 text-xs"> ({o.dosya})</span>
                     </p>
-                    <button type="button" onClick={() => setOkunanlar((l) => l.filter((x) => x.sonuc.marka !== o.sonuc.marka))} className="focus-ring text-xs text-metin/50 hover:text-sicak-dim">
-                      Çıkar
-                    </button>
+                    {!baran && (
+                      <button type="button" onClick={() => setOkunanlar((l) => l.filter((x) => x.sonuc.marka !== o.sonuc.marka))} className="focus-ring text-xs text-metin/50 hover:text-sicak-dim">
+                        Çıkar
+                      </button>
+                    )}
                   </div>
                   <p className="text-xs text-metin/60 mt-1">
                     {o.eski
@@ -373,10 +416,33 @@ export default function ToptanFiyatListesi({
               );
             })}
 
+            {cikanMarkalar.length > 0 && (
+              <p className="text-sm bg-amber-50 border border-amber-300 text-amber-900 rounded-md px-3 py-2">
+                Dikkat: bu dosyada olmayan marka{cikanMarkalar.length > 1 ? "lar" : ""}:{" "}
+                <strong>{cikanMarkalar.map((m) => `${m.marka} (${m.urunler.length} ürün)`).join(", ")}</strong>. Listeyi güncellerseniz bu ürünler listeden çıkar.
+              </p>
+            )}
             <div className="border border-soguk/30 bg-soguk-light/30 rounded-md p-3 space-y-3">
               <p className="text-xs text-metin/70">
                 Satış fiyatı = alış fiyatı + kâr %. Nakit ve kredi kartı fiyatına aynı kâr uygulanır. Kâr oranları sonradan da değiştirilebilir.
               </p>
+              {kalacakMarkalar.length > 3 && (
+                <div className="flex flex-wrap items-end gap-2 text-xs text-metin/60">
+                  <label>
+                    <span className="block mb-1 font-medium">Tüm markalara aynı kâr %</span>
+                    <input value={topluKar} onChange={(e) => setTopluKar(e.target.value)} inputMode="decimal" placeholder="örn. 15" className={kucukKutu} />
+                  </label>
+                  <button
+                    type="button"
+                    disabled={karOku(topluKar) === null}
+                    onClick={() => setKarlar((k) => ({ ...k, ...Object.fromEntries(kalacakMarkalar.map((m) => [m, topluKar])) }))}
+                    className="focus-ring border border-soguk/40 text-soguk-dim rounded-md px-3 py-1.5 text-sm hover:bg-soguk-light disabled:opacity-40"
+                  >
+                    Hepsine yaz
+                  </button>
+                  <span className="text-metin/45">Sonra istediğiniz markayı tek tek değiştirebilirsiniz.</span>
+                </div>
+              )}
               <div className="flex flex-wrap items-end gap-4">
                 {kalacakMarkalar.map((m) => (
                   <label key={m} className="text-xs text-metin/60">
@@ -423,6 +489,27 @@ export default function ToptanFiyatListesi({
           <p className="text-xs text-metin/55 mt-0.5 mb-3">Değiştirip kaydedince satış fiyatları kayıtlı alış fiyatlarından yeniden hesaplanır.</p>
           <form key={`${JSON.stringify(durum.kar)}|${durum.yuvarlama}`} action={toptanKarKaydet} className="flex flex-wrap items-end gap-4">
             <input type="hidden" name="listeId" value={liste.id} />
+            {durum.markalar.length > 3 && (
+              <div className="w-full flex flex-wrap items-end gap-2 text-xs text-metin/60">
+                <label>
+                  <span className="block mb-1 font-medium">Tüm markalara aynı kâr %</span>
+                  <input data-toplu-kar inputMode="decimal" placeholder="örn. 15" className={kucukKutu} />
+                </label>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    const f = e.currentTarget.form;
+                    const v = (f?.querySelector("input[data-toplu-kar]") as HTMLInputElement | null)?.value ?? "";
+                    if (!f || karOku(v) === null) return;
+                    f.querySelectorAll<HTMLInputElement>('input[name^="kar_"]').forEach((i) => (i.value = v));
+                  }}
+                  className="focus-ring border border-soguk/40 text-soguk-dim rounded-md px-3 py-1.5 text-sm hover:bg-soguk-light"
+                >
+                  Hepsine yaz
+                </button>
+                <span className="text-metin/45">Yazdıktan sonra &quot;Fiyatları yeniden hesapla&quot;ya basın.</span>
+              </div>
+            )}
             {durum.markalar.map((m) => (
               <label key={m.marka} className="text-xs text-metin/60">
                 <span className="block mb-1 font-medium">{m.marka} kâr %</span>
@@ -581,7 +668,11 @@ export default function ToptanFiyatListesi({
               );
             })}
           </table>
-          {!satirlar.length && <p className="text-sm text-metin/50 p-4">Listede ürün yok. Yukarıdan Netsa PDF&apos;lerini yükleyin.</p>}
+          {!satirlar.length && (
+            <p className="text-sm text-metin/50 p-4">
+              {baran ? "Listede ürün yok. Yukarıdan Baran Isı'nın fiyat listesi dosyasını yükleyin." : "Listede ürün yok. Yukarıdan Netsa PDF'lerini yükleyin."}
+            </p>
+          )}
         </div>
       </section>
 

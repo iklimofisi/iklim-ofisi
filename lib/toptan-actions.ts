@@ -3,6 +3,7 @@
 // -----------------------------------------------------------------------------
 // İKLİMOFİSİ TOPTAN FİYAT LİSTESİ — sunucu işlemleri
 //   toptanListeOlustur : boş toptan listeyi oluşturur (bir kez)
+//   baranListeOlustur  : boş Baran Isı listesini oluşturur (bir kez; dosya tarayıcıda okunur)
 //   toptanPdfOku       : yüklenen tek bir Netsa PDF'ini okur (veritabanına YAZMAZ; önizleme için)
 //   toptanListeUygula  : okunan markaları listeye işler (yalnız yüklenen markalar değişir)
 //   toptanKarKaydet    : kâr oranlarını / yuvarlamayı değiştirip satış fiyatlarını yeniden hesaplar
@@ -18,6 +19,9 @@ import { netsaAyikla, type NetsaSonuc, type PdfSayfa } from "@/lib/netsa-ayikla"
 import {
   TOPTAN_KAYNAK,
   TOPTAN_BASLIK,
+  BARAN_KAYNAK,
+  BARAN_BASLIK,
+  toptanKaynakMi,
   bosToptanDurum,
   toptanDurumOku,
   toptanMarkaAdi,
@@ -33,7 +37,9 @@ import {
 } from "@/lib/toptan-fiyat";
 
 const EN_AZ_URUN = 10; // bir markada bundan az ürün okunursa dosya biçimi değişmiş sayılır
-const TOPTAN_MARKALAR_SINIRI = 10; // tek seferde işlenecek en fazla liste
+const TOPTAN_MARKALAR_SINIRI = 40; // tek seferde işlenecek en fazla marka (Baran dosyasında 10 marka var)
+// Baran dosyası tüm markaları birlikte getirir: markada en az 1, toplamda en az bu kadar ürün okunmalı
+const BARAN_EN_AZ_TOPLAM = 20;
 
 async function yetki(islem: string, girdi?: FormData | Record<string, unknown>) {
   const kullanici = await girisZorunlu();
@@ -48,20 +54,26 @@ const yollariYenile = (id: string) => {
 
 // Toptan listeyi açar; zaten varsa ona gider (ikinci liste oluşmaz)
 export async function toptanListeOlustur() {
+  await listeAc(TOPTAN_KAYNAK, TOPTAN_BASLIK, "toptanListeOlustur");
+}
+export async function baranListeOlustur() {
+  await listeAc(BARAN_KAYNAK, BARAN_BASLIK, "baranListeOlustur");
+}
+async function listeAc(kaynak: string, baslik: string, islem: string) {
   const giren = await girisZorunlu();
-  const mevcut = await prisma.fiyatListesi.findFirst({ where: { kaynak: TOPTAN_KAYNAK }, orderBy: { createdAt: "asc" }, select: { id: true } });
+  const mevcut = await prisma.fiyatListesi.findFirst({ where: { kaynak }, orderBy: { createdAt: "asc" }, select: { id: true } });
   if (mevcut) redirect(`/panel/fiyat-listeleri/${mevcut.id}`);
-  await islemKaydet(giren, "toptanListeOlustur", {});
+  await islemKaydet(giren, islem, {});
   const l = await prisma.fiyatListesi.create({
     data: {
-      baslik: TOPTAN_BASLIK,
+      baslik,
       paraBirimi: "TRY",
       kdvDahil: true,
       fiyatGoster: true,
       duzen: "TABLO",
       fiyatBaslik: "Nakit",
       fiyat2Baslik: "Kredi Kartı",
-      kaynak: TOPTAN_KAYNAK,
+      kaynak,
       kaynakDurum: JSON.stringify(bosToptanDurum()),
       olusturanAdi: giren?.ad ?? "",
     },
@@ -156,7 +168,7 @@ async function listeyiYaz(listeId: string, durum: ToptanDurum) {
 
 async function toptanListeGetir(listeId: string) {
   const l = await prisma.fiyatListesi.findUnique({ where: { id: listeId }, select: { id: true, kaynak: true, kaynakDurum: true } });
-  return l && l.kaynak === TOPTAN_KAYNAK ? l : null;
+  return l && toptanKaynakMi(l.kaynak) ? l : null;
 }
 
 // Formdaki / istekteki marka kâr oranları. Listede bulunan her markanın kârı girilmiş olmalı.
@@ -190,14 +202,17 @@ export async function toptanListeUygula(girdi: {
   const liste = await toptanListeGetir(listeId);
   if (!liste) return { basarili: false, mesaj: "Toptan fiyat listesi bulunamadı." };
 
-  const durum = toptanDurumOku(liste.kaynakDurum);
+  const baran = liste.kaynak === BARAN_KAYNAK;
+  const durum = toptanDurumOku(liste.kaynakDurum, liste.kaynak);
   const simdi = new Date().toISOString();
   const yeniMarkalar = new Map<string, ToptanDurum["markalar"][number]>();
   for (const m of gelen) {
-    const marka = toptanMarkaAdi(m?.sonuc?.marka);
+    const marka = toptanMarkaAdi(m?.sonuc?.marka, baran);
     if (!marka) return { basarili: false, mesaj: "Tanınmayan marka listesi gönderildi." };
+    if (yeniMarkalar.has(marka)) return { basarili: false, mesaj: `${marka} iki kez gönderildi; liste güncellenmedi.` };
     const urunler = netsaUrunleriOku(m.sonuc.urunler, marka);
-    if (urunler.length < EN_AZ_URUN) return { basarili: false, mesaj: `${marka} listesinde yeterli ürün yok (${urunler.length}); liste güncellenmedi.` };
+    if (urunler.length < (baran ? 1 : EN_AZ_URUN))
+      return { basarili: false, mesaj: `${marka} listesinde yeterli ürün yok (${urunler.length}); liste güncellenmedi.` };
     yeniMarkalar.set(marka, {
       marka,
       tarih: String(m.sonuc.tarih ?? "").slice(0, 20),
@@ -208,13 +223,22 @@ export async function toptanListeUygula(girdi: {
     });
   }
   if (!yeniMarkalar.size) return { basarili: false, mesaj: "Yüklenecek liste yok." };
+  const yeniToplam = [...yeniMarkalar.values()].reduce((a, m) => a + m.urunler.length, 0);
+  if (baran && yeniToplam < BARAN_EN_AZ_TOPLAM)
+    return { basarili: false, mesaj: `Baran dosyasından yalnız ${yeniToplam} ürün okundu; dosya biçimi değişmiş olabilir, liste güncellenmedi.` };
 
-  const markalar = markaSirala([...durum.markalar.filter((m) => !yeniMarkalar.has(m.marka)), ...yeniMarkalar.values()]);
+  // Netsa: yalnız yüklenen markalar yenilenir. Baran: dosya tüm listeyi getirir; dosyada artık
+  // olmayan markanın ürünleri listeden çıkar (önizlemede gösterilir).
+  const kalanEskiler = baran ? [] : durum.markalar.filter((m) => !yeniMarkalar.has(m.marka));
+  const markalar = markaSirala([...kalanEskiler, ...yeniMarkalar.values()]);
   const k = karlariOku((girdi.kar ?? {}) as Record<string, unknown>, markalar.map((m) => m.marka));
   if ("hata" in k) return { basarili: false, mesaj: k.hata };
 
   // Değişiklikler (alış fiyatına göre) yalnız yüklenen markalar için
-  const degisiklikler = [...yeniMarkalar.values()].flatMap((y) => toptanDegisiklikler(durum.markalar.find((m) => m.marka === y.marka)?.urunler ?? [], y.urunler));
+  const degisiklikler = [
+    ...[...yeniMarkalar.values()].flatMap((y) => toptanDegisiklikler(durum.markalar.find((m) => m.marka === y.marka)?.urunler ?? [], y.urunler)),
+    ...(baran ? durum.markalar.filter((m) => !yeniMarkalar.has(m.marka)).flatMap((m) => toptanDegisiklikler(m.urunler, [])) : []),
+  ];
   const ilkKez = !durum.markalar.length;
   const yeniDurum: ToptanDurum = {
     markalar,
@@ -228,7 +252,9 @@ export async function toptanListeUygula(girdi: {
   await listeyiYaz(liste.id, yeniDurum);
   yollariYenile(liste.id);
   const say = (t: string) => degisiklikler.filter((d) => d.tur === t).length;
-  const adlar = [...yeniMarkalar.values()].map((m) => `${m.marka} (${m.tarih || "tarihsiz"})`).join(", ");
+  const adlar = baran
+    ? `Baran ${[...yeniMarkalar.values()][0]?.tarih || "tarihsiz"} (${yeniMarkalar.size} marka)`
+    : [...yeniMarkalar.values()].map((m) => `${m.marka} (${m.tarih || "tarihsiz"})`).join(", ");
   return {
     basarili: true,
     mesaj: ilkKez
@@ -243,7 +269,7 @@ export async function toptanKarKaydet(formData: FormData) {
   const listeId = String(formData.get("listeId") ?? "");
   const liste = await toptanListeGetir(listeId);
   if (!liste) redirect("/panel/fiyat-listeleri");
-  const durum = toptanDurumOku(liste.kaynakDurum);
+  const durum = toptanDurumOku(liste.kaynakDurum, liste.kaynak);
   const ham: Record<string, unknown> = {};
   for (const m of durum.markalar) ham[m.marka] = formData.get(`kar_${m.marka}`);
   const k = karlariOku(ham, durum.markalar.map((m) => m.marka));
@@ -263,7 +289,7 @@ export async function toptanNotlariKaydet(girdi: { listeId: string; gizli: unkno
   await yetki("toptanNotlariKaydet", { listeId, gizli: notAyar.gizli.length, ekler: notAyar.ekler });
   const liste = await toptanListeGetir(listeId);
   if (!liste) return { basarili: false, mesaj: "Toptan fiyat listesi bulunamadı." };
-  const durum = toptanDurumOku(liste.kaynakDurum);
+  const durum = toptanDurumOku(liste.kaynakDurum, liste.kaynak);
   durum.notAyar = notAyar;
   await prisma.fiyatListesi.update({ where: { id: liste.id }, data: { kaynakDurum: JSON.stringify(durum), updatedAt: new Date() } });
   yollariYenile(liste.id);

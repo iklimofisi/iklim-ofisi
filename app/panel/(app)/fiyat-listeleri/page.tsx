@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { fiyatListesiOlustur, fiyatListesiKopyala, fiyatListesiSil, kayaFiyatListesiGuncelle, hazirListeEkle, hazirListeTamamla } from "@/lib/actions";
 import { HAZIR_LISTELER } from "@/lib/hazir-listeler";
 import { kaynakDurumOku, kayaDurumOzeti } from "@/lib/kaya-fiyat";
-import { toptanListeOlustur } from "@/lib/toptan-actions";
-import { TOPTAN_KAYNAK, TOPTAN_BASLIK, toptanDurumOku } from "@/lib/toptan-fiyat";
+import { toptanListeOlustur, baranListeOlustur } from "@/lib/toptan-actions";
+import { TOPTAN_KAYNAK, TOPTAN_BASLIK, BARAN_KAYNAK, toptanDurumOku } from "@/lib/toptan-fiyat";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
 import KaydetButonu from "@/components/KaydetButonu";
 import { FIYAT_SUTUN_KALIPLARI, ikiFiyatli, iskontoKapsamGecerli } from "@/lib/fiyat-listesi";
@@ -41,6 +41,7 @@ export default async function FiyatListeleriSayfasi() {
   listeler.sort((a, b) => Number(Boolean(b.kaynak)) - Number(Boolean(a.kaynak)));
   const kayaVar = listeler.some((l) => l.kaynak === "KAYA");
   const toptanVar = listeler.some((l) => l.kaynak === TOPTAN_KAYNAK);
+  const baranVar = listeler.some((l) => l.kaynak === BARAN_KAYNAK);
 
   const dugme = "focus-ring text-xs text-metin/50 hover:text-soguk-dim font-medium";
 
@@ -167,6 +168,24 @@ export default async function FiyatListeleriSayfasi() {
         </div>
       )}
 
+      {!baranVar && (
+        <div className="bg-soguk-light/40 border border-soguk/30 rounded-lg p-5 mb-8 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-sm">
+            <p className="font-medium text-metin">Baran Isı Fiyat Listesi (Viessmann · Baymak · Bosch · Copa · Rush …)</p>
+            <p className="text-xs text-metin/60 mt-0.5">
+              Baran Isı&apos;nın gönderdiği fiyat listesi dosyası (.html) panelden yüklenir; yenisi geldikçe aynı yerden güncellenir. Dosyadaki nakit ve
+              kart fiyatları alış fiyatınız olarak yalnız panelde görünür; müşteriye giden PDF&apos;te marka başına kâr eklenmiş satış fiyatı ve sizin firma
+              bilgileriniz çıkar, Baran adı geçmez.
+            </p>
+          </div>
+          <form action={baranListeOlustur}>
+            <KaydetButonu basari={null} bekleme="Oluşturuluyor…">
+              Listeyi oluştur
+            </KaydetButonu>
+          </form>
+        </div>
+      )}
+
       <HizliAramaListesi
         yerTutucu="Hızlı ara: liste adı, hazırlayan…"
         bosMetin="Henüz fiyat listesi yok."
@@ -181,6 +200,10 @@ export default async function FiyatListeleriSayfasi() {
                   {l.kaynak === TOPTAN_KAYNAK ? (
                     <span className="mr-2 inline-block rounded bg-soguk-light text-soguk-dim border border-soguk/30 px-1.5 text-[10px] font-semibold align-middle">
                       TOPTAN · NETSA PDF
+                    </span>
+                  ) : l.kaynak === BARAN_KAYNAK ? (
+                    <span className="mr-2 inline-block rounded bg-soguk-light text-soguk-dim border border-soguk/30 px-1.5 text-[10px] font-semibold align-middle">
+                      BARAN ISI FİYAT LİSTESİ
                     </span>
                   ) : l.kaynak ? (
                     <span className="mr-2 inline-block rounded bg-soguk-light text-soguk-dim border border-soguk/30 px-1.5 text-[10px] font-semibold align-middle">
@@ -199,7 +222,18 @@ export default async function FiyatListeleriSayfasi() {
                     </p>
                   );
                 })()}
-                {l.kaynak && l.kaynak !== TOPTAN_KAYNAK && (() => {
+                {l.kaynak === BARAN_KAYNAK && (() => {
+                  const d = toptanDurumOku(l.kaynakDurum, l.kaynak);
+                  const tarihler = [...new Set(d.markalar.map((m) => m.tarih).filter(Boolean))];
+                  return (
+                    <p className="text-[11px] mt-0.5 text-metin/50 whitespace-normal">
+                      {d.markalar.length
+                        ? `Baran listesi ${tarihler.join(", ") || "—"} · ${d.markalar.map((m) => m.marka).join(" · ")}`
+                        : "Henüz Baran listesi yüklenmedi"}
+                    </p>
+                  );
+                })()}
+                {l.kaynak && l.kaynak !== TOPTAN_KAYNAK && l.kaynak !== BARAN_KAYNAK && (() => {
                   const o = kayaDurumOzeti(kaynakDurumOku(l.kaynakDurum));
                   const renk = { yesil: "text-emerald-700", turuncu: "text-amber-700", sari: "text-amber-700", kirmizi: "text-sicak-dim" }[o.renk];
                   const isaret = { yesil: "✓", turuncu: "●", sari: "!", kirmizi: "⚠" }[o.renk];

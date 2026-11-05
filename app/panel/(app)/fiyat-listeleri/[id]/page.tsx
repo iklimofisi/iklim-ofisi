@@ -5,7 +5,7 @@ import { getTcmbKurlari } from "@/lib/kur";
 import FiyatListesiDuzenleyici from "@/components/FiyatListesiDuzenleyici";
 import KayaFiyatListesi from "@/components/KayaFiyatListesi";
 import ToptanFiyatListesi from "@/components/ToptanFiyatListesi";
-import { TOPTAN_KAYNAK, toptanDurumOku, toptanNotGruplari, anahtarla } from "@/lib/toptan-fiyat";
+import { BARAN_KAYNAK, toptanKaynakMi, toptanDurumOku, toptanNotGruplari, anahtarla } from "@/lib/toptan-fiyat";
 import { kaynakDurumOku } from "@/lib/kaya-fiyat";
 import { HAZIR_LISTELER } from "@/lib/hazir-listeler";
 import { hazirListeTamamla, hazirListeFiyatGeriYukle } from "@/lib/actions";
@@ -45,9 +45,11 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
 
   const dugme = "focus-ring text-sm font-medium border px-4 py-2 rounded-md transition-colors";
 
-  // İklimOfisi Toptan listesi (Netsa PDF'lerinden): alış fiyatları yalnız burada görünür
-  if (liste.kaynak === TOPTAN_KAYNAK) {
-    const durum = toptanDurumOku(liste.kaynakDurum);
+  // İklimOfisi Toptan listesi (Netsa PDF'lerinden) ve Baran Isı listesi (HTML dosyasından):
+  // alış fiyatları yalnız burada görünür
+  if (toptanKaynakMi(liste.kaynak)) {
+    const baran = liste.kaynak === BARAN_KAYNAK;
+    const durum = toptanDurumOku(liste.kaynakDurum, liste.kaynak);
     const alislar = new Map(anahtarla(durum.markalar.flatMap((m) => m.urunler)).map((x) => [x.anahtar, x.deger]));
     const satirlar = anahtarla(liste.kalemler).map(({ anahtar, deger: k }) => ({
       id: k.id,
@@ -66,7 +68,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
         <Link href="/panel/fiyat-listeleri" className="focus-ring text-sm text-metin/60 hover:text-metin inline-block mb-6">
           ← Fiyat listelerine dön
         </Link>
-        <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">Fiyat Listesi · Toptan (Netsa)</p>
+        <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">{baran ? "Fiyat Listesi · Baran Isı" : "Fiyat Listesi · Toptan (Netsa)"}</p>
         <h1 className="font-display text-2xl font-semibold text-metin mb-6">{liste.baslik}</h1>
         <ToptanFiyatListesi
           liste={{
@@ -82,6 +84,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
           durum={durum}
           satirlar={satirlar}
           notGruplari={toptanNotGruplari(durum)}
+          kaynak={baran ? "BARAN" : "NETSA"}
         />
       </div>
     );

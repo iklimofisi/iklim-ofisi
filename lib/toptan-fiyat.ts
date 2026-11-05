@@ -16,6 +16,12 @@ import { yuvarlamaGecerli } from "@/lib/fiyat-listesi";
 export const TOPTAN_KAYNAK = "TOPTAN";
 export const TOPTAN_BASLIK = "İklimOfisi Toptan Fiyat Listesi";
 export const TOPTAN_MARKALAR = ["Sakura", "Bosch", "Carrier"] as const;
+// Baran Isı listesi (tedarikçinin HTML kataloğu) aynı düzenle çalışır; markalar dosyadan gelir
+// (sabit marka listesi yok, dosyadaki sırayla). Panelde "Baran" olarak görünür; müşteriye giden
+// PDF'te başlık, firma ve iletişim bilgileri bizimdir.
+export const BARAN_KAYNAK = "BARAN";
+export const BARAN_BASLIK = "İklimOfisi Fiyat Listesi";
+export const toptanKaynakMi = (k: string | null | undefined) => k === TOPTAN_KAYNAK || k === BARAN_KAYNAK;
 export const TOPTAN_VARSAYILAN_YUVARLAMA = 10;
 
 export type ToptanMarka = {
@@ -68,7 +74,12 @@ const sayi = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 
 const metin = (v: unknown, sinir: number) => (typeof v === "string" ? v.slice(0, sinir) : "");
 
 // Bilinen markanın yazımını düzeltir ("BOSCH" → "Bosch"); bilinmeyen marka kabul edilmez
-export function toptanMarkaAdi(v: unknown): string | null {
+// serbest (Baran): dosyadaki marka adı temizlenip kabul edilir
+export function toptanMarkaAdi(v: unknown, serbest = false): string | null {
+  if (serbest) {
+    const s = typeof v === "string" ? v.replace(/[[\];+\u0000-\u001f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 60) : "";
+    return s || null;
+  }
   const t = typeof v === "string" ? v.trim().toLocaleLowerCase("tr-TR") : "";
   return TOPTAN_MARKALAR.find((m) => m.toLocaleLowerCase("tr-TR") === t) ?? null;
 }
@@ -130,7 +141,8 @@ export function notAyarOku(v: unknown): ToptanNotAyar {
   return { gizli: liste(o.gizli, 1000), ekler: liste(o.ekler, 300) };
 }
 
-export function toptanDurumOku(json: string | null | undefined): ToptanDurum {
+export function toptanDurumOku(json: string | null | undefined, kaynak?: string | null): ToptanDurum {
+  const serbest = kaynak === BARAN_KAYNAK;
   const d = bosToptanDurum();
   let v: Record<string, unknown>;
   try {
@@ -142,7 +154,7 @@ export function toptanDurumOku(json: string | null | undefined): ToptanDurum {
   }
   if (Array.isArray(v.markalar))
     for (const m of v.markalar as Record<string, unknown>[]) {
-      const marka = toptanMarkaAdi(m?.marka);
+      const marka = toptanMarkaAdi(m?.marka, serbest);
       if (!marka || d.markalar.some((x) => x.marka === marka)) continue;
       d.markalar.push({
         marka,
@@ -156,7 +168,7 @@ export function toptanDurumOku(json: string | null | undefined): ToptanDurum {
   d.markalar = markaSirala(d.markalar);
   if (v.kar && typeof v.kar === "object")
     for (const [m, k] of Object.entries(v.kar as Record<string, unknown>)) {
-      const marka = toptanMarkaAdi(m);
+      const marka = toptanMarkaAdi(m, serbest);
       const n = karOku(k);
       if (marka && n !== null) d.kar[marka] = n;
     }
@@ -176,8 +188,9 @@ export function karOku(v: unknown): number | null {
   return Number.isFinite(n) && n >= 0 && n <= 500 ? Math.round(n * 100) / 100 : null;
 }
 
+// Netsa markaları sabit sırayla; Baran listesi dosyadaki sırasıyla kalır
 export const markaSirala = <T extends { marka: string }>(l: T[]) =>
-  [...l].sort((a, b) => TOPTAN_MARKALAR.indexOf(a.marka as never) - TOPTAN_MARKALAR.indexOf(b.marka as never));
+  !l.every((x) => TOPTAN_MARKALAR.includes(x.marka as never)) ? [...l] : [...l].sort((a, b) => TOPTAN_MARKALAR.indexOf(a.marka as never) - TOPTAN_MARKALAR.indexOf(b.marka as never));
 
 // Satış fiyatı = alış + kâr %; seçilen adımın en yakın katına (yoksa tam liraya) yuvarlanır
 export function toptanSatis(alis: number, kar: number, yuvarlama: number) {
@@ -328,6 +341,6 @@ export function toptanNotlari(d: ToptanDurum): string {
 
 // Düzenlenebilir kopyaya giden notlar: kendi notlarımız + (toptan listede) PDF'lerden alınan marka notları
 export function listeNotlari(l: { kaynak: string | null; kaynakDurum: string | null; notlar: string | null }): string | null {
-  if (l.kaynak !== TOPTAN_KAYNAK) return l.notlar;
-  return [l.notlar?.trim(), toptanNotlari(toptanDurumOku(l.kaynakDurum))].filter(Boolean).join("\n") || null;
+  if (!toptanKaynakMi(l.kaynak)) return l.notlar;
+  return [l.notlar?.trim(), toptanNotlari(toptanDurumOku(l.kaynakDurum, l.kaynak))].filter(Boolean).join("\n") || null;
 }
