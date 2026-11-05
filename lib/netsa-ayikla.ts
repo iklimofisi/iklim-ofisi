@@ -118,10 +118,11 @@ export function netsaAyikla(sayfalar: PdfSayfa[]): NetsaSonuc {
     const etiket = `${marka} ${sayfaAdi}`;
     const montajSatiri = S.find((s) => s.y < basY && /^\(.*MONTAJ/i.test(s.metin));
     const notlar: string[] = [];
-    if (montajSatiri) {
-      const m = sade(montajSatiri.parcalar.filter((p) => !GURULTU.test(p.s)).map((p) => p.s).join(" "));
-      notlar.push(cumle(m.replace(/^\(/, "").replace(/\)?\.?\)?$/, "")) + ".");
-    }
+    // Başlık altındaki "(MONTAJ ve DEVREYE ALMA ...)" satırı; sayfanın maddeleri aynı konuları
+    // anlatıyorsa (ör. Bosch ısı pompası: başlıkta "hariç", maddede "devreye alma dahil") alınmaz
+    const montajNotu = montajSatiri
+      ? cumle(sade(montajSatiri.parcalar.filter((p) => !GURULTU.test(p.s)).map((p) => p.s).join(" ")).replace(/^\(/, "").replace(/\)?\.?\)?$/, "")) + "."
+      : "";
 
     // Tablo sonu: notlar / dipnotlar
     const sonSatir = S.find((s) => s.y > basY && /^(NOTLAR|1\s*-|Kapasiteye|Enerji Besleme|Sipariş)/i.test(s.metin));
@@ -256,21 +257,40 @@ export function netsaAyikla(sayfalar: PdfSayfa[]): NetsaSonuc {
       );
       if (temiz.length > 8) notlar.push(temiz);
     }
+    if (montajNotu) {
+      const kucuk = (s: string) => s.toLocaleLowerCase("tr-TR");
+      const maddeMetni = kucuk(notlar.filter((n) => !n.startsWith("@")).join(" "));
+      const konular = [/montaj/, /devreye/, /borulama|bakır boru/].filter((r) => r.test(kucuk(montajNotu)));
+      const kapsandi = konular.length > 0 && konular.every((r) => r.test(maddeMetni));
+      if (!kapsandi) notlar.unshift(montajNotu);
+    }
     sayfaNotlari.push({ etiket, notlar });
   });
 
-  // Aynı not birden çok sayfada geçiyorsa tek not, o sayfaların etiketleriyle
+  // Aynı not birden çok sayfada geçiyorsa tek not, o sayfaların etiketleriyle.
+  // Sıra her sayfadaki sırayı korur: sayfanın yeni notu, o sayfada kendinden önce gelen
+  // (önceki sayfalarda da geçen) notun hemen arkasına yerleşir.
   const tumEtiketler = [...new Set(sayfaNotlari.map((s) => s.etiket))];
   const harita = new Map<string, Set<string>>();
-  for (const s of sayfaNotlari)
+  const sira: string[] = [];
+  for (const s of sayfaNotlari) {
+    let imlec = -1;
     for (const n of s.notlar) {
       const grupNotu = n.match(/^@(.+?)@(.*)$/);
       const metin = grupNotu ? grupNotu[2] : n;
       const etk = grupNotu ? `${s.etiket} · ${grupNotu[1]}` : s.etiket;
-      if (!harita.has(metin)) harita.set(metin, new Set());
+      if (!harita.has(metin)) {
+        harita.set(metin, new Set());
+        sira.splice(imlec + 1, 0, metin);
+        imlec++;
+      } else {
+        const j = sira.indexOf(metin);
+        if (j > imlec) imlec = j;
+      }
       harita.get(metin)!.add(etk);
     }
-  const notlar: NetsaNot[] = [...harita.entries()].map(([metin, e]) => {
+  }
+  const notlar: NetsaNot[] = sira.map((metin) => [metin, harita.get(metin)!] as const).map(([metin, e]) => {
     const etk = [...e];
     const hepsi = tumEtiketler.length > 0 && tumEtiketler.every((t) => etk.includes(t));
     return { metin, etiketler: hepsi ? [] : etk };
