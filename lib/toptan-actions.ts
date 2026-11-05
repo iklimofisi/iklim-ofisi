@@ -6,6 +6,7 @@
 //   toptanPdfOku       : yüklenen tek bir Netsa PDF'ini okur (veritabanına YAZMAZ; önizleme için)
 //   toptanListeUygula  : okunan markaları listeye işler (yalnız yüklenen markalar değişir)
 //   toptanKarKaydet    : kâr oranlarını / yuvarlamayı değiştirip satış fiyatlarını yeniden hesaplar
+//   toptanNotlariKaydet: PDF notlarından gizlenenleri ve ürün gruplarına eklenen kendi notları kaydeder
 // -----------------------------------------------------------------------------
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
@@ -22,6 +23,7 @@ import {
   toptanMarkaAdi,
   netsaUrunleriOku,
   netsaNotlariOku,
+  notAyarOku,
   karOku,
   markaSirala,
   toptanDegisiklikler,
@@ -221,6 +223,7 @@ export async function toptanListeUygula(girdi: {
     sonGuncelleme: simdi,
     degisiklikler: ilkKez ? [] : degisiklikler,
     degisiklikTarihi: ilkKez ? null : simdi,
+    notAyar: durum.notAyar, // not seçimi ve kendi notlarımız yeni yüklemede korunur
   };
   await listeyiYaz(liste.id, yeniDurum);
   yollariYenile(liste.id);
@@ -250,4 +253,19 @@ export async function toptanKarKaydet(formData: FormData) {
   await listeyiYaz(liste.id, durum);
   yollariYenile(liste.id);
   redirect(`/panel/fiyat-listeleri/${liste.id}?mesaj=toptan-kar-kaydedildi`);
+}
+
+// Not seçimi: PDF notlarından gizlenenler ve ürün gruplarına eklenen kendi notlar.
+// Yalnız kaynakDurum içindeki not ayarı değişir; ürünler, fiyatlar ve diğer veriler aynı kalır.
+export async function toptanNotlariKaydet(girdi: { listeId: string; gizli: unknown; ekler: unknown }): Promise<ToptanIslemSonucu> {
+  const listeId = String(girdi?.listeId ?? "");
+  const notAyar = notAyarOku({ gizli: girdi?.gizli, ekler: girdi?.ekler });
+  await yetki("toptanNotlariKaydet", { listeId, gizli: notAyar.gizli.length, ekler: notAyar.ekler });
+  const liste = await toptanListeGetir(listeId);
+  if (!liste) return { basarili: false, mesaj: "Toptan fiyat listesi bulunamadı." };
+  const durum = toptanDurumOku(liste.kaynakDurum);
+  durum.notAyar = notAyar;
+  await prisma.fiyatListesi.update({ where: { id: liste.id }, data: { kaynakDurum: JSON.stringify(durum), updatedAt: new Date() } });
+  yollariYenile(liste.id);
+  return { basarili: true, mesaj: `Notlar kaydedildi (${notAyar.gizli.length} not gizli, ${notAyar.ekler.length} kendi notunuz).` };
 }

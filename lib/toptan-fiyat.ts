@@ -39,6 +39,11 @@ export type ToptanDegisiklik = {
   yeni2: number | null;
 };
 
+// Not seçimi (panelden): PDF'ten gelen notlardan gizlenenler (grup + not metni; PDF yeniden
+// yüklense de metni aynı kalan not gizli kalır) ve ürün gruplarına eklenen kendi notlarımız
+export type ToptanNotKaydi = { grup: string; metin: string };
+export type ToptanNotAyar = { gizli: ToptanNotKaydi[]; ekler: ToptanNotKaydi[] };
+
 export type ToptanDurum = {
   markalar: ToptanMarka[];
   kar: Record<string, number>; // marka → kâr %
@@ -46,6 +51,7 @@ export type ToptanDurum = {
   sonGuncelleme: string | null; // ISO — PDF'lerden en son güncellendiği an
   degisiklikler: ToptanDegisiklik[]; // en son PDF yüklemesindeki değişiklikler (alış fiyatına göre)
   degisiklikTarihi: string | null;
+  notAyar: ToptanNotAyar;
 };
 
 export const bosToptanDurum = (): ToptanDurum => ({
@@ -55,6 +61,7 @@ export const bosToptanDurum = (): ToptanDurum => ({
   sonGuncelleme: null,
   degisiklikler: [],
   degisiklikTarihi: null,
+  notAyar: { gizli: [], ekler: [] },
 });
 
 const sayi = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
@@ -104,6 +111,25 @@ export function netsaNotlariOku(v: unknown): NetsaNot[] {
     .filter((n) => n.metin);
 }
 
+// Tarayıcıdan / veritabanından gelen not seçimini güvenle okur
+export function notAyarOku(v: unknown): ToptanNotAyar {
+  const o = v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+  const liste = (x: unknown, sinir: number): ToptanNotKaydi[] => {
+    if (!Array.isArray(x)) return [];
+    const sonuc: ToptanNotKaydi[] = [];
+    for (const k of x.slice(0, sinir)) {
+      if (!k || typeof k !== "object") continue;
+      const r = k as Record<string, unknown>;
+      const grup = metin(r.grup, 200).trim();
+      // Satır başındaki "[...]" PDF'te ürün etiketi sayılmasın
+      const not = metin(r.metin, 2000).replace(/[\r\n]+/g, " ").replace(/^\s*\[/, "(").trim();
+      if (grup && not && !sonuc.some((s) => s.grup === grup && s.metin === not)) sonuc.push({ grup, metin: not });
+    }
+    return sonuc;
+  };
+  return { gizli: liste(o.gizli, 1000), ekler: liste(o.ekler, 300) };
+}
+
 export function toptanDurumOku(json: string | null | undefined): ToptanDurum {
   const d = bosToptanDurum();
   let v: Record<string, unknown>;
@@ -138,6 +164,7 @@ export function toptanDurumOku(json: string | null | undefined): ToptanDurum {
   d.sonGuncelleme = metin(v.sonGuncelleme, 40) || null;
   d.degisiklikTarihi = metin(v.degisiklikTarihi, 40) || null;
   d.degisiklikler = Array.isArray(v.degisiklikler) ? (v.degisiklikler as ToptanDegisiklik[]).filter((x) => x && typeof x.ad === "string").slice(0, 2000) : [];
+  d.notAyar = notAyarOku(v.notAyar);
   return d;
 }
 
@@ -234,8 +261,13 @@ export const urunGrubu = (bolum: string) => bolum.split(" · ")[0].trim();
 // çıkmaktadır") o bölümün hemen altına (bolum: true, grup = bölüm adı), sayfanın notları ürün
 // grubunun son bölümünün altına gelir.
 export type ToptanGrupNotu = { grup: string; notlar: string; bolum?: boolean };
-export function toptanGrupNotlari(d: ToptanDurum): ToptanGrupNotu[] {
-  const sonuc: ToptanGrupNotu[] = [];
+// Panelde seçim için: her ürün grubu (ve notu olan alt bölümü) PDF notlarıyla (gizli mi) ve
+// kendi eklenen notlarla birlikte. Kendi not yalnız ürün grubuna eklenir (grubun sonunda çıkar).
+export type ToptanNotGrubu = { marka: string; grup: string; bolum: boolean; notlar: { metin: string; gizli: boolean }[]; ekler: string[] };
+export function toptanNotGruplari(d: ToptanDurum): ToptanNotGrubu[] {
+  const sonuc: ToptanNotGrubu[] = [];
+  const gizli = (grup: string, metin: string) => d.notAyar.gizli.some((x) => x.grup === grup && x.metin === metin);
+  const ekler = (grup: string) => d.notAyar.ekler.filter((x) => x.grup === grup).map((x) => x.metin);
   for (const m of markaSirala(d.markalar)) {
     const gruplar: string[] = [];
     for (const u of m.urunler) {
@@ -251,7 +283,7 @@ export function toptanGrupNotlari(d: ToptanDurum): ToptanGrupNotu[] {
         }
         if (n.etiketler.includes(g)) satirlar.push(n.metin);
       }
-      if (satirlar.length) sonuc.push({ grup: g, notlar: satirlar.join("\n") });
+      sonuc.push({ marka: m.marka, grup: g, bolum: false, notlar: satirlar.map((s) => ({ metin: s, gizli: gizli(g, s) })), ekler: ekler(g) });
       // Bu ürün grubunun alt bölümlerine ait notlar (bölüm adı kalemlerdeki gibi 120 karakter)
       const bolumler: string[] = [];
       for (const u of m.urunler) {
@@ -260,19 +292,38 @@ export function toptanGrupNotlari(d: ToptanDurum): ToptanGrupNotu[] {
       }
       for (const b of bolumler) {
         const bn = m.notlar.filter((n) => !n.etiketler.includes(g) && n.etiketler.some((e) => e.slice(0, 120).trim() === b)).map((n) => n.metin);
-        if (bn.length) sonuc.push({ grup: b, notlar: bn.join("\n"), bolum: true });
+        if (bn.length) sonuc.push({ marka: m.marka, grup: b, bolum: true, notlar: bn.map((s) => ({ metin: s, gizli: gizli(b, s) })), ekler: [] });
       }
     }
   }
   return sonuc;
 }
 
+// PDF'e giden notlar: gizlenenler çıkmaz, kendi notlarımız grubun notlarının sonuna eklenir
+export function toptanGrupNotlari(d: ToptanDurum): ToptanGrupNotu[] {
+  const sonuc: ToptanGrupNotu[] = [];
+  for (const g of toptanNotGruplari(d)) {
+    const satirlar = [...g.notlar.filter((n) => !n.gizli).map((n) => n.metin), ...g.ekler];
+    if (!satirlar.length) continue;
+    sonuc.push(g.bolum ? { grup: g.grup, notlar: satirlar.join("\n"), bolum: true } : { grup: g.grup, notlar: satirlar.join("\n") });
+  }
+  return sonuc;
+}
+
 // Tek not alanına yazılacak hâli (düzenlenebilir kopya için): her not markasıyla başlar ve
-// yalnız o markanın (grubunun) ürünü listede kalırsa çıkar
+// yalnız o grubun ürünü listede kalırsa çıkar. Gizlenen notlar alınmaz, kendi notlarımız eklenir.
 export function toptanNotlari(d: ToptanDurum): string {
-  return markaSirala(d.markalar)
-    .flatMap((m) => m.notlar.map((n) => `[${(n.etiketler.length ? n.etiketler : [m.marka]).join("; ")}] ${m.marka}: ${n.metin}`))
-    .join("\n");
+  const etiket = (s: string) => s.replace(/[[\];+\r\n]/g, " ").replace(/\s+/g, " ").trim();
+  const harita = new Map<string, { marka: string; metin: string; gruplar: string[] }>();
+  for (const g of toptanNotGruplari(d))
+    for (const n of [...g.notlar.filter((x) => !x.gizli).map((x) => x.metin), ...g.ekler]) {
+      const k = `${g.marka}\u0000${n}`;
+      if (!harita.has(k)) harita.set(k, { marka: g.marka, metin: n, gruplar: [] });
+      const e = harita.get(k)!;
+      const t = etiket(g.grup);
+      if (t && !e.gruplar.includes(t)) e.gruplar.push(t);
+    }
+  return [...harita.values()].map((e) => `[${(e.gruplar.length ? e.gruplar : [e.marka]).join("; ")}] ${e.marka}: ${e.metin}`).join("\n");
 }
 
 // Düzenlenebilir kopyaya giden notlar: kendi notlarımız + (toptan listede) PDF'lerden alınan marka notları

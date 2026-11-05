@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { fiyatListesiAyarKaydet, fiyatListesiSecimdenKopyala } from "@/lib/actions";
-import { toptanPdfOku, toptanListeUygula, toptanKarKaydet } from "@/lib/toptan-actions";
+import { toptanPdfOku, toptanListeUygula, toptanKarKaydet, toptanNotlariKaydet } from "@/lib/toptan-actions";
 import KaydetButonu from "@/components/KaydetButonu";
 import { bildirimGoster } from "@/lib/bildirim";
 import { DUZENLER, YUVARLAMALAR, flParaYaz, FIYAT_SORUNUZ } from "@/lib/fiyat-listesi";
@@ -17,6 +17,7 @@ import {
   markaSirala,
   type ToptanDurum,
   type ToptanDegisiklik,
+  type ToptanNotGrubu,
 } from "@/lib/toptan-fiyat";
 import type { NetsaSonuc } from "@/lib/netsa-ayikla";
 
@@ -55,12 +56,12 @@ export default function ToptanFiyatListesi({
   liste,
   durum,
   satirlar,
-  grupNotlari,
+  notGruplari,
 }: {
   liste: { id: string; baslik: string; aciklama: string; notlar: string; duzen: string; fiyatBaslik: string; fiyat2Baslik: string; paraBirimi: string };
   durum: ToptanDurum;
   satirlar: ToptanSatir[];
-  grupNotlari: { grup: string; notlar: string; bolum?: boolean }[];
+  notGruplari: ToptanNotGrubu[];
 }) {
   const router = useRouter();
   const tl = (n: number | null | undefined) => (n && n > 0 ? flParaYaz(n, liste.paraBirimi) : FIYAT_SORUNUZ);
@@ -615,26 +616,132 @@ export default function ToptanFiyatListesi({
           </div>
           <KaydetButonu basari={null}>Ayarları Kaydet</KaydetButonu>
         </form>
-        {grupNotlari.length > 0 && (
-          <details className="mt-4 text-xs text-metin/65">
-            <summary className="cursor-pointer">PDF&apos;lerden alınan ürün grubu notları (her yüklemede yenilenir)</summary>
-            <p className="mt-2 text-[11px] text-metin/45">
-              Netsa PDF&apos;indeki gibi: bölüme ait not o bölümün tablosunun hemen altında, sayfanın notları da ürün grubunun son bölümünün altında
-              çıkar. PDF&apos;e yalnız seçtiğiniz ürünlerin notları girer.
-            </p>
-            {grupNotlari.map((m) => (
-              <div key={`${m.bolum ? "b" : "g"}:${m.grup}`} className={m.bolum ? "mt-2 pl-4" : "mt-3"}>
-                <p className={m.bolum ? "text-metin/80" : "font-semibold text-metin"}>{m.bolum ? `${m.grup} (bölümün altında)` : `${m.grup} (grubun sonunda)`}</p>
-                <ul className="mt-1 space-y-1 list-disc pl-5">
-                  {m.notlar.split("\n").map((n, i) => (
-                    <li key={i}>{n}</li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </details>
-        )}
+        {notGruplari.length > 0 && <NotSecimi key={JSON.stringify(notGruplari)} listeId={liste.id} gruplar={notGruplari} />}
       </details>
     </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// ÜRÜN GRUBU NOTLARI: PDF'ten gelen notlardan istenmeyenin işareti kaldırılır (PDF'te çıkmaz),
+// her ürün grubuna kendi notunuz eklenir (grubun notlarının sonunda çıkar). Seçim kaydedilir;
+// aynı marka PDF'i yeniden yüklense de metni aynı kalan notun seçimi korunur.
+// -----------------------------------------------------------------------------
+function NotSecimi({ listeId, gruplar }: { listeId: string; gruplar: ToptanNotGrubu[] }) {
+  const router = useRouter();
+  const kimlik = (grup: string, metin: string) => `${grup}\u0000${metin}`;
+  const ilkGizli = () => new Set(gruplar.flatMap((g) => g.notlar.filter((n) => n.gizli).map((n) => kimlik(g.grup, n.metin))));
+  const ilkEkler = () => Object.fromEntries(gruplar.filter((g) => !g.bolum).map((g) => [g.grup, g.ekler.join("\n")]));
+  const [gizli, setGizli] = useState<Set<string>>(ilkGizli);
+  const [ekler, setEkler] = useState<Record<string, string>>(ilkEkler);
+  const [kaydediliyor, baslat] = useTransition();
+  const [hata, setHata] = useState<string | null>(null);
+
+  // Bileşen kayıtlı notlar değişince yeniden kurulur (key), bu yüzden ilk hâl bir kez alınır
+  const [ilk] = useState(() => JSON.stringify({ g: [...ilkGizli()].sort(), e: ilkEkler() }));
+  const degisti = JSON.stringify({ g: [...gizli].sort(), e: ekler }) !== ilk;
+  const markalar = [...new Set(gruplar.map((g) => g.marka))];
+
+  const isaretle = (grup: string, metin: string, goster: boolean) =>
+    setGizli((s) => {
+      const y = new Set(s);
+      if (goster) y.delete(kimlik(grup, metin));
+      else y.add(kimlik(grup, metin));
+      return y;
+    });
+
+  function kaydet() {
+    setHata(null);
+    // Yalnız şu an listede olan notların gizliliği gönderilir
+    const gizliListe = gruplar.flatMap((g) => g.notlar.filter((n) => gizli.has(kimlik(g.grup, n.metin))).map((n) => ({ grup: g.grup, metin: n.metin })));
+    const ekListe = Object.entries(ekler).flatMap(([grup, metin]) =>
+      metin
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((s) => ({ grup, metin: s }))
+    );
+    baslat(async () => {
+      try {
+        const r = await toptanNotlariKaydet({ listeId, gizli: gizliListe, ekler: ekListe });
+        if (r.basarili) {
+          bildirimGoster(r.mesaj);
+          router.refresh();
+        } else setHata(r.mesaj);
+      } catch (e) {
+        setHata(e instanceof Error ? e.message : "Notlar kaydedilemedi.");
+      }
+    });
+  }
+
+  return (
+    <details className="mt-4 text-xs text-metin/70 border border-hat rounded-md bg-white">
+      <summary className="cursor-pointer px-3 py-2 font-medium text-metin">Ürün grubu notları — PDF&apos;e girecek notları seçin, kendi notunuzu ekleyin</summary>
+      <div className="px-3 pb-3 space-y-4">
+        <p className="text-[11px] text-metin/50">
+          İşaretli notlar PDF&apos;te çıkar; işaretini kaldırdığınız not çıkmaz. Kendi notunuz grubun notlarının sonuna eklenir (her satır ayrı not). Bölüme
+          ait not o bölümün tablosunun altında, grubun notları grubun son bölümünün altında çıkar. PDF&apos;e yalnız seçtiğiniz ürünlerin grupları girer.
+          Aynı marka PDF&apos;i yeniden yüklense de seçiminiz ve kendi notlarınız korunur; yeni gelen notlar işaretli gelir.
+        </p>
+        {markalar.map((marka) => (
+          <div key={marka} className="space-y-3">
+            <p className="font-display text-sm font-semibold text-metin border-b border-hat pb-1">{marka}</p>
+            {gruplar
+              .filter((g) => g.marka === marka)
+              .map((g) => (
+                <div key={`${g.bolum ? "b" : "g"}:${g.grup}`} className={g.bolum ? "pl-5" : ""}>
+                  <p className={g.bolum ? "text-metin/80" : "font-semibold text-metin"}>
+                    {g.grup} <span className="font-normal text-metin/45">{g.bolum ? "(bölümün altında)" : "(grubun sonunda)"}</span>
+                  </p>
+                  {g.notlar.length > 0 ? (
+                    <ul className="mt-1 space-y-1">
+                      {g.notlar.map((n) => {
+                        const acik = !gizli.has(kimlik(g.grup, n.metin));
+                        return (
+                          <li key={n.metin}>
+                            <label className="flex items-start gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={acik}
+                                onChange={(e) => isaretle(g.grup, n.metin, e.target.checked)}
+                                className="mt-0.5 accent-soguk"
+                              />
+                              <span className={acik ? "text-metin/80" : "text-metin/40 line-through"}>{n.metin}</span>
+                            </label>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    !g.bolum && <p className="mt-1 text-metin/40">PDF&apos;te bu grup için not yok.</p>
+                  )}
+                  {!g.bolum && (
+                    <textarea
+                      rows={2}
+                      maxLength={4000}
+                      value={ekler[g.grup] ?? ""}
+                      onChange={(e) => setEkler((s) => ({ ...s, [g.grup]: e.target.value }))}
+                      placeholder="Kendi notunuz (opsiyonel; her satır ayrı not) — örn. Devreye alma dahildir, montaj hariçtir."
+                      className="focus-ring mt-2 w-full border border-hat rounded-md px-2 py-1.5 text-xs bg-white"
+                    />
+                  )}
+                </div>
+              ))}
+          </div>
+        ))}
+        {hata && <p className="text-sm bg-sicak-light border border-sicak/40 text-sicak-dim rounded-md px-3 py-2">⚠ {hata}</p>}
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={kaydet}
+            disabled={kaydediliyor || !degisti}
+            className="focus-ring bg-soguk text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim disabled:opacity-50"
+          >
+            {kaydediliyor ? "Kaydediliyor…" : "Notları Kaydet"}
+          </button>
+          {degisti && !kaydediliyor && <span className="text-amber-800">Kaydedilmemiş değişiklik var.</span>}
+        </div>
+      </div>
+    </details>
   );
 }
