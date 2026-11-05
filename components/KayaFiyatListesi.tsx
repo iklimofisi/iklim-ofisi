@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { kayaFiyatListesiGuncelle, fiyatListesiAyarKaydet, fiyatListesiSecimdenKopyala } from "@/lib/actions";
 import KaydetButonu from "@/components/KaydetButonu";
 import { DUZENLER, flParaYaz, FIYAT_SORUNUZ } from "@/lib/fiyat-listesi";
-import { kayaDurumOzeti, yuzdeFark, KAYA_BILDIRIMLER, type KaynakDurum, type KayaDegisiklik } from "@/lib/kaya-fiyat";
+import { kayaDurumOzeti, yuzdeFark, KAYA_BILDIRIMLER, KAYA_ZAM_YUZDE, type KaynakDurum, type KayaDegisiklik } from "@/lib/kaya-fiyat";
 
 // -----------------------------------------------------------------------------
 // OTOMATİK GÜNCELLENEN FİYAT LİSTESİ (Kaya İklimlendirme)
@@ -99,6 +99,11 @@ export default function KayaFiyatListesi({
     });
 
   const fiyat = (n: number | null) => (n && n > 0 ? flParaYaz(n, liste.paraBirimi) : <span className="text-metin/45 font-sans text-xs">{FIYAT_SORUNUZ}</span>);
+  // Alış fiyatı = Kaya'nın kendi fiyatı. Listede %5 eklenip tam liraya yuvarlanmış fiyat durur
+  // (zamli); Kaya fiyatları tam lira olduğu için %5'i geri almak Kaya fiyatını birebir verir.
+  // Yalnız bu sayfada görünür, PDF'e girmez.
+  const [alisGoster, setAlisGoster] = useState(true);
+  const alis = (n: number | null) => (n && n > 0 ? Math.round(n / (1 + KAYA_ZAM_YUZDE / 100)) : null);
   // Fiyat hücresi: değiştiyse eski fiyat üstü çizili + yüzde fark
   const fiyatHucre = (n: number | null, d: KayaDegisiklik | undefined, ikinci: boolean) => {
     if (!d || d.tur !== "DEGISEN") return fiyat(n);
@@ -236,6 +241,10 @@ export default function KayaFiyatListesi({
           <span className="text-metin/55">
             {seciliSayi} / {satirlar.length} ürün PDF&apos;e girecek
           </span>
+          <label className="inline-flex items-center gap-1.5 text-metin/60 cursor-pointer">
+            <input type="checkbox" checked={alisGoster} onChange={(e) => setAlisGoster(e.target.checked)} className="accent-soguk" />
+            Alış fiyatlarını göster
+          </label>
           {degisim.size > 0 && (
             <label className="inline-flex items-center gap-1.5 text-amber-800 cursor-pointer">
               <input type="checkbox" checked={yalnizDegisen} onChange={(e) => setYalnizDegisen(e.target.checked)} className="accent-amber-600" />
@@ -250,6 +259,7 @@ export default function KayaFiyatListesi({
               <tr>
                 <th className="w-10 py-2" />
                 <th className="text-left py-2 px-2 font-semibold">Ürün</th>
+                {alisGoster && <th className="text-right py-2 px-3 font-semibold whitespace-nowrap text-metin/40">Alış (Nakit / Kart)</th>}
                 <th className="text-right py-2 px-3 font-semibold whitespace-nowrap">{liste.fiyatBaslik || "Nakit"}</th>
                 <th className="text-right py-2 px-3 font-semibold whitespace-nowrap">{liste.fiyat2Baslik || "Kart"}</th>
               </tr>
@@ -273,7 +283,7 @@ export default function KayaFiyatListesi({
                         className="accent-soguk"
                       />
                     </td>
-                    <td colSpan={3} className="py-1.5 px-2 text-xs font-semibold text-soguk-dim uppercase tracking-wide">
+                    <td colSpan={alisGoster ? 4 : 3} className="py-1.5 px-2 text-xs font-semibold text-soguk-dim uppercase tracking-wide">
                       {bolum} <span className="font-normal normal-case text-metin/50">({sec}/{gor.length})</span>
                     </td>
                   </tr>
@@ -299,6 +309,13 @@ export default function KayaFiyatListesi({
                           )}
                           {r.aciklama && <span className="block text-[11px] text-metin/50">{r.aciklama}</span>}
                         </td>
+                        {alisGoster && (
+                          <td className="py-1.5 px-3 text-right font-mono whitespace-nowrap text-[12px] text-metin/45">
+                            {fiyat(alis(r.fiyat))}
+                            <br />
+                            {fiyat(alis(r.fiyat2))}
+                          </td>
+                        )}
                         <td className="py-1.5 px-3 text-right font-mono whitespace-nowrap">{fiyatHucre(r.fiyat, d, false)}</td>
                         <td className="py-1.5 px-3 text-right font-mono whitespace-nowrap">{fiyatHucre(r.fiyat2, d, true)}</td>
                       </tr>
