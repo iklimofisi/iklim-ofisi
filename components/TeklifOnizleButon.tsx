@@ -7,7 +7,8 @@ import Link from "next/link";
 // Teklif listesinde "Önizle": teklife girmeden PDF'ini bir pencerede gösterir
 // (müşteriye giden PDF ile aynı). Pencereden teklife gidilebilir, yazdırılabilir
 // veya PDF indirilebilir. Esc veya dışarı tıklayınca kapanır.
-export default function TeklifOnizleButon({ teklifId, baslik }: { teklifId: string; baslik: string }) {
+// ikonSinifi doluysa düğme göz ikonu olarak çıkar (teklif listesi); yoksa "Önizle" yazısı
+export default function TeklifOnizleButon({ teklifId, baslik, ikonSinifi }: { teklifId: string; baslik: string; ikonSinifi?: string }) {
   const [acik, setAcik] = useState(false);
   const pdf = `/api/teklif/${teklifId}/pdf`;
 
@@ -27,9 +28,18 @@ export default function TeklifOnizleButon({ teklifId, baslik }: { teklifId: stri
 
   return (
     <>
-      <button type="button" onClick={() => setAcik(true)} className="focus-ring text-xs text-metin/40 hover:text-soguk-dim font-medium">
-        Önizle
-      </button>
+      {ikonSinifi ? (
+        <button type="button" onClick={() => setAcik(true)} className={ikonSinifi} title="Önizle" aria-label="Önizle">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </button>
+      ) : (
+        <button type="button" onClick={() => setAcik(true)} className="focus-ring text-xs text-metin/40 hover:text-soguk-dim font-medium">
+          Önizle
+        </button>
+      )}
       {acik &&
         createPortal(
           <div

@@ -47,7 +47,8 @@ export default function HizliAramaListesi({
   bosluk = "space-y-3",
   sayfaBasina = 10,
 }: {
-  satirlar: { id: string; aramaMetni: string; icerik: React.ReactNode }[];
+  // grup: doluysa aynı grubun (ör. "Bugün · 6 Kasım") ilk görünen satırının üstünde başlık çıkar
+  satirlar: { id: string; aramaMetni: string; icerik: React.ReactNode; grup?: string }[];
   yerTutucu?: string;
   bosMetin?: string;
   birim?: string;
@@ -140,11 +141,25 @@ export default function HizliAramaListesi({
       {satirlar.length > 0 && eslesenler.length > 0 && baslik}
 
       <div className={bosluk}>
-        {satirlar.map((s) => (
-          <div key={s.id} hidden={!gorunen.has(s.id)}>
-            {s.icerik}
-          </div>
-        ))}
+        {(() => {
+          // Grup başlığı: görünen satırlar içinde grup değiştiği yerde (arama / sayfa değişince de doğru kalır)
+          let oncekiGrup: string | undefined;
+          return satirlar.map((s) => {
+            const gorunur = gorunen.has(s.id);
+            const baslikGoster = gorunur && !!s.grup && s.grup !== oncekiGrup;
+            if (gorunur) oncekiGrup = s.grup;
+            return (
+              <div key={s.id} hidden={!gorunur}>
+                {baslikGoster && (
+                  <p className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-widest text-metin/50 mt-5 mb-2 px-1 after:content-[''] after:flex-1 after:h-px after:bg-hat">
+                    {s.grup}
+                  </p>
+                )}
+                {s.icerik}
+              </div>
+            );
+          });
+        })()}
         {satirlar.length === 0 && <p className="text-sm text-metin/50">{bosMetin}</p>}
         {satirlar.length > 0 && eslesenler.length === 0 && (
           <p className="text-sm text-metin/50 bg-yuzey border border-hat rounded-lg p-4">

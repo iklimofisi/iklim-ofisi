@@ -16,12 +16,21 @@ type Durum = (typeof durumlar)[number]["deger"];
 
 // Teklif durumu seçici. "Reddedildi" seçilince neden soran küçük bir pencere açılır;
 // vazgeçilirse durum değişmez.
+// renkli: teklif listesinde durum rengiyle yuvarlak etiket görünümü
+const RENKLER: Record<string, string> = {
+  BEKLEMEDE: "text-amber-800 bg-amber-50 border-amber-300",
+  ONAYLANDI: "text-emerald-800 bg-emerald-50 border-emerald-300",
+  REDDEDILDI: "text-sicak-dim bg-sicak-light border-sicak/40",
+};
+
 export default function TeklifDurumSecici({
   teklifId,
   mevcutDurum,
+  renkli = false,
 }: {
   teklifId: string;
   mevcutDurum: string;
+  renkli?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const [deger, setDeger] = useState(mevcutDurum);
@@ -56,7 +65,11 @@ export default function TeklifDurumSecici({
           setDeger(yeni);
           startTransition(() => teklifDurumGuncelle(teklifId, yeni));
         }}
-        className="focus-ring text-xs border border-hat rounded-md px-2 py-1 bg-white text-metin/70"
+        className={
+          renkli
+            ? `focus-ring text-xs font-bold border rounded-full pl-3 pr-2 py-1.5 cursor-pointer disabled:opacity-60 ${RENKLER[deger] ?? "border-hat bg-white text-metin/70"}`
+            : "focus-ring text-xs border border-hat rounded-md px-2 py-1 bg-white text-metin/70"
+        }
       >
         {durumlar.map((d) => (
           <option key={d.deger} value={d.deger}>
