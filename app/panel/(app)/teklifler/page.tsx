@@ -22,7 +22,7 @@ function teklifNoFormat(no: number) {
 const DURUM_RENGI: Record<string, string> = { BEKLEMEDE: "#E0A43A", ONAYLANDI: "#2E9E68", REDDEDILDI: "#E8734A" };
 const etiket = "text-[11px] font-bold px-1.5 py-px rounded border";
 const ikonDugme =
-  "focus-ring w-8 h-8 grid place-items-center rounded-lg border border-hat bg-white text-metin/50 hover:text-soguk-dim hover:border-soguk transition-colors";
+  "focus-ring w-7 h-7 grid place-items-center rounded-md border border-hat bg-white text-metin/50 hover:text-soguk-dim hover:border-soguk transition-colors";
 
 function Ikon({ d }: { d: string }) {
   return (
@@ -431,24 +431,25 @@ export default async function TekliflerSayfasi({
               <div className="relative bg-yuzey border border-hat rounded-xl flex overflow-hidden shadow-sm hover:border-soguk hover:shadow-md transition-all">
                 {/* Durum rengi: turuncu beklemede, yeşil onaylandı, kırmızı reddedildi */}
                 <span aria-hidden className="absolute left-0 inset-y-0 w-[5px]" style={{ background: DURUM_RENGI[t.durum] ?? "#D7E0E1" }} />
-                <div className="flex-1 min-w-0 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 pl-5 pr-4 py-3.5">
-                  <Link href={`/panel/teklifler/${t.id}`} className="focus-ring min-w-0 flex-1 flex items-center gap-3.5 group">
+                <div className="flex-1 min-w-0 flex flex-wrap items-center justify-between gap-x-3 gap-y-2.5 pl-5 pr-3 py-3">
+                  <Link href={`/panel/teklifler/${t.id}`} className="focus-ring min-w-[15rem] flex-1 basis-80 flex items-center gap-3 group">
                     <span
-                      className="hidden sm:grid w-10 h-10 shrink-0 rounded-full bg-soguk-light text-soguk-dim border border-soguk/20 place-items-center text-xs font-extrabold"
+                      className="hidden sm:grid w-9 h-9 shrink-0 rounded-full bg-soguk-light text-soguk-dim border border-soguk/20 place-items-center text-xs font-extrabold"
                       title={`Hazırlayan: ${hazirlayanPersonel}`}
                     >
                       {basHarfler(hazirlayanPersonel)}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-2 min-w-0">
-                        <span className="font-mono text-[11px] font-bold text-soguk-dim bg-soguk-light rounded px-1.5 py-0.5 shrink-0">
+                      {/* Uzun teklif adları kesilmez, alt satıra geçer */}
+                      <span className="flex items-start gap-2 min-w-0">
+                        <span className="font-mono text-[10.5px] font-bold text-soguk-dim bg-soguk-light rounded px-1.5 py-0.5 shrink-0 mt-px">
                           {teklifNoFormat(t.teklifNo)}
                         </span>
-                        <span className="font-semibold text-metin text-[15px] truncate group-hover:text-soguk-dim transition-colors">
+                        <span className="font-semibold text-metin text-[13px] leading-snug break-words min-w-0 group-hover:text-soguk-dim transition-colors">
                           {t.baslik || "(Başlıksız Teklif)"}
                         </span>
                       </span>
-                      <span className="text-xs text-metin/60 flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
+                      <span className="text-[11.5px] text-metin/60 flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-1.5">
                         {musterisizMi(t.musteriId) ? (
                           <span className="font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5" title="Müşteri henüz bağlanmadı">
                             {musteriEtiketi(t.musteriId, t.musteri.ad, t.muhatap)}
@@ -483,12 +484,12 @@ export default async function TekliflerSayfasi({
                     </span>
                   </Link>
                   <div className="flex flex-wrap items-center justify-end gap-3 shrink-0">
-                    <div className="text-right min-w-[7.5rem]">
-                      <p className="font-mono text-metin font-bold text-base leading-tight">{paraFormat(toplam, t.paraBirimi)}</p>
+                    <div className="text-right min-w-[6.5rem]">
+                      <p className="font-mono text-metin font-bold text-sm leading-tight">{paraFormat(toplam, t.paraBirimi)}</p>
                       <p className="text-[10px] text-metin/40">KDV hariç</p>
                     </div>
                     <TeklifDurumSecici teklifId={t.id} mevcutDurum={t.durum} renkli />
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-0.5">
                       <TeklifOnizleButon teklifId={t.id} baslik={`${teklifNoFormat(t.teklifNo)} ${t.baslik || ""}`.trim()} ikonSinifi={ikonDugme} />
                       <a href={`/panel/teklifler/${t.id}?yazdir=1`} target="_blank" rel="noopener" className={ikonDugme} title="Yazdır" aria-label="Yazdır">
                         <Ikon d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" />
