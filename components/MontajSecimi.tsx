@@ -30,7 +30,7 @@ const GRUPLAR: [string, string][] = [
 ];
 const grupKodu = (kod: string) => kod.toUpperCase().replace(/^MNT-/, "").split("-")[0];
 const VARSAYILAN_BOLUM = "MONTAJ-BAKIR BORU-TEST VE DEVREYE ALMA";
-const SARF_ADI = "Bakır boru tesisatı sarf malzeme ve azot testi (%10)";
+const sarfAdi = (oran: number) => `Bakır boru tesisatı sarf malzeme ve azot testi (%${oran.toLocaleString("tr-TR")})`;
 
 const sayi = (v: string) => {
   const t = v.trim().replace(/\s/g, "");
@@ -82,6 +82,8 @@ export default function MontajSecimi({ kalemler, kurlar }: { kalemler: MontajKal
   const [bolumAdi, setBolumAdi] = useState(VARSAYILAN_BOLUM);
   const [tekSatir, setTekSatir] = useState(true);
   const [sarf, setSarf] = useState(true);
+  const [sarfOranMetin, setSarfOranMetin] = useState("10");
+  const sarfOran = Math.max(0, sayi(sarfOranMetin));
   // Elle yöntem
   const [elle, setElle] = useState({ aciklama: VARSAYILAN_BOLUM, adet: "1", birim: "Adet", fiyat: "" });
 
@@ -100,7 +102,7 @@ export default function MontajSecimi({ kalemler, kurlar }: { kalemler: MontajKal
 
   const secilenler = kalemler.filter((k) => sayi(miktar[k.kod] ?? "") > 0);
   const bakirToplam = secilenler.filter((k) => grupKodu(k.kod) === "BB").reduce((a, k) => a + k.fiyat * sayi(miktar[k.kod]), 0);
-  const sarfTutar = sarf ? bakirToplam * 0.1 : 0;
+  const sarfTutar = sarf ? (bakirToplam * sarfOran) / 100 : 0;
   const kaynakToplam = secilenler.reduce((a, k) => a + k.fiyat * sayi(miktar[k.kod]), 0) + sarfTutar;
 
   // Montaj bölümleri (hariç seçilince kaldırmak için)
@@ -138,7 +140,7 @@ export default function MontajSecimi({ kalemler, kurlar }: { kalemler: MontajKal
       ekle(bolumAdi, [{ aciklama: bolumAdi.trim() || VARSAYILAN_BOLUM, adet: 1, birim: "Adet", birimFiyat: r2(kaynakToplam * kur) }]);
     } else {
       const satirlar = secilenler.map((k) => ({ aciklama: k.ad, adet: sayi(miktar[k.kod]), birim: k.birim, birimFiyat: r2(k.fiyat * kur) }));
-      if (sarfTutar > 0) satirlar.push({ aciklama: SARF_ADI, adet: 1, birim: "Adet", birimFiyat: r2(sarfTutar * kur) });
+      if (sarfTutar > 0) satirlar.push({ aciklama: sarfAdi(sarfOran), adet: 1, birim: "Adet", birimFiyat: r2(sarfTutar * kur) });
       ekle(bolumAdi, satirlar);
     }
   };
@@ -275,7 +277,18 @@ export default function MontajSecimi({ kalemler, kurlar }: { kalemler: MontajKal
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={sarf} onChange={(e) => setSarf(e.target.checked)} className="accent-soguk" />
-                    Bakır boru sarf malzeme + azot testi (%10)
+                    Bakır boru sarf malzeme + azot testi
+                  </label>
+                  <label className="flex items-center gap-1">
+                    bakır boru tutarının %
+                    <input
+                      value={sarfOranMetin}
+                      onChange={(e) => setSarfOranMetin(e.target.value)}
+                      inputMode="decimal"
+                      disabled={!sarf}
+                      aria-label="Sarf malzeme ve azot testi yüzdesi"
+                      className="focus-ring w-14 border border-hat rounded px-2 py-1 text-right text-xs disabled:opacity-50"
+                    />
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={tekSatir} onChange={(e) => setTekSatir(e.target.checked)} className="accent-soguk" />
@@ -285,7 +298,7 @@ export default function MontajSecimi({ kalemler, kurlar }: { kalemler: MontajKal
                 <div className="flex flex-wrap items-center gap-3 text-xs bg-white border border-hat rounded-md px-3 py-2">
                   <span>
                     Toplam: <strong>{para(kaynakToplam, kaynakPb)}</strong>
-                    {sarfTutar > 0 && <span className="text-metin/50"> (sarf %10: {para(sarfTutar, kaynakPb)})</span>}
+                    {sarfTutar > 0 && <span className="text-metin/50"> (sarf %{sarfOran.toLocaleString("tr-TR")}: {para(sarfTutar, kaynakPb)})</span>}
                   </span>
                   {kaynakPb !== teklifPb && (
                     <span className="flex items-center gap-1">

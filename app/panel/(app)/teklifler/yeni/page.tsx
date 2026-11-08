@@ -224,7 +224,8 @@ export default async function YeniTeklifSayfasi({
 
         <MontajSecimi kalemler={montajKalemleri(urunler)} kurlar={kurlar} />
 
-        <SablonSecici sablonlar={sablonlar} seciliIdler={[]} varsayilanIlk />
+        {/* Yeni teklifte hiçbir not seçili gelmez; kullanıcı istediğini seçer */}
+        <SablonSecici sablonlar={sablonlar} seciliIdler={[]} />
 
         <div className="flex items-center justify-end border-t border-hat pt-4">
           <KaydetButonu basari={null}>Teklifi Kaydet</KaydetButonu>

@@ -7,6 +7,25 @@ import { bildirimGoster } from "@/lib/bildirim";
 
 type Sablon = { id: string; baslik: string; grupBaslik: string | null; icerik: string };
 
+// Türkçe harf ve büyük/küçük harf farkı gözetmeden karşılaştırma ("DAHIL" = "dahil", "HARIC" = "hariç")
+const sade = (s: string) =>
+  s
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ı/g, "i")
+    .replace(/i̇/g, "i")
+    .replace(/ç/g, "c")
+    .replace(/ş/g, "s")
+    .replace(/ğ/g, "g")
+    .replace(/ö/g, "o")
+    .replace(/ü/g, "u")
+    .replace(/â/g, "a")
+    .replace(/î/g, "i")
+    .replace(/û/g, "u");
+const montajGrubuMu = (grup: string) => sade(grup).includes("montaj");
+const notMetni = (n: Sablon) => sade(`${n.grupBaslik ?? ""} ${n.baslik} ${n.icerik}`);
+const montajHaricMi = (n: Sablon) => /haric|dahil degil|dahil olmayan/.test(notMetni(n));
+const montajDahilMi = (n: Sablon) => !montajHaricMi(n) && /dahil/.test(notMetni(n));
+
 // Teklif formunda notları GRUP GRUP seçtirir: her gruptan uygun olan bir not seçilir.
 // Müşteriye yalnızca grup başlığı ("Ödeme Koşulları") ve notun metni gider;
 // "(Ç-9)" gibi kodlar sadece burada, panelde görünür.
@@ -33,7 +52,8 @@ export default function SablonSecici({
     const ilk: Record<string, string[]> = {};
     for (const g of sablonlariGrupla(sablonlar)) {
       const gruptaki = g.notlar.filter((n) => secili.has(n.id)).map((n) => n.id);
-      ilk[g.grup] = gruptaki.length > 0 ? gruptaki : varsayilanIlk ? [g.notlar[0].id] : [];
+      // Montaj notları yeni teklifte seçili gelmez (montaj dahil/hariç kullanıcı seçer)
+      ilk[g.grup] = gruptaki.length > 0 ? gruptaki : varsayilanIlk && !montajGrubuMu(g.grup) ? [g.notlar[0].id] : [];
     }
     return ilk;
   });
@@ -47,17 +67,21 @@ export default function SablonSecici({
   useEffect(() => {
     const form = kokRef.current?.closest("form");
     if (!form) return;
-    const kucuk = (s: string) => s.toLocaleLowerCase("tr-TR");
-    const haricMi = (n: Sablon) => /hariç|haric|dahil değil|dâhil değil|dahil degil/.test(kucuk(`${n.baslik} ${n.icerik}`));
-    const dahilMi = (n: Sablon) => !haricMi(n) && /dahil|dâhil/.test(kucuk(`${n.baslik} ${n.icerik}`));
+    const haricMi = montajHaricMi;
+    const dahilMi = montajDahilMi;
     const h = (e: Event) => {
       const d = (e as CustomEvent).detail as { tur?: "haric" | "dahil"; olustur?: boolean; sonuc?: string };
       if (!d || (d.tur !== "haric" && d.tur !== "dahil")) return;
       const tur = d.tur;
-      const g = sablonlariGrupla(listeRef.current).find((x) => kucuk(x.grup).includes("montaj"));
       const uygun = tur === "haric" ? haricMi : dahilMi;
       const ters = tur === "haric" ? dahilMi : haricMi;
-      const n = g?.notlar.find(uygun);
+      // Önce adı "Montaj" olan grupta; yoksa adında / metninde montaj geçen herhangi bir grupta ara
+      const gruplar = sablonlariGrupla(listeRef.current);
+      const montajNotu = (x: Sablon) => notMetni(x).includes("montaj");
+      let g = gruplar.find((x) => montajGrubuMu(x.grup) && x.notlar.some(uygun));
+      if (!g) g = gruplar.find((x) => x.notlar.some((n) => montajNotu(n) && uygun(n)));
+      if (!g) g = gruplar.find((x) => montajGrubuMu(x.grup));
+      const n = g?.notlar.find((x) => uygun(x) && (montajGrubuMu(g!.grup) || montajNotu(x)));
       if (g && n) {
         setSecimler((s) => ({ ...s, [g.grup]: [n.id] }));
         d.sonuc = n.baslik;
