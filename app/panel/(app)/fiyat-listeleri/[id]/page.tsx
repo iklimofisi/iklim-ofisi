@@ -152,7 +152,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
           <input type="hidden" name="kod" value={hazir.kod} />
           <p className="text-xs text-metin/70 max-w-xl">
             Toplu zam / indirim yüzünden fiyatlar bozulduysa: Liste Fiyatı ve Satış Fiyatı ilk hâline döner
-            {liste.satisIskontoYuzde !== null ? " (satış fiyatı güncel satış iskontosuyla hesaplanır)" : " (Satış = alış + %15)"}. Ürün adları, açıklamalar,
+            {liste.satisIskontoYuzde !== null ? " (satış fiyatı güncel satış iskontosuyla hesaplanır)" : hazir.fiyat2Baslik ? " (Satış = alış + %15)" : ""}. Ürün adları, açıklamalar,
             fotoğraflar ve sizin eklediğiniz başka ürünler değişmez.
           </p>
           <OnayliGonderButonu

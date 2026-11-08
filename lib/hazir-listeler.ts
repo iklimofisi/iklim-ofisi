@@ -21,6 +21,7 @@ export type HazirKalem = {
   liste: number;
   satis: number;
   kart?: number; // 3. fiyat (ör. kredi kartı 9 taksit liste fiyatı)
+  birim?: string; // yoksa "Adet" (montaj listesinde Metre, Set, Kg…)
 };
 export type HazirBolum = { ad: string; bilgi?: string; gorsel?: string; kalemler: HazirKalem[] };
 export type HazirListe = {
@@ -192,5 +193,102 @@ const NIVA: HazirListe = {
   },
 };
 
-export const HAZIR_LISTELER: HazirListe[] = [NIVA, OLEFINI];
+// İklim Ofisi'nin kendi montaj birim fiyatları (VRF / klima). Kaynak: İKLİM OFİSİ MONTAJ BİRİM FİYATLARI.xlsx
+// Tek fiyat sütunu (USD, KDV hariç). Aynı kodlarla Ürün Kataloğu'na da yüklenir (teklifte aranabilsin diye).
+const MONTAJ: HazirListe = {
+  kod: "iklim-ofisi-montaj",
+  marka: "İklim Ofisi",
+  baslik: "İklim Ofisi Montaj Birim Fiyatları",
+  aciklama: "VRF ve klima sistemleri montaj birim fiyatları: dış ve iç ünite montajı, malzemeli bakır boru ve izolasyon, kablolama, branşman, soğutucu akışkan, kumanda ve devreye alma.",
+  notlar: "Fiyatlara KDV dahil değildir.\nBakır boru tesisatı sarf malzeme ve azot gazı testi bedeli: bakır boru tutarının %10'u olarak ayrıca eklenir.",
+  kaynakAciklama: "İklim Ofisi montaj birim fiyatları · USD · KDV hariç",
+  paraBirimi: "USD",
+  kdvDahil: false,
+  fiyatBaslik: "Birim Fiyat",
+  fiyat2Baslik: "",
+  bolumler: [
+    {
+      ad: "Dış Ünite Montajı",
+      kalemler: [
+      { kod: "MNT-DU-01", ad: "Önden atışlı tek fanlı dış ünite montajı", birim: "Adet", marka: "", liste: 81.9, satis: 81.9 },
+      { kod: "MNT-DU-02", ad: "Önden atışlı çift fanlı dış ünite montajı", birim: "Adet", marka: "", liste: 87.75, satis: 87.75 },
+      { kod: "MNT-DU-03", ad: "Üstten atışlı dış ünite montajı", birim: "Adet", marka: "", liste: 111.15, satis: 111.15 },
+      ],
+    },
+    {
+      ad: "İç Ünite Montajı",
+      kalemler: [
+      { kod: "MNT-IU-01", ad: "Kanallı ve tavan tipi iç ünite montajı (1,5–16 kW)", birim: "Adet", marka: "", liste: 46.8, satis: 46.8 },
+      { kod: "MNT-IU-02", ad: "%100 taze havalı kanallı tip ünite montajı", birim: "Adet", marka: "", liste: 58.5, satis: 58.5 },
+      { kod: "MNT-IU-03", ad: "Kanallı tip iç ünite montajı (22,4–28 kW)", birim: "Adet", marka: "", liste: 58.5, satis: 58.5 },
+      { kod: "MNT-IU-04", ad: "Kasetli tip iç ünite montajı (2,2–16 kW)", birim: "Adet", marka: "", liste: 46.8, satis: 46.8 },
+      { kod: "MNT-IU-05", ad: "Duvar tipi iç ünite montajı", birim: "Adet", marka: "", liste: 38.61, satis: 38.61 },
+      { kod: "MNT-IU-06", ad: "Döşeme ve konsol tipi iç ünite montajı", birim: "Adet", marka: "", liste: 46.8, satis: 46.8 },
+      { kod: "MNT-IU-07", ad: "PFD box montajı (PFD-1123 / 1803 / 2803)", birim: "Adet", marka: "", liste: 40.95, satis: 40.95 },
+      { kod: "MNT-IU-08", ad: "PFD box montajı (PFD-1123×4)", birim: "Adet", marka: "", liste: 76.05, satis: 76.05 },
+      { kod: "MNT-IU-09", ad: "DX santral EEV kit montajı", birim: "Adet", marka: "", liste: 76.05, satis: 76.05 },
+      { kod: "MNT-IU-10", ad: "SAF ısı geri kazanım ünitesi montajı", birim: "Adet", marka: "", liste: 58.5, satis: 58.5 },
+      { kod: "MNT-IU-11", ad: "SAF DX taze hava ünitesi montajı", birim: "Adet", marka: "", liste: 32.76, satis: 32.76 },
+      ],
+    },
+    {
+      ad: "Malzemeli Bakır Boru ve İzolasyon", bilgi: "sarf malzeme ve azot testi için bakır boru toplamına %10 eklenir",
+      kalemler: [
+      { kod: "MNT-BB-01", ad: "Bakır boru Ø6,4 mm (1/4\") 0,8 mm + 13 mm izolasyon, malzemeli montaj", birim: "Metre", marka: "", liste: 9.36, satis: 9.36 },
+      { kod: "MNT-BB-02", ad: "Bakır boru Ø9,5 mm (3/8\") 0,8 mm + 13 mm izolasyon, malzemeli montaj", birim: "Metre", marka: "", liste: 12.87, satis: 12.87 },
+      { kod: "MNT-BB-03", ad: "Bakır boru Ø12,7 mm (1/2\") 0,8 mm + 13 mm izolasyon, malzemeli montaj", birim: "Metre", marka: "", liste: 15.21, satis: 15.21 },
+      { kod: "MNT-BB-04", ad: "Bakır boru Ø15,9 mm (5/8\") 1,0 mm + 13 mm izolasyon, malzemeli montaj", birim: "Metre", marka: "", liste: 17.55, satis: 17.55 },
+      { kod: "MNT-BB-05", ad: "Bakır boru Ø19,1 mm (3/4\") 1,0 mm + 13 mm izolasyon, malzemeli montaj", birim: "Metre", marka: "", liste: 23.4, satis: 23.4 },
+      { kod: "MNT-BB-06", ad: "Bakır boru Ø22,2 mm (7/8\") 1,0 mm + 13 mm izolasyon, malzemeli montaj", birim: "Metre", marka: "", liste: 29.25, satis: 29.25 },
+      { kod: "MNT-BB-07", ad: "Bakır boru Ø25,4 mm (1\") 1,0 mm + 19 mm izolasyon, malzemeli montaj", birim: "Metre", marka: "", liste: 33.93, satis: 33.93 },
+      { kod: "MNT-BB-08", ad: "Bakır boru Ø28,6 mm (1 1/8\") 1,0 mm + 19 mm izolasyon, malzemeli montaj", birim: "Metre", marka: "", liste: 38.61, satis: 38.61 },
+      { kod: "MNT-BB-09", ad: "Bakır boru Ø34,9 mm (1 3/8\") 1,2 mm + 19 mm izolasyon, malzemeli montaj", birim: "Metre", marka: "", liste: 54.99, satis: 54.99 },
+      { kod: "MNT-BB-10", ad: "Bakır boru Ø42,27 mm (1 5/8\") 1,4 mm + 19 mm kauçuk izolasyon, malzemeli montaj", birim: "Metre", marka: "", liste: 81.9, satis: 81.9 },
+      { kod: "MNT-BB-11", ad: "Bakır boru Ø53,98 mm (2 1/8\") 2,0 mm + 25 mm kauçuk izolasyon, malzemeli montaj", birim: "Metre", marka: "", liste: 93.6, satis: 93.6 },
+      ],
+    },
+    {
+      ad: "Kablolama",
+      kalemler: [
+      { kod: "MNT-KB-01", ad: "2×1,5 koaksiyel sinyal kablosu, malzemeli montaj", birim: "Metre", marka: "", liste: 3.51, satis: 3.51 },
+      { kod: "MNT-KB-02", ad: "TTR 2×0,75 mm² kumanda kablosu, malzemeli montaj", birim: "Metre", marka: "", liste: 2.93, satis: 2.93 },
+      ],
+    },
+    {
+      ad: "Branşman Montajı",
+      kalemler: [
+      { kod: "MNT-BR-01", ad: "Branşman (joint) montajı, heat pump", birim: "Set", marka: "", liste: 11.7, satis: 11.7 },
+      { kod: "MNT-BR-02", ad: "Branşman (joint) montajı, heat recovery", birim: "Set", marka: "", liste: 17.55, satis: 17.55 },
+      { kod: "MNT-BR-03", ad: "Header montajı, 4’lü", birim: "Set", marka: "", liste: 28.08, satis: 28.08 },
+      { kod: "MNT-BR-04", ad: "Header montajı, 6’lı", birim: "Set", marka: "", liste: 35.1, satis: 35.1 },
+      { kod: "MNT-BR-05", ad: "Header montajı, 8’li", birim: "Set", marka: "", liste: 37.44, satis: 37.44 },
+      ],
+    },
+    {
+      ad: "Soğutucu Akışkan ve Test",
+      kalemler: [
+      { kod: "MNT-SA-01", ad: "R-410A soğutucu akışkan (ek şarj)", birim: "Kg", marka: "", liste: 58.5, satis: 58.5 },
+      { kod: "MNT-SA-02", ad: "Azot basınç testi", birim: "Adet", marka: "", liste: 150.35, satis: 150.35 },
+      ],
+    },
+    {
+      ad: "Kumanda Montajı",
+      kalemler: [
+      { kod: "MNT-KU-01", ad: "İç ünite kumandası montaj ve kurulum", birim: "Adet", marka: "", liste: 4.68, satis: 4.68 },
+      { kod: "MNT-KU-02", ad: "Merkezi kumanda montaj ve kurulum (SL1A, SL2A)", birim: "Adet", marka: "", liste: 23.4, satis: 23.4 },
+      { kod: "MNT-KU-03", ad: "BMS montaj ve kurulum (SL4A, EF4SC8A1, BACnet, Modbus, KNX)", birim: "Adet", marka: "", liste: 117.0, satis: 117.0 },
+      { kod: "MNT-KU-04", ad: "Payölçerli merkezi kumanda montaj ve kurulum (SL4B, SC-WBGW256)", birim: "Adet", marka: "", liste: 234.0, satis: 234.0 },
+      ],
+    },
+    {
+      ad: "Devreye Alma",
+      kalemler: [
+      { kod: "MNT-DA-01", ad: "Sistem devreye alma", birim: "Sistem", marka: "", liste: 60.51, satis: 60.51 },
+      ],
+    },
+  ],
+  gorseller: {},
+};
+
+export const HAZIR_LISTELER: HazirListe[] = [NIVA, OLEFINI, MONTAJ];
 export const hazirListeBul = (kod: string) => HAZIR_LISTELER.find((l) => l.kod === kod) ?? null;

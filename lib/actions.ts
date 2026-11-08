@@ -1728,7 +1728,7 @@ export async function hazirListeEkle(formData: FormData) {
       marka: k.marka ?? h.marka,
       kod: k.kod,
       aciklama: hazirAciklama(k) || null,
-      birim: "Adet",
+      birim: k.birim || "Adet",
       fiyat: k.liste,
       fiyat2: k.satis,
       fiyat3: k.kart ?? null,
