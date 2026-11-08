@@ -6,6 +6,8 @@ import { getTcmbKurlari } from "@/lib/kur";
 import HizliMusteriEkleModal from "@/components/HizliMusteriEkleModal"; // HIZLI MÜŞTERİ MODALI
 import MusteriYetkiliSecici from "@/components/MusteriYetkiliSecici";
 import SablonSecici from "@/components/SablonSecici";
+import MontajSecimi from "@/components/MontajSecimi";
+import { montajKalemleri } from "@/lib/montaj";
 import KaydetButonu from "@/components/KaydetButonu";
 import Link from "next/link";
 import { donusumKalemleri } from "@/lib/satinalma-hesap";
@@ -219,6 +221,8 @@ export default async function YeniTeklifSayfasi({
           <span className="font-semibold text-metin">PDF çıktısında tüm kalem fiyatlarını gizle</span>
           <span className="text-xs text-metin/60">(Müşteri kalem fiyatlarını göremez, sadece dip toplam görünür)</span>
         </label>
+
+        <MontajSecimi kalemler={montajKalemleri(urunler)} kurlar={kurlar} />
 
         <SablonSecici sablonlar={sablonlar} seciliIdler={[]} varsayilanIlk />
 

@@ -7,6 +7,8 @@ import { getTcmbKurlari } from "@/lib/kur";
 import MusteriYetkiliSecici from "@/components/MusteriYetkiliSecici";
 import Link from "next/link";
 import SablonSecici from "@/components/SablonSecici";
+import MontajSecimi from "@/components/MontajSecimi";
+import { montajKalemleri } from "@/lib/montaj";
 import { ozelNotlariOku } from "@/lib/sablon";
 import KaydetButonu from "@/components/KaydetButonu";
 
@@ -183,6 +185,8 @@ export default async function TeklifDuzenle({
             (Aktif edilirse müşteri hiçbir kalemin birim veya toplam fiyatını göremez, sadece en altta Dip Toplam gösterilir.)
           </span>
         </label>
+
+        <MontajSecimi kalemler={montajKalemleri(urunler)} kurlar={kurlar} />
 
         <SablonSecici sablonlar={sablonlar} seciliIdler={[...seciliSablonIdleri]} ozelNotlar={ozelNotlariOku(teklif.ozelNotlar)} />
 

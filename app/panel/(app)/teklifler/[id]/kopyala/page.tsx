@@ -8,6 +8,8 @@ import MusteriYetkiliSecici from "@/components/MusteriYetkiliSecici";
 import HizliMusteriEkleModal from "@/components/HizliMusteriEkleModal";
 import Link from "next/link";
 import SablonSecici from "@/components/SablonSecici";
+import MontajSecimi from "@/components/MontajSecimi";
+import { montajKalemleri } from "@/lib/montaj";
 import { ozelNotlariOku } from "@/lib/sablon";
 import KaydetButonu from "@/components/KaydetButonu";
 
@@ -153,6 +155,8 @@ export default async function TeklifKopyala({
           <input type="checkbox" name="birimFiyatGoster" value="hayir" defaultChecked={!kaynak.birimFiyatGoster} className="accent-soguk" />
           <span className="font-medium text-metin">PDF Çıktısında Tüm Kalem Fiyatlarını Gizle</span>
         </label>
+
+        <MontajSecimi kalemler={montajKalemleri(urunler)} kurlar={kurlar} />
 
         <SablonSecici sablonlar={sablonlar} seciliIdler={[...seciliSablonIdleri]} ozelNotlar={ozelNotlariOku(kaynak.ozelNotlar)} />
 

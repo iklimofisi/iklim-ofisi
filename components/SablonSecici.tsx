@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { sablonlariGrupla } from "@/lib/sablon";
 import { sablonHizliEkle, sablonIcerikGuncelle } from "@/lib/actions";
 import { bildirimGoster } from "@/lib/bildirim";
@@ -39,6 +39,54 @@ export default function SablonSecici({
   });
   const [yeniGrupAcik, setYeniGrupAcik] = useState(false);
 
+  // MONTAJ DAHİL / HARİÇ (components/MontajSecimi.tsx): "Montaj" adlı not grubunda
+  // uygun notu seçer; istenirse hazır notu oluşturur. Sonuç olayın detail.sonuc alanına yazılır.
+  const kokRef = useRef<HTMLDivElement>(null);
+  const listeRef = useRef(liste);
+  listeRef.current = liste;
+  useEffect(() => {
+    const form = kokRef.current?.closest("form");
+    if (!form) return;
+    const kucuk = (s: string) => s.toLocaleLowerCase("tr-TR");
+    const haricMi = (n: Sablon) => /hariç|haric|dahil değil|dâhil değil|dahil degil/.test(kucuk(`${n.baslik} ${n.icerik}`));
+    const dahilMi = (n: Sablon) => !haricMi(n) && /dahil|dâhil/.test(kucuk(`${n.baslik} ${n.icerik}`));
+    const h = (e: Event) => {
+      const d = (e as CustomEvent).detail as { tur?: "haric" | "dahil"; olustur?: boolean; sonuc?: string };
+      if (!d || (d.tur !== "haric" && d.tur !== "dahil")) return;
+      const tur = d.tur;
+      const g = sablonlariGrupla(listeRef.current).find((x) => kucuk(x.grup).includes("montaj"));
+      const uygun = tur === "haric" ? haricMi : dahilMi;
+      const ters = tur === "haric" ? dahilMi : haricMi;
+      const n = g?.notlar.find(uygun);
+      if (g && n) {
+        setSecimler((s) => ({ ...s, [g.grup]: [n.id] }));
+        d.sonuc = n.baslik;
+        return;
+      }
+      // Uygun not yoksa en azından ters anlamlı not seçili kalmasın
+      if (g) setSecimler((s) => ({ ...s, [g.grup]: (s[g.grup] ?? []).filter((id) => !g.notlar.some((x) => x.id === id && ters(x))) }));
+      if (d.olustur) {
+        d.sonuc = "olusturuluyor";
+        const grup = g?.grup ?? "Montaj";
+        const icerik =
+          tur === "haric"
+            ? "Montaj, bakır boru tesisatı, test ve devreye alma fiyata dahil değildir."
+            : "Montaj, bakır boru tesisatı, test ve devreye alma teklif kapsamındadır.";
+        sablonHizliEkle({ baslik: `${grup} (${tur === "haric" ? "hariç" : "dahil"})`, grupBaslik: grup, icerik }).then((yeni) => {
+          if (yeni) {
+            notEklendi(yeni);
+            bildirimGoster("Montaj notu hazır notlara eklendi ve bu teklifte seçildi.");
+          }
+        });
+        return;
+      }
+      d.sonuc = "yok";
+    };
+    form.addEventListener("teklif-montaj-not", h);
+    return () => form.removeEventListener("teklif-montaj-not", h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const gruplar = sablonlariGrupla(liste);
   const seciliHepsi = Object.values(secimler).flat();
   // Yalnızca seçili notların özel metinleri gönderilir
@@ -54,7 +102,7 @@ export default function SablonSecici({
   };
 
   return (
-    <div className="border-t border-hat pt-4 mt-4 mb-4">
+    <div ref={kokRef} className="border-t border-hat pt-4 mt-4 mb-4">
       <input type="hidden" name="ozelNotlar" value={ozelJson} />
       {seciliHepsi.map((id) => (
         <input key={id} type="hidden" name="sablonIds" value={id} />

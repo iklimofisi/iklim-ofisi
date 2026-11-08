@@ -131,6 +131,55 @@ export default function TeklifKalemleri({
     }
   }, [satirlar]);
 
+  // MONTAJ SEÇİMİNDEN GELEN İSTEKLER (components/MontajSecimi.tsx, aynı formdaki olaylar):
+  //   teklif-kalem-ekle: bölümü (aynı adlı bölüm varsa yerine) ekler
+  //   teklif-bolumler:   mevcut bölüm adlarını bildirir
+  //   teklif-bolum-sil:  bölümü kaldırır (kayıtlı kalemler kaydedilene kadar silinmez)
+  const satirlarRef = useRef<Satir[]>([]);
+  satirlarRef.current = satirlar;
+  useEffect(() => {
+    const form = kokRef.current?.closest("form");
+    if (!form) return;
+    const bolumu = (s: Satir) => s.bolum || "Genel Kalemler";
+    const ekle = (e: Event) => {
+      const d = (e as CustomEvent).detail as { bolum?: string; degistir?: boolean; kalemler?: { aciklama: string; adet: number; birim?: string; birimFiyat: number }[] };
+      if (!d?.bolum || !Array.isArray(d.kalemler) || !d.kalemler.length) return;
+      const bolum = d.bolum;
+      setSatirlar((prev) => {
+        // Boş başlangıç satırları (açıklama ve fiyat yok, kayıtlı değil) temizlenir
+        let kalan = prev.filter((s) => s.id || (s.aciklama ?? "").trim() || parseSayi(s.birimFiyat) !== 0);
+        if (d.degistir) kalan = kalan.filter((s) => bolumu(s) !== bolum);
+        const yeni: Satir[] = d.kalemler!.map((k, i) => ({
+          key: `montaj-${Date.now()}-${i}`,
+          bolum,
+          aciklama: k.aciklama,
+          adet: String(k.adet),
+          birim: birimNormal(k.birim),
+          birimFiyat: String(k.birimFiyat),
+          iskontoYuzde: "0",
+          markaId: "",
+        }));
+        return bolumlereGoreDiz([...kalan, ...yeni]);
+      });
+    };
+    const bolumler = (e: Event) => {
+      const d = (e as CustomEvent).detail as { liste?: string[] };
+      if (d && Array.isArray(d.liste)) d.liste.push(...Array.from(new Set(satirlarRef.current.map(bolumu))));
+    };
+    const sil = (e: Event) => {
+      const b = ((e as CustomEvent).detail as { bolum?: string })?.bolum;
+      if (b) setSatirlar((prev) => prev.filter((s) => bolumu(s) !== b));
+    };
+    form.addEventListener("teklif-kalem-ekle", ekle);
+    form.addEventListener("teklif-bolumler", bolumler);
+    form.addEventListener("teklif-bolum-sil", sil);
+    return () => {
+      form.removeEventListener("teklif-kalem-ekle", ekle);
+      form.removeEventListener("teklif-bolumler", bolumler);
+      form.removeEventListener("teklif-bolum-sil", sil);
+    };
+  }, []);
+
   // DİNANMİK PARA BİRİMİ SİMGESİ (EUR -> €, USD -> $, TRY -> ₺)
   useEffect(() => {
     const selectEl = document.querySelector<HTMLSelectElement>('select[name="paraBirimi"]');
