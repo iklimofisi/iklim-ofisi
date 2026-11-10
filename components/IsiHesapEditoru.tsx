@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { isiHesapKaydet, isiHesapTeklifeAktar } from "@/lib/isi-hesap-actions";
+import { isiHesapKaydet, isiHesapTeklifeAktar, isiHesapOnerileri, type OneriSonucu } from "@/lib/isi-hesap-actions";
+import type { Oneri } from "@/lib/isi-hesap/oneri";
 import { bildirimGoster } from "@/lib/bildirim";
 import {
   ISITICILAR,
@@ -485,7 +486,7 @@ export default function IsiHesapEditoru({ hesap, musteriler, modeller }: Props) 
 
       {sekme === "sonuclar" && <SonuclarSekmesi sonuc={sonuc} veri={veri} />}
 
-      {sekme === "sema" && <SemaSekmesi sonuc={sonuc} veri={veri} ad={ad} />}
+      {sekme === "sema" && <SemaSekmesi sonuc={sonuc} veri={veri} ad={ad} malzemeyeGit={() => setSekme("malzeme")} />}
 
       {sekme === "malzeme" && (
         <MalzemeSekmesi
@@ -1479,7 +1480,7 @@ function YukGrafigi({ s }: { s: HesapSonucu }) {
 // =============================================================================
 // 4. ŞEMA VE KROKİLER
 // =============================================================================
-function SemaSekmesi({ sonuc, veri, ad }: { sonuc: HesapSonucu; veri: HesapVerisi; ad: string }) {
+function SemaSekmesi({ sonuc, veri, ad, malzemeyeGit }: { sonuc: HesapSonucu; veri: HesapVerisi; ad: string; malzemeyeGit: () => void }) {
   const sema = useMemo(() => cizimSvg(tesisatSemasi(sonuc, ad || "Isı pompası projesi"), "Tesisat prensip şeması"), [sonuc, ad]);
   const krokiler = useMemo(
     () =>
@@ -1502,6 +1503,15 @@ function SemaSekmesi({ sonuc, veri, ad }: { sonuc: HesapSonucu; veri: HesapVeris
           <>Hepsi PDF raporunda da yer alır.</>,
         ]}
       />
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-soguk/5 border border-soguk/20 rounded-lg px-4 py-3">
+        <p className="text-xs text-metin/70 max-w-3xl">
+          Şemadaki ısı pompası, boyler, tampon (buffer) tank, genleşme tankları, pompalar, vanalar ve kollektörler için{" "}
+          <strong className="text-metin">marka, ürün kodu ve fiyatlı ürün önerileri</strong> Malzeme & Teklif sekmesinde; öneriler Ürün Kataloğu ve fiyat listelerinizden seçilir.
+        </p>
+        <button type="button" onClick={malzemeyeGit} className="focus-ring shrink-0 bg-soguk text-white px-3 py-1.5 rounded-md text-xs font-medium hover:bg-soguk-dim">
+          Önerilen ürünler →
+        </button>
+      </div>
       <div className="bg-white border border-hat rounded-lg p-2 overflow-x-auto">
         <div className="min-w-[56rem]" dangerouslySetInnerHTML={{ __html: sema }} />
       </div>
@@ -1544,27 +1554,159 @@ function MalzemeSekmesi({
 }) {
   const [aktariliyor, setAktariliyor] = useState(false);
   const bolumler = [...new Set(sonuc.malzemeler.map((m) => m.bolum))];
+
+  // --- Ürün önerileri (Ürün Kataloğu + fiyat listeleri; sunucuda aranır, hiçbir şey kaydedilmez) ---
+  const imza = useMemo(() => JSON.stringify(sonuc.malzemeler.map((m) => [m.aciklama, m.urunId ?? ""])), [sonuc.malzemeler]);
+  const [oneri, setOneri] = useState<{ imza: string; sonuc: Extract<OneriSonucu, { ok: true }> } | null>(null);
+  const [oneriHata, setOneriHata] = useState("");
+  // Seçim anahtarı "sıra|açıklama" → "URUN:id" / "LISTE:id"; "" = öneri kullanılmaz (genel açıklama)
+  const [secim, setSecim] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let iptal = false;
+    const t = setTimeout(async () => {
+      const r: OneriSonucu = await isiHesapOnerileri(sonuc.malzemeler.map((m) => ({ aciklama: m.aciklama, urunId: m.urunId ?? null }))).catch(() => ({
+        ok: false as const,
+        hata: "Ürün önerileri alınamadı; sayfayı yenileyip tekrar deneyin.",
+      }));
+      if (iptal) return;
+      if (r.ok) {
+        setOneri({ imza, sonuc: r });
+        setOneriHata("");
+      } else setOneriHata(r.hata);
+    }, 400);
+    return () => {
+      iptal = true;
+      clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imza]);
+  const guncel = oneri && oneri.imza === imza ? oneri.sonuc : null;
+  const satirBilgisi = (i: number) => {
+    const s = guncel?.satirlar[i];
+    return s && s.aciklama === sonuc.malzemeler[i].aciklama.slice(0, 500) ? s : null;
+  };
+  const anahtar = (i: number) => `${i}|${sonuc.malzemeler[i].aciklama}`;
+  const seciliOneri = (i: number): Oneri | null => {
+    const s = satirBilgisi(i);
+    if (!s) return null;
+    const k = anahtar(i);
+    const deger = k in secim ? secim[k] : (s.oneriler[0]?.anahtar ?? "");
+    return s.oneriler.find((o) => o.anahtar === deger) ?? null;
+  };
+  const para = (n: number) => n.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fiyatYaz = (o: Oneri) => (o.fiyat > 0 ? `${para(o.fiyat)} ${o.paraBirimi}${o.kdvDahil ? " (KDV dahil)" : ""}` : "fiyat yok");
+  const secimler = guncel
+    ? sonuc.malzemeler
+        .map((m, i) => ({ i, a: m.aciklama.slice(0, 500), s: seciliOneri(i)?.anahtar ?? "" }))
+        .filter((x) => x.s)
+    : [];
+  const aranan = guncel ? sonuc.malzemeler.filter((_, i) => satirBilgisi(i)?.ihtiyac).length : 0;
+  const bulunan = guncel ? sonuc.malzemeler.filter((_, i) => (satirBilgisi(i)?.oneriler.length ?? 0) > 0).length : 0;
+  // Seçilen ürünlerin liste toplamı (para birimi başına, KDV hariç)
+  const toplamlar = new Map<string, number>();
+  for (const x of secimler) {
+    const o = seciliOneri(x.i);
+    if (!o || !(o.fiyat > 0)) continue;
+    const net = o.kdvDahil ? o.fiyat / 1.2 : o.fiyat;
+    toplamlar.set(o.paraBirimi, (toplamlar.get(o.paraBirimi) ?? 0) + net * sonuc.malzemeler[x.i].adet);
+  }
+
   return (
     <div className="grid lg:grid-cols-[1fr_20rem] gap-5 items-start">
       <Kart
-        baslik="Malzeme listesi"
-        aciklama="Hesaptan otomatik çıkar; burada değiştirilemez. Girdileri değiştirince liste kendiliğinden güncellenir. Teklife aktarıldıktan sonra teklif ekranında kalem ekleyip silebilir, fiyat girebilirsiniz. Boru metrajları tahminidir (güzergâh payı dahil); keşifte kontrol edin."
+        baslik="Malzeme listesi ve ürün önerileri"
+        aciklama="Malzemeler hesaptan otomatik çıkar; girdileri değiştirince liste kendiliğinden güncellenir. Her malzeme için Ürün Kataloğu ve fiyat listelerinizden ölçüsü uyan ürün (marka · kod · fiyat) önerilir; en uygun olan seçili gelir, açılır listeden değiştirebilir ya da “Öneri kullanma” diyebilirsiniz. Küçük boy (ör. 150 L gereken yere 100 L) önerilmez. Boru metrajları tahminidir (güzergâh payı dahil); keşifte kontrol edin."
       >
+        <div className="mb-4 text-xs">
+          {oneriHata ? (
+            <p className="text-sicak-dim">{oneriHata}</p>
+          ) : !guncel ? (
+            <p className="text-metin/50">Ürün önerileri aranıyor…</p>
+          ) : (
+            <p className="text-metin/60">
+              <strong className="text-metin">{bulunan}</strong> / {aranan} malzemeye listelerinizden ürün önerildi
+              {aranan > bulunan && <> · {aranan - bulunan} malzeme için kayıtlı uygun ürün yok (teklife genel açıklamayla gider)</>}.
+              {toplamlar.size > 0 && (
+                <>
+                  {" "}Seçilen ürünlerin liste toplamı (KDV hariç):{" "}
+                  <strong className="text-metin">
+                    {[...toplamlar.entries()].map(([pb, t]) => `${para(t)} ${pb}`).join(" + ")}
+                  </strong>
+                </>
+              )}
+            </p>
+          )}
+        </div>
         {bolumler.map((b) => (
-          <div key={b} className="mb-4 last:mb-0">
+          <div key={b} className="mb-5 last:mb-0">
             <p className="text-xs font-semibold text-soguk-dim uppercase tracking-wide mb-1">{b}</p>
-            <Tablo
-              basliklar={["Malzeme", "Miktar", "Birim"]}
-              sagdan={[1]}
-              satirlar={sonuc.malzemeler.filter((m) => m.bolum === b).map((m) => [m.aciklama, sy(m.adet, 2), m.birim])}
-            />
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase tracking-wide text-metin/50 border-b border-hat">
+                    <th className="py-2 px-2 font-medium">Malzeme (hesaptan)</th>
+                    <th className="py-2 px-2 font-medium text-right">Miktar</th>
+                    <th className="py-2 px-2 font-medium min-w-[18rem]">Önerilen ürün (marka · kod · fiyat)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sonuc.malzemeler.map((m, i) => {
+                    if (m.bolum !== b) return null;
+                    const s = satirBilgisi(i);
+                    const o = seciliOneri(i);
+                    return (
+                      <tr key={i} className="border-b border-hat/60 last:border-0 align-top">
+                        <td className="py-1.5 px-2">{m.aciklama}</td>
+                        <td className="py-1.5 px-2 text-right tabular-nums whitespace-nowrap">
+                          {sy(m.adet, 2)} {m.birim}
+                        </td>
+                        <td className="py-1.5 px-2">
+                          {!guncel ? (
+                            <span className="text-xs text-metin/40">…</span>
+                          ) : !s?.ihtiyac ? (
+                            <span className="text-xs text-metin/40">—</span>
+                          ) : !s.oneriler.length ? (
+                            <span className="text-xs text-metin/45">Listelerinizde uygun ürün yok</span>
+                          ) : (
+                            <>
+                              <select
+                                value={o?.anahtar ?? ""}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  setSecim((x) => ({ ...x, [anahtar(i)]: v }));
+                                }}
+                                aria-label={`${m.aciklama} için ürün`}
+                                className={`${girdi} text-xs`}
+                              >
+                                {s.oneriler.map((x) => (
+                                  <option key={x.anahtar} value={x.anahtar}>
+                                    {[x.marka, x.kod, x.ad].filter(Boolean).join(" · ")} — {fiyatYaz(x)}
+                                  </option>
+                                ))}
+                                <option value="">— Öneri kullanma (teklife genel açıklamayla) —</option>
+                              </select>
+                              {o && (
+                                <p className="text-[11px] text-metin/50 mt-0.5">
+                                  {o.not ? `${o.not} · ` : ""}
+                                  {o.listeAdi ? `Liste: ${o.listeAdi}` : "Ürün Kataloğu"}
+                                </p>
+                              )}
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         ))}
       </Kart>
       <div className="bg-yuzey border border-hat rounded-lg p-4 lg:sticky lg:top-44">
         <h2 className="font-display font-semibold text-metin text-sm mb-1">Teklife aktar</h2>
         <p className="text-xs text-metin/55 mb-3">
-          Malzeme listesiyle yeni bir teklif taslağı açılır. Kataloğa bağlı ısı pompasının fiyatı otomatik gelir; diğer fiyatları teklif ekranında girersiniz.
+          Malzeme listesiyle yeni bir teklif taslağı açılır. Seçtiğiniz önerilen ürünler marka, kod ve fiyatıyla gelir (farklı para birimindeki fiyatlar TCMB kuruyla çevrilir, KDV dahil liste fiyatları KDV hariç yapılır). Öneri seçilmeyen satırlar genel açıklamayla gelir; fiyatlarını teklif ekranında girersiniz.
         </p>
         {teklif && (
           <p className="text-xs mb-3">
@@ -1585,6 +1727,7 @@ function MalzemeSekmesi({
         ) : (
           <form action={isiHesapTeklifeAktar} onSubmit={() => setAktariliyor(true)} className="space-y-3">
             <input type="hidden" name="hesapId" value={hesapId} />
+            <input type="hidden" name="secimler" value={JSON.stringify(secimler)} />
             <Alan ad="Müşteri">
               <select name="musteriId" defaultValue={musteriId} required className={girdi}>
                 <option value="">— Müşteri seçin —</option>
@@ -1601,10 +1744,10 @@ function MalzemeSekmesi({
             </Alan>
             <button
               type="submit"
-              disabled={aktariliyor || !sonuc.malzemeler.length}
+              disabled={aktariliyor || !sonuc.malzemeler.length || (!guncel && !oneriHata)}
               className="focus-ring w-full bg-soguk text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim disabled:opacity-60"
             >
-              {aktariliyor ? "Teklif oluşturuluyor…" : "Teklif taslağı oluştur →"}
+              {aktariliyor ? "Teklif oluşturuluyor…" : !guncel && !oneriHata ? "Öneriler yükleniyor…" : "Teklif taslağı oluştur →"}
             </button>
           </form>
         )}

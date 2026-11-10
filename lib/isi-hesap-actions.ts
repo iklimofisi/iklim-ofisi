@@ -11,6 +11,8 @@ import { veriOku, varsayilanVeri, ornekDaire } from "@/lib/isi-hesap/tipler";
 import { aktifPompaModelleri } from "@/lib/isi-hesap/modeller-db";
 import { sistemiHesapla } from "@/lib/isi-hesap/hesap";
 import { ILLER } from "@/lib/isi-hesap/iklim";
+import { onerileriBul, ihtiyacBul, sade, type Ihtiyac, type Oneri, type OneriAdayi } from "@/lib/isi-hesap/oneri";
+import { getTcmbKurlari, type TcmbKurlari } from "@/lib/kur";
 
 // -----------------------------------------------------------------------------
 // ISI POMPASI HESABI — sunucu işlemleri
@@ -120,6 +122,90 @@ export async function isiHesapSil(id: string) {
   revalidatePath("/panel/isi-hesabi");
 }
 
+// --- Malzeme için ürün önerisi (Ürün Kataloğu + fiyat listeleri) -------------
+
+// Öneri havuzu: katalogdaki ürünler ve tüm fiyat listelerinin satırları
+async function oneriHavuzu(): Promise<OneriAdayi[]> {
+  const [urunler, satirlar] = await Promise.all([
+    prisma.urun.findMany({
+      select: { id: true, kod: true, ad: true, listeFiyati: true, paraBirimi: true, marka: { select: { ad: true } } },
+    }),
+    prisma.fiyatListesiKalem.findMany({
+      select: {
+        id: true,
+        ad: true,
+        kod: true,
+        marka: true,
+        fiyat: true,
+        urunId: true,
+        liste: { select: { baslik: true, paraBirimi: true, kdvDahil: true } },
+      },
+    }),
+  ]);
+  return [
+    ...urunler.map(
+      (u): OneriAdayi => ({
+        kaynak: "URUN",
+        id: u.id,
+        ad: u.ad,
+        kod: u.kod || null,
+        marka: u.marka?.ad ?? null,
+        fiyat: Number.isFinite(u.listeFiyati) && u.listeFiyati > 0 ? u.listeFiyati : 0,
+        paraBirimi: u.paraBirimi || "TRY",
+        kdvDahil: false,
+        listeAdi: null,
+        urunId: u.id,
+      })
+    ),
+    ...satirlar.map(
+      (s): OneriAdayi => ({
+        kaynak: "LISTE",
+        id: s.id,
+        ad: s.ad,
+        kod: s.kod || null,
+        marka: s.marka || null,
+        fiyat: Number.isFinite(s.fiyat) && s.fiyat > 0 ? s.fiyat : 0,
+        paraBirimi: s.liste.paraBirimi || "TRY",
+        kdvDahil: s.liste.kdvDahil,
+        listeAdi: s.liste.baslik,
+        urunId: s.urunId,
+      })
+    ),
+  ];
+}
+
+export type OneriSonucu =
+  | { ok: true; satirlar: { aciklama: string; ihtiyac: Ihtiyac | null; oneriler: Oneri[] }[]; kurlar: TcmbKurlari | null }
+  | { ok: false; hata: string };
+
+// Düzenleme ekranının Malzeme sekmesinden çağrılır (yalnız okur, hiçbir şey kaydetmez)
+export async function isiHesapOnerileri(malzemeler: { aciklama: string; urunId?: string | null }[]): Promise<OneriSonucu> {
+  await girisZorunlu();
+  if (!Array.isArray(malzemeler) || malzemeler.length > 400) return { ok: false, hata: "Malzeme listesi okunamadı." };
+  const liste = malzemeler.map((m) => ({ aciklama: metinAl(m?.aciklama, 500), urunId: metinAl(m?.urunId, 40) || null }));
+  try {
+    const [havuz, kurlar] = await Promise.all([oneriHavuzu(), getTcmbKurlari()]);
+    const sonuc = onerileriBul(liste, havuz);
+    return { ok: true, satirlar: sonuc.map((s, i) => ({ aciklama: liste[i].aciklama, ...s })), kurlar };
+  } catch (hata) {
+    console.error("[isiHesapOnerileri]", hata);
+    return { ok: false, hata: "Ürün önerileri alınamadı; sayfayı yenileyip tekrar deneyin." };
+  }
+}
+
+// Teklife aktarılan önerilen ürünün fiyatı teklifin para birimine çevrilir (TCMB efektif satış).
+// KDV dahil listelerden gelen fiyat KDV hariç yapılır (%20). Çevrilemezse null.
+function teklifFiyati(o: OneriAdayi, paraBirimi: string, kurlar: TcmbKurlari | null): number | null {
+  if (!(o.fiyat > 0)) return 0;
+  const net = o.kdvDahil ? o.fiyat / 1.2 : o.fiyat;
+  const tl = (pb: string): number | null => (pb === "TRY" ? 1 : kurlar ? ((kurlar as Record<string, unknown>)[pb] as number | undefined) ?? null : null);
+  if (o.paraBirimi === paraBirimi) return Math.round(net * 100) / 100;
+  const k1 = tl(o.paraBirimi);
+  const k2 = tl(paraBirimi);
+  if (!k1 || !k2) return null;
+  return Math.round(((net * k1) / k2) * 100) / 100;
+}
+
 // Hesabın malzeme listesinden yeni teklif taslağı oluşturur (fiyatlar teklifte girilir)
 export async function isiHesapTeklifeAktar(formData: FormData) {
   const kullanici = await yetki("isiHesapTeklifeAktar", formData);
@@ -144,17 +230,79 @@ export async function isiHesapTeklifeAktar(formData: FormData) {
     ? await prisma.urun.findMany({ where: { id: { in: urunIdleri } }, select: { id: true, listeFiyati: true, paraBirimi: true, markaId: true } })
     : [];
   const urunMap = new Map(urunler.map((u) => [u.id, u]));
-  const paraBirimi = urunler[0]?.paraBirimi ?? "TRY";
+
+  // Malzeme sekmesinde seçilen önerilen ürünler: [{ i: sıra, a: malzeme açıklaması, s: "URUN:id" | "LISTE:id" | "" }]
+  // Yalnız aynı sıradaki açıklama tutuyorsa kullanılır (hesap değiştiyse eski seçim uygulanmaz).
+  const secilen = new Map<number, OneriAdayi>();
+  try {
+    const ham = JSON.parse(String(formData.get("secimler") ?? "[]"));
+    const istek = (Array.isArray(ham) ? ham : [])
+      .slice(0, 400)
+      .map((x) => ({ i: Number(x?.i), a: metinAl(x?.a, 500), s: metinAl(x?.s, 60) }))
+      .filter((x) => Number.isInteger(x.i) && x.i >= 0 && x.i < sonuc.malzemeler.length && x.s && x.a === sonuc.malzemeler[x.i].aciklama.slice(0, 500));
+    if (istek.length) {
+      const havuz = await oneriHavuzu();
+      const bul = new Map(havuz.map((a) => [`${a.kaynak}:${a.id}`, a]));
+      for (const x of istek) {
+        const a = bul.get(x.s);
+        if (a) secilen.set(x.i, a);
+      }
+    }
+  } catch {
+    // Seçim okunamazsa teklif eski hâliyle (genel açıklamalarla) oluşturulur
+  }
+
+  // Teklifin para birimi: seçilen ısı pompasının (yoksa seçilen ürünlerde en çok geçen) para birimi
+  const fiyatlilar = [...secilen.values()].filter((a) => a.fiyat > 0);
+  const sayac = new Map<string, number>();
+  for (const a of fiyatlilar) sayac.set(a.paraBirimi, (sayac.get(a.paraBirimi) ?? 0) + 1);
+  const pompaSecimi = sonuc.malzemeler.findIndex((m) => !!m.urunId || ihtiyacBul(m)?.tur === "ISI_POMPASI");
+  const pompaUrunu = pompaSecimi >= 0 ? secilen.get(pompaSecimi) : undefined;
+  const paraBirimi =
+    (pompaUrunu && pompaUrunu.fiyat > 0 ? pompaUrunu.paraBirimi : null) ??
+    ([...sayac.entries()].sort((x, y) => y[1] - x[1])[0]?.[0] ||
+      urunler[0]?.paraBirimi ||
+      "TRY");
+  const kurlar =
+    fiyatlilar.some((a) => a.paraBirimi !== paraBirimi) || urunler.some((u) => u.paraBirimi !== paraBirimi) ? await getTcmbKurlari() : null;
+
+  // Marka adı → panel markası (teklifte marka sütunu / logosu için)
+  const markalar = secilen.size ? await prisma.marka.findMany({ select: { id: true, ad: true } }) : [];
+  const markaBul = (ad: string | null) => (ad ? markalar.find((x) => sade(x.ad) === sade(ad))?.id ?? null : null);
+  const urunMarka = new Map<string, string | null>();
+  const secilenUrunIdleri = [...secilen.values()].map((a) => a.urunId).filter((x): x is string => !!x);
+  if (secilenUrunIdleri.length) {
+    for (const u of await prisma.urun.findMany({ where: { id: { in: secilenUrunIdleri } }, select: { id: true, markaId: true } })) urunMarka.set(u.id, u.markaId);
+  }
+  const para = (n: number) => n.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const kalemler = sonuc.malzemeler.map((m, sira) => {
+    const birim = (m.birim || "Adet").slice(0, 20);
+    const o = secilen.get(sira);
+    if (o) {
+      const markaId = (o.urunId ? urunMarka.get(o.urunId) : null) ?? markaBul(o.marka);
+      const adSade = sade(o.ad);
+      const markaEk = !markaId && o.marka && !adSade.includes(sade(o.marka)) ? `${o.marka} ` : "";
+      const kodEk = o.kod && !adSade.includes(sade(o.kod)) ? ` — ${o.kod}` : "";
+      const fiyat = teklifFiyati(o, paraBirimi, kurlar);
+      const fiyatNotu = fiyat === null ? ` [liste fiyatı: ${para(o.fiyat)} ${o.paraBirimi}${o.kdvDahil ? " KDV dahil" : ""}]` : "";
+      return {
+        bolum: m.bolum,
+        aciklama: `${markaEk}${o.ad}${kodEk}${fiyatNotu}`.slice(0, 500),
+        adet: m.adet,
+        birim,
+        birimFiyat: fiyat ?? 0,
+        markaId,
+        sira,
+      };
+    }
     const u = m.urunId ? urunMap.get(m.urunId) : undefined;
-    // Teklif kaleminde birim sütunu yok; ölçü birimli kalemlerde açıklamaya eklenir
-    const birimEk = ["m", "m²", "kg", "L"].includes(m.birim) ? ` (${m.birim})` : "";
     return {
       bolum: m.bolum,
-      aciklama: (m.aciklama + birimEk).slice(0, 500),
+      aciklama: m.aciklama.slice(0, 500),
       adet: m.adet,
-      birimFiyat: u && u.paraBirimi === paraBirimi ? u.listeFiyati : 0,
+      birim,
+      birimFiyat: u ? teklifFiyati({ kaynak: "URUN", id: u.id, ad: "", kod: null, marka: null, fiyat: u.listeFiyati, paraBirimi: u.paraBirimi, kdvDahil: false, listeAdi: null, urunId: u.id }, paraBirimi, kurlar) ?? 0 : 0,
       markaId: u?.markaId ?? null,
       sira,
     };
