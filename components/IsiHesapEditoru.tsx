@@ -1553,6 +1553,7 @@ function MalzemeSekmesi({
   kaydediliyor: boolean;
 }) {
   const [aktariliyor, setAktariliyor] = useState(false);
+  const [aktarim, setAktarim] = useState<"ONERI" | "BOS" | "">(""); // kullanıcı seçer
   const bolumler = [...new Set(sonuc.malzemeler.map((m) => m.bolum))];
 
   // --- Ürün önerileri (Ürün Kataloğu + fiyat listeleri; sunucuda aranır, hiçbir şey kaydedilmez) ---
@@ -1706,7 +1707,7 @@ function MalzemeSekmesi({
       <div className="bg-yuzey border border-hat rounded-lg p-4 lg:sticky lg:top-44">
         <h2 className="font-display font-semibold text-metin text-sm mb-1">Teklife aktar</h2>
         <p className="text-xs text-metin/55 mb-3">
-          Malzeme listesiyle yeni bir teklif taslağı açılır. Seçtiğiniz önerilen ürünler marka, kod ve fiyatıyla gelir (farklı para birimindeki fiyatlar TCMB kuruyla çevrilir, KDV dahil liste fiyatları KDV hariç yapılır). Öneri seçilmeyen satırlar genel açıklamayla gelir; fiyatlarını teklif ekranında girersiniz.
+          Yeni bir teklif taslağı açılır. Nasıl gideceğini aşağıdan seçin.
         </p>
         {teklif && (
           <p className="text-xs mb-3">
@@ -1727,7 +1728,31 @@ function MalzemeSekmesi({
         ) : (
           <form action={isiHesapTeklifeAktar} onSubmit={() => setAktariliyor(true)} className="space-y-3">
             <input type="hidden" name="hesapId" value={hesapId} />
-            <input type="hidden" name="secimler" value={JSON.stringify(secimler)} />
+            <input type="hidden" name="aktarim" value={aktarim} />
+            <input type="hidden" name="secimler" value={aktarim === "ONERI" ? JSON.stringify(secimler) : "[]"} />
+            <div className="space-y-2" role="radiogroup" aria-label="Teklife aktarma şekli">
+              {(
+                [
+                  [
+                    "ONERI",
+                    "Önerilen ürünlerle git",
+                    "Soldaki listede seçili ürünler marka, kod ve fiyatıyla gelir (farklı para birimi TCMB kuruyla çevrilir, KDV dahil liste fiyatı KDV hariç yapılır). “Öneri kullanma” dediğiniz satırlar genel açıklamayla gelir.",
+                  ],
+                  ["BOS", "Boş git", `Yalnız bölüm başlıkları gelir (${bolumler.length} bölüm: ${bolumler.join(", ")}); altlarını teklif ekranında siz doldurursunuz.`],
+                ] as const
+              ).map(([k, baslik, aciklama]) => (
+                <label
+                  key={k}
+                  className={`flex gap-2 items-start border rounded-md px-3 py-2 cursor-pointer text-xs ${aktarim === k ? "border-soguk bg-soguk/5" : "border-hat bg-white hover:border-soguk/50"}`}
+                >
+                  <input type="radio" name="aktarimSecimi" checked={aktarim === k} onChange={() => setAktarim(k)} className="mt-0.5" />
+                  <span>
+                    <span className="block font-medium text-metin text-[13px]">{baslik}</span>
+                    <span className="block text-metin/55 leading-snug mt-0.5">{aciklama}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
             <Alan ad="Müşteri">
               <select name="musteriId" defaultValue={musteriId} required className={girdi}>
                 <option value="">— Müşteri seçin —</option>
@@ -1744,10 +1769,18 @@ function MalzemeSekmesi({
             </Alan>
             <button
               type="submit"
-              disabled={aktariliyor || !sonuc.malzemeler.length || (!guncel && !oneriHata)}
+              disabled={aktariliyor || !aktarim || !sonuc.malzemeler.length || (aktarim === "ONERI" && !guncel && !oneriHata)}
               className="focus-ring w-full bg-soguk text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim disabled:opacity-60"
             >
-              {aktariliyor ? "Teklif oluşturuluyor…" : !guncel && !oneriHata ? "Öneriler yükleniyor…" : "Teklif taslağı oluştur →"}
+              {aktariliyor
+                ? "Teklif oluşturuluyor…"
+                : !aktarim
+                  ? "Önce nasıl gideceğini seçin"
+                  : aktarim === "BOS"
+                  ? "Boş teklif oluştur →"
+                  : !guncel && !oneriHata
+                    ? "Öneriler yükleniyor…"
+                    : "Önerilen ürünlerle teklif oluştur →"}
             </button>
           </form>
         )}

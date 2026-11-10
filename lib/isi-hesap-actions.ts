@@ -233,9 +233,11 @@ export async function isiHesapTeklifeAktar(formData: FormData) {
 
   // Malzeme sekmesinde seçilen önerilen ürünler: [{ i: sıra, a: malzeme açıklaması, s: "URUN:id" | "LISTE:id" | "" }]
   // Yalnız aynı sıradaki açıklama tutuyorsa kullanılır (hesap değiştiyse eski seçim uygulanmaz).
+  // "BOS": teklif yalnız bölüm başlıklarıyla açılır (her bölümde bir boş satır), kalemleri kullanıcı doldurur
+  const bos = formData.get("aktarim") === "BOS";
   const secilen = new Map<number, OneriAdayi>();
   try {
-    const ham = JSON.parse(String(formData.get("secimler") ?? "[]"));
+    const ham = bos ? [] : JSON.parse(String(formData.get("secimler") ?? "[]"));
     const istek = (Array.isArray(ham) ? ham : [])
       .slice(0, 400)
       .map((x) => ({ i: Number(x?.i), a: metinAl(x?.a, 500), s: metinAl(x?.s, 60) }))
@@ -318,7 +320,19 @@ export async function isiHesapTeklifeAktar(formData: FormData) {
       olusturanAdi: kullanici?.ad ?? "",
       tarih: simdi,
       ilkTarih: simdi,
-      kalemler: { create: kalemler },
+      kalemler: {
+        create: bos
+          ? [...new Set(sonuc.malzemeler.map((m) => m.bolum))].map((bolum, sira) => ({
+              bolum,
+              aciklama: "",
+              adet: 1,
+              birim: "Adet",
+              birimFiyat: 0,
+              markaId: null,
+              sira,
+            }))
+          : kalemler,
+      },
     },
     select: { id: true },
   });
