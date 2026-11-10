@@ -42,7 +42,7 @@ import {
 } from "@/lib/isi-hesap/katalog";
 import { ILLER, ilBul } from "@/lib/isi-hesap/iklim";
 import { sistemiHesapla, elemanU, sy, type HesapSonucu, type OdaSonucu } from "@/lib/isi-hesap/hesap";
-import { tesisatSemasi, serimKrokisi } from "@/lib/isi-hesap/cizim";
+import { tesisatSemasi, serimKrokisi, yerlesimSemasi } from "@/lib/isi-hesap/cizim";
 import { cizimSvg } from "@/lib/isi-hesap/svg";
 
 // -----------------------------------------------------------------------------
@@ -1482,6 +1482,20 @@ function YukGrafigi({ s }: { s: HesapSonucu }) {
 // =============================================================================
 function SemaSekmesi({ sonuc, veri, ad, malzemeyeGit }: { sonuc: HesapSonucu; veri: HesapVerisi; ad: string; malzemeyeGit: () => void }) {
   const sema = useMemo(() => cizimSvg(tesisatSemasi(sonuc, ad || "Isı pompası projesi"), "Tesisat prensip şeması"), [sonuc, ad]);
+  const yerlesim = useMemo(
+    () =>
+      sonuc.odalar.length
+        ? cizimSvg(
+            yerlesimSemasi(
+              sonuc,
+              veri.odalar.map((o) => ({ id: o.id, en: o.en, boy: o.boy })),
+              ad || "Isı pompası projesi"
+            ),
+            "Odalara göre tesisat yerleşim şeması"
+          )
+        : "",
+    [sonuc, veri.odalar, ad]
+  );
   const krokiler = useMemo(
     () =>
       sonuc.odalar
@@ -1499,6 +1513,7 @@ function SemaSekmesi({ sonuc, veri, ad, malzemeyeGit }: { sonuc: HesapSonucu; ve
         baslik="Şema ve krokiler"
         adimlar={[
           <>Prensip şeması hesaptan otomatik çizilir: ısı pompası, boyler, tampon tank, genleşme tankı, pompalar, karışım vanası ve devreler gerçek seçilen boyutlarıyla görünür. Ölçekli değildir, bağlantı mantığını gösterir.</>,
+          <>Yerleşim şeması sizin girdiğiniz odalarla çizilir: her oda en × boy ölçüsüyle bir kutu, içinde o odanın radyatörleri (tip · yükseklik × boy) ve yerden ısıtması (devre, boru aralığı, kollektör). Isı pompası, tampon, boyler, pompalar ve kollektör odaların dışında, mekanik oda kutusunda durur. Oda sırası Odalar sekmesindeki sıradır; mimari plan değildir.</>,
           <>Serim krokileri yalnız yerden ısıtmalı odalar için çıkar: boru aralığı, devre sayısı, gidiş-dönüş ve kollektör yönü. Krokiyi değiştirmek için Odalar sekmesinde ölçü, boru aralığı, desen ve boru döşenmeyen alanı değiştirin.</>,
           <>Hepsi PDF raporunda da yer alır.</>,
         ]}
@@ -1515,6 +1530,11 @@ function SemaSekmesi({ sonuc, veri, ad, malzemeyeGit }: { sonuc: HesapSonucu; ve
       <div className="bg-white border border-hat rounded-lg p-2 overflow-x-auto">
         <div className="min-w-[56rem]" dangerouslySetInnerHTML={{ __html: sema }} />
       </div>
+      {yerlesim && (
+        <div className="bg-white border border-hat rounded-lg p-2 overflow-x-auto">
+          <div className="min-w-[56rem]" dangerouslySetInnerHTML={{ __html: yerlesim }} />
+        </div>
+      )}
       {krokiler.length > 0 ? (
         <div className="grid xl:grid-cols-2 gap-4">
           {krokiler.map((k) => (

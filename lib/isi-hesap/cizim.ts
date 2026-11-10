@@ -7,6 +7,8 @@
 //      3 yollu vana, boyler, tampon tank, pompalar, karışım vanası, kollektör ve
 //      radyatör devrelerini tüm ara bağlantılarıyla gösteren prensip şeması
 //   2. serimKrokisi(): oda bazında ölçekli yerden ısıtma boru serim krokisi
+//   3. yerlesimSemasi(): odalara göre yerleşim — radyatör / yerden ısıtma oda
+//      içinde, ekipman odaların dışında (mekanik oda)
 // -----------------------------------------------------------------------------
 import type { HesapSonucu, OdaSonucu, YerdenSonucu } from "./hesap";
 import { sy } from "./hesap";
@@ -602,6 +604,334 @@ export function serimKrokisi(o: OdaSonucu, en: number, boy: number, haricAlan: n
   k.cizgi(36, H - 6, 46, H - 6, RENK.donus, 0.9);
   k.yazi(48, H - 5, "Dönüş", 2.4);
   k.yazi(W - 8, H - 5, `Kenar mesafesi ${KENAR * 100} cm · ölçekli şematik serim`, 2.2, { hiza: "sag", renk: RENK.soluk });
+  return { w: W, h: H, ogeler: k.ogeler };
+}
+
+// =============================================================================
+// 3. ODALARA GÖRE TESİSAT YERLEŞİM ŞEMASI
+// Girilen odalar (en × boy ölçüleriyle, yaklaşık ölçekli kutular) yan yana
+// dizilir; her odanın içinde o odanın ısıtıcısı gösterilir: radyatörler
+// (tip · yükseklik × boy) ve yerden ısıtma (devre sayısı, boru aralığı,
+// kollektör). Isı pompası, tampon tank, boyler, genleşme tankı, pompalar ve
+// kollektör odaların dışında, mekanik oda kutusunda durur. Radyatör gidiş /
+// dönüş hatları ve yerden ısıtma devre boruları her oda sırasının altından geçer.
+// Mimari plan değildir: oda sırası, oda listesindeki sıradır.
+// =============================================================================
+export function yerlesimSemasi(s: HesapSonucu, olculer: { id: string; en: number; boy: number }[], baslik: string): Cizim {
+  const W = 420;
+  const k = new Kalem();
+  const MOR = "#ae3ec9";
+  const tampon = s.tampon.hacim > 0;
+
+  k.yazi(8, 9, `TESİSAT YERLEŞİM ŞEMASI (odalara göre) — ${baslik}`, 4.4, { kalin: true });
+  k.yazi(
+    8,
+    15,
+    `${s.odalar.length} oda · ${sy(s.toplamAlan)} m² · ısı kaybı ${sy(s.isiKaybi / 1000)} kW · ısı pompası yükü ${sy(s.tasarimYuku / 1000)} kW · ${s.il} ${sy(s.disSicaklik)} °C`,
+    2.8,
+    { renk: RENK.soluk }
+  );
+  k.cizgi(8, 18, W - 8, 18, RENK.soluk, 0.3);
+
+  // ---------------------------------------------------------------------------
+  // Sol sütun: dış ünite + mekanik oda (ekipman odaların dışında)
+  // ---------------------------------------------------------------------------
+  const HG = 104; // mekanik oda gidiş kolektörü (dikey) x
+  const HR = 107.5; // dönüş
+  const XG = 121; // radyatör gidiş ana kolonu x
+  const XR = 124; // radyatör dönüş ana kolonu x
+  const XY = 130; // yerden ısıtma devre boruları kolonu x (kollektörden)
+
+  k.dortgen(8, 23, 110, 36, RENK.soluk, 0.3, { kesik: true });
+  k.yazi(11, 28, "DIŞ ORTAM", 2.3, { renk: RENK.soluk, kalin: true });
+  k.dortgen(12, 31, 24, 25, RENK.cizgi, 0.5, { dolgu: "#f8f9fa", r: 1.5 });
+  k.daire(24, 43.5, 9, RENK.cizgi, 0.4, RENK.beyaz);
+  k.daire(24, 43.5, 1.6, RENK.cizgi, 0.3, RENK.cizgi);
+  for (const a of [0, 90, 180, 270]) {
+    const r = (a * Math.PI) / 180;
+    k.yol(
+      [
+        [24 + 1.6 * Math.cos(r), 43.5 + 1.6 * Math.sin(r)],
+        [24 + 7.6 * Math.cos(r + 0.35), 43.5 + 7.6 * Math.sin(r + 0.35)],
+        [24 + 7.6 * Math.cos(r - 0.15), 43.5 + 7.6 * Math.sin(r - 0.15)],
+      ],
+      RENK.cizgi,
+      0.3,
+      { kapali: true, dolgu: "#dee2e6" }
+    );
+  }
+  k.yazi(40, 36, "ISI POMPASI (dış ünite)", 2.6, { kalin: true });
+  k.yazi(40, 40, kisalt(s.secilenModel ? s.secilenModel.ad : "Hava kaynaklı ısı pompası", 30), 2.3);
+  k.yazi(40, 44, `Gerekli ${sy(s.tasarimYuku / 1000)} kW @ ${sy(s.disSicaklik)} °C`, 2.2, { renk: RENK.soluk });
+  k.yazi(40, 48, `Gidiş ${sy(s.pompaGidis)} °C${s.hatlar.pompa ? ` · ${s.hatlar.pompa.ad}` : ""}`, 2.2, { renk: RENK.soluk });
+
+  // Isı pompası → mekanik oda
+  k.yol([[36, 51], [HG, 51], [HG, 66]], RENK.gidis, 0.8);
+  k.yol([[36, 54], [HR, 54], [HR, 66]], RENK.donus, 0.8);
+  k.hortum(42, 51, RENK.gidis);
+  k.hortum(42, 54, RENK.donus);
+
+  const MY = 62; // mekanik oda üst kenarı
+  let c = MY + 8;
+  const etiket = (y: number, baslikM: string, alt?: string, alt2?: string) => {
+    k.yazi(12, y, baslikM, 2.5, { kalin: true });
+    if (alt) k.yazi(12, y + 3.6, alt, 2.2, { renk: RENK.soluk });
+    if (alt2) k.yazi(12, y + 7.2, alt2, 2.2, { renk: RENK.soluk });
+  };
+  if (tampon) {
+    k.dortgen(80, c, 14, 22, RENK.cizgi, 0.5, { dolgu: "#fff5f5", r: 5 });
+    k.cizgi(94, c + 4, HG, c + 4, RENK.gidis, 0.6);
+    k.cizgi(94, c + 18, HR, c + 18, RENK.donus, 0.6);
+    k.nokta(HG, c + 4, RENK.gidis);
+    k.nokta(HR, c + 18, RENK.donus);
+    etiket(c + 6, `Tampon (buffer) tank ${Math.round(s.tampon.hacim)} L`, "4 bağlantılı, yalıtımlı");
+    c += 28;
+  }
+  if (s.boyler) {
+    k.dortgen(80, c, 14, 22, RENK.cizgi, 0.5, { dolgu: "#fff9db", r: 5 });
+    k.yol([[82, c + 12], [92, c + 14], [82, c + 16], [92, c + 18]], RENK.gidis, 0.3);
+    k.cizgi(94, c + 12, HG, c + 12, RENK.gidis, 0.6);
+    k.cizgi(94, c + 18, HR, c + 18, RENK.donus, 0.6);
+    k.nokta(HG, c + 12, RENK.gidis);
+    k.nokta(HR, c + 18, RENK.donus);
+    k.ucYollu(HG, c + 12 - 3.5, false, false);
+    etiket(c + 6, `Boyler ${s.boyler.hacim} L`, `serpantin en az ${sy(s.boyler.serpantinM2)} m²`, "3 yollu vana ile kullanım suyu önceliği");
+    c += 28;
+  }
+  k.dortgen(83, c, 8, 11, RENK.cizgi, 0.4, { dolgu: "#e7f5ff", r: 3.5 });
+  k.cizgi(91, c + 5.5, HR, c + 5.5, RENK.donus, 0.5);
+  k.nokta(HR, c + 5.5, RENK.donus);
+  etiket(c + 4, `Genleşme tankı ${s.genlesme.hacim} L`, `ön basınç ${sy(s.genlesme.onBasinc)} bar · emniyet ${s.genlesme.emniyet} bar`);
+  c += 17;
+
+  // Radyatör devresi çıkışı
+  let radS: number | null = null;
+  let radR: number | null = null;
+  if (s.radyatorVar) {
+    const y = c + 3;
+    radS = y;
+    radR = y + 4;
+    k.cizgi(HG, y, XG, y, RENK.gidis, 0.7);
+    k.cizgi(XR, y + 4, HR, y + 4, RENK.donus, 0.7);
+    k.nokta(HG, y, RENK.gidis);
+    k.nokta(HR, y + 4, RENK.donus);
+    k.pompa(114, y);
+    etiket(
+      y - 1,
+      "Radyatör devresi (pompa)",
+      `${sy(s.radyatorRejimi.gidis, 0)}/${sy(s.radyatorRejimi.donus, 0)} °C · ${Math.round(s.pompalar.radyatorDebi)} L/h · ${sy(s.pompalar.radyatorBasma)} mSS`
+    );
+    c += 14;
+  }
+  // Yerden ısıtma devresi çıkışı + kollektör
+  let yerS: number | null = null;
+  if (s.yerdenVar) {
+    // Kollektör mekanik odada (dolap); devre boruları buradan odalara gider
+    const y = c + 5;
+    const KX = 62;
+    k.cizgi(HG, y, KX + 2.4, y, RENK.gidis, 0.7);
+    k.cizgi(HR, y + 4, KX + 6, y + 4, RENK.donus, 0.7);
+    k.nokta(HG, y, RENK.gidis);
+    k.nokta(HR, y + 4, RENK.donus);
+    if (s.karisimli) k.ucYollu(95, y, true, true);
+    k.pompa(84, y, false);
+    k.dortgen(KX, y - 3, 2.4, 10, RENK.gidis, 0.35, { dolgu: "#ffe3e3" });
+    k.dortgen(KX + 3.6, y - 3, 2.4, 10, RENK.donus, 0.35, { dolgu: "#d0ebff" });
+    yerS = y + 10;
+    k.yol([[KX + 3, y + 7], [KX + 3, yerS], [XY + 1.8, yerS]], MOR, 0.5, { kesik: true });
+    const toplamAgiz = s.kollektorler.reduce((t, x) => t + x.agiz, 0);
+    k.yazi(KX - 2, y + 1, s.kollektorler.length > 1 ? `${s.kollektorler.length} kollektör` : "Kollektör", 2.3, { hiza: "sag", kalin: true });
+    k.yazi(KX - 2, y + 4.6, `${toplamAgiz} ağız (dolap)`, 2.2, { hiza: "sag", renk: RENK.soluk });
+    etiket(
+      yerS + 4.5,
+      "Yerden ısıtma devresi (pompa" + (s.karisimli ? " + karışım vanası)" : ")"),
+      `${sy(s.yerdenGidis ?? 0)}/${sy(s.yerdenDonusOrt ?? 0)} °C · ${Math.round(s.pompalar.yerdenDebi)} L/h${s.karisimli ? ` · Kvs ${sy(s.karisimVanasiKvs ?? 0)}` : ""}`
+    );
+    c += 26;
+  }
+  // Mekanik oda başlığı ve sınırı
+  k.yol([[HG, 66], [HG, c - 4]], RENK.gidis, 0.8);
+  k.yol([[HR, 66], [HR, c - 4]], RENK.donus, 0.8);
+  k.dortgen(8, MY, 110, c - MY, RENK.cizgi, 0.35, { kesik: true });
+  k.yazi(11, MY + 4.5, "MEKANİK ODA / TEKNİK HACİM", 2.3, { kalin: true, renk: RENK.soluk });
+  const mekanikAlt = c;
+
+  // ---------------------------------------------------------------------------
+  // Sağ alan: odalar (en × boy, yaklaşık ölçekli) sıra sıra
+  // ---------------------------------------------------------------------------
+  const X0 = 138;
+  const X1 = W - 8;
+  const AW = X1 - X0;
+  const Y0 = 24;
+  const serit = (s.radyatorVar ? 6 : 0) + (s.yerdenVar ? 3.5 : 0) + 6;
+  const odalar = s.odalar.map((o) => {
+    const m = olculer.find((x) => x.id === o.id);
+    const kenar = Math.sqrt(Math.max(1, o.alan));
+    return { o, en: Math.max(0.5, m?.en || kenar), boy: Math.max(0.5, m?.boy || kenar) };
+  });
+  type Kutu = { o: OdaSonucu; x: number; y: number; w: number; h: number };
+  const yerlestir = (sc: number) => {
+    const satirlar: { kutular: Kutu[]; y: number; h: number }[] = [];
+    let x = 0;
+    let y = Y0;
+    let satir: Kutu[] = [];
+    let sh = 0;
+    const kapat = () => {
+      if (!satir.length) return;
+      satirlar.push({ kutular: satir, y, h: sh });
+      y += sh + serit;
+      satir = [];
+      sh = 0;
+      x = 0;
+    };
+    for (const d of odalar) {
+      const w = Math.min(AW, Math.max(44, d.en * sc));
+      const h = Math.max(34, d.boy * sc);
+      if (x > 0 && x + w > AW) kapat();
+      satir.push({ o: d.o, x: X0 + x, y, w, h });
+      sh = Math.max(sh, h);
+      x += w + 3;
+    }
+    kapat();
+    return { satirlar, alt: y };
+  };
+  let sc = 16;
+  let yer = yerlestir(sc);
+  while (sc > 3 && yer.alt > Math.max(240, mekanikAlt)) {
+    sc -= 0.5;
+    yer = yerlestir(sc);
+  }
+  // Oda kutuları satırın üst kenarına hizalı; hatlar satırın altından geçer
+  let sonRadY: number | null = null;
+  let sonYerY: number | null = null;
+  if (!odalar.length) k.yazi(X0, Y0 + 10, "Henüz oda girilmedi.", 3, { renk: RENK.soluk });
+  for (const satir of yer.satirlar) {
+    const lyS = satir.y + satir.h + 3; // radyatör gidiş hattı
+    const lyR = lyS + 2.6; // dönüş hattı
+    const lyY = lyS + (s.radyatorVar ? 5.4 : 0); // yerden ısıtma devre boruları
+    let radSag = 0;
+    let yerSag = 0;
+    for (const b of satir.kutular) {
+      const o = b.o;
+      const yerden = o.yerden;
+      const rad = o.radyator?.parcalar ?? [];
+      const isitilmiyor = !yerden && !rad.length;
+      k.dortgen(b.x, b.y, b.w, b.h, RENK.cizgi, 0.55, { dolgu: isitilmiyor ? "#f1f3f5" : yerden ? "#fff8f5" : RENK.beyaz });
+      const harf = Math.max(8, Math.floor((b.w - 4) / 1.45));
+      k.yazi(b.x + 2, b.y + 4.6, kisalt(o.ad, harf), 2.6, { kalin: true });
+      k.yazi(b.x + 2, b.y + 8.3, kisalt(`${sy(o.alan)} m² · ${Math.round(o.toplam)} W · ${sy(o.sicaklik, 0)} °C`, Math.floor((b.w - 4) / 1.2)), 2.1, {
+        renk: RENK.soluk,
+      });
+      if (isitilmiyor) {
+        k.yazi(b.x + b.w / 2, b.y + b.h / 2 + 3, "ısıtılmıyor", 2.2, { hiza: "orta", renk: RENK.soluk });
+        continue;
+      }
+      // Yerden ısıtma: serpantin görünümü + bilgi + kollektöre giden devre boruları
+      if (yerden) {
+        k.yazi(
+          b.x + 2,
+          b.y + 11.9,
+          kisalt(`Yerden ısıtma · ${yerden.devreSayisi} devre · ${Math.round(yerden.aralik * 100)} cm · K${yerden.kollektor}`, Math.floor((b.w - 4) / 1.15)),
+          2.1,
+          { renk: MOR, kalin: true }
+        );
+        const ust = b.y + 14;
+        const alt = b.y + b.h - (rad.length ? 10 : 3);
+        const sol = b.x + 3;
+        const sag = b.x + b.w - 3;
+        if (alt - ust >= 4) {
+          const adim = Math.max(2.2, Math.min(4, yerden.aralik * sc));
+          const n: [number, number][] = [];
+          let yy = ust + 1;
+          let sola = false;
+          n.push([sol, yy]);
+          while (yy + adim <= alt) {
+            n.push([sola ? sol : sag, yy]);
+            yy += adim;
+            n.push([sola ? sol : sag, yy]);
+            sola = !sola;
+          }
+          n.push([sola ? sol : sag, yy]);
+          k.yol(n, "#f4a582", 0.3);
+        }
+        // Devre boruları oda dışına (kollektöre)
+        const xd = b.x + b.w - 5;
+        k.cizgi(xd, b.y + b.h, xd, lyY, MOR, 0.45, true);
+        k.cizgi(xd - 1.6, b.y + b.h, xd - 1.6, lyY, MOR, 0.45, true);
+        k.nokta(xd, lyY, MOR);
+        yerSag = Math.max(yerSag, xd);
+      }
+      // Radyatörler: oda içinde alt duvar önünde, tip · yükseklik × boy
+      if (rad.length) {
+        const rh = 3.2;
+        const ry = b.y + b.h - 4.6;
+        const genislikler = rad.map((p) => Math.max(13, Math.min(b.w - 6, (p.boy / 1000) * sc)));
+        let x = b.x + 3;
+        let cizilen = 0;
+        for (let i = 0; i < rad.length; i++) {
+          const rw = genislikler[i];
+          const kalanVar = i < rad.length - 1;
+          const sinir = b.x + b.w - (yerden ? 8 : 3) - (kalanVar ? 7 : 0);
+          if (x + rw > sinir && cizilen > 0) break;
+          const p = rad[i];
+          k.radyator(x, ry, rw, rh);
+          k.yazi(x + rw / 2, ry - 0.9, `${p.tip} · ${p.yukseklik}×${p.boy}`, 1.8, { hiza: "orta" });
+          // bağlantılar: gidiş (sol) / dönüş (sağ) satır altındaki hatlara
+          k.cizgi(x + 1.2, ry + rh, x + 1.2, lyS, RENK.gidis, 0.4);
+          k.cizgi(x + rw - 1.2, ry + rh, x + rw - 1.2, lyR, RENK.donus, 0.4);
+          k.nokta(x + 1.2, lyS, RENK.gidis);
+          k.nokta(x + rw - 1.2, lyR, RENK.donus);
+          radSag = Math.max(radSag, x + rw - 1.2);
+          x += rw + 3;
+          cizilen++;
+        }
+        if (cizilen < rad.length) k.yazi(x, ry + 2.6, `+${rad.length - cizilen}`, 2.2, { kalin: true });
+      }
+    }
+    if (radSag > 0) {
+      k.cizgi(XG, lyS, radSag, lyS, RENK.gidis, 0.7);
+      k.cizgi(XR, lyR, radSag, lyR, RENK.donus, 0.7);
+      k.nokta(XG, lyS, RENK.gidis);
+      k.nokta(XR, lyR, RENK.donus);
+      sonRadY = lyR;
+    }
+    if (yerSag > 0) {
+      k.cizgi(XY + 1.8, lyY, yerSag, lyY, MOR, 0.5, true);
+      sonYerY = lyY;
+    }
+  }
+  // Ana kolonlar (mekanik odadan oda sıralarına)
+  if (radS !== null && radR !== null && sonRadY !== null) {
+    const ilk = yer.satirlar.find((st) => st.kutular.some((b) => (b.o.radyator?.parcalar.length ?? 0) > 0));
+    const ustS = Math.min(radS, ilk ? ilk.y + ilk.h + 3 : radS);
+    k.cizgi(XG, Math.min(ustS, radS), XG, Math.max(radS, sonRadY - 2.6), RENK.gidis, 0.8);
+    k.cizgi(XR, Math.min(ustS + 2.6, radR), XR, Math.max(radR, sonRadY), RENK.donus, 0.8);
+  }
+  if (yerS !== null && sonYerY !== null) {
+    const ilk = yer.satirlar.find((st) => st.kutular.some((b) => b.o.yerden));
+    const ilkY = ilk ? ilk.y + ilk.h + 3 + (s.radyatorVar ? 5.4 : 0) : yerS;
+    k.cizgi(XY + 1.8, Math.min(yerS, ilkY), XY + 1.8, Math.max(yerS, sonYerY), MOR, 0.5, true);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Açıklama
+  // ---------------------------------------------------------------------------
+  const H = Math.max(mekanikAlt, yer.alt) + 16;
+  const LY = H - 6;
+  k.cizgi(8, LY - 5, W - 8, LY - 5, RENK.soluk, 0.3);
+  const lejant: [string, string, boolean][] = [
+    ["Radyatör gidiş", RENK.gidis, false],
+    ["Radyatör dönüş", RENK.donus, false],
+    ["Yerden ısıtma devre boruları (kollektöre)", MOR, true],
+  ];
+  let lx = 10;
+  for (const [ad, renk, kesik] of lejant) {
+    k.cizgi(lx, LY, lx + 9, LY, renk, 0.8, kesik);
+    k.yazi(lx + 11, LY + 0.9, ad, 2.3);
+    lx += 16 + ad.length * 1.15;
+  }
+  k.yazi(W - 8, LY + 0.9, "Oda kutuları girilen en × boy ölçülerine göre yaklaşık ölçeklidir; mimari plan değildir.", 2.1, { hiza: "sag", renk: RENK.soluk });
+
   return { w: W, h: H, ogeler: k.ogeler };
 }
 

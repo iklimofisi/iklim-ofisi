@@ -7,7 +7,7 @@ import type { HesapVerisi } from "./tipler";
 import { ISITICILAR } from "./tipler";
 import { RADYATOR_TIPLERI, RADYATOR_KATALOG_KAYNAGI } from "./katalog";
 import { IL_KAYNAGI } from "./iklim";
-import { tesisatSemasi, serimKrokisi, type Cizim } from "./cizim";
+import { tesisatSemasi, serimKrokisi, yerlesimSemasi, type Cizim } from "./cizim";
 
 // -----------------------------------------------------------------------------
 // ISI POMPASI SİSTEM HESABI — PDF RAPORU
@@ -633,6 +633,19 @@ export function isiHesapPdfOlustur(
   const sema = tesisatSemasi(s, bilgi.baslik);
   const semaW = SAG - SOL;
   cizimBas(sema, SOL, 12, Math.min(semaW, (185 * sema.w) / sema.h), 1.12);
+
+  // ===========================================================================
+  // ODALARA GÖRE YERLEŞİM ŞEMASI (yatay sayfa)
+  // ===========================================================================
+  if (s.odalar.length) {
+    yeniSayfa(true);
+    const yerlesim = yerlesimSemasi(
+      s,
+      v.odalar.map((o) => ({ id: o.id, en: o.en, boy: o.boy })),
+      bilgi.baslik
+    );
+    cizimBas(yerlesim, SOL, 12, Math.min(SAG - SOL, (182 * yerlesim.w) / yerlesim.h), 1.12);
+  }
 
   // ===========================================================================
   // SERİM KROKİLERİ (sayfada iki tane)
