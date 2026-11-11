@@ -52,6 +52,18 @@ function adimaYuvarla(n: number, adim: number | null | undefined) {
 
 // Satış fiyatı = liste fiyatı − iskonto. Yuvarlama seçilmemişse TL'de tam sayıya,
 // döviz listelerinde kuruşa yuvarlanır.
+// Kredi kartı (3. sütun) kâr modu: kart fiyatı = alış (liste − alış iskontosu) + kâr; tedarikçinin ayrı kart fiyatı gerekmez
+export function kartFiyati(liste: number, alisYuzde: number, karYuzde: number, paraBirimi: string) {
+  const n = liste * (1 - Math.min(100, Math.max(0, alisYuzde)) / 100) * (1 + Math.max(0, karYuzde) / 100);
+  return paraBirimi === "TRY" ? Math.round(n) : Math.round(n * 100) / 100;
+}
+// Kâr yüzdesi: 0–1000 arası sayı ("20", "%20", "12,5"); boş ya da geçersizse null
+export function karOku(v: unknown): number | null {
+  const t = String(v ?? "").trim().replace("%", "").replace(",", ".");
+  if (!t) return null;
+  const n = Number(t);
+  return Number.isFinite(n) && n >= 0 && n <= 1000 ? n : null;
+}
 export function iskontoUygula(fiyat: number, yuzde: number, paraBirimi: string, yuvarlama: number | null = 0) {
   const i = Math.min(100, Math.max(0, yuzde || 0));
   const n = fiyat * (1 - i / 100);

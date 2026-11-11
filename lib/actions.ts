@@ -23,7 +23,7 @@ import { donusumKalemleri } from "@/lib/satinalma-hesap";
 import { randomUUID, randomBytes } from "crypto";
 import { gecerliTur } from "@/lib/gorusme";
 import { gecerliRedNedeni } from "@/lib/teklif-durum";
-import { flKalemleriOku, metinAl, duzenGecerli, iskontoKapsamGecerli, FIYAT_SUTUN_KALIPLARI, iskontoUygula, yuzdeOku, yuvarlamaGecerli } from "@/lib/fiyat-listesi";
+import { flKalemleriOku, metinAl, duzenGecerli, iskontoKapsamGecerli, FIYAT_SUTUN_KALIPLARI, iskontoUygula, yuzdeOku, yuvarlamaGecerli, kartFiyati, karOku } from "@/lib/fiyat-listesi";
 import { birimNormal } from "@/lib/birimler";
 import { listeNotlari } from "@/lib/toptan-fiyat";
 import { MUSTERISIZ_ID, musterisizMi, musterisizGoster } from "@/lib/musterisiz";
@@ -1671,7 +1671,15 @@ export async function hazirListeFiyatGeriYukle(formData: FormData) {
   if (!h) return;
   const liste = await prisma.fiyatListesi.findFirst({
     where: { baslik: h.baslik },
-    select: { id: true, paraBirimi: true, satisIskontoYuzde: true, kalemler: { select: { id: true, ad: true, kod: true, fiyat: true, fiyat2: true, fiyat3: true } } },
+    select: {
+      id: true,
+      paraBirimi: true,
+      satisIskontoYuzde: true,
+      alisIskontoYuzde: true,
+      kartKarYuzde: true,
+      fiyat3Baslik: true,
+      kalemler: { select: { id: true, ad: true, kod: true, fiyat: true, fiyat2: true, fiyat3: true } },
+    },
   });
   if (!liste) redirect("/panel/fiyat-listeleri");
   // Satış iskontosu tanımlı listede satış fiyatı güncel iskontoyla yeniden hesaplanır
@@ -1682,7 +1690,11 @@ export async function hazirListeFiyatGeriYukle(formData: FormData) {
       fiyatlar.set(k.kod.toUpperCase(), {
         liste: k.liste,
         satis: satisYuzde !== null ? iskontoUygula(k.liste, satisYuzde, liste.paraBirimi) : k.satis,
-        kart: k.kart ?? null,
+        // Kredi kartı kâr modunda kart fiyatı liste fiyatından (alış + kâr) yeniden hesaplanır
+        kart:
+          liste.fiyat3Baslik && liste.kartKarYuzde !== null && liste.alisIskontoYuzde !== null
+            ? kartFiyati(k.liste, liste.alisIskontoYuzde, liste.kartKarYuzde, liste.paraBirimi)
+            : k.kart ?? null,
       });
   const islemler: ReturnType<typeof prisma.fiyatListesiKalem.update>[] = [];
   for (const s of liste.kalemler) {
@@ -1785,6 +1797,8 @@ export async function fiyatListesiKaydet(formData: FormData) {
   // Alış iskontosu yalnız panelde kullanılır; satış iskontosu doluysa 2. fiyat liste fiyatından hesaplanır
   const alisIskontoYuzde = yuzdeOku(formData.get("alisIskontoYuzde"));
   const satisIskontoYuzde = fiyat2Baslik ? yuzdeOku(formData.get("satisIskontoYuzde")) : null;
+  // Kredi kartı kârı: yalnız 3. sütun ve alış iskontosu varken; kart fiyatı = alış + bu kâr (fiyat3'e satış fiyatı yazılır)
+  const kartKarYuzde = fiyat3Baslik && alisIskontoYuzde !== null ? karOku(formData.get("kartKarYuzde")) : null;
   // Liste iskontosu uygulanan fiyatların yuvarlanması (yalnız PDF; 0 = yok → boş kaydedilir)
   const yuvarlamaAdim = yuvarlamaGecerli(formData.get("yuvarlamaAdim")) || null;
   const paraBirimi = paraBirimiDogrula(formData.get("paraBirimi"));
@@ -1799,6 +1813,7 @@ export async function fiyatListesiKaydet(formData: FormData) {
         kdvDahil: formData.get("kdvDahil") === "evet",
         alisIskontoYuzde,
         satisIskontoYuzde,
+        kartKarYuzde,
         yuvarlamaAdim,
         iskontoYuzde: Math.min(100, Math.max(0, iskonto)),
         iskontoKapsam: iskontoKapsamGecerli(formData.get("iskontoKapsam")),
@@ -1825,7 +1840,13 @@ export async function fiyatListesiKaydet(formData: FormData) {
         birim: k.birim,
         fiyat: k.fiyat,
         fiyat2: !fiyat2Baslik ? null : satisIskontoYuzde !== null ? (k.fiyat > 0 ? iskontoUygula(k.fiyat, satisIskontoYuzde, paraBirimi) : null) : k.fiyat2,
-        fiyat3: fiyat3Baslik ? k.fiyat3 ?? null : null,
+        fiyat3: !fiyat3Baslik
+          ? null
+          : kartKarYuzde !== null && alisIskontoYuzde !== null
+            ? k.fiyat > 0
+              ? kartFiyati(k.fiyat, alisIskontoYuzde, kartKarYuzde, paraBirimi)
+              : null
+            : k.fiyat3 ?? null,
         gorselId: k.gorselId,
       })),
     }),
@@ -1850,6 +1871,7 @@ export async function fiyatListesiKopyala(id: string) {
       iskontoKapsam: kaynak.iskontoKapsam,
       alisIskontoYuzde: kaynak.alisIskontoYuzde,
       satisIskontoYuzde: kaynak.satisIskontoYuzde,
+      kartKarYuzde: kaynak.kartKarYuzde,
       yuvarlamaAdim: kaynak.yuvarlamaAdim,
       fiyatGoster: kaynak.fiyatGoster,
       duzen: kaynak.duzen,
@@ -1940,6 +1962,7 @@ export async function fiyatListesiSecimdenKopyala(formData: FormData) {
       iskontoKapsam: kaynak.iskontoKapsam,
       alisIskontoYuzde: kaynak.alisIskontoYuzde,
       satisIskontoYuzde: kaynak.satisIskontoYuzde,
+      kartKarYuzde: kaynak.kartKarYuzde,
       yuvarlamaAdim: kaynak.yuvarlamaAdim,
       fiyatGoster: kaynak.fiyatGoster,
       duzen: kaynak.duzen,

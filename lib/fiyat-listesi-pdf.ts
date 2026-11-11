@@ -59,6 +59,7 @@ export type PdfListe = {
   fiyat2Baslik?: string | null;
   fiyat3Baslik?: string | null; // doluysa (iki fiyatlı listede) 3. fiyat sütunu
   satisIskontoYuzde?: number | null; // doluysa liste fiyatları (1. ve 3. sütun) PDF'te gizlenir, satış fiyatları gösterilir
+  kartKarYuzde?: number | null; // doluysa 3. sütun (ör. kredi kartı) fiyatı zaten satış fiyatıdır (alış + kâr); iskonto uygulanmaz
   yuvarlamaAdim?: number | null; // liste iskontosu uygulanan fiyatların yuvarlanacağı adım (boş/0 = yok)
   gecerlilikTarihi: Date | null;
   notlar: string | null;
@@ -153,7 +154,14 @@ export function fiyatListesiPdfOlustur(
       ? [
           { ad: fb2, f: (k) => k.fiyat2, isk: isk2 },
           ...(uc
-            ? [{ ad: fb3, f: (k: PdfKalem) => (fiyatVar(k.fiyat3) ? iskontoUygula(k.fiyat3, satisY as number, liste.paraBirimi) : null), isk: isk3 }]
+            ? [
+                {
+                  ad: fb3,
+                  f: (k: PdfKalem) =>
+                    !fiyatVar(k.fiyat3) ? null : typeof liste.kartKarYuzde === "number" ? k.fiyat3 : iskontoUygula(k.fiyat3, satisY as number, liste.paraBirimi),
+                  isk: isk3,
+                },
+              ]
             : []),
         ]
       : [

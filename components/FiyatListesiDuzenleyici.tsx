@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { fiyatListesiKaydet } from "@/lib/actions";
 import KaydetButonu from "@/components/KaydetButonu";
 import { fotografYukle } from "@/lib/gorsel-yukle";
-import { DUZENLER, FIYAT_SUTUN_KALIPLARI, iskontoluFiyat, flParaYaz, sutunIskontolari, iskontoKapsamGecerli, iskontoUygula, yuzdeOku, YUVARLAMALAR, yuvarlamaGecerli } from "@/lib/fiyat-listesi";
+import { DUZENLER, FIYAT_SUTUN_KALIPLARI, iskontoluFiyat, flParaYaz, sutunIskontolari, iskontoKapsamGecerli, iskontoUygula, yuzdeOku, YUVARLAMALAR, yuvarlamaGecerli, kartFiyati, karOku } from "@/lib/fiyat-listesi";
 import { tutarOku } from "@/lib/toplam-dagit";
 
 // -----------------------------------------------------------------------------
@@ -64,6 +64,7 @@ type Ayarlar = {
   iskontoKapsam: string; // HEPSI | FIYAT1 | FIYAT2 (iki fiyatlı listede iskontonun uygulandığı sütun)
   alisIskontoYuzde: number | null; // liste fiyatından alış iskontosu (yalnız panelde)
   satisIskontoYuzde: number | null; // doluysa 2. fiyat = 1. fiyat − bu iskonto (otomatik)
+  kartKarYuzde?: number | null; // doluysa 3. fiyat (ör. kredi kartı) = alış + bu kâr (otomatik)
   yuvarlamaAdim: number | null; // liste iskontosu uygulanan fiyatların (PDF) yuvarlanacağı adım (boş/0 = yok)
   fiyatGoster: boolean;
   duzen: string;
@@ -136,6 +137,11 @@ export default function FiyatListesiDuzenleyici({
   const satisOto = satisY !== null;
   const alisHatali = alisIsk.trim() !== "" && alisY === null;
   const satisHatali = ikiFiyat && satisIsk.trim() !== "" && satisY === null;
+  // Kredi kartı kârı (3. sütun): yazılırsa kart fiyatı = alış (liste − alış iskontosu) + bu kâr; boşsa kart fiyatı elle / listeden
+  const [kartKar, setKartKar] = useState(yuzdeMetni(ayarlar.kartKarYuzde ?? null));
+  const kartKarY = ucFiyat && alisY !== null ? karOku(kartKar) : null;
+  const kartOto = kartKarY !== null;
+  const kartHatali = ucFiyat && kartKar.trim() !== "" && alisY !== null && kartKarY === null;
   // Kâr % (alış üzerine): yazılınca satış iskontosu hesaplanır → satış = liste × (1 − alış %) × (1 + kâr %).
   // Alış veya satış iskontosu değişince kâr kutusu kendiliğinden güncellenir (yazılırken değil).
   const [karMetni, setKarMetni] = useState("");
@@ -154,7 +160,11 @@ export default function FiyatListesiDuzenleyici({
   const [yuvarlamaAdim, setYuvarlamaAdim] = useState(yuvarlamaGecerli(ayarlar.yuvarlamaAdim));
   // 2. fiyatın değeri (satış iskontosu doluysa liste fiyatından hesaplanır)
   // 3. sütunun satış fiyatı (satış iskontosu modunda; ör. kredi kartı satış = kredi kartı liste − iskonto)
-  const ucuncuSatis = (r: { fiyat3: string }) => {
+  const ucuncuSatis = (r: { fiyat: string; fiyat3: string }) => {
+    if (kartOto) {
+      const l = sayiOku(r.fiyat);
+      return l > 0 ? kartFiyati(l, alisY as number, kartKarY as number, paraBirimi) : 0;
+    }
     const f = sayiOku(r.fiyat3);
     return satisOto && f > 0 ? iskontoUygula(f, satisY as number, paraBirimi) : 0;
   };
@@ -274,7 +284,7 @@ export default function FiyatListesiDuzenleyici({
           ...r,
           fiyat: zam1 && f > 0 ? fiyatMetni(yuvarlaFiyat(f * (1 + zamOrani / 100))) : r.fiyat,
           // 3. fiyat (ör. kredi kartı) liste fiyatıyla birlikte güncellenir
-          fiyat3: ucFiyat && zam1 && f3 > 0 ? fiyatMetni(yuvarlaFiyat(f3 * (1 + zamOrani / 100))) : r.fiyat3,
+          fiyat3: ucFiyat && !kartOto && zam1 && f3 > 0 ? fiyatMetni(yuvarlaFiyat(f3 * (1 + zamOrani / 100))) : r.fiyat3,
           fiyat2: zam2 && f2 > 0 ? fiyatMetni(yuvarlaFiyat(f2 * (1 + zamOrani / 100))) : r.fiyat2,
           uyari: undefined,
         };
@@ -359,7 +369,8 @@ export default function FiyatListesiDuzenleyici({
       birim: r.birim,
       fiyat: sayiOku(r.fiyat),
       fiyat2: ikiFiyat && ikinciFiyat(r) > 0 ? ikinciFiyat(r) : null,
-      fiyat3: ucFiyat && sayiOku(r.fiyat3) > 0 ? sayiOku(r.fiyat3) : null,
+      // Kredi kartı kâr modunda kart satış fiyatı gönderilir (sunucu da aynı formülle yeniden hesaplar)
+      fiyat3: !ucFiyat ? null : kartOto ? (ucuncuSatis(r) > 0 ? ucuncuSatis(r) : null) : sayiOku(r.fiyat3) > 0 ? sayiOku(r.fiyat3) : null,
       gorselId: r.gorselId,
     }))
   );
@@ -530,14 +541,29 @@ export default function FiyatListesiDuzenleyici({
                 />
               </div>
             )}
+            {ucFiyat && (
+              <div className="w-52">
+                <label className={etiket}>{fb3} kârım % (alış üzerine)</label>
+                <input
+                  name="kartKarYuzde"
+                  inputMode="decimal"
+                  value={kartKar}
+                  disabled={alisY === null}
+                  onChange={(e) => setKartKar(e.target.value)}
+                  placeholder={alisY === null ? "önce alış iskontosu" : "boş: listeden / elle"}
+                  title={`Yazarsanız ${fb3} fiyatı = alış fiyatı + bu kâr (otomatik). Boş bırakırsanız ${fb3} fiyatları eskisi gibi girilir.`}
+                  className={`${kutu} ${kartHatali ? "border-sicak" : ""} disabled:bg-zemin disabled:text-metin/40`}
+                />
+              </div>
+            )}
           </div>
           <p className="text-[11px] text-metin/60">
             {alisY !== null
-              ? `Alış fiyatı = liste fiyatı − %${alisY.toLocaleString("tr-TR")}${ucFiyat ? ` (${fb1} ve ${fb3} için ayrı ayrı)` : ""}; her ürünün altında alış fiyatı ve kârı görünür. Alış fiyatı PDF'e ve müşteriye gitmez. `
+              ? `Alış fiyatı = liste fiyatı − %${alisY.toLocaleString("tr-TR")}${ucFiyat && !kartOto ? ` (${fb1} ve ${fb3} için ayrı ayrı)` : ""}; her ürünün altında alış fiyatı ve kârı görünür. Alış fiyatı PDF'e ve müşteriye gitmez. `
               : "Alış iskontosu girerseniz her ürünün altında alış fiyatı ve kârınız görünür (yalnız panelde). "}
             {ikiFiyat &&
               (satisOto
-                ? `${fb2} satış fiyatı ${fb1} üzerinden${ucFiyat ? `, ${fb3} satış fiyatı kendi liste fiyatı üzerinden` : ""} %${(satisY as number).toLocaleString("tr-TR")} iskontoyla otomatik hesaplanır. PDF'te liste fiyatları gösterilmez; müşteriye yalnız ${ucFiyat ? `${fb2} ve ${fb3}` : fb2} satış fiyatları gider.`
+                ? `${fb2} satış fiyatı ${fb1} üzerinden${ucFiyat && !kartOto ? `, ${fb3} satış fiyatı kendi liste fiyatı üzerinden` : ""} %${(satisY as number).toLocaleString("tr-TR")} iskontoyla otomatik hesaplanır. PDF'te liste fiyatları gösterilmez; müşteriye yalnız ${ucFiyat ? `${fb2} ve ${fb3}` : fb2} satış fiyatları gider.`
                 : `${fb2} fiyatları elle girilir. Satış iskontosu yazarsanız hepsi ${fb1} üzerinden otomatik hesaplanır.`)}
             {(alisHatali || satisHatali) && <span className="text-sicak-dim font-medium"> İskonto 0 ile 100 arasında bir sayı olmalı.</span>}
             {ikiFiyat && !alisHatali && !satisHatali && karHatali && (
@@ -546,6 +572,13 @@ export default function FiyatListesiDuzenleyici({
             {ikiFiyat && alisY !== null && (
               <span> Kâr yazarsanız satış iskontosu kendiliğinden hesaplanır (satış = alış + kâr).</span>
             )}
+            {kartOto && (
+              <span>
+                {" "}
+                {fb3} fiyatı = alış ({fb1} − %{(alisY as number).toLocaleString("tr-TR")}) + %{(kartKarY as number).toLocaleString("tr-TR")} kâr; otomatik hesaplanır. Kutuyu boşaltırsanız {fb3} fiyatları yeniden elle girilir.
+              </span>
+            )}
+            {kartHatali && <span className="text-sicak-dim font-medium"> {fb3} kârı 0 ile 1000 arasında bir sayı olmalı.</span>}
           </p>
         </div>
 
@@ -820,7 +853,7 @@ export default function FiyatListesiDuzenleyici({
                       className={`${kutu} text-right font-mono`}
                     />
                   </div>
-                  {ucFiyat && (
+                  {ucFiyat && !kartOto && (
                     <div className="relative sm:col-start-4">
                       <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-metin/45 max-w-[45%] truncate">{satisOto ? `${fb3} (liste)` : fb3}</span>
                       <input
@@ -846,13 +879,17 @@ export default function FiyatListesiDuzenleyici({
                       />
                     </div>
                   )}
-                  {ucFiyat && satisOto && (
+                  {ucFiyat && (satisOto || kartOto) && (
                     <div className="relative sm:col-start-4">
                       <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-metin/45 max-w-[45%] truncate">{fb3}</span>
                       <input
                         value={ucuncuSatis(r) > 0 ? fiyatMetni(ucuncuSatis(r)) : ""}
                         readOnly
-                        title={`${fb3} (liste) − %${(satisY as number).toLocaleString("tr-TR")} (otomatik)`}
+                        title={
+                          kartOto
+                            ? `Alış (${fb1} − %${(alisY as number).toLocaleString("tr-TR")}) + %${(kartKarY as number).toLocaleString("tr-TR")} kâr (otomatik)`
+                            : `${fb3} (liste) − %${(satisY as number).toLocaleString("tr-TR")} (otomatik)`
+                        }
                         aria-label={`${fb3} satış`}
                         className={`${kutu} text-right font-mono bg-zemin text-metin/70`}
                       />
@@ -877,7 +914,9 @@ export default function FiyatListesiDuzenleyici({
                       (
                         [
                           [fiyat, ikiFiyat ? ikinciFiyat(r) : fiyat, ucFiyat ? `${fb2} ` : ""],
-                          ...(ucFiyat && satisOto ? [[sayiOku(r.fiyat3), ucuncuSatis(r), `${fb3} `] as [number, number, string]] : []),
+                          ...(ucFiyat && (satisOto || kartOto)
+                            ? [[kartOto ? fiyat : sayiOku(r.fiyat3), ucuncuSatis(r), `${fb3} `] as [number, number, string]]
+                            : []),
                         ] as [number, number, string][]
                       ).map(([liste, satis, etk]) => {
                         if (!(liste > 0)) return null;
