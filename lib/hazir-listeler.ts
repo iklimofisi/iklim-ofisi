@@ -7,6 +7,7 @@
 // -----------------------------------------------------------------------------
 
 import { OLEFINI } from "@/lib/hazir-olefini";
+import { BUDERUS } from "@/lib/hazir-buderus";
 
 // genislik / yukseklik: tedarikçi listesindeki "Takılabilir Genişlik / Yükseklik" sütunları (Niva)
 // aciklama / marka: doğrudan yazılan açıklama ve marka (Olefini vb.)
@@ -290,5 +291,5 @@ const MONTAJ: HazirListe = {
   gorseller: {},
 };
 
-export const HAZIR_LISTELER: HazirListe[] = [NIVA, OLEFINI, MONTAJ];
+export const HAZIR_LISTELER: HazirListe[] = [NIVA, OLEFINI, BUDERUS, MONTAJ];
 export const hazirListeBul = (kod: string) => HAZIR_LISTELER.find((l) => l.kod === kod) ?? null;

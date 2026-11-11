@@ -136,6 +136,20 @@ export default function FiyatListesiDuzenleyici({
   const satisOto = satisY !== null;
   const alisHatali = alisIsk.trim() !== "" && alisY === null;
   const satisHatali = ikiFiyat && satisIsk.trim() !== "" && satisY === null;
+  // Kâr % (alış üzerine): yazılınca satış iskontosu hesaplanır → satış = liste × (1 − alış %) × (1 + kâr %).
+  // Alış veya satış iskontosu değişince kâr kutusu kendiliğinden güncellenir (yazılırken değil).
+  const [karMetni, setKarMetni] = useState("");
+  const karOdak = useRef(false);
+  useEffect(() => {
+    if (karOdak.current) return;
+    if (alisY !== null && satisY !== null && alisY < 100) {
+      const k = ((100 - satisY) / (100 - alisY) - 1) * 100;
+      setKarMetni(String(Math.round(k * 100) / 100).replace(".", ","));
+    } else setKarMetni("");
+  }, [alisY, satisY]);
+  const karSayi = Number(karMetni.replace("%", "").replace(",", ".").trim());
+  const karSatisIsk = alisY !== null && karMetni.trim() !== "" && Number.isFinite(karSayi) ? 100 - (100 - alisY) * (1 + karSayi / 100) : null;
+  const karHatali = karMetni.trim() !== "" && (alisY === null || karSatisIsk === null || karSatisIsk < 0 || karSatisIsk > 100);
   // Liste iskontosu uygulanan fiyatların yuvarlanması (yalnız PDF'teki iskontolu fiyatlar)
   const [yuvarlamaAdim, setYuvarlamaAdim] = useState(yuvarlamaGecerli(ayarlar.yuvarlamaAdim));
   // 2. fiyatın değeri (satış iskontosu doluysa liste fiyatından hesaplanır)
@@ -493,6 +507,29 @@ export default function FiyatListesiDuzenleyici({
             ) : (
               <input type="hidden" name="satisIskontoYuzde" value="" />
             )}
+            {ikiFiyat && (
+              <div className="w-52">
+                <label className={etiket}>veya kârım % (alış üzerine)</label>
+                <input
+                  inputMode="decimal"
+                  value={karMetni}
+                  disabled={alisY === null}
+                  onFocus={() => (karOdak.current = true)}
+                  onBlur={() => (karOdak.current = false)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setKarMetni(v);
+                    const k = Number(v.replace("%", "").replace(",", ".").trim());
+                    if (alisY === null || !v.trim() || !Number.isFinite(k)) return;
+                    const s = 100 - (100 - alisY) * (1 + k / 100);
+                    if (s >= 0 && s <= 100) setSatisIsk(String(Math.round(s * 10000) / 10000).replace(".", ","));
+                  }}
+                  placeholder={alisY === null ? "önce alış iskontosu" : "örn. 20"}
+                  title="Kâr yazınca satış iskontosu otomatik hesaplanır: satış = liste × (1 − alış iskontosu) × (1 + kâr)"
+                  className={`${kutu} ${karHatali ? "border-sicak" : ""} disabled:bg-zemin disabled:text-metin/40`}
+                />
+              </div>
+            )}
           </div>
           <p className="text-[11px] text-metin/60">
             {alisY !== null
@@ -503,6 +540,12 @@ export default function FiyatListesiDuzenleyici({
                 ? `${fb2} satış fiyatı ${fb1} üzerinden${ucFiyat ? `, ${fb3} satış fiyatı kendi liste fiyatı üzerinden` : ""} %${(satisY as number).toLocaleString("tr-TR")} iskontoyla otomatik hesaplanır. PDF'te liste fiyatları gösterilmez; müşteriye yalnız ${ucFiyat ? `${fb2} ve ${fb3}` : fb2} satış fiyatları gider.`
                 : `${fb2} fiyatları elle girilir. Satış iskontosu yazarsanız hepsi ${fb1} üzerinden otomatik hesaplanır.`)}
             {(alisHatali || satisHatali) && <span className="text-sicak-dim font-medium"> İskonto 0 ile 100 arasında bir sayı olmalı.</span>}
+            {ikiFiyat && !alisHatali && !satisHatali && karHatali && (
+              <span className="text-sicak-dim font-medium"> Bu kâr oranında satış fiyatı liste fiyatını geçiyor; satış iskontosu 0 ile 100 arasında olmalı.</span>
+            )}
+            {ikiFiyat && alisY !== null && (
+              <span> Kâr yazarsanız satış iskontosu kendiliğinden hesaplanır (satış = alış + kâr).</span>
+            )}
           </p>
         </div>
 
