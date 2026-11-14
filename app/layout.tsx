@@ -8,6 +8,10 @@ const gaId = process.env.NEXT_PUBLIC_GA_ID;
 // Google Tag Manager kapsayıcısı
 const GTM_ID = "GTM-TFWGDTTJ";
 
+// Microsoft Clarity projesi (ziyaretçi ısı haritası / oturum kaydı).
+// Yönetim paneli (/panel) kaydedilmez: müşteri, fiyat ve teklif bilgileri Clarity'ye gitmesin.
+const CLARITY_ID = "zdojkwvtd3";
+
 export const metadata: Metadata = {
   title: {
     default: "İklim Ofisi Mühendislik — İstanbul VRF, Klima & Mekanik Tesisat",
@@ -104,6 +108,19 @@ export default function RootLayout({
           />
         </noscript>
         {children}
+
+        {/* MICROSOFT CLARITY: yalnız sitenin herkese açık sayfalarında (panelde yüklenmez) */}
+        <Script id="microsoft-clarity" strategy="afterInteractive">
+          {`
+            if (window.location.pathname.indexOf('/panel') !== 0) {
+              (function(c,l,a,r,i,t,y){
+                c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+                t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+                y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+              })(window, document, "clarity", "script", "${CLARITY_ID}");
+            }
+          `}
+        </Script>
 
         {/* GOOGLE TAG MANAGER: dataLayer ve gtag tanımlanır, sayfa görüntüleme olayı (gtm.js) gönderilir, sonra gtm.js yüklenir */}
         <Script id="google-tag-manager" strategy="afterInteractive">
