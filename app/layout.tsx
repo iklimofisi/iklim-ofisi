@@ -8,6 +8,10 @@ const gaId = process.env.NEXT_PUBLIC_GA_ID;
 // Google Tag Manager kapsayıcısı
 const GTM_ID = "GTM-TFWGDTTJ";
 
+// Google Ads hesabı ve "Potansiyel müşteri formu gönderimi" dönüşümü
+const ADS_ID = "AW-18517752349";
+const ADS_FORM_DONUSUMU = "AW-18517752349/w_SNCLKpybgdEJ30-f1E";
+
 // Microsoft Clarity projesi (ziyaretçi ısı haritası / oturum kaydı).
 // Yönetim paneli (/panel) kaydedilmez: müşteri, fiyat ve teklif bilgileri Clarity'ye gitmesin.
 const CLARITY_ID = "zdojkwvtd3";
@@ -119,6 +123,31 @@ export default function RootLayout({
                 y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
               })(window, document, "clarity", "script", "${CLARITY_ID}");
             }
+          `}
+        </Script>
+
+        {/* GOOGLE ADS: etiket (gtag.js) + form dönüşümü fonksiyonu.
+            gtag_report_conversion() iletişim formu başarıyla gönderilince çağrılır (components/FormDonusumu.tsx). */}
+        <Script src={`https://www.googletagmanager.com/gtag/js?id=${ADS_ID}`} strategy="afterInteractive" />
+        <Script id="google-ads" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            window.gtag = window.gtag || function(){dataLayer.push(arguments);};
+            gtag('js', new Date());
+            gtag('config', '${ADS_ID}');
+            window.gtag_report_conversion = function (url, talepId) {
+              var callback = function () {
+                if (typeof(url) != 'undefined') {
+                  window.location = url;
+                }
+              };
+              gtag('event', 'conversion', {
+                  'send_to': '${ADS_FORM_DONUSUMU}',
+                  'transaction_id': talepId || '',
+                  'event_callback': callback
+              });
+              return false;
+            };
           `}
         </Script>
 

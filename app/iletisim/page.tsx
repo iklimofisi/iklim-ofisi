@@ -7,6 +7,7 @@ import Link from "next/link";
 import DosyaSecici from "@/components/DosyaSecici";
 import TelefonEpostaAlanlari from "@/components/TelefonEpostaAlanlari";
 import { whatsappNumarasi } from "@/components/IletisimButonlari";
+import FormDonusumu from "@/components/FormDonusumu";
 
 const HATA_MESAJI: Record<string, string> = {
   "eksik-bilgi": "Ad soyad ve proje detayı alanlarını doldurmanız gerekiyor, tekrar deneyin.",
@@ -28,7 +29,7 @@ export const metadata: Metadata = {
 export default async function Iletisim({
   searchParams,
 }: {
-  searchParams: { basarili?: string; hata?: string };
+  searchParams: { basarili?: string; hata?: string; talep?: string };
 }) {
   // Paneldeki güncel şirket bilgilerini veritabanından çeker
   const sirket = await getSirketAyarlari();
@@ -108,6 +109,8 @@ export default async function Iletisim({
             Talebiniz alındı, en kısa sürede sizinle iletişime geçeceğiz.
           </div>
         )}
+        {/* Google Ads: "Potansiyel müşteri formu gönderimi" dönüşümü (yalnız kaydedilen talepte, bir kez) */}
+        {searchParams?.basarili && searchParams?.talep && <FormDonusumu talepId={String(searchParams.talep).slice(0, 40)} />}
         {searchParams?.hata && (
           <div className="bg-sicak-light text-sicak-dim rounded-md px-4 py-3 mb-6 text-sm">
             {(Object.prototype.hasOwnProperty.call(HATA_MESAJI, searchParams.hata) && HATA_MESAJI[searchParams.hata]) ||

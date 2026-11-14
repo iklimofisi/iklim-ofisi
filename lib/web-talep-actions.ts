@@ -112,5 +112,6 @@ export async function webTalebiOlustur(formData: FormData) {
   });
 
   revalidatePath("/panel/talepler");
-  redirect("/iletisim?basarili=true");
+  // talep: Google Ads dönüşümü yalnız gerçekten kaydedilen talepte bir kez sayılsın diye (bot yönlendirmesinde yok)
+  redirect(`/iletisim?basarili=true&talep=${talep.id}`);
 }
