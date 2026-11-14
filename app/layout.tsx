@@ -5,6 +5,9 @@ import "./globals.css";
 // Google Analytics Kimliği Vercel'den Otomatik Okunur
 const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
+// Google Tag Manager kapsayıcısı
+const GTM_ID = "GTM-TFWGDTTJ";
+
 export const metadata: Metadata = {
   title: {
     default: "İklim Ofisi Mühendislik — İstanbul VRF, Klima & Mekanik Tesisat",
@@ -91,7 +94,32 @@ export default function RootLayout({
   return (
     <html lang="tr" className="scroll-smooth">
       <body className="bg-slate-50 text-slate-800 antialiased font-sans">
+        {/* GOOGLE TAG MANAGER (JavaScript kapalı tarayıcılar için) */}
+        <noscript>
+          <iframe
+            src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+          />
+        </noscript>
         {children}
+
+        {/* GOOGLE TAG MANAGER: dataLayer ve gtag tanımlanır, sayfa görüntüleme olayı (gtm.js) gönderilir, sonra gtm.js yüklenir */}
+        <Script id="google-tag-manager" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            window.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+            (function(){
+              var s = document.createElement('script');
+              s.async = true;
+              s.src = 'https://www.googletagmanager.com/gtm.js?id=${GTM_ID}';
+              document.head.appendChild(s);
+            })();
+          `}
+        </Script>
 
         {/* GOOGLE ANALYTICS (GA4) KODLARI */}
         {gaId && (
