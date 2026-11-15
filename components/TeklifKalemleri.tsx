@@ -550,6 +550,20 @@ export default function TeklifKalemleri({
     setYeniBolumAdi("");
   };
 
+  // Bölüm adını değiştirme (başlıktaki ✎): o bölümdeki tüm satırların bölüm adı değişir.
+  // Yeni ad başka bir bölümle aynıysa iki bölüm birleşir.
+  const [duzenlenenBolum, setDuzenlenenBolum] = useState<string | null>(null);
+  const [bolumAdiTaslak, setBolumAdiTaslak] = useState("");
+  const bolumAdiniKaydet = () => {
+    const eski = duzenlenenBolum;
+    const yeni = bolumAdiTaslak.trim().slice(0, 200);
+    setDuzenlenenBolum(null);
+    if (eski === null || !yeni || yeni === eski) return;
+    setSatirlar((onceki) =>
+      bolumlereGoreDiz(onceki.map((s) => ((s.bolum || "Genel Kalemler") === eski ? { ...s, bolum: yeni } : s)))
+    );
+  };
+
   // Kalemleri Bölümlere Göre Grupla
   const gruplanmisSatirlar = useMemo(() => {
     const gruplar: { [key: string]: { item: Satir; orjinalIndex: number }[] } = {};
@@ -730,7 +744,44 @@ export default function TeklifKalemleri({
         <div key={bolumAdi} className="border border-hat rounded-md p-3 bg-yuzey space-y-3">
           <div className="flex justify-between items-center border-b border-hat pb-2">
             <span className="font-semibold text-xs text-soguk-dim uppercase tracking-wider flex items-center gap-1.5">
-              <span>📌</span> Bölüm: <strong className="text-metin">{bolumAdi}</strong>
+              <span>📌</span> Bölüm:{" "}
+              {duzenlenenBolum === bolumAdi ? (
+                <input
+                  autoFocus
+                  value={bolumAdiTaslak}
+                  onChange={(e) => setBolumAdiTaslak(e.target.value)}
+                  onBlur={bolumAdiniKaydet}
+                  onKeyDown={(e) => {
+                    // Enter formu göndermesin; Enter = kaydet, Esc = vazgeç
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      bolumAdiniKaydet();
+                    } else if (e.key === "Escape") {
+                      e.preventDefault();
+                      setDuzenlenenBolum(null);
+                    }
+                  }}
+                  maxLength={200}
+                  aria-label="Bölüm adı"
+                  className="focus-ring normal-case tracking-normal text-sm font-semibold text-metin border border-soguk rounded px-2 py-0.5 min-w-[16rem] bg-white"
+                />
+              ) : (
+                <>
+                  <strong className="text-metin">{bolumAdi}</strong>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBolumAdiTaslak(bolumAdi);
+                      setDuzenlenenBolum(bolumAdi);
+                    }}
+                    title="Bölüm adını değiştir"
+                    aria-label={`${bolumAdi} bölümünün adını değiştir`}
+                    className="focus-ring normal-case tracking-normal text-metin/45 hover:text-soguk-dim px-1"
+                  >
+                    ✎
+                  </button>
+                </>
+              )}
               <span className="normal-case tracking-normal font-mono text-metin/70 ml-2">
                 Bölüm toplamı:{" "}
                 {formatPara(
