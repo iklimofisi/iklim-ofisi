@@ -386,9 +386,38 @@ export default function TeklifKalemleri({
     );
   };
 
-  // Satır Sil
+  // Satır Sil. Bölümün son satırı silinirse bölüm başlığı kaybolmasın diye yerine boş bir satır
+  // bırakılır (boş satır kaydedilmez). Bölümün tamamı başlıktaki "Bölümü kaldır" ile silinir.
   const satirSil = (key: number | string) => {
-    setSatirlar((prev) => prev.filter((s) => s.key !== key));
+    setSatirlar((prev) => {
+      const silinen = prev.find((s) => s.key === key);
+      const kalan = prev.filter((s) => s.key !== key);
+      if (!silinen) return kalan;
+      const bolum = silinen.bolum || "Genel Kalemler";
+      if (kalan.some((s) => (s.bolum || "Genel Kalemler") === bolum)) return kalan;
+      return bolumlereGoreDiz(
+        prev.map((s) =>
+          s.key === key
+            ? {
+                key: Date.now() + Math.random(),
+                bolum,
+                aciklama: "",
+                adet: "1",
+                birim: VARSAYILAN_BIRIM,
+                birimFiyat: "0",
+                iskontoYuzde: topluIskontoOrani || "0",
+                markaId: "",
+              }
+            : s
+        )
+      );
+    });
+  };
+  // Bölümü (tüm satırlarıyla) kaldır
+  const bolumuKaldir = (bolumAdi: string) => {
+    const sayi = satirlar.filter((s) => (s.bolum || "Genel Kalemler") === bolumAdi && (s.aciklama ?? "").trim()).length;
+    if (sayi > 0 && !window.confirm(`"${bolumAdi}" bölümü ve içindeki ${sayi} kalem tekliften kaldırılsın mı? (Kaydetmeden önce geri almak için sayfayı yenileyebilirsiniz.)`)) return;
+    setSatirlar((prev) => prev.filter((s) => (s.bolum || "Genel Kalemler") !== bolumAdi));
   };
 
   // Katalogdan Ürün Seçildiğinde Fiyat ve Açıklamayı Doldur
@@ -793,13 +822,23 @@ export default function TeklifKalemleri({
                 {sembol}
               </span>
             </span>
-            <button
-              type="button"
-              onClick={() => satirEkle(bolumAdi)}
-              className="text-xs text-soguk-dim font-medium hover:underline"
-            >
-              + Bu Bölüme Kalem Ekle
-            </button>
+            <span className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => satirEkle(bolumAdi)}
+                className="text-xs text-soguk-dim font-medium hover:underline"
+              >
+                + Bu Bölüme Kalem Ekle
+              </button>
+              <button
+                type="button"
+                onClick={() => bolumuKaldir(bolumAdi)}
+                title="Bölümü içindeki kalemlerle birlikte kaldır"
+                className="text-xs text-metin/40 hover:text-sicak-dim font-medium"
+              >
+                Bölümü kaldır
+              </button>
+            </span>
           </div>
 
           <div className={`hidden sm:grid ${izgara} gap-2 text-xs text-metin/50 px-1 font-medium`}>
