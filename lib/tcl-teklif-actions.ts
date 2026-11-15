@@ -1,7 +1,8 @@
 "use server";
 
 // -----------------------------------------------------------------------------
-// TCL TEKLİF PDF'İNDEN TEDARİKÇİ (SATINALMA) TEKLİFİ
+// TCL / VIESSMANN TEKLİF PDF'İNDEN TEDARİKÇİ (SATINALMA) TEKLİFİ
+// PDF'in biçimi kendiliğinden tanınır (Viessmann teklifi ya da TCL teklifi).
 //   tclTeklifPdfOku    : yüklenen PDF'i okur, önizleme için döner (veritabanına YAZMAZ)
 //   tclSatinalmaKaydet : PDF'i yeniden okuyup satınalma teklifi olarak kaydeder
 //                        (ürün grupları bölüm olarak, PDF maliyet dosyası olarak saklanır)
@@ -15,6 +16,7 @@ import { girisZorunlu } from "@/lib/oturum";
 import { islemKaydet } from "@/lib/islem-kaydi";
 import type { PdfSayfa } from "@/lib/netsa-ayikla";
 import { tclTeklifAyikla, tclKalemAciklamasi, type TclSonuc } from "@/lib/tcl-teklif-ayikla";
+import { viessmannTeklifAyikla, viessmannTeklifiMi } from "@/lib/viessmann-teklif-ayikla";
 
 const EN_BUYUK = 10 * 1024 * 1024;
 
@@ -59,7 +61,10 @@ async function dosyayiOku(dosya: FormDataEntryValue | null): Promise<{ pdf: Buff
   try {
     const pdf = Buffer.from(await dosya.arrayBuffer());
     if (pdf.subarray(0, 5).toString("latin1") !== "%PDF-") return { hata: "Dosya PDF değil.", ad };
-    const sonuc = tclTeklifAyikla(await pdfSayfalari(pdf));
+    const sayfalar = await pdfSayfalari(pdf);
+    const sonuc: TclSonuc = viessmannTeklifiMi(sayfalar)
+      ? { ...viessmannTeklifAyikla(sayfalar), firma: "VIESSMANN" }
+      : { ...tclTeklifAyikla(sayfalar), firma: "TCL" };
     if (!sonuc.kalemler.length) return { hata: sonuc.uyarilar[0] ?? "Teklifte ürün satırı bulunamadı.", ad };
     return { pdf, ad, tip: dosya.type || "application/pdf", sonuc };
   } catch (e) {

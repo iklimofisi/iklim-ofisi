@@ -69,9 +69,9 @@ export default async function SatinalmaTekliflerPage() {
       {/* 0. TCL TEKLİF PDF'İNDEN OTOMATİK TEDARİKÇİ TEKLİFİ */}
       <div className="bg-soguk-light/30 border border-soguk/40 rounded-lg p-5 space-y-3 shadow-sm">
         <div>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-soguk-dim">📄 TCL Teklif PDF&apos;inden Otomatik Ekle</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-soguk-dim">📄 TCL / Viessmann Teklif PDF&apos;inden Otomatik Ekle</h2>
           <p className="text-xs text-metin/60 mt-1">
-            TCL&apos;den gelen teklif PDF&apos;ini seçin: ürün grupları, model kodları, adetler ve fiyatlar okunur. Kaydettikten sonra kâr oranını
+            TCL ya da Viessmann&apos;dan gelen teklif PDF&apos;ini seçin (biçim kendiliğinden tanınır): ürün grupları, model kodları, adetler ve fiyatlar okunur. Kaydettikten sonra kâr oranını
             yazıp tek tıkla müşteri teklif formuna aktarırsınız.
           </p>
         </div>

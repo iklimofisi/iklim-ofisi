@@ -6,7 +6,8 @@ import KaydetButonu from "@/components/KaydetButonu";
 import type { TclSonuc } from "@/lib/tcl-teklif-ayikla";
 
 // -----------------------------------------------------------------------------
-// TCL TEKLİF PDF'İ YÜKLE → satınalma teklifi
+// TCL / VIESSMANN TEKLİF PDF'İ YÜKLE → satınalma teklifi
+// (biçim kendiliğinden tanınır; Viessmann tekliflerindeki fiyatlar zaten net alıştır)
 // PDF seçilince okunur ve önizlenir (ürün grupları, adet, birim fiyat, Net Tutar
 // kontrolü). PDF'teki fiyatlar liste fiyatıdır; firmanın verdiği alış iskontosu
 // yazılınca net alış fiyatları görünür. "Kaydet" ile satınalma teklifi oluşur;
@@ -33,6 +34,7 @@ export default function TclTeklifYukle({
   const [hata, setHata] = useState<string | null>(null);
   const [baslik, setBaslik] = useState(sabitKonu ?? "");
   const [tedarikciId, setTedarikciId] = useState(() => tedarikciler.find((t) => /tcl/i.test(t.ad))?.id ?? "");
+  const [tedarikciElle, setTedarikciElle] = useState(false); // kullanıcı tedarikçiyi kendisi seçtiyse PDF'e göre değiştirilmez
   const [iskontoMetin, setIskontoMetin] = useState("");
   const iskN = (() => {
     const n = Number(iskontoMetin.trim().replace("%", "").replace(",", "."));
@@ -52,6 +54,12 @@ export default function TclTeklifYukle({
       const r = await tclTeklifPdfOku(fd);
       if (r.basarili) {
         setSonuc(r.sonuc);
+        // PDF hangi firmanınsa o tedarikçi seçili gelir (kullanıcı kendisi seçmediyse)
+        if (!tedarikciElle) {
+          const desen = r.sonuc.firma === "VIESSMANN" ? /viessmann/i : /tcl/i;
+          const t = tedarikciler.find((x) => desen.test(x.ad));
+          if (t) setTedarikciId(t.id);
+        }
         if (!sabitKonu && !baslik.trim() && r.sonuc.projeAdi) setBaslik(r.sonuc.projeAdi);
       } else setHata(r.hata);
     } catch (e) {
@@ -79,7 +87,7 @@ export default function TclTeklifYukle({
       {teklifeAktar && <input type="hidden" name="sonra" value="teklif" />}
       <div className={`grid gap-3 ${teklifeAktar ? "sm:grid-cols-5" : "sm:grid-cols-4"}`}>
         <div>
-          <label className="block text-xs font-medium text-metin/60 mb-1">TCL teklif PDF&apos;i *</label>
+          <label className="block text-xs font-medium text-metin/60 mb-1">TCL / Viessmann teklif PDF&apos;i *</label>
           <input
             name="pdf"
             type="file"
@@ -113,7 +121,16 @@ export default function TclTeklifYukle({
         )}
         <div>
           <label className="block text-xs font-medium text-metin/60 mb-1">Tedarikçi *</label>
-          <select name="tedarikciId" required value={tedarikciId} onChange={(e) => setTedarikciId(e.target.value)} className={kutu}>
+          <select
+            name="tedarikciId"
+            required
+            value={tedarikciId}
+            onChange={(e) => {
+              setTedarikciId(e.target.value);
+              setTedarikciElle(true);
+            }}
+            className={kutu}
+          >
             <option value="">— Tedarikçi seçin —</option>
             {tedarikciler.map((t) => (
               <option key={t.id} value={t.id}>
@@ -132,7 +149,11 @@ export default function TclTeklifYukle({
             placeholder="örn. 35"
             className={`${kutu} ${iskontoHatali ? "border-sicak/60" : ""}`}
           />
-          <p className="text-[10px] text-metin/45 mt-0.5">PDF&apos;teki liste fiyatlarından düşülür; sonradan değiştirilebilir.</p>
+          <p className="text-[10px] text-metin/45 mt-0.5">
+            {sonuc?.firma === "VIESSMANN"
+              ? "Viessmann fiyatları zaten net alış; iskonto yoksa boş bırakın."
+              : "PDF'teki liste fiyatlarından düşülür; sonradan değiştirilebilir."}
+          </p>
         </div>
         {teklifeAktar && (
           <div>
@@ -151,6 +172,7 @@ export default function TclTeklifYukle({
         <div className="border border-hat rounded-md bg-white">
           <div className="px-3 py-2 border-b border-hat flex flex-wrap items-center justify-between gap-2 text-xs">
             <span>
+              {sonuc.firma === "VIESSMANN" && <span className="mr-1.5 px-1.5 py-0.5 rounded bg-sicak/15 text-sicak-dim font-semibold">Viessmann</span>}
               <strong className="text-metin">{sonuc.projeAdi || "Proje adı okunamadı"}</strong>
               <span className="text-metin/50"> · {sonuc.tarih || "tarih yok"} · {sonuc.kalemler.length} kalem · {pb}</span>
             </span>
@@ -159,11 +181,11 @@ export default function TclTeklifYukle({
                 <span className="text-amber-800">Birim fiyatsız teklif · Net Tutar {sonuc.netTutar != null ? para(sonuc.netTutar, pb) : "—"}</span>
               ) : (
                 <>
-                  Liste toplamı <strong>{para(sonuc.kalemToplami, pb)}</strong>
+                  {sonuc.firma === "VIESSMANN" ? "Net alış toplamı" : "Liste toplamı"} <strong>{para(sonuc.kalemToplami, pb)}</strong>
                   {sonuc.netTutar != null && (
                     <span className={tutuyor ? "text-emerald-700" : "text-sicak-dim"}>
                       {" "}
-                      · PDF Net Tutar {para(sonuc.netTutar, pb)} {tutuyor ? "✓" : "⚠"}
+                      · PDF {sonuc.firma === "VIESSMANN" ? "Pozisyonlar toplamı" : "Net Tutar"} {para(sonuc.netTutar, pb)} {tutuyor ? "✓" : "⚠"}
                     </span>
                   )}
                 </>
@@ -182,7 +204,7 @@ export default function TclTeklifYukle({
                 <tr>
                   <th className="text-left px-3 py-1.5">Ürün</th>
                   <th className="text-right px-2 py-1.5">Adet</th>
-                  <th className="text-right px-2 py-1.5">Liste fiyatı</th>
+                  <th className="text-right px-2 py-1.5">{sonuc.firma === "VIESSMANN" ? "Birim fiyat" : "Liste fiyatı"}</th>
                   {iskN > 0 && <th className="text-right px-2 py-1.5 text-soguk-dim">Net alış</th>}
                   <th className="text-right px-3 py-1.5">{iskN > 0 ? "Net tutar" : "Tutar"}</th>
                 </tr>

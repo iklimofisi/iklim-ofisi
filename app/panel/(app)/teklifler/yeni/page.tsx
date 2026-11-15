@@ -59,9 +59,12 @@ export default async function YeniTeklifSayfasi({
   if (satinalma) {
     const d = donusumKalemleri(satinalma, marj);
     aktarimFiyatsiz = d.fiyatsizVar;
-    // TCL ürünleri (tedarikçi adı ya da TCL model kodu) panelde TCL markasıyla gelir
+    // TCL ürünleri (tedarikçi adı ya da TCL model kodu) panelde TCL markasıyla gelir;
+    // Viessmann teklifinden gelen ürünler (tedarikçi adı ya da "Vitoclima" ürün adı) Viessmann markasıyla
     const tclMi = /tcl/i.test(satinalma.tedarikci.ad) || satinalma.kalemler.some((k) => /^TMV-/i.test(k.aciklama));
-    const tclMarka = tclMi ? markalar.find((m) => m.ad.trim().toLocaleUpperCase("tr-TR") === "TCL") : undefined;
+    const viessmannMi = /viessmann/i.test(satinalma.tedarikci.ad) || satinalma.kalemler.some((k) => /^Vitoclima|Viessmann/i.test(k.aciklama));
+    const markaAdi = viessmannMi ? "VIESSMANN" : tclMi ? "TCL" : "";
+    const tclMarka = markaAdi ? markalar.find((m) => m.ad.trim().toLocaleUpperCase("tr-TR") === markaAdi) : undefined;
     aktarimKalemleri = d.kalemler.map((k, i) => ({
       key: `aktarim-${i}`,
       bolum: k.bolum || "Genel Kalemler",
@@ -101,13 +104,14 @@ export default async function YeniTeklifSayfasi({
       {!satinalma && (
         <details className="group bg-soguk-light/30 border border-soguk/40 rounded-lg p-4 mb-5">
           <summary className="cursor-pointer list-none flex items-center justify-between gap-3">
-            <span className="text-sm font-semibold text-soguk-dim">📄 TCL teklif PDF&apos;inden doldur</span>
+            <span className="text-sm font-semibold text-soguk-dim">📄 TCL / Viessmann teklif PDF&apos;inden doldur</span>
             <span className="text-xs text-metin/50 group-open:hidden">Aç</span>
             <span className="text-xs text-metin/50 hidden group-open:inline">Kapat</span>
           </summary>
           <p className="text-xs text-metin/60 mt-2 mb-3">
             PDF&apos;i seçin, alış iskontosu ve kâr oranını yazın: kalemler ürün gruplarıyla, iskonto düşülüp kâr eklenmiş fiyatla aşağıdaki forma
-            gelir. Tedarikçi teklifi Satınalma bölümüne de kaydedilir.
+            gelir. Tedarikçi teklifi Satınalma bölümüne de kaydedilir. TCL ve Viessmann tekliflerinin biçimi kendiliğinden tanınır (Viessmann
+            fiyatları zaten net alış olduğu için iskonto genelde boş bırakılır).
           </p>
           <TclTeklifYukle tedarikciler={tedarikciler} konular={konuKayitlari.map((k) => k.baslik).filter(Boolean)} teklifeAktar />
         </details>
