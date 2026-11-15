@@ -80,6 +80,17 @@ export function tarihYaz(d: Date) {
 // genel toplamla aynı esasta: KDV hariç teklifte KDV hariç, KDV dahilde dahil).
 // Böylece bölüm toplamlarının toplamı her zaman Genel Toplam'a eşittir.
 // Sıra: bölümler kalemlerde ilk göründükleri sırayla.
+// Birim fiyatı gizlenen bölümler (Teklif.fiyatGizliBolumler JSON dizisi; bozuk / boşsa hiçbiri)
+export function gizliFiyatBolumleri(json: string | null | undefined): Set<string> {
+  if (!json) return new Set();
+  try {
+    const v = JSON.parse(json);
+    return new Set(Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim() !== "").map((x) => x.trim()) : []);
+  } catch {
+    return new Set();
+  }
+}
+
 export function bolumToplamlari(kalemler: (KalemHesap & { bolum?: string | null })[]) {
   const m = new Map<string, number>();
   for (const k of kalemler) {

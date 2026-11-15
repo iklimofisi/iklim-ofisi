@@ -8,7 +8,7 @@ import OtomatikYazdir from "@/components/OtomatikYazdir";
 import TeklifDurumSecici from "@/components/TeklifDurumSecici";
 import { getSirketAyarlari } from "@/lib/sirket";
 import TeklifEpostaGonderModal from "@/components/TeklifEpostaGonderModal"; // MODAL İMPORT EDİLDİ
-import { musteriToplami, ilkHazirlanmaTarihi, musteriTeklifTarihi, kosulCumlesi, tarihYaz, bolumToplamlari } from "@/lib/teklif-hesap";
+import { musteriToplami, ilkHazirlanmaTarihi, musteriTeklifTarihi, kosulCumlesi, tarihYaz, bolumToplamlari, gizliFiyatBolumleri } from "@/lib/teklif-hesap";
 import { sablonlariGrupla, notlariUygula } from "@/lib/sablon";
 import { ISTIRAK_METNI } from "@/lib/kurumsal";
 import TeklifWhatsapp from "@/components/TeklifWhatsapp";
@@ -104,6 +104,8 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
   const bolumler = bolumToplamlari(teklif.kalemler);
   const bolumToplamiGoster = teklif.birimFiyatGoster && bolumler.length > 1;
   const bolumTutari = new Map(bolumler.map((b) => [b.bolum, b.tutar]));
+  // Birim fiyatı gizlenen bölümler: satırlarda fiyat / tutar yok, yalnız bölüm toplamı (PDF ile aynı)
+  const gizliBolumler = gizliFiyatBolumleri(teklif.fiyatGizliBolumler);
   const ilkTarih = ilkHazirlanmaTarihi(teklif);
 
   // Teklifin muhatabı: seçilen yetkili, yoksa müşterinin ana yetkilisi
@@ -390,6 +392,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
                 </tr>
 
                 {kalemler.map((k) => {
+                  const bolumGizli = teklif.birimFiyatGoster && gizliBolumler.has(bolumAdi);
                   const netBirimFiyat = k.birimFiyat * (1 - k.iskontoYuzde / 100);
                   const satirTutar = k.adet * netBirimFiyat;
 
@@ -409,19 +412,25 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
                         </div>
                       </td>
                       <td className="py-2 text-right text-metin/70 whitespace-nowrap">{miktarYaz(k.adet, k.birim)}</td>
-                      {teklif.birimFiyatGoster && (
-                        <>
-                          <td className="py-2 text-right text-metin/70 whitespace-nowrap">{paraFormat(netBirimFiyat, pb)}</td>
-                          <td className="py-2 text-right text-metin whitespace-nowrap">{paraFormat(satirTutar, pb)}</td>
-                        </>
-                      )}
+                      {teklif.birimFiyatGoster &&
+                        (bolumGizli ? (
+                          <>
+                            <td />
+                            <td />
+                          </>
+                        ) : (
+                          <>
+                            <td className="py-2 text-right text-metin/70 whitespace-nowrap">{paraFormat(netBirimFiyat, pb)}</td>
+                            <td className="py-2 text-right text-metin whitespace-nowrap">{paraFormat(satirTutar, pb)}</td>
+                          </>
+                        ))}
                     </tr>
                   );
                 })}
 
                 {/* Bölüm toplamı: yalnızca birden fazla kalemli bölümlerde
                     (tek kalemde satır tutarıyla aynı olacağı için tekrar yazılmaz) */}
-                {bolumToplamiGoster && kalemler.length > 1 && (
+                {((bolumToplamiGoster && kalemler.length > 1) || (teklif.birimFiyatGoster && gizliBolumler.has(bolumAdi))) && (
                   <tr className="break-inside-avoid">
                     <td colSpan={3} className="pt-1.5 pb-1 pr-4 text-right text-xs text-metin/60">
                       {bolumAdi} toplamı

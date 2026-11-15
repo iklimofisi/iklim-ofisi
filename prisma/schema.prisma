@@ -101,6 +101,7 @@ model Teklif {
   kdvDahil                 Boolean           @default(false)
   gecerlilikGunu           Int               @default(15)
   birimFiyatGoster         Boolean           @default(true)
+  fiyatGizliBolumler       String?           // JSON dizi: PDF'te birim fiyatı / satır tutarı gizlenen bölüm adları (yalnız bölüm toplamı görünür)
   revizyonNo               Int               @default(1)
   olusturanKullaniciId     String?           // Hazırlayan Kullanıcı Bağlantısı
   olusturanKullanici       Kullanici?        @relation(fields: [olusturanKullaniciId], references: [id])

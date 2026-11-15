@@ -67,6 +67,7 @@ export default function TeklifKalemleri({
   paraBirimi = "TRY",
   kurlar = null,
   birimli = true,
+  gizliFiyatBolumleri = [],
 }: {
   baslangic?: Satir[];
   markalar?: { id: string; ad: string }[];
@@ -74,7 +75,10 @@ export default function TeklifKalemleri({
   paraBirimi?: string;
   kurlar?: { tarih: string; USD: number; EUR: number } | null; // TCMB efektif satış (1 birim = ? TL)
   birimli?: boolean; // ölçü birimi seçimi (müşteri teklifleri). Tedarikçi teklifi ekranında kapalı.
+  gizliFiyatBolumleri?: string[]; // PDF'te birim fiyatı gizlenen bölümler (müşteri teklifleri)
 }) {
+  // Bölüm bazında birim fiyat gizleme (PDF'te o bölümde yalnız bölüm toplamı görünür). Yalnız müşteri tekliflerinde.
+  const [gizliBolumler, setGizliBolumler] = useState<Set<string>>(() => new Set(gizliFiyatBolumleri));
   // State: Tüm kalemler
   const [satirlar, setSatirlar] = useState<Satir[]>(() => {
     if (baslangic && baslangic.length > 0) {
@@ -418,6 +422,12 @@ export default function TeklifKalemleri({
     const sayi = satirlar.filter((s) => (s.bolum || "Genel Kalemler") === bolumAdi && (s.aciklama ?? "").trim()).length;
     if (sayi > 0 && !window.confirm(`"${bolumAdi}" bölümü ve içindeki ${sayi} kalem tekliften kaldırılsın mı? (Kaydetmeden önce geri almak için sayfayı yenileyebilirsiniz.)`)) return;
     setSatirlar((prev) => prev.filter((s) => (s.bolum || "Genel Kalemler") !== bolumAdi));
+    setGizliBolumler((g) => {
+      if (!g.has(bolumAdi)) return g;
+      const n = new Set(g);
+      n.delete(bolumAdi);
+      return n;
+    });
   };
 
   // Katalogdan Ürün Seçildiğinde Fiyat ve Açıklamayı Doldur
@@ -586,8 +596,26 @@ export default function TeklifKalemleri({
   const bolumAdiniKaydet = () => {
     const eski = duzenlenenBolum;
     const yeni = bolumAdiTaslak.trim().slice(0, 200);
+    if (eski === null || !yeni || yeni === eski) {
+      setDuzenlenenBolum(null);
+      return;
+    }
+    // Aynı adda başka bölüm varsa sessizce birleştirme: sor; vazgeçilirse düzenleme açık kalır
+    const varOlan = satirlar.some((s) => (s.bolum || "Genel Kalemler") === yeni);
+    if (
+      varOlan &&
+      !window.confirm(`"${yeni}" adında bir bölüm zaten var. "${eski}" bölümünün kalemleri o bölüme taşınıp iki bölüm birleştirilsin mi?\n\nBirleştirmek istemiyorsanız "İptal"e basıp farklı bir ad yazın.`)
+    ) {
+      return;
+    }
     setDuzenlenenBolum(null);
-    if (eski === null || !yeni || yeni === eski) return;
+    setGizliBolumler((g) => {
+      if (!g.has(eski)) return g;
+      const n = new Set(g);
+      n.delete(eski);
+      n.add(yeni);
+      return n;
+    });
     setSatirlar((onceki) =>
       bolumlereGoreDiz(onceki.map((s) => ((s.bolum || "Genel Kalemler") === eski ? { ...s, bolum: yeni } : s)))
     );
@@ -632,6 +660,11 @@ export default function TeklifKalemleri({
 
   return (
     <div ref={kokRef} className="space-y-4 mb-6">
+      {/* Birim fiyatı gizlenen bölümler (yalnız teklifte bulunan bölümler gönderilir) */}
+      {birimli &&
+        [...gizliBolumler]
+          .filter((b) => satirlar.some((s) => (s.bolum || "Genel Kalemler") === b))
+          .map((b) => <input key={b} type="hidden" name="fiyatGizliBolum" value={b} />)}
       {/* PARA BİRİMİ DEĞİŞTİ → FİYATLARI ÇEVİRME ÖNERİSİ */}
       {cevirmeBekliyor && fiyatPb && (
         <div role="alert" className="bg-amber-50 border border-amber-300 rounded-md p-4 space-y-3">
@@ -823,6 +856,28 @@ export default function TeklifKalemleri({
               </span>
             </span>
             <span className="flex items-center gap-3">
+              {birimli && (
+                <label
+                  className="flex items-center gap-1 text-xs text-metin/60 cursor-pointer select-none"
+                  title="PDF'te bu bölümdeki kalemlerin birim fiyatı ve satır tutarı görünmez; bölümün altında yalnız bölüm toplamı yazar."
+                >
+                  <input
+                    type="checkbox"
+                    checked={gizliBolumler.has(bolumAdi)}
+                    onChange={(e) => {
+                      const ac = e.target.checked;
+                      setGizliBolumler((g) => {
+                        const n = new Set(g);
+                        if (ac) n.add(bolumAdi);
+                        else n.delete(bolumAdi);
+                        return n;
+                      });
+                    }}
+                    className="accent-soguk"
+                  />
+                  Birim fiyatları gizle
+                </label>
+              )}
               <button
                 type="button"
                 onClick={() => satirEkle(bolumAdi)}

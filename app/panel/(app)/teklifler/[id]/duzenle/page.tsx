@@ -11,6 +11,7 @@ import MontajSecimi from "@/components/MontajSecimi";
 import { montajKalemleri } from "@/lib/montaj";
 import { ozelNotlariOku } from "@/lib/sablon";
 import KaydetButonu from "@/components/KaydetButonu";
+import { gizliFiyatBolumleri } from "@/lib/teklif-hesap";
 
 export const dynamic = "force-dynamic";
 
@@ -146,6 +147,7 @@ export default async function TeklifDuzenle({
 
         <TeklifKalemleri
           kurlar={kurlar}
+          gizliFiyatBolumleri={[...gizliFiyatBolumleri(teklif.fiyatGizliBolumler)]}
           markalar={markalar.map((m) => ({ id: m.id, ad: m.ad }))}
           urunler={urunler.map((u) => ({
             id: u.id,

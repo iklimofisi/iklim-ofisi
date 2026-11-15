@@ -203,6 +203,14 @@ function ozelNotlarVerisi(formData: FormData, sablonIds: string[]): string | nul
   return Object.keys(sonuc).length ? JSON.stringify(sonuc) : null;
 }
 
+// Birim fiyatı gizlenecek bölümler (formdaki "fiyatGizliBolum" işaretleri); yalnız teklifte
+// gerçekten bulunan bölümler saklanır. Hiçbiri yoksa null.
+function fiyatGizliBolumVerisi(formData: FormData, kalemler: ReturnType<typeof kalemleriOku>): string | null {
+  const mevcut = new Set(kalemler.map((k) => k.bolum || "Genel Kalemler"));
+  const secili = [...new Set((formData.getAll("fiyatGizliBolum") as string[]).map((x) => String(x).trim()))].filter((b) => b && mevcut.has(b));
+  return secili.length ? JSON.stringify(secili.slice(0, 200)) : null;
+}
+
 // Kalemi veritabanına yazılacak alanlara indirger (formdaki eskiId alanı yazılmaz)
 // "sira": formdaki sırası — kalemler her yerde bu sırayla listelenir
 function kalemVerisi(k: ReturnType<typeof kalemleriOku>[number], sira: number) {
@@ -281,6 +289,7 @@ export async function teklifEkle(formData: FormData) {
       kdvDahil,
       gecerlilikGunu,
       birimFiyatGoster,
+      fiyatGizliBolumler: fiyatGizliBolumVerisi(formData, kalemler),
       olusturanKullaniciId: kullanici?.id || null,
       olusturanAdi: kullanici?.ad ?? "",
       tarih: simdi,
@@ -412,6 +421,7 @@ export async function teklifGuncelle(formData: FormData) {
         kdvDahil,
         gecerlilikGunu,
         birimFiyatGoster,
+        fiyatGizliBolumler: fiyatGizliBolumVerisi(formData, kalemler),
         tarih: new Date(), // Son Güncelleme / Revizyon Tarihi Olur
         revizyonNo: mevcut.revizyonNo + 1,
         sablonlar: { set: sablonIds.map((id) => ({ id })) },

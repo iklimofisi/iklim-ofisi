@@ -25,6 +25,7 @@ const BELGE_ALANLARI = {
   kdvDahil: true,
   gecerlilikGunu: true,
   birimFiyatGoster: true,
+  fiyatGizliBolumler: true,
   revizyonNo: true,
   olusturanAdi: true,
   musteri: true,

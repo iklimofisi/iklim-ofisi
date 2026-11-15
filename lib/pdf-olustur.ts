@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf";
 import { LIBERATION_SANS_NORMAL, LIBERATION_SANS_KALIN } from "@/lib/pdf-fontlari";
 import { PDF_LOGO_JPEG_BASE64, PDF_LOGO_ORAN } from "@/lib/pdf-logo";
-import { musteriToplami, ilkHazirlanmaTarihi, musteriTeklifTarihi, kosulCumlesi, bolumToplamlari } from "@/lib/teklif-hesap";
+import { musteriToplami, ilkHazirlanmaTarihi, musteriTeklifTarihi, kosulCumlesi, bolumToplamlari, gizliFiyatBolumleri } from "@/lib/teklif-hesap";
 import { sablonlariGrupla, notlariUygula } from "@/lib/sablon";
 import { ISTIRAK_METNI } from "@/lib/kurumsal";
 import { miktarYaz } from "@/lib/birimler";
@@ -269,8 +269,11 @@ export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer
   const bolumOzet = bolumToplamlari(teklif.kalemler ?? []);
   const bolumToplamiGoster = fiyatli && bolumOzet.length > 1;
   const bolumTutari = new Map(bolumOzet.map((b) => [b.bolum, b.tutar]));
+  // Birim fiyatı gizlenen bölümlerde satırlarda fiyat / tutar yazmaz; yalnız bölüm toplamı görünür
+  const gizliBolumler = gizliFiyatBolumleri(teklif.fiyatGizliBolumler);
 
   for (const [bolumAdi, kalemler] of bolumler) {
+    const bolumGizli = fiyatli && gizliBolumler.has(bolumAdi);
     // Bölüm başlığı en az bir kalemle aynı sayfada olsun
     if (yerAc(16)) tabloBasligi();
     doc.setFillColor(...BOLUM_ZEMIN);
@@ -303,7 +306,7 @@ export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer
       doc.text(satirlar, metinX, ilkSatirY);
       yazi(8.5, false, METIN_70);
       doc.text(metin(miktarYaz(Number(k.adet ?? 1), k.birim)), X_ADET, ilkSatirY, { align: "right" });
-      if (fiyatli) {
+      if (fiyatli && !bolumGizli) {
         doc.text(paraYaz(netBirim, pb), X_BIRIM, ilkSatirY, { align: "right" });
         yazi(8.5, false, METIN);
         doc.text(paraYaz(tutar, pb), X_TUTAR, ilkSatirY, { align: "right" });
@@ -314,7 +317,7 @@ export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer
     });
 
     // Tek kalemli bölümde bölüm toplamı satır tutarıyla aynı; tekrar yazılmaz
-    if (bolumToplamiGoster && kalemler.length > 1) {
+    if ((bolumToplamiGoster && kalemler.length > 1) || bolumGizli) {
       if (yerAc(9)) tabloBasligi();
       cizgi(X_ADET - 20, y, SAG, y, METIN_40, 0.3);
       yazi(8, true, SOGUK_DIM);
