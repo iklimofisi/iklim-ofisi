@@ -10,6 +10,9 @@ export interface Makale {
   gorselAlt: string;
   gorselSigdir?: boolean; // beyaz zeminli ürün fotoğrafı: kırpmadan sığdır
   guncelleme?: string; // içerik sonradan önemli ölçüde güncellendiyse ("30 Ekim 2026")
+  seoBaslik?: string; // Google sonuçlarında görünen başlık (en çok ~60 karakter); yoksa "baslik | İklim Ofisi Mühendislik"
+  seoAciklama?: string; // Google sonuçlarında görünen açıklama (en çok ~155 karakter); yoksa ozet
+  sss?: [soru: string, cevap: string][]; // makale sonunda sık sorulan sorular (FAQPage yapısal verisi de eklenir)
 }
 
 // Paylaşım görseli (1200x630, logo + başlık): public/og/blog/<slug>.jpg
@@ -230,12 +233,16 @@ export const MAKALELER: Makale[] = [
     baslik: "Hava Perdesi Nedir, Ne İşe Yarar, Nasıl Seçilir?",
     kategori: "HAVA PERDESİ",
     tarih: "25 Ekim 2026",
-    guncelleme: "30 Ekim 2026",
-    okumaSuresi: "5 dk okuma",
+    guncelleme: "16 Kasım 2026",
+    okumaSuresi: "6 dk okuma",
+    seoBaslik: "Hava Perdesi Nedir, Nasıl Seçilir? Yükseklik Tablosu (2026)",
+    seoAciklama: "Hava perdesi kapı açıkken ısının kaçmasını önler. Kapı genişliği ve 3–12 m montaj yüksekliğine göre model tablosu, ısıtıcılı mı ısıtıcısız mı, montaj ipuçları.",
     gorsel: "/hava-perdesi/olefini-kapi.jpg",
     gorselAlt: "Ahşap giriş kapısı üzerine monte edilmiş hava perdesi",
     ozet: "Hava perdesi ne işe yarar, nasıl çalışır, nerelerde kullanılır? Enerji tasarrufu, girişte konfor ve doğru model seçimi: kapı genişliği, montaj yüksekliği, ısıtıcılı veya ısıtıcısız tercih ve montajda dikkat edilecekler.",
     icerikHtml: `
+      <aside><p><strong>Kısaca:</strong> Hava perdesi, kapı açıkken içerideki ısıtılmış veya soğutulmuş havanın dışarı kaçmasını azaltan, kapının üstüne takılan bir fan cihazıdır. Doğru model için üç şeye bakılır: <strong>kapı genişliği</strong> (cihaz boyu kapıya eşit ya da biraz uzun olmalı), <strong>montaj yüksekliği</strong> (seriyi belirler) ve <strong>girişin ısıtılması gerekip gerekmediği</strong> (ısıtıcılı / ısıtıcısız).</p></aside>
+
       <h2>Hava Perdesi Nedir?</h2>
       <p>Hava perdesi, kapının üst kısmına monte edilen ve aşağıya doğru güçlü, düzgün bir hava akımı üfleyen cihazdır. Bu hava akımı kapı açıkken iç ve dış ortam arasında görünmez bir bariyer oluşturur. Böylece kışın ısıtılmış, yazın soğutulmuş hava içeride kalır.</p>
 
@@ -262,6 +269,17 @@ export const MAKALELER: Makale[] = [
       <p>Hava perdesinin boyu kapı genişliğine eşit ya da biraz fazla olmalıdır. Hava akımı kapının tamamını kapsamazsa kenarlardan hava kaçar. Geniş kapılarda birden fazla cihaz yan yana monte edilir.</p>
       <h3>2. Montaj yüksekliği</h3>
       <p>Cihazın kapı üstünde takılacağı yükseklik, seçilecek serinin en önemli belirleyicisidir. Hava akımının zemine kadar etkili ulaşması gerekir. Örneğin Niva hava perdelerinin ısıtıcısız modellerinde genel tip Linda serisi 3 m'ye, ticari Life serisi 4 m'ye, endüstriyel Lena serisi 6 m'ye, Turbo serisi 12 m'ye kadar montaj yüksekliği için uygundur.</p>
+      <div class="tablo"><table>
+        <thead><tr><th>Seri</th><th>Tip</th><th>En yüksek montaj (ısıtıcısız / ısıtıcılı)</th><th>Cihaz boyu</th><th>Uygun yer</th></tr></thead>
+        <tbody>
+          <tr><td>Niva Linda</td><td>Genel tip</td><td>3,0 m / 2,5 m</td><td>85 – 200 cm</td><td>Mağaza, ofis, konut girişi</td></tr>
+          <tr><td>Niva Smart Kaset</td><td>Tavana gömme</td><td>3,8 m / 3,5 m</td><td>120 – 200 cm</td><td>Asma tavanlı girişler</td></tr>
+          <tr><td>Niva Life</td><td>Ticari tip</td><td>4,0 m / 3,5 m</td><td>100 – 250 cm</td><td>Restoran, market, ticari giriş</td></tr>
+          <tr><td>Niva Lena</td><td>Endüstriyel tip</td><td>6,0 m / 6,0 m</td><td>85 – 120 cm</td><td>Depo, atölye, yüksek kapı</td></tr>
+          <tr><td>Niva Turbo</td><td>Endüstriyel tip</td><td>12 m</td><td>100 cm</td><td>Fabrika, hangar</td></tr>
+        </tbody>
+      </table></div>
+      <p>Kapı genişliği tek cihazın boyunu aşıyorsa, kapının tamamını kapsayacak şekilde iki veya daha fazla cihaz yan yana monte edilir.</p>
       <h3>3. Isıtıcılı mı, ısıtıcısız mı?</h3>
       <p>Mekân zaten klima veya kaloriferle iyi ısıtılıyorsa ısıtıcısız model yeterli olabilir. Kışın giriş bölümünün de ısınması isteniyorsa ısıtıcılı model seçilir. Isıtıcılı modeller daha yüksek elektrik gücü çeker; sigorta ve kablo kesiti buna göre kontrol edilmelidir.</p>
       <h3>4. Montaj tipi</h3>
@@ -279,21 +297,63 @@ export const MAKALELER: Makale[] = [
       <p>İklim Ofisi olarak Niva ve Olefini marka hava perdelerinin satışını ve montajını yapıyoruz. Niva; genel, ticari, tavana gömme, endüstriyel ve dikey tipte geniş bir seri yelpazesi sunar. Olefini ise şık tasarımı ve dijital kontrol paneliyle mağaza, otel ve restoran girişlerinde dekorasyonla uyumlu bir seçenektir.</p>
       <p>Seri ve ölçüler için <a href="/hava-perdesi">hava perdesi</a> sayfamıza bakabilirsiniz. Kapı genişliğini, montaj yüksekliğini ve ısıtıcılı/ısıtıcısız tercihinizi paylaşırsanız size uygun modelle <a href="/iletisim">teklif</a> hazırlayalım.</p>
     `,
+    sss: [
+      [
+        "Hava perdesi elektrik faturasını artırır mı?",
+        "Isıtıcısız modeller yalnız fan motorunu çalıştırdığı için düşük güç çeker. Isıtıcılı modeller ısıtıcı devredeyken daha yüksek güç çeker. Cihazı kapı switch'i ile yalnız kapı açıkken çalıştırmak gereksiz tüketimi önler; kapıdan kaçan ısı azaldığı için klima ve kalorifer de daha az çalışır.",
+      ],
+      [
+        "Hava perdesi klima veya kaloriferin yerine geçer mi?",
+        "Hayır. Hava perdesi mekânı ısıtmaz ya da soğutmaz; mevcut iklimlendirmenin kapıdan kaçmasını azaltır. Isıtıcılı modeller kapı önünü ısıtır ama mekânın ısıtma sisteminin yerine geçmez.",
+      ],
+      [
+        "Hava perdesi kapının içine mi dışına mı takılır?",
+        "Genellikle iç tarafa, kapıya olabildiğince yakın ve kapının tam üstüne monte edilir. Hava çıkış yönü hafifçe dışarı doğru ayarlanarak bariyer güçlendirilir.",
+      ],
+      [
+        "Hava perdesi evde kullanılır mı?",
+        "Evet. Genel tip modeller konut ve bina girişlerinde de kullanılır; özellikle sık açılan giriş, bahçe veya teras kapılarında kapı önündeki cereyanı azaltır.",
+      ],
+      [
+        "Hava perdesi sinek ve tozu engeller mi?",
+        "Hava akımı uçan haşerelerin, tozun ve egzoz kokusunun içeri girmesini azaltmaya yardımcı olur; ancak tamamen engellemez. Asıl amacı ısı kaybını ve cereyanı azaltmaktır.",
+      ],
+      [
+        "Hava perdesi fiyatı neye göre değişir?",
+        "Fiyatı belirleyen başlıca etkenler cihazın boyu, seri (montaj yüksekliği), ısıtıcılı ya da ısıtıcısız olması ve kumanda seçenekleridir. Kapı genişliği ve montaj yüksekliğini bildirirseniz uygun modelle net fiyat teklifi hazırlıyoruz.",
+      ],
+    ],
   },
   {
     slug: "aluminyum-radyator-mu-celik-panel-radyator-mu",
     baslik: "Alüminyum Radyatör mü, Çelik Panel Radyatör mü? Farklar ve Doğru Seçim",
     kategori: "ISITMA",
     tarih: "25 Ekim 2026",
-    okumaSuresi: "5 dk okuma",
+    guncelleme: "16 Kasım 2026",
+    okumaSuresi: "6 dk okuma",
+    seoBaslik: "Alüminyum mu Panel Radyatör mü? Karşılaştırma Tablosu",
+    seoAciklama: "Alüminyum ve çelik panel radyatör farkı: ısınma hızı, ağırlık, su kalitesi ve maliyet tablosu. Kaç dilim gerekir? Örnek hesap ve hangi evde hangisi seçilmeli.",
     gorsel: "/ayen/ayen-slider.jpg",
     gorselAlt: "Ahşap desenli Ayen alüminyum radyatör",
     ozet: "Alüminyum ve çelik panel radyatörlerin ısınma hızı, ağırlık, görünüm, su kalitesi ve maliyet açısından karşılaştırması; dilim sayısının nasıl hesaplandığı ve hangi durumda hangisinin tercih edilmesi gerektiği.",
     icerikHtml: `
+      <aside><p><strong>Kısaca:</strong> Alüminyum radyatör daha hızlı ısınır, hafiftir ve dekoratif seçenekleri çoktur; tesisat suyunun pH değerine dikkat ister. Çelik panel radyatör aynı ısıl güç için genellikle daha ekonomiktir, daha yavaş ısınır ve ısısını biraz daha uzun korur. Hangisi seçilirse seçilsin, radyatörün gücü odanın ısı kaybına göre belirlenmelidir.</p></aside>
+
       <h2>İki Radyatör Tipi Arasındaki Temel Fark</h2>
       <p><strong>Çelik panel radyatörler</strong> sac levhaların preslenip kaynaklanmasıyla üretilir ve Türkiye'de konutlarda en yaygın kullanılan radyatör tipidir. <strong>Alüminyum radyatörler</strong> ise ekstrüzyon veya döküm yöntemiyle üretilen dilimlerin birleştirilmesiyle oluşur. Malzeme ve üretim farkı; ısınma hızını, ağırlığı, görünümü ve kullanım koşullarını doğrudan etkiler.</p>
 
       <h2>Karşılaştırma</h2>
+      <div class="tablo"><table>
+        <thead><tr><th>Özellik</th><th>Alüminyum radyatör</th><th>Çelik panel radyatör</th></tr></thead>
+        <tbody>
+          <tr><td>Isınma hızı</td><td>Hızlı (yüksek ısı iletimi, düşük su hacmi)</td><td>Daha yavaş; kapatınca ısısını biraz daha uzun korur</td></tr>
+          <tr><td>Ağırlık</td><td>Hafif, montajı kolay</td><td>Daha ağır</td></tr>
+          <tr><td>Boyut</td><td>Dilim eklenip çıkarılarak ayarlanır</td><td>Standart boy ve yükseklikler</td></tr>
+          <tr><td>Görünüm</td><td>Renk, ahşap ve metal desen seçenekleri</td><td>Sade, standart</td></tr>
+          <tr><td>Su kalitesi</td><td>pH üreticinin aralığında tutulmalı, gerekirse inhibitör</td><td>Genel tesisat suyu bakımı</td></tr>
+          <tr><td>Maliyet</td><td>Aynı güç için genellikle daha yüksek</td><td>Genellikle daha ekonomik</td></tr>
+        </tbody>
+      </table></div>
       <h3>Isınma hızı</h3>
       <p>Alüminyumun ısı iletimi çeliğe göre çok yüksektir ve alüminyum radyatörlerin su hacmi düşüktür. Bu yüzden alüminyum radyatör çalışmaya başladıktan kısa süre sonra ısı vermeye başlar ve termostatik vanaların ayarına hızlı tepki verir. Çelik panel radyatör daha fazla su taşıdığı için daha yavaş ısınır, kapatıldıktan sonra da ısısını biraz daha uzun korur.</p>
       <h3>Ağırlık ve montaj</h3>
@@ -321,6 +381,32 @@ export const MAKALELER: Makale[] = [
       <p>İklim Ofisi olarak Ayen alüminyum radyatör ve havlupanların satışını ve montajını yapıyoruz. Ayen radyatörler %98 alüminyum alaşımdan üretilir, EN 442 ve TSE belgelidir; her radyatör 15 bar sızdırmazlık testinden geçer. 9 panel radyatör ve 9 havlupan serisi, 30 renk seçeneğiyle sunulur.</p>
       <p>Model, ölçü ve renk seçenekleri için <a href="/ayen">Ayen alüminyum radyatör</a> sayfamıza bakabilir, odalarınızın ısı ihtiyacını kabaca görmek için <a href="/hesaplama">kapasite hesaplama</a> aracımızı kullanabilirsiniz. Kesin dilim sayısı için <a href="/iletisim">keşif</a> isteyin.</p>
     `,
+    sss: [
+      [
+        "Alüminyum radyatör mü daha iyi ısıtır, panel radyatör mü?",
+        "Odanın ısı kaybına göre doğru güçte seçilen iki radyatör de odayı aynı sıcaklığa getirir. Fark ısınma hızındadır: alüminyum radyatör çalışmaya başladıktan kısa süre sonra ısı verir ve termostatik vanaya hızlı tepki verir; çelik panel radyatör daha yavaş ısınır.",
+      ],
+      [
+        "1 dilim alüminyum radyatör kaç watt verir?",
+        "Modele ve yüksekliğe göre değişir. Örneğin Ayen radyatörlerin 600 mm yüksekliğindeki modelleri, Δt 60 (90/70 °C su, 20 °C oda) koşulunda dilim başına yaklaşık 98 W ile 163 W arasında ısı verir. Daha düşük su sıcaklığında bu değer azalır.",
+      ],
+      [
+        "Alüminyum radyatör kombiye uygun mu?",
+        "Evet, kombi ve yoğuşmalı kazanlarla kullanılır. Tesisat suyunun pH değeri üreticinin belirttiği aralıkta tutulmalıdır. Yoğuşmalı kazan düşük su sıcaklığında çalıştırılacaksa dilim sayısı bu sıcaklığa göre hesaplanmalıdır.",
+      ],
+      [
+        "Alüminyum radyatör ısı pompasıyla kullanılabilir mi?",
+        "Kullanılabilir; ancak ısı pompası daha düşük su sıcaklığında çalıştığı için radyatörün verdiği ısı azalır ve aynı oda için daha fazla dilim gerekir. Seçim, ısı pompasının çalışma su sıcaklığına göre yapılmalıdır.",
+      ],
+      [
+        "Alüminyum radyatör paslanır mı?",
+        "Alüminyum çelik gibi paslanmaz; ancak pH değeri uygun olmayan tesisat suyunda korozyona uğrayabilir. Bu yüzden tesisat suyu kontrol edilmeli, gerekirse uygun inhibitör kullanılmalıdır.",
+      ],
+      [
+        "Mevcut panel radyatörleri alüminyum radyatörle değiştirebilir miyim?",
+        "Evet. Yeni radyatörün gücü odanın ısı kaybına göre seçilir; bağlantı ölçüleri ve vana yerleri keşifte kontrol edilerek mevcut tesisata uyarlanır.",
+      ],
+    ],
   },
   {
     slug: "endustriyel-mutfak-havalandirma-elektrostatik-filtre",

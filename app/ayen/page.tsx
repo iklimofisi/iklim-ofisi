@@ -18,9 +18,10 @@ export const dynamic = "force-dynamic";
 const SAYFA = `${SITE}/ayen`;
 
 export const metadata: Metadata = {
-  title: "Ayen Radyatör — Alüminyum Panel Radyatör ve Havlupan Modelleri | İstanbul",
+  // Google'da kısalmadan görünsün diye kısa başlık (site adı eklenmeden)
+  title: { absolute: "Ayen Alüminyum Radyatör ve Havlupan Modelleri | İklim Ofisi" },
   description:
-    "Ayen alüminyum radyatör: 9 dilimli panel serisi (300–1900 mm), 9 alüminyum havlupan modeli, 30 renk seçeneği. %98 alüminyum, EN 442 ve TSE belgeli, her radyatör 15 bar testli. İstanbul'da satış, keşif ve montaj.",
+    "Ayen alüminyum radyatör ve havlupan: 9 panel radyatör, 9 havlupan modeli, 30 renk. EN 442 ve TSE belgeli. İstanbul'da keşif, satış ve montaj için teklif alın.",
   keywords: [
     "Ayen radyatör",
     "Ayen alüminyum radyatör",

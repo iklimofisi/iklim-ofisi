@@ -17,7 +17,8 @@ export const dynamic = "force-dynamic";
 const SAYFA = `${SITE}/hava-perdesi`;
 
 export const metadata: Metadata = {
-  title: "Hava Perdesi — Isıtıcılı ve Isıtıcısız Niva, Olefini Modelleri | İstanbul",
+  // Google'da kısalmadan görünsün diye kısa başlık (site adı eklenmeden)
+  title: { absolute: "Hava Perdesi Modelleri: Niva ve Olefini | İklim Ofisi" },
   description:
     "Hava perdesi nedir, ne işe yarar? Niva ve Olefini hava perdeleri: ısıtıcılı ve ısıtıcısız modeller, 85–250 cm boy, 12 m'ye kadar montaj yüksekliği. Mağaza, restoran, otel, AVM ve endüstriyel kapılar için İstanbul'da satış, keşif ve montaj.",
   keywords: [

@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { MAKALELER, makaleIsoTarihi, makaleOgGorseli } from "../data";
 import { JsonLd, SITE } from "@/components/YapisalVeri";
+import { sssYapisalVeri } from "@/components/SikSorulanSorular";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +19,9 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
   const makale = MAKALELER.find((m) => m.slug === params.slug);
   if (!makale) return {};
   return {
-    title: makale.baslik,
-    description: makale.ozet,
+    // seoBaslik: Google'da kısalmadan görünsün diye site adı eklenmeden kullanılır
+    title: makale.seoBaslik ? { absolute: makale.seoBaslik } : makale.baslik,
+    description: makale.seoAciklama ?? makale.ozet,
     alternates: { canonical: `/blog/${makale.slug}` },
     openGraph: {
       title: makale.baslik,
@@ -41,6 +43,12 @@ export default function BlogDetayPage({ params }: { params: { slug: string } }) 
   const makale = MAKALELER.find((m) => m.slug === params.slug);
 
   if (!makale) notFound();
+
+  // Diğer makaleler: önce aynı kategori, sonra en yeniler (iç bağlantı)
+  const digerMakaleler = [
+    ...MAKALELER.filter((m) => m.slug !== makale.slug && m.kategori === makale.kategori),
+    ...MAKALELER.filter((m) => m.slug !== makale.slug && m.kategori !== makale.kategori),
+  ].slice(0, 3);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased selection:bg-teal-700 selection:text-white">
@@ -68,6 +76,9 @@ export default function BlogDetayPage({ params }: { params: { slug: string } }) 
               },
             }}
           />
+          {makale.sss && makale.sss.length > 0 && (
+            <JsonLd veri={{ "@context": "https://schema.org", ...sssYapisalVeri(makale.sss) }} />
+          )}
           <Link href="/blog" className="text-xs font-bold text-teal-700 hover:underline inline-block">
             ← Tüm Makalelere Dön
           </Link>
@@ -98,9 +109,27 @@ export default function BlogDetayPage({ params }: { params: { slug: string } }) 
 
           {/* İÇERİK METNİ */}
           <div
-            className="bg-white border border-slate-200/90 rounded-2xl p-8 shadow-sm space-y-4 text-sm leading-relaxed text-slate-700 max-w-none [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-slate-900 [&_h2]:pt-3 [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-slate-900 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1 [&_strong]:text-slate-900"
+            className="bg-white border border-slate-200/90 rounded-2xl p-8 shadow-sm space-y-4 text-sm leading-relaxed text-slate-700 max-w-none [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-slate-900 [&_h2]:pt-3 [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-slate-900 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1 [&_strong]:text-slate-900 [&_a]:text-teal-700 [&_a]:underline [&_a]:underline-offset-2 [&_aside]:bg-teal-50 [&_aside]:border [&_aside]:border-teal-200 [&_aside]:rounded-xl [&_aside]:p-4 [&_.tablo]:overflow-x-auto [&_table]:w-full [&_table]:text-xs [&_table]:border-collapse [&_th]:bg-slate-50 [&_th]:text-left [&_th]:font-bold [&_th]:text-slate-900 [&_th]:p-2 [&_th]:border [&_th]:border-slate-200 [&_td]:p-2 [&_td]:border [&_td]:border-slate-200 [&_td]:align-top"
             dangerouslySetInnerHTML={{ __html: makale.icerikHtml }}
           />
+
+          {/* SIK SORULAN SORULAR */}
+          {makale.sss && makale.sss.length > 0 && (
+            <section className="bg-white border border-slate-200/90 rounded-2xl p-8 shadow-sm space-y-3">
+              <h2 className="text-lg font-bold text-slate-900">Sık Sorulan Sorular</h2>
+              {makale.sss.map(([soru, cevap]) => (
+                <details key={soru} className="group border border-slate-200 rounded-xl p-4">
+                  <summary className="cursor-pointer list-none flex items-start justify-between gap-4 font-bold text-slate-900 text-sm">
+                    <h3>{soru}</h3>
+                    <span className="text-teal-700 group-open:rotate-45 transition-transform text-lg leading-none" aria-hidden>
+                      +
+                    </span>
+                  </summary>
+                  <p className="text-sm text-slate-600 leading-relaxed mt-3">{cevap}</p>
+                </details>
+              ))}
+            </section>
+          )}
 
           {/* ÇAĞRI BANNERI */}
           <div className="bg-slate-900 text-white rounded-2xl p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl">
@@ -117,6 +146,25 @@ export default function BlogDetayPage({ params }: { params: { slug: string } }) 
               Ücretsiz Keşif İsteyin →
             </Link>
           </div>
+
+          {/* DİĞER MAKALELER */}
+          {digerMakaleler.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Diğer Makaleler</h2>
+              <div className="grid sm:grid-cols-3 gap-3">
+                {digerMakaleler.map((m) => (
+                  <Link
+                    key={m.slug}
+                    href={`/blog/${m.slug}`}
+                    className="block bg-white border border-slate-200/90 rounded-xl p-4 shadow-sm hover:border-teal-300 transition-colors"
+                  >
+                    <span className="text-[10px] font-bold text-teal-700 uppercase tracking-widest">{m.kategori}</span>
+                    <span className="block text-sm font-bold text-slate-900 leading-snug mt-1">{m.baslik}</span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
 
         </div>
       </main>
