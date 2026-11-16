@@ -3,7 +3,8 @@
 // Biçim: kapak sayfasında yazı; sonraki sayfalarda her sayfa başında "Teklif <no>
 // Başlangıç <tarih>", "Proje <ad>" ve "Poz. · Malzeme tanımı · Toplam fiyat" başlığı.
 // Her kalem: "10  Vitoclima 335-S OVT5735T1 VRF ODU" (poz. no + ad), istenirse teknik
-// açıklama satırları, "Sipariş no. 3203306" ve "1 Ad.  9.121,00 USD/Ad.  Net  9.121,00 USD".
+// açıklama satırları, "Sipariş no. 3203306" ve "1 Ad.  9.121,00 USD/Ad.  Net  9.121,00 USD"
+// (yeni biçimde "Net" yazmaz: "1 Ad.  4.519,20 USD/Ad.  4.519,20 USD"; ikisi de okunur).
 // "DX Batarya:" + "*****" gibi satırlar grup başlığıdır. Sonda "Pozisyonlar toplamı"
 // (KDV hariç). Teklifteki fiyatlar firmamızın NET ALIŞ fiyatlarıdır.
 // Sonuç TCL ayıklayıcısıyla aynı biçimdedir: satınalma teklifi ve müşteri teklifine
@@ -54,7 +55,7 @@ function otomatikBolum(metin: string): string {
   if (/kontrol|kumanda|controller|gateway|a[ğg] ge[çc]idi/i.test(metin)) return "Kontrol Sistemleri";
   if (/\bAHU\b|DX batarya/i.test(metin)) return "DX Batarya / AHU Kit";
   if (/\bODU\b|d[ıi][şs] [üu]nite/i.test(metin)) return "VRF Dış Üniteler";
-  if (/IDU\b|i[çc] [üu]nite|kaset|duvar tipi|kanal tipi|as[ıi]l[ıi]|konsol/i.test(metin)) return "VRF İç Üniteler";
+  if (/IDU\b|i[çc] [üu]nite|kaset|\by\.\s*kas\b|duvar tipi|kanal tipi|as[ıi]l[ıi]|konsol/i.test(metin)) return "VRF İç Üniteler";
   return "Viessmann Ürünleri";
 }
 
@@ -102,8 +103,9 @@ export function viessmannTeklifAyikla(sayfalar: PdfSayfa[]): TclSonuc {
         bitti = true;
         break;
       }
-      // Adet / fiyat satırı: "3 Ad. 647,50 USD/Ad. Net 1.942,50 USD"
-      const f = m.match(/^([\d.,]+)\s*([A-Za-zÇĞİÖŞÜçğıöşü.]+)\s+([\d.,]+)\s*(USD|EUR|TL|TRY)\s*\/\s*\S+\s+Net\s+([\d.,]+)\s*(USD|EUR|TL|TRY)/i);
+      // Adet / fiyat satırı: "3 Ad. 647,50 USD/Ad. Net 1.942,50 USD" (eski) veya
+      // "3 Ad. 647,50 USD/Ad. 1.942,50 USD" (yeni, "Net" yok)
+      const f = m.match(/^([\d.,]+)\s*([A-Za-zÇĞİÖŞÜçğıöşü.]+)\s+([\d.,]+)\s*(USD|EUR|TL|TRY)\s*\/\s*\S+\s+(?:Net\s+)?([\d.,]+)\s*(USD|EUR|TL|TRY)\s*$/i);
       if (f) {
         const adet = sayiOku(f[1]);
         const birim = sayiOku(f[3]);
