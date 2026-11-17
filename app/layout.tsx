@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Script from "next/script"; // Google Analytics için Eklendi
 import "./globals.css";
+import { HTML_DIL, OG_DIL, type Dil } from "@/lib/dil";
+import { dilAl } from "@/lib/dil-sunucu";
 
 // Google Analytics Kimliği Vercel'den Otomatik Okunur
 const gaId = process.env.NEXT_PUBLIC_GA_ID;
@@ -16,7 +18,41 @@ const ADS_FORM_DONUSUMU = "AW-18517752349/w_SNCLKpybgdEJ30-f1E";
 // Yönetim paneli (/panel) kaydedilmez: müşteri, fiyat ve teklif bilgileri Clarity'ye gitmesin.
 const CLARITY_ID = "zdojkwvtd3";
 
-export const metadata: Metadata = {
+// Dile göre site geneli başlık ve açıklama (sayfalar kendi başlıklarını ekler)
+const GENEL: Record<Dil, { baslik: string; aciklama: string; ogBaslik: string; ogAciklama: string }> = {
+  tr: {
+    baslik: "İklim Ofisi Mühendislik — İstanbul VRF, Klima & Mekanik Tesisat",
+    aciklama:
+      "İstanbul'da konut, ofis, otel ve endüstriyel tesisler için TCL ve Mitsubishi Electric VRF sistemleri, klima ve multi klima, ısı pompası, Fraenkische yerden ısıtma, kazan dairesi yenileme, havalandırma ve mekanik tesisat. Ücretsiz keşif ve projelendirme.",
+    ogBaslik: "İklim Ofisi Mühendislik — VRF, Klima, Isı Pompası & Yerden Isıtma",
+    ogAciklama:
+      "TCL ve Mitsubishi Electric VRF, klima ve multi klima; ısı pompası, Fraenkische yerden ısıtma ve kazan dairesi yenileme. 24 saatte ücretsiz keşif imkanı.",
+  },
+  en: {
+    baslik: "İklim Ofisi Engineering — Istanbul VRF, Air Conditioning & Mechanical Installation",
+    aciklama:
+      "TCL and Mitsubishi Electric VRF systems, air conditioners and multi-split systems, heat pumps, Fraenkische underfloor heating, boiler room renovation, ventilation and mechanical installation for homes, offices, hotels and industrial facilities in Istanbul. Free site survey and engineering design.",
+    ogBaslik: "İklim Ofisi Engineering — VRF, Air Conditioning, Heat Pumps & Underfloor Heating",
+    ogAciklama:
+      "TCL and Mitsubishi Electric VRF, air conditioners and multi-split systems; heat pumps, Fraenkische underfloor heating and boiler room renovation. Free site survey within 24 hours.",
+  },
+  de: {
+    baslik: "İklim Ofisi Engineering — VRF, Klimatechnik & Haustechnik in Istanbul",
+    aciklama:
+      "TCL- und Mitsubishi-Electric-VRF-Systeme, Klima- und Multisplit-Anlagen, Wärmepumpen, Fraenkische Fußbodenheizung, Heizraumsanierung, Lüftung und Haustechnik für Wohnungen, Büros, Hotels und Industrieanlagen in Istanbul. Kostenlose Vor-Ort-Besichtigung und Planung.",
+    ogBaslik: "İklim Ofisi Engineering — VRF, Klimaanlagen, Wärmepumpen & Fußbodenheizung",
+    ogAciklama:
+      "TCL- und Mitsubishi-Electric-VRF, Klima- und Multisplit-Anlagen; Wärmepumpen, Fraenkische Fußbodenheizung und Heizraumsanierung. Kostenlose Besichtigung innerhalb von 24 Stunden.",
+  },
+};
+
+export function generateMetadata(): Metadata {
+  const dil = dilAl();
+  const g = GENEL[dil];
+  return { ...metadata, title: { default: g.baslik, template: dil === "tr" ? "%s | İklim Ofisi Mühendislik" : "%s | İklim Ofisi Engineering" }, description: g.aciklama, openGraph: { ...metadata.openGraph, title: g.ogBaslik, description: g.ogAciklama, locale: OG_DIL[dil], ...(dil === "tr" ? {} : { url: `https://iklimofisi.com/${dil}` }) } };
+}
+
+const metadata: Metadata = {
   title: {
     default: "İklim Ofisi Mühendislik — İstanbul VRF, Klima & Mekanik Tesisat",
     template: "%s | İklim Ofisi Mühendislik",
@@ -99,8 +135,9 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const dil = dilAl();
   return (
-    <html lang="tr" className="scroll-smooth">
+    <html lang={HTML_DIL[dil]} className="scroll-smooth">
       <body className="bg-slate-50 text-slate-800 antialiased font-sans">
         {/* GOOGLE TAG MANAGER (JavaScript kapalı tarayıcılar için) */}
         <noscript>

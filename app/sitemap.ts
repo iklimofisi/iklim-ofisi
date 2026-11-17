@@ -20,15 +20,23 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { yol: "/kvkk", oncelik: 0.2 },
   ];
 
+  // Her sayfa Türkçe, İngilizce (/en) ve Almanca (/de) olarak listelenir; dil karşılıkları (hreflang) eklenir
+  const diller = (yolu: string) => ({
+    languages: { "tr-TR": `${taban}${yolu}`, en: `${taban}/en${yolu}`, de: `${taban}/de${yolu}` },
+  });
+  const ucDil = (yolu: string, oncelik: number, ek: { lastModified?: string } = {}) =>
+    ["", "/en", "/de"].map((onEk) => ({
+      url: `${taban}${onEk}${yolu}`,
+      priority: onEk ? Math.round(oncelik * 0.8 * 10) / 10 : oncelik,
+      alternates: diller(yolu),
+      ...ek,
+    }));
+
   return [
-    ...sayfalar.map((s) => ({ url: `${taban}${s.yol}`, priority: s.oncelik })),
-    ...MAKALELER.map((m) => {
+    ...sayfalar.flatMap((s) => ucDil(s.yol, s.oncelik)),
+    ...MAKALELER.flatMap((m) => {
       const tarih = makaleIsoTarihi(m.guncelleme ?? m.tarih);
-      return {
-        url: `${taban}/blog/${m.slug}`,
-        priority: 0.5,
-        ...(tarih ? { lastModified: tarih } : {}),
-      };
+      return ucDil(`/blog/${m.slug}`, 0.5, tarih ? { lastModified: tarih } : {});
     }),
   ];
 }

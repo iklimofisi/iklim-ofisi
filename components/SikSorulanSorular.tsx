@@ -1,4 +1,11 @@
 import Link from "next/link";
+import { yol, type Dil } from "@/lib/dil";
+
+const YAZI: Record<Dil, { etiket: string; ilgili: string }> = {
+  tr: { etiket: "SIK SORULAN SORULAR", ilgili: "İlgili yazılar:" },
+  en: { etiket: "FREQUENTLY ASKED QUESTIONS", ilgili: "Related articles:" },
+  de: { etiket: "HÄUFIG GESTELLTE FRAGEN", ilgili: "Verwandte Artikel:" },
+};
 
 // -----------------------------------------------------------------------------
 // SIK SORULAN SORULAR — ürün sayfalarında ortak bölüm
@@ -19,17 +26,20 @@ export default function SikSorulanSorular({
   sss,
   ilgili = [],
   zemin = "",
+  dil = "tr",
 }: {
   baslik: string;
   sss: Sss[];
   ilgili?: { href: string; ad: string }[];
   zemin?: string; // bölümün arka plan sınıfları (ör. "bg-white border-y border-slate-200/80")
+  dil?: Dil;
 }) {
+  const y = YAZI[dil];
   return (
     <section id="sss" className={`scroll-mt-28 py-14 md:py-16 ${zemin}`}>
       <div className="max-w-4xl mx-auto px-6 space-y-6">
         <div className="space-y-2">
-          <p className="text-xs font-bold tracking-widest text-teal-700 uppercase">SIK SORULAN SORULAR</p>
+          <p className="text-xs font-bold tracking-widest text-teal-700 uppercase">{y.etiket}</p>
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">{baslik}</h2>
         </div>
         <div className="space-y-3">
@@ -47,11 +57,11 @@ export default function SikSorulanSorular({
         </div>
         {ilgili.length > 0 && (
           <p className="text-xs text-slate-500 leading-relaxed">
-            İlgili yazılar:{" "}
+            {y.ilgili}{" "}
             {ilgili.map((l, i) => (
               <span key={l.href}>
                 {i > 0 && " · "}
-                <Link href={l.href} className="text-teal-700 underline underline-offset-2">
+                <Link href={yol(dil, l.href)} className="text-teal-700 underline underline-offset-2">
                   {l.ad}
                 </Link>
               </span>

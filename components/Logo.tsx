@@ -44,11 +44,13 @@ export function LogoTam({
   boyut = 40,
   ters = false,
   altYazi = true,
+  altYaziMetni = "MEKANİK MÜHENDİSLİK",
   className = "",
 }: {
   boyut?: number;
   ters?: boolean;
   altYazi?: boolean;
+  altYaziMetni?: string; // dile göre alt yazı (İngilizce / Almanca sayfalarda çevirisi)
   className?: string;
 }) {
   const yaziBoyu = Math.round(boyut * 0.62);
@@ -70,7 +72,7 @@ export function LogoTam({
               whiteSpace: "nowrap",
             }}
           >
-            MEKANİK MÜHENDİSLİK
+            {altYaziMetni}
           </span>
         )}
       </span>

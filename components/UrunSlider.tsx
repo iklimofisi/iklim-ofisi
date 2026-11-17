@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { yol, type Dil } from "@/lib/dil";
 
 // ---------------------------------------------------------------------------
 // SLAYTLAR
@@ -23,7 +24,7 @@ type Slayt = {
 
 // Sıra = önem sırası: VRF ve klima (TCL, Mitsubishi Electric) → ısı pompası →
 // yerden ısıtma (Fraenkische) → kazan dairesi (Buderus) → mutfak havalandırma (AIRNEX)
-const SLAYTLAR: Slayt[] = [
+const SLAYTLAR_TR: Slayt[] = [
   {
     etiket: "TCL · TMV6+ Super",
     baslik: "VRF Merkezi İklimlendirme Sistemleri",
@@ -110,6 +111,44 @@ const SLAYTLAR: Slayt[] = [
   },
 ];
 
+// İngilizce / Almanca slayt yazıları (sıra SLAYTLAR ile aynı: etiket, başlık, görsel açıklaması)
+const CEVIRI: Record<"en" | "de", [string, string, string][]> = {
+  en: [
+    ["TCL · TMV6+ Super", "VRF Central Air Conditioning Systems", "TCL TMV6+ Super Series VRF outdoor unit"],
+    ["TCL · Mini VRF", "Full DC Inverter Mini VRF", "TCL Mini VRF outdoor units"],
+    ["TCL · Indoor Unit Range", "Cassette Type Indoor Units", "Ceiling-mounted TCL cassette indoor unit"],
+    ["Mitsubishi Electric · City Multi", "City Multi VRF Systems", "Mitsubishi Electric City Multi VRF outdoor units"],
+    ["Mitsubishi Electric", "Wall-Mounted and Multi-Split Air Conditioners", "Mitsubishi Electric wall-mounted indoor unit in a living room"],
+    ["Fraenkische · Underfloor Heating", "Underfloor Heating Systems", "Underfloor heating pipes laid in a spiral pattern"],
+    ["Buderus · Boiler Room Renovation", "Logamax plus GB272: 49–150 kW, Cascade", "Wall-mounted Buderus Logamax plus GB272 condensing boiler"],
+    ["Ayen · Aluminium Radiators", "Aluminium Panel Radiator Models", "Wood-pattern Ayen Class aluminium radiator"],
+    ["Ayen · Aluminium Towel Radiators", "Towel Radiators: 9 Designs, 30 Colours", "White, gold and black Ayen aluminium towel radiators"],
+    ["Niva · Olefini", "Air Curtains With and Without Heaters", "Wall-mounted Niva air curtain"],
+    ["AIRNEX · Kitchen Ventilation", "Electrostatic Cell Exhaust Unit", "AIRNEX electrostatic cell exhaust unit in a commercial kitchen"],
+    ["AIRNEX", "4-Stage Electrostatic Filtration", "AIRNEX working principle: pre-filter, ionisation, collector cell and fan"],
+  ],
+  de: [
+    ["TCL · TMV6+ Super", "VRF-Zentralklimasysteme", "TCL TMV6+ Super Serie VRF-Außengerät"],
+    ["TCL · Mini VRF", "Full-DC-Inverter Mini VRF", "TCL Mini VRF-Außengeräte"],
+    ["TCL · Innengeräte", "Kassetten-Innengeräte", "Deckenmontiertes TCL-Kassetteninnengerät"],
+    ["Mitsubishi Electric · City Multi", "City Multi VRF-Systeme", "Mitsubishi Electric City Multi VRF-Außengeräte"],
+    ["Mitsubishi Electric", "Wand- und Multisplit-Klimageräte", "Mitsubishi Electric Wandgerät im Wohnzimmer"],
+    ["Fraenkische · Fußbodenheizung", "Fußbodenheizungssysteme", "Spiralförmig verlegte Fußbodenheizungsrohre"],
+    ["Buderus · Heizraumsanierung", "Logamax plus GB272: 49–150 kW, Kaskade", "Wandhängender Buderus Logamax plus GB272 Brennwertkessel"],
+    ["Ayen · Aluminiumheizkörper", "Aluminium-Paneelheizkörper", "Ayen Class Aluminiumheizkörper in Holzoptik"],
+    ["Ayen · Aluminium-Badheizkörper", "Badheizkörper: 9 Designs, 30 Farben", "Ayen Aluminium-Badheizkörper in Weiß, Gold und Schwarz"],
+    ["Niva · Olefini", "Torluftschleier mit und ohne Heizung", "Wandmontierter Niva-Torluftschleier"],
+    ["AIRNEX · Küchenlüftung", "Abluftgerät mit Elektrofilterzelle", "AIRNEX Abluftgerät mit Elektrofilterzelle in einer Gewerbeküche"],
+    ["AIRNEX", "4-stufige elektrostatische Filtration", "AIRNEX Funktionsprinzip: Vorfilter, Ionisierung, Abscheidezelle und Ventilator"],
+  ],
+};
+
+const ARAYUZ: Record<Dil, { bolge: string; incele: string; onceki: string; sonraki: string; gorsel: string }> = {
+  tr: { bolge: "Ürün ve çözümlerimiz", incele: "İncele →", onceki: "Önceki görsel", sonraki: "Sonraki görsel", gorsel: "görsel" },
+  en: { bolge: "Our products and solutions", incele: "View →", onceki: "Previous image", sonraki: "Next image", gorsel: "image" },
+  de: { bolge: "Unsere Produkte und Lösungen", incele: "Ansehen →", onceki: "Vorheriges Bild", sonraki: "Nächstes Bild", gorsel: "Bild" },
+};
+
 const SURE_MS = 5000;
 
 function CizimGorsel({ tur }: { tur: Cizim }) {
@@ -159,9 +198,12 @@ function CizimGorsel({ tur }: { tur: Cizim }) {
   );
 }
 
-export default function UrunSlider() {
+export default function UrunSlider({ dil = "tr" }: { dil?: Dil }) {
   const [aktif, setAktif] = useState(0);
   const [durdu, setDurdu] = useState(false);
+  const a = ARAYUZ[dil];
+  const SLAYTLAR: Slayt[] =
+    dil === "tr" ? SLAYTLAR_TR : SLAYTLAR_TR.map((s, i) => ({ ...s, etiket: CEVIRI[dil][i][0], baslik: CEVIRI[dil][i][1], alt: CEVIRI[dil][i][2] }));
   const adet = SLAYTLAR.length;
   const dokunmaX = useRef<number | null>(null);
 
@@ -194,7 +236,7 @@ export default function UrunSlider() {
       }}
       role="region"
       aria-roledescription="carousel"
-      aria-label="Ürün ve çözümlerimiz"
+      aria-label={a.bolge}
     >
       {SLAYTLAR.map((s, i) => (
         <div
@@ -221,11 +263,11 @@ export default function UrunSlider() {
             <div className="flex items-end justify-between gap-4 mt-1">
               <h2 className="text-lg sm:text-2xl font-bold text-white leading-tight">{s.baslik}</h2>
               <Link
-                href={s.href}
+                href={yol(dil, s.href)}
                 tabIndex={i === aktif ? 0 : -1}
                 className="shrink-0 hidden sm:inline-block px-4 py-2 rounded-lg bg-white/95 text-slate-900 font-bold text-xs hover:bg-teal-500 hover:text-white transition-colors"
               >
-                İncele →
+                {a.incele}
               </Link>
             </div>
           </div>
@@ -236,7 +278,7 @@ export default function UrunSlider() {
       <button
         type="button"
         onClick={() => git(aktif - 1)}
-        aria-label="Önceki görsel"
+        aria-label={a.onceki}
         className="focus-ring absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/85 hover:bg-white text-slate-900 hidden sm:flex items-center justify-center shadow"
       >
         ‹
@@ -244,7 +286,7 @@ export default function UrunSlider() {
       <button
         type="button"
         onClick={() => git(aktif + 1)}
-        aria-label="Sonraki görsel"
+        aria-label={a.sonraki}
         className="focus-ring absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/85 hover:bg-white text-slate-900 hidden sm:flex items-center justify-center shadow"
       >
         ›
@@ -257,7 +299,7 @@ export default function UrunSlider() {
             key={s.baslik}
             type="button"
             onClick={() => git(i)}
-            aria-label={`${i + 1}. görsel: ${s.baslik}`}
+            aria-label={dil === "tr" ? `${i + 1}. görsel: ${s.baslik}` : `${a.gorsel} ${i + 1}: ${s.baslik}`}
             aria-current={i === aktif}
             className={`h-2 rounded-full transition-all ${i === aktif ? "w-6 bg-teal-400" : "w-2 bg-white/60 hover:bg-white"}`}
           />

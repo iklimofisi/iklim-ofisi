@@ -3,6 +3,9 @@
 //   * WhatsApp numarası girilmemişse WhatsApp butonu çıkmaz.
 //   * Telefon boşsa (ya da hâlâ örnek numara duruyorsa) Ara butonu çıkmaz.
 
+import type { Dil } from "@/lib/dil";
+import { SITE_METNI } from "@/lib/site-metin";
+
 const ORNEK_TELEFON = "+90 (216) 450 00 00";
 
 // "0532 123 45 67", "+90 532 123 45 67", "5321234567" → "905321234567"
@@ -29,22 +32,25 @@ function telefonLinki(ham: string | null | undefined): string | null {
 export default function IletisimButonlari({
   telefon,
   whatsapp,
+  dil = "tr",
 }: {
   telefon?: string | null;
   whatsapp?: string | null;
+  dil?: Dil;
 }) {
+  const t = SITE_METNI[dil].iletisimDugme;
   const wa = whatsappNumarasi(whatsapp);
   const tel = telefonLinki(telefon);
   if (!wa && !tel) return null;
 
-  const mesaj = encodeURIComponent("Merhaba, iklimofisi.com üzerinden ulaşıyorum. Bilgi almak istiyorum.");
+  const mesaj = encodeURIComponent(t.whatsappMesaji);
 
   return (
     <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end gap-3 print:hidden">
       {tel && (
         <a
           href={tel}
-          aria-label="Bizi arayın"
+          aria-label={t.arayin}
           className="group flex items-center gap-2 rounded-full bg-slate-900 text-white shadow-lg shadow-slate-900/20 hover:bg-teal-700 transition-colors h-12 pl-3.5 pr-3.5 sm:pr-5 focus-ring"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -54,7 +60,7 @@ export default function IletisimButonlari({
               d="M3 5a2 2 0 012-2h2.3a1 1 0 01.95.68l1.2 3.6a1 1 0 01-.25 1.02L7.6 9.9a14 14 0 006.5 6.5l1.6-1.6a1 1 0 011.02-.25l3.6 1.2a1 1 0 01.68.95V19a2 2 0 01-2 2h-1C9.72 21 3 14.28 3 6V5z"
             />
           </svg>
-          <span className="hidden sm:inline text-sm font-bold">Hemen Arayın</span>
+          <span className="hidden sm:inline text-sm font-bold">{t.hemenArayin}</span>
         </a>
       )}
       {wa && (
@@ -62,7 +68,7 @@ export default function IletisimButonlari({
           href={`https://wa.me/${wa}?text=${mesaj}`}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="WhatsApp ile yazın"
+          aria-label={t.whatsappYazin}
           className="flex items-center gap-2 rounded-full bg-[#25D366] text-white shadow-lg shadow-green-900/20 hover:bg-[#1ebe5b] transition-colors h-12 pl-3 pr-3 sm:pr-5 focus-ring"
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden>

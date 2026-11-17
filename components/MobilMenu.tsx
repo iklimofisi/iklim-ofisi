@@ -2,31 +2,22 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { DILLER, DIL_ADI, DIL_KISA, dilsizYol, yol, type Dil } from "@/lib/dil";
+import { SITE_METNI } from "@/lib/site-metin";
 
-const links = [
-  { href: "/hakkimizda", label: "Hakkımızda" },
-  { href: "/hizmetler", label: "Hizmetler" },
-  { href: "/urunler", label: "Ürünler" },
-  { href: "/tcl-vrf", label: "TCL VRF Sistemleri" },
-  { href: "/buderus", label: "Buderus Yoğuşmalı Kazanlar" },
-  { href: "/ayen", label: "Ayen Alüminyum Radyatör" },
-  { href: "/hava-perdesi", label: "Niva & Olefini Hava Perdeleri" },
-  { href: "/referanslar", label: "Referanslar" },
-  { href: "/hesaplama", label: "Kapasite Hesaplama" },
-  { href: "/airnex", label: "AIRNEX Mutfak Havalandırma" },
-  { href: "/blog", label: "Blog" },
-  { href: "/iletisim", label: "İletişim" },
-];
-
-export default function MobilMenu() {
+export default function MobilMenu({ dil = "tr" }: { dil?: Dil }) {
   const [acik, setAcik] = useState(false);
+  const t = SITE_METNI[dil].mobil;
+  const links = t.linkler;
+  const taban = dilsizYol(usePathname() || "/");
 
   return (
     <div className="lg:hidden">
       <button
         type="button"
         onClick={() => setAcik((v) => !v)}
-        aria-label={acik ? "Menüyü kapat" : "Menüyü aç"}
+        aria-label={acik ? t.kapat : t.ac}
         aria-expanded={acik}
         className="focus-ring w-10 h-10 flex items-center justify-center rounded-lg border border-slate-200 text-slate-800 hover:bg-slate-50"
       >
@@ -41,10 +32,28 @@ export default function MobilMenu() {
 
       {acik && (
         <nav className="absolute left-0 right-0 top-full bg-white border-b border-slate-200 shadow-lg px-6 py-4 flex flex-col text-sm font-semibold text-slate-700">
+          {/* Dil seçimi (küçük ekranlarda üst menüde yer olmadığı için burada) */}
+          <div className="flex gap-2 pb-3 mb-1 border-b border-slate-100" aria-label={SITE_METNI[dil].dilSec}>
+            {DILLER.map((d) => (
+              <a
+                key={d}
+                href={yol(d, taban)}
+                hrefLang={d}
+                lang={d}
+                title={DIL_ADI[d]}
+                aria-current={d === dil ? "true" : undefined}
+                className={`focus-ring flex-1 text-center py-2 rounded-lg border text-xs font-bold ${
+                  d === dil ? "bg-teal-700 border-teal-700 text-white" : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                {DIL_KISA[d]}
+              </a>
+            ))}
+          </div>
           {links.map((l) => (
             <Link
               key={l.href}
-              href={l.href}
+              href={yol(dil, l.href)}
               onClick={() => setAcik(false)}
               className="focus-ring py-3 border-b border-slate-100 last:border-b-0 hover:text-teal-700 transition-colors"
             >

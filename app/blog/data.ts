@@ -1,3 +1,7 @@
+import type { Dil } from "@/lib/dil";
+import { CEVIRI_EN } from "./ceviri-en";
+import { CEVIRI_DE } from "./ceviri-de";
+
 export interface Makale {
   slug: string;
   baslik: string;
@@ -14,6 +18,10 @@ export interface Makale {
   seoAciklama?: string; // Google sonuçlarında görünen açıklama (en çok ~155 karakter); yoksa ozet
   sss?: [soru: string, cevap: string][]; // makale sonunda sık sorulan sorular (FAQPage yapısal verisi de eklenir)
 }
+
+// İngilizce / Almanca çeviri: slug, tarih ve görseller Türkçe ile aynı kalır (ceviri-en.ts, ceviri-de.ts)
+export type MakaleCevirisi = Pick<Makale, "baslik" | "kategori" | "okumaSuresi" | "ozet" | "icerikHtml" | "gorselAlt"> &
+  Partial<Pick<Makale, "seoBaslik" | "seoAciklama" | "sss">>;
 
 // Paylaşım görseli (1200x630, logo + başlık): public/og/blog/<slug>.jpg
 export const makaleOgGorseli = (slug: string) => `/og/blog/${slug}.jpg`;
@@ -556,4 +564,33 @@ export function makaleIsoTarihi(tarih: string): string | null {
   const ay = AYLAR.indexOf(m[2].toLocaleLowerCase("tr-TR")) + 1;
   if (ay === 0) return null;
   return `${m[3]}-${String(ay).padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+}
+
+
+// Seçili dildeki makale listesi. Çevirisi olmayan makale Türkçe gösterilir.
+// Çeviri içindeki site içi bağlantılar ("/tcl-vrf") dil önekiyle ("/en/tcl-vrf") değiştirilir.
+export function makaleler(dil: Dil): Makale[] {
+  if (dil === "tr") return MAKALELER;
+  const ceviriler = dil === "en" ? CEVIRI_EN : CEVIRI_DE;
+  return MAKALELER.map((m) => {
+    const c = ceviriler[m.slug];
+    if (!c) return m;
+    return {
+      ...m,
+      ...c,
+      icerikHtml: c.icerikHtml.replace(/href="\/(?!\/)/g, `href="/${dil}/`),
+      seoBaslik: c.seoBaslik,
+      seoAciklama: c.seoAciklama,
+      sss: c.sss,
+    };
+  });
+}
+
+// "30 Ekim 2026" → dile göre gösterim ("30 October 2026", "30. Oktober 2026")
+export function makaleTarihi(dil: Dil, tarih: string): string {
+  if (dil === "tr") return tarih;
+  const iso = makaleIsoTarihi(tarih);
+  if (!iso) return tarih;
+  const t = new Date(`${iso}T12:00:00Z`);
+  return t.toLocaleDateString(dil === "en" ? "en-GB" : "de-DE", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 }

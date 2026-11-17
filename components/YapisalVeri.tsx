@@ -5,6 +5,9 @@
 // Firma adı, adres, telefon ve e-posta PANELDEKİ şirket bilgilerinden gelir.
 // -----------------------------------------------------------------------------
 
+import type { Dil } from "@/lib/dil";
+import { SITE_METNI } from "@/lib/site-metin";
+
 export const SITE = "https://iklimofisi.com";
 
 // Metin içinde "</script>" geçse bile sayfayı bozmasın diye "<" kaçırılır
@@ -52,7 +55,7 @@ type Sirket = {
   email: string | null;
 };
 
-export function IsletmeYapisalVerisi({ sirket }: { sirket: Sirket }) {
+export function IsletmeYapisalVerisi({ sirket, dil = "tr" }: { sirket: Sirket; dil?: Dil }) {
   const telefonlar = telefonlariAyir(sirket.telefon);
   const adres = adresAyir(sirket.adres);
   const veri: Record<string, unknown> = {
@@ -63,9 +66,7 @@ export function IsletmeYapisalVerisi({ sirket }: { sirket: Sirket }) {
     url: SITE,
     logo: `${SITE}/logo-hat.png`,
     image: `${SITE}/og-image.png`,
-    description:
-      sirket.slogan ||
-      "VRF merkezi iklimlendirme, klima ve multi klima, ısı pompası, yerden ısıtma, kazan dairesi yenileme, havalandırma ve mekanik tesisat çözümleri.",
+    description: (dil === "tr" && sirket.slogan) || SITE_METNI[dil].isletmeAciklamasi,
     ...(telefonlar[0] ? { telephone: telefonlar[0] } : {}),
     ...(sirket.email ? { email: sirket.email } : {}),
     ...(sirket.adres

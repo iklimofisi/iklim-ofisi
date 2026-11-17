@@ -4,7 +4,9 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
-import { MAKALELER, makaleIsoTarihi, makaleOgGorseli } from "../data";
+import { makaleler, makaleIsoTarihi, makaleOgGorseli, makaleTarihi } from "../data";
+import { dilAlternatifleri, OG_DIL, yol, type Dil } from "@/lib/dil";
+import { dilAl } from "@/lib/dil-sunucu";
 import { JsonLd, SITE } from "@/components/YapisalVeri";
 import { sssYapisalVeri } from "@/components/SikSorulanSorular";
 
@@ -15,22 +17,62 @@ const ESKI_SLUGLAR: Record<string, string> = {
   "vrf-sistemler-ve-mitsu-samsung-teknolojisi": "vrf-rehberi-mitsubishi-electric-ve-tcl",
 };
 
+// MAKALE SAYFASI METİNLERİ (Türkçe / English / Deutsch)
+const YAZI: Record<Dil, { geri: string; yayin: string; sss: string; ctaBaslik: string; ctaMetin: string; ctaDugme: string; diger: string; dilKodu: string; site: string }> = {
+  tr: {
+    geri: "← Tüm Makalelere Dön",
+    yayin: "Yayınlanma",
+    sss: "Sık Sorulan Sorular",
+    ctaBaslik: "Projeniz İçin Teknik Danışmanlık Alın",
+    ctaMetin: "Uzman mühendislerimiz binanız için doğru kapasiteyi ücretsiz keşifle belirlesin.",
+    ctaDugme: "Ücretsiz Keşif İsteyin →",
+    diger: "Diğer Makaleler",
+    dilKodu: "tr-TR",
+    site: "İklim Ofisi Mühendislik",
+  },
+  en: {
+    geri: "← Back to All Articles",
+    yayin: "Published",
+    sss: "Frequently Asked Questions",
+    ctaBaslik: "Get Technical Advice for Your Project",
+    ctaMetin: "Let our expert engineers determine the right capacity for your building with a free site survey.",
+    ctaDugme: "Request a Free Site Survey →",
+    diger: "More Articles",
+    dilKodu: "en",
+    site: "İklim Ofisi Engineering",
+  },
+  de: {
+    geri: "← Zurück zu allen Artikeln",
+    yayin: "Veröffentlicht",
+    sss: "Häufig gestellte Fragen",
+    ctaBaslik: "Technische Beratung für Ihr Projekt",
+    ctaMetin: "Unsere Fachingenieure ermitteln bei einer kostenlosen Besichtigung die richtige Leistung für Ihr Gebäude.",
+    ctaDugme: "Kostenlose Besichtigung anfordern →",
+    diger: "Weitere Artikel",
+    dilKodu: "de",
+    site: "İklim Ofisi Engineering",
+  },
+};
+
 export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
-  const makale = MAKALELER.find((m) => m.slug === params.slug);
+  const dil = dilAl();
+  const makale = makaleler(dil).find((m) => m.slug === params.slug);
   if (!makale) return {};
+  const yolu = yol(dil, `/blog/${makale.slug}`);
   return {
     // seoBaslik: Google'da kısalmadan görünsün diye site adı eklenmeden kullanılır
     title: makale.seoBaslik ? { absolute: makale.seoBaslik } : makale.baslik,
     description: makale.seoAciklama ?? makale.ozet,
-    alternates: { canonical: `/blog/${makale.slug}` },
+    alternates: dilAlternatifleri(dil, `/blog/${makale.slug}`),
     openGraph: {
       title: makale.baslik,
       description: makale.ozet,
       type: "article",
-      url: `${SITE}/blog/${makale.slug}`,
-      siteName: "İklim Ofisi Mühendislik",
-      locale: "tr_TR",
-      images: [{ url: makaleOgGorseli(makale.slug), width: 1200, height: 630, alt: makale.baslik }],
+      url: `${SITE}${yolu}`,
+      siteName: YAZI[dil].site,
+      locale: OG_DIL[dil],
+      // Türkçe paylaşım görselinde Türkçe başlık yazılı; diğer dillerde makale fotoğrafı kullanılır
+      images: [dil === "tr" ? { url: makaleOgGorseli(makale.slug), width: 1200, height: 630, alt: makale.baslik } : { url: makale.gorsel, alt: makale.baslik }],
       ...(makaleIsoTarihi(makale.tarih) ? { publishedTime: makaleIsoTarihi(makale.tarih)! } : {}),
     },
   };
@@ -38,8 +80,11 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
 
 export default function BlogDetayPage({ params }: { params: { slug: string } }) {
   const yeniSlug = ESKI_SLUGLAR[params.slug];
-  if (yeniSlug) permanentRedirect(`/blog/${yeniSlug}`);
+  const dil = dilAl();
+  const y = YAZI[dil];
+  if (yeniSlug) permanentRedirect(yol(dil, `/blog/${yeniSlug}`));
 
+  const MAKALELER = makaleler(dil);
   const makale = MAKALELER.find((m) => m.slug === params.slug);
 
   if (!makale) notFound();
@@ -65,8 +110,8 @@ export default function BlogDetayPage({ params }: { params: { slug: string } }) 
               description: makale.ozet,
               ...(makaleIsoTarihi(makale.tarih) ? { datePublished: makaleIsoTarihi(makale.tarih) } : {}),
               ...(makale.guncelleme && makaleIsoTarihi(makale.guncelleme) ? { dateModified: makaleIsoTarihi(makale.guncelleme) } : {}),
-              inLanguage: "tr-TR",
-              mainEntityOfPage: `${SITE}/blog/${makale.slug}`,
+              inLanguage: y.dilKodu,
+              mainEntityOfPage: `${SITE}${yol(dil, `/blog/${makale.slug}`)}`,
               image: [`${SITE}${makaleOgGorseli(makale.slug)}`, `${SITE}${makale.gorsel}`],
               author: { "@type": "Organization", name: "İklim Ofisi Mühendislik", url: SITE },
               publisher: {
@@ -79,8 +124,8 @@ export default function BlogDetayPage({ params }: { params: { slug: string } }) 
           {makale.sss && makale.sss.length > 0 && (
             <JsonLd veri={{ "@context": "https://schema.org", ...sssYapisalVeri(makale.sss) }} />
           )}
-          <Link href="/blog" className="text-xs font-bold text-teal-700 hover:underline inline-block">
-            ← Tüm Makalelere Dön
+          <Link href={yol(dil, "/blog")} className="text-xs font-bold text-teal-700 hover:underline inline-block">
+            {y.geri}
           </Link>
 
           <div className="space-y-3 border-b border-slate-200 pb-6">
@@ -91,7 +136,7 @@ export default function BlogDetayPage({ params }: { params: { slug: string } }) 
               {makale.baslik}
             </h1>
             <p className="text-xs text-slate-400 font-mono">
-              Yayınlanma: {makale.tarih} · {makale.okumaSuresi}
+              {y.yayin}: {makaleTarihi(dil, makale.tarih)} · {makale.okumaSuresi}
             </p>
           </div>
 
@@ -116,7 +161,7 @@ export default function BlogDetayPage({ params }: { params: { slug: string } }) 
           {/* SIK SORULAN SORULAR */}
           {makale.sss && makale.sss.length > 0 && (
             <section className="bg-white border border-slate-200/90 rounded-2xl p-8 shadow-sm space-y-3">
-              <h2 className="text-lg font-bold text-slate-900">Sık Sorulan Sorular</h2>
+              <h2 className="text-lg font-bold text-slate-900">{y.sss}</h2>
               {makale.sss.map(([soru, cevap]) => (
                 <details key={soru} className="group border border-slate-200 rounded-xl p-4">
                   <summary className="cursor-pointer list-none flex items-start justify-between gap-4 font-bold text-slate-900 text-sm">
@@ -134,28 +179,28 @@ export default function BlogDetayPage({ params }: { params: { slug: string } }) 
           {/* ÇAĞRI BANNERI */}
           <div className="bg-slate-900 text-white rounded-2xl p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl">
             <div className="space-y-1 text-center sm:text-left">
-              <h3 className="text-lg font-bold">Projeniz İçin Teknik Danışmanlık Alın</h3>
+              <h3 className="text-lg font-bold">{y.ctaBaslik}</h3>
               <p className="text-xs text-slate-300">
-                Uzman mühendislerimiz binanız için doğru kapasiteyi ücretsiz keşifle belirlesin.
+                {y.ctaMetin}
               </p>
             </div>
             <Link
-              href="/iletisim"
+              href={yol(dil, "/iletisim")}
               className="shrink-0 px-6 py-3 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs rounded-lg transition-colors"
             >
-              Ücretsiz Keşif İsteyin →
+              {y.ctaDugme}
             </Link>
           </div>
 
           {/* DİĞER MAKALELER */}
           {digerMakaleler.length > 0 && (
             <section className="space-y-3">
-              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Diğer Makaleler</h2>
+              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-widest">{y.diger}</h2>
               <div className="grid sm:grid-cols-3 gap-3">
                 {digerMakaleler.map((m) => (
                   <Link
                     key={m.slug}
-                    href={`/blog/${m.slug}`}
+                    href={yol(dil, `/blog/${m.slug}`)}
                     className="block bg-white border border-slate-200/90 rounded-xl p-4 shadow-sm hover:border-teal-300 transition-colors"
                   >
                     <span className="text-[10px] font-bold text-teal-700 uppercase tracking-widest">{m.kategori}</span>

@@ -20,13 +20,19 @@ function htmlKacir(metin: string) {
 }
 
 export async function webTalebiOlustur(formData: FormData) {
+  // Form dili (İngilizce / Almanca sayfadan gelen talepler aynı dildeki sayfaya döner)
+  const dilHam = String(formData.get("dil") ?? "");
+  const dil = dilHam === "en" || dilHam === "de" ? dilHam : "tr";
+  const sayfa = dil === "tr" ? "/iletisim" : `/${dil}/iletisim`;
+  const dilEtiketi = dil === "en" ? "İngilizce" : dil === "de" ? "Almanca" : "";
+
   // --- Spam koruması ---
   // 1) Süre kontrolü: form sayfası açıldıktan saniyeler içinde gönderildiyse bot kabul edilir.
   //    Bota hata gösterilmez; hiçbir şey kaydedilmeden "başarılı" sayfasına gider.
   const acilis = Number(formData.get("form_acilis") ?? 0);
   const cokHizli = Number.isFinite(acilis) && acilis > 0 && Date.now() - acilis < EN_KISA_SURE_MS;
   if (cokHizli) {
-    redirect("/iletisim?basarili=true");
+    redirect(`${sayfa}?basarili=true`);
   }
   // 2) Görünmez alan: gerçek ziyaretçiler görmez. DİKKAT: tarayıcının otomatik doldurması
   //    (Chrome "firma" adlı alana şirket adını yazıyordu) gerçek müşteriyi de bot sandırıyordu.
@@ -38,18 +44,19 @@ export async function webTalebiOlustur(formData: FormData) {
   const telefon = String(formData.get("telefon") ?? "").trim().slice(0, 50);
   const email = String(formData.get("email") ?? "").trim().slice(0, 200);
   const mesajHam = String(formData.get("mesaj") ?? "").trim().slice(0, 5000);
-  const mesaj = mesajHam && tuzak ? `⚠ Olası spam (gizli alan doldurulmuş)\n\n${mesajHam}` : mesajHam;
+  const notlar = [tuzak ? "⚠ Olası spam (gizli alan doldurulmuş)" : "", dilEtiketi ? `🌐 ${dilEtiketi} sayfadan gönderildi` : ""].filter(Boolean);
+  const mesaj = mesajHam && notlar.length ? `${notlar.join("\n")}\n\n${mesajHam}` : mesajHam;
   const kvkk = formData.get("kvkk");
   const dosya = formData.get("dosya") as File | null;
 
   if (!ad || !mesajHam) {
-    redirect("/iletisim?hata=eksik-bilgi");
+    redirect(`${sayfa}?hata=eksik-bilgi`);
   }
   if (!telefon && !email) {
-    redirect("/iletisim?hata=iletisim-yok");
+    redirect(`${sayfa}?hata=iletisim-yok`);
   }
   if (!kvkk) {
-    redirect("/iletisim?hata=kvkk");
+    redirect(`${sayfa}?hata=kvkk`);
   }
 
   let dosyaBuffer: Buffer | undefined;
@@ -59,10 +66,10 @@ export async function webTalebiOlustur(formData: FormData) {
   if (dosya && dosya.size > 0) {
     const uzanti = dosya.name.toLowerCase().slice(dosya.name.lastIndexOf("."));
     if (!IZINLI_UZANTILAR.includes(uzanti)) {
-      redirect("/iletisim?hata=dosya-turu");
+      redirect(`${sayfa}?hata=dosya-turu`);
     }
     if (dosya.size > EN_FAZLA_DOSYA_MB * 1024 * 1024) {
-      redirect("/iletisim?hata=dosya-boyutu");
+      redirect(`${sayfa}?hata=dosya-boyutu`);
     }
     dosyaBuffer = Buffer.from(await dosya.arrayBuffer());
     dosyaAdi = dosya.name;
@@ -87,7 +94,7 @@ export async function webTalebiOlustur(formData: FormData) {
   const gecerliEmail = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(email) ? email : undefined;
   await epostaGonder({
     replyTo: gecerliEmail,
-    konu: `🚨 YENİ MÜŞTERİ TALEBİ: ${ad.replace(/[\r\n]+/g, " ")}`,
+    konu: `🚨 YENİ MÜŞTERİ TALEBİ${dilEtiketi ? ` (${dilEtiketi})` : ""}: ${ad.replace(/[\r\n]+/g, " ")}`,
     icerikHtml: `
       <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8fafc; color: #334155;">
         <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 25px; border-radius: 10px; border: 1px solid #e2e8f0;">
@@ -117,5 +124,5 @@ export async function webTalebiOlustur(formData: FormData) {
 
   revalidatePath("/panel/talepler");
   // talep: Google Ads dönüşümü yalnız gerçekten kaydedilen talepte bir kez sayılsın diye (bot yönlendirmesinde yok)
-  redirect(`/iletisim?basarili=true&talep=${talep.id}`);
+  redirect(`${sayfa}?basarili=true&talep=${talep.id}`);
 }

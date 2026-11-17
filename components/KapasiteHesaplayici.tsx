@@ -2,11 +2,189 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { yol, type Dil } from "@/lib/dil";
 
 type Kategori = null | "bireysel" | "ticari" | "vrf" | "isi-pompasi";
 type VrfTab = "projem-var" | "kesif-istiyorum";
 
-export default function KapasiteHesaplayici() {
+// HESAPLAYICI METİNLERİ (Türkçe / English / Deutsch)
+const tr = {
+  soru: "Hangi Ürün İçin Hesaplama Yapmak İstiyorsunuz?",
+  soruAlt: "Devam etmek için aşağıdaki seçeneklerden birini seçin.",
+  bireysel: "Bireysel Klima",
+  bireyselAlt: "Duvar tipi ve multi-split klimalar için pratik BTU hesabı.",
+  ticari: "Ticari Klima",
+  ticariAlt: "Mağaza, ofis ve salon tipi klimalar için kapasite hesabı.",
+  vrf: "VRF Sistemleri",
+  vrfAlt: "Proje, otel ve plaza iklimlendirme & keşif talebi.",
+  isiPompasi: "Isı Pompası",
+  isiPompasiAlt: "Villa ve konutlar için yerden ısıtma / güç hesabı.",
+  geri: "← Geri Dön",
+  vrfBaslik: "VRF Sistem Projelendirme",
+  projemVar: "Mevcut Projem Var",
+  projemYok: "Projem Yok / Keşif İstiyorum",
+  projeMetin: "Mimari veya mekanik projenizi (DWG / PDF / Görsel) ekibimizin incelemesi için lütfen teknik mailimize iletiniz.",
+  mailHatti: "Teknik Mail Hattımız:",
+  mailKonu: "VRF%20Proje%20Dosyası%20İnceleme%20Talebi",
+  mailDugme: "Mail Programını Aç & Dosya Ekle",
+  kesifMetin: "Uzman mühendislerimiz binanızı veya şantiyenizi yerinde inceleyerek VRF kapasite hesabını ve borulama şemasını ücretsiz hazırlasın.",
+  kesifDugme: "Ücretsiz Keşif Formu Doldurun →",
+  ticariEtiket: "TİCARİ İKLİMLENDİRME",
+  bireyselEtiket: "BİREYSEL KLİMA",
+  kapasiteBaslik: "Kapasite Hesabı Yapın",
+  alan: "Mekan / Oda Alanı",
+  katKonumu: "Kat Konumu",
+  araKat: "Ara Kat",
+  zeminKat: "Zemin Kat",
+  catiKati: "Çatı Katı / Teras",
+  yalitim: "Yalıtım Durumu",
+  iyi: "İyi (Mantolamalı)",
+  orta: "Orta Standart",
+  zayif: "Zayıf / Yalıtımsız",
+  gunes: "Güneş Alma",
+  gunesOrta: "Orta Güneş Alıyor",
+  gunesCok: "Güney / Çok Güneş Alıyor",
+  gunesAz: "Kuzey / Az Güneş Alıyor",
+  tahmini: "Tahmini Kapasite İhtiyacınız",
+  onerilen: "Önerilen Standart Cihaz Kapasitesi:",
+  klimaTeklif: "Bu Kapasitede Fiyat Teklifi İsteyin →",
+  ipEtiket: "YENİLENEBİLİR ENERJİ & ISITMA",
+  ipBaslik: "Isı Pompası Güç Hesabı",
+  ipAlan: "Isıtılacak Net Alan",
+  ipYalitim: "Yalıtım & Cam Durumu",
+  ipIyi: "İyi (Isı Yalıtımlı / Çift Cam)",
+  ipOrta: "Orta Yalıtımlı",
+  ipZayif: "Eski / Yalıtımsız Bina",
+  katTipi: "Kat Tipi",
+  mustakil: "Müstakil / Ara Kat Villa",
+  teras: "Çatı Katı / Teraslı Villa",
+  gerekli: "Gerekli Isı Pompası Kapasitesi",
+  onerilenGuc: "Önerilen Cihaz Gücü:",
+  ipBirim: "kW Isı Pompası",
+  ipTeklif: "Isı Pompası Fiyat Teklifi İsteyin →",
+  sayiDili: "tr-TR",
+};
+
+type Metin = typeof tr;
+
+const en: Metin = {
+  soru: "Which Product Would You Like to Calculate For?",
+  soruAlt: "Choose one of the options below to continue.",
+  bireysel: "Residential AC",
+  bireyselAlt: "Practical BTU calculation for wall-mounted and multi-split air conditioners.",
+  ticari: "Commercial AC",
+  ticariAlt: "Capacity calculation for shop, office and floor-standing air conditioners.",
+  vrf: "VRF Systems",
+  vrfAlt: "Project, hotel and office tower air conditioning & site survey request.",
+  isiPompasi: "Heat Pump",
+  isiPompasiAlt: "Underfloor heating / output calculation for villas and homes.",
+  geri: "← Go Back",
+  vrfBaslik: "VRF System Design",
+  projemVar: "I Have a Project",
+  projemYok: "No Project / I Need a Site Survey",
+  projeMetin: "Please send your architectural or mechanical drawings (DWG / PDF / image) to our technical e-mail address for our team to review.",
+  mailHatti: "Our Technical E-mail:",
+  mailKonu: "VRF%20Project%20File%20Review%20Request",
+  mailDugme: "Open E-mail & Attach File",
+  kesifMetin: "Our expert engineers will inspect your building or site and prepare the VRF capacity calculation and piping diagram free of charge.",
+  kesifDugme: "Fill In the Free Site Survey Form →",
+  ticariEtiket: "COMMERCIAL AIR CONDITIONING",
+  bireyselEtiket: "RESIDENTIAL AIR CONDITIONING",
+  kapasiteBaslik: "Calculate the Capacity",
+  alan: "Space / Room Area",
+  katKonumu: "Floor Position",
+  araKat: "Intermediate Floor",
+  zeminKat: "Ground Floor",
+  catiKati: "Top Floor / Terrace",
+  yalitim: "Insulation",
+  iyi: "Good (External Insulation)",
+  orta: "Average",
+  zayif: "Poor / Uninsulated",
+  gunes: "Sun Exposure",
+  gunesOrta: "Moderate Sun",
+  gunesCok: "South-Facing / Lots of Sun",
+  gunesAz: "North-Facing / Little Sun",
+  tahmini: "Your Estimated Capacity Requirement",
+  onerilen: "Recommended Standard Unit Capacity:",
+  klimaTeklif: "Request a Quote for This Capacity →",
+  ipEtiket: "RENEWABLE ENERGY & HEATING",
+  ipBaslik: "Heat Pump Output Calculation",
+  ipAlan: "Net Heated Area",
+  ipYalitim: "Insulation & Glazing",
+  ipIyi: "Good (Insulated / Double Glazing)",
+  ipOrta: "Moderately Insulated",
+  ipZayif: "Old / Uninsulated Building",
+  katTipi: "Building Type",
+  mustakil: "Detached / Mid-Floor Villa",
+  teras: "Top Floor / Villa with Terrace",
+  gerekli: "Required Heat Pump Capacity",
+  onerilenGuc: "Recommended Unit Output:",
+  ipBirim: "kW Heat Pump",
+  ipTeklif: "Request a Heat Pump Quote →",
+  sayiDili: "en-US",
+};
+
+const de: Metin = {
+  soru: "Für welches Produkt möchten Sie rechnen?",
+  soruAlt: "Wählen Sie eine der folgenden Optionen, um fortzufahren.",
+  bireysel: "Wohnraum-Klima",
+  bireyselAlt: "Praktische BTU-Berechnung für Wand- und Multisplit-Klimageräte.",
+  ticari: "Gewerbe-Klima",
+  ticariAlt: "Leistungsberechnung für Klimageräte in Geschäften, Büros und Sälen.",
+  vrf: "VRF-Systeme",
+  vrfAlt: "Klimatisierung von Projekten, Hotels und Bürogebäuden & Besichtigungsanfrage.",
+  isiPompasi: "Wärmepumpe",
+  isiPompasiAlt: "Fußbodenheizungs- / Leistungsberechnung für Villen und Wohnhäuser.",
+  geri: "← Zurück",
+  vrfBaslik: "VRF-Systemplanung",
+  projemVar: "Ich habe Pläne",
+  projemYok: "Keine Pläne / Besichtigung gewünscht",
+  projeMetin: "Bitte senden Sie Ihre Architektur- oder TGA-Pläne (DWG / PDF / Bild) zur Prüfung durch unser Team an unsere technische E-Mail-Adresse.",
+  mailHatti: "Unsere technische E-Mail:",
+  mailKonu: "Anfrage%20zur%20Pr%C3%BCfung%20einer%20VRF-Projektdatei",
+  mailDugme: "E-Mail öffnen & Datei anhängen",
+  kesifMetin: "Unsere Fachingenieure besichtigen Ihr Gebäude oder Ihre Baustelle und erstellen kostenlos die VRF-Leistungsberechnung und das Rohrleitungsschema.",
+  kesifDugme: "Formular für kostenlose Besichtigung ausfüllen →",
+  ticariEtiket: "GEWERBLICHE KLIMATISIERUNG",
+  bireyselEtiket: "WOHNRAUM-KLIMA",
+  kapasiteBaslik: "Leistung berechnen",
+  alan: "Raum- / Zimmerfläche",
+  katKonumu: "Geschosslage",
+  araKat: "Zwischengeschoss",
+  zeminKat: "Erdgeschoss",
+  catiKati: "Dachgeschoss / Terrasse",
+  yalitim: "Dämmung",
+  iyi: "Gut (Außendämmung)",
+  orta: "Durchschnittlich",
+  zayif: "Schwach / ungedämmt",
+  gunes: "Sonneneinstrahlung",
+  gunesOrta: "Mittlere Sonne",
+  gunesCok: "Südlage / viel Sonne",
+  gunesAz: "Nordlage / wenig Sonne",
+  tahmini: "Ihr geschätzter Leistungsbedarf",
+  onerilen: "Empfohlene Standard-Geräteleistung:",
+  klimaTeklif: "Angebot für diese Leistung anfordern →",
+  ipEtiket: "ERNEUERBARE ENERGIE & HEIZUNG",
+  ipBaslik: "Wärmepumpen-Leistungsberechnung",
+  ipAlan: "Beheizte Nettofläche",
+  ipYalitim: "Dämmung & Verglasung",
+  ipIyi: "Gut (gedämmt / Doppelverglasung)",
+  ipOrta: "Mittel gedämmt",
+  ipZayif: "Altbau / ungedämmt",
+  katTipi: "Gebäudetyp",
+  mustakil: "Freistehend / Villa im Zwischengeschoss",
+  teras: "Dachgeschoss / Villa mit Terrasse",
+  gerekli: "Erforderliche Wärmepumpenleistung",
+  onerilenGuc: "Empfohlene Geräteleistung:",
+  ipBirim: "kW Wärmepumpe",
+  ipTeklif: "Wärmepumpen-Angebot anfordern →",
+  sayiDili: "de-DE",
+};
+
+const METIN: Record<Dil, Metin> = { tr, en, de };
+
+export default function KapasiteHesaplayici({ dil = "tr" }: { dil?: Dil }) {
+  const t = METIN[dil];
   const [seciliKategori, setSeciliKategori] = useState<Kategori>(null);
   const [vrfTab, setVrfTab] = useState<VrfTab>("projem-var");
 
@@ -55,10 +233,10 @@ export default function KapasiteHesaplayici() {
         <div className="space-y-10 text-center">
           <div className="space-y-3 max-w-2xl mx-auto">
             <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
-              Hangi Ürün İçin Hesaplama Yapmak İstiyorsunuz?
+              {t.soru}
             </h1>
             <p className="text-sm text-slate-500">
-              Devam etmek için aşağıdaki seçeneklerden birini seçin.
+              {t.soruAlt}
             </p>
           </div>
 
@@ -75,10 +253,10 @@ export default function KapasiteHesaplayici() {
               </div>
               <div>
                 <h3 className="font-bold text-slate-900 text-lg group-hover:text-teal-700 transition-colors">
-                  Bireysel Klima
+                  {t.bireysel}
                 </h3>
                 <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                  Duvar tipi ve multi-split klimalar için pratik BTU hesabı.
+                  {t.bireyselAlt}
                 </p>
               </div>
             </button>
@@ -95,10 +273,10 @@ export default function KapasiteHesaplayici() {
               </div>
               <div>
                 <h3 className="font-bold text-slate-900 text-lg group-hover:text-teal-700 transition-colors">
-                  Ticari Klima
+                  {t.ticari}
                 </h3>
                 <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                  Mağaza, ofis ve salon tipi klimalar için kapasite hesabı.
+                  {t.ticariAlt}
                 </p>
               </div>
             </button>
@@ -115,10 +293,10 @@ export default function KapasiteHesaplayici() {
               </div>
               <div>
                 <h3 className="font-bold text-slate-900 text-lg group-hover:text-teal-700 transition-colors">
-                  VRF Sistemleri
+                  {t.vrf}
                 </h3>
                 <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                  Proje, otel ve plaza iklimlendirme & keşif talebi.
+                  {t.vrfAlt}
                 </p>
               </div>
             </button>
@@ -135,10 +313,10 @@ export default function KapasiteHesaplayici() {
               </div>
               <div>
                 <h3 className="font-bold text-slate-900 text-lg group-hover:text-teal-700 transition-colors">
-                  Isı Pompası
+                  {t.isiPompasi}
                 </h3>
                 <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                  Villa ve konutlar için yerden ısıtma / güç hesabı.
+                  {t.isiPompasiAlt}
                 </p>
               </div>
             </button>
@@ -155,12 +333,12 @@ export default function KapasiteHesaplayici() {
             onClick={() => setSeciliKategori(null)}
             className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
           >
-            ← Geri Dön
+            {t.geri}
           </button>
 
           <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm space-y-8 text-center">
             <h2 className="text-2xl font-bold text-slate-900">
-              VRF Sistem Projelendirme
+              {t.vrfBaslik}
             </h2>
 
             {/* Sekme Butonları */}
@@ -173,7 +351,7 @@ export default function KapasiteHesaplayici() {
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                Mevcut Projem Var
+                {t.projemVar}
               </button>
               <button
                 onClick={() => setVrfTab("kesif-istiyorum")}
@@ -183,7 +361,7 @@ export default function KapasiteHesaplayici() {
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                Projem Yok / Keşif İstiyorum
+                {t.projemYok}
               </button>
             </div>
 
@@ -191,19 +369,19 @@ export default function KapasiteHesaplayici() {
             {vrfTab === "projem-var" && (
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 space-y-4">
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Mimari veya mekanik projenizi (DWG / PDF / Görsel) ekibimizin incelemesi için lütfen teknik mailimize iletiniz.
+                  {t.projeMetin}
                 </p>
 
                 <div className="py-2">
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Teknik Mail Hattımız:</p>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t.mailHatti}</p>
                   <p className="text-lg font-bold text-teal-700 font-mono">info@iklimofisi.com</p>
                 </div>
 
                 <a
-                  href="mailto:info@iklimofisi.com?subject=VRF%20Proje%20Dosyası%20İnceleme%20Talebi"
+                  href={`mailto:info@iklimofisi.com?subject=${t.mailKonu}`}
                   className="inline-block px-8 py-3.5 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-md transition-all"
                 >
-                  Mail Programını Aç & Dosya Ekle
+                  {t.mailDugme}
                 </a>
               </div>
             )}
@@ -212,14 +390,14 @@ export default function KapasiteHesaplayici() {
             {vrfTab === "kesif-istiyorum" && (
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 space-y-4">
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Uzman mühendislerimiz binanızı veya şantiyenizi yerinde inceleyerek VRF kapasite hesabını ve borulama şemasını ücretsiz hazırlasın.
+                  {t.kesifMetin}
                 </p>
 
                 <Link
-                  href="/iletisim"
+                  href={yol(dil, "/iletisim")}
                   className="inline-block px-8 py-3.5 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-md transition-all"
                 >
-                  Ücretsiz Keşif Formu Doldurun →
+                  {t.kesifDugme}
                 </Link>
               </div>
             )}
@@ -236,16 +414,16 @@ export default function KapasiteHesaplayici() {
             onClick={() => setSeciliKategori(null)}
             className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
           >
-            ← Geri Dön
+            {t.geri}
           </button>
 
           <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm space-y-8">
             <div className="border-b border-slate-100 pb-4">
               <span className="text-[10px] font-bold text-teal-700 uppercase tracking-widest">
-                {seciliKategori === "ticari" ? "TİCARİ İKLİMLENDİRME" : "BİREYSEL KLİMA"}
+                {seciliKategori === "ticari" ? t.ticariEtiket : t.bireyselEtiket}
               </span>
               <h2 className="text-2xl font-bold text-slate-900 mt-0.5">
-                Kapasite Hesabı Yapın
+                {t.kapasiteBaslik}
               </h2>
             </div>
 
@@ -253,7 +431,7 @@ export default function KapasiteHesaplayici() {
               {/* Oda Alanı Slider */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center text-sm font-semibold">
-                  <label className="text-slate-700">Mekan / Oda Alanı</label>
+                  <label className="text-slate-700">{t.alan}</label>
                   <span className="text-teal-700 font-bold font-mono text-base">{m2} m²</span>
                 </div>
                 <input
@@ -269,41 +447,41 @@ export default function KapasiteHesaplayici() {
               {/* Detay Seçimler */}
               <div className="grid sm:grid-cols-3 gap-4 text-xs">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Kat Konumu</label>
+                  <label className="block font-semibold text-slate-700 mb-1">{t.katKonumu}</label>
                   <select
                     value={kat}
                     onChange={(e) => setKat(e.target.value)}
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 font-medium"
                   >
-                    <option value="ara">Ara Kat</option>
-                    <option value="zemin">Zemin Kat</option>
-                    <option value="cati">Çatı Katı / Teras</option>
+                    <option value="ara">{t.araKat}</option>
+                    <option value="zemin">{t.zeminKat}</option>
+                    <option value="cati">{t.catiKati}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Yalıtım Durumu</label>
+                  <label className="block font-semibold text-slate-700 mb-1">{t.yalitim}</label>
                   <select
                     value={yalitim}
                     onChange={(e) => setYalitim(e.target.value)}
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 font-medium"
                   >
-                    <option value="iyi">İyi (Mantolamalı)</option>
-                    <option value="orta">Orta Standart</option>
-                    <option value="zayif">Zayıf / Yalıtımsız</option>
+                    <option value="iyi">{t.iyi}</option>
+                    <option value="orta">{t.orta}</option>
+                    <option value="zayif">{t.zayif}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Güneş Alma</label>
+                  <label className="block font-semibold text-slate-700 mb-1">{t.gunes}</label>
                   <select
                     value={gunes}
                     onChange={(e) => setGunes(e.target.value)}
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 font-medium"
                   >
-                    <option value="orta">Orta Güneş Alıyor</option>
-                    <option value="cok">Güney / Çok Güneş Alıyor</option>
-                    <option value="az">Kuzey / Az Güneş Alıyor</option>
+                    <option value="orta">{t.gunesOrta}</option>
+                    <option value="cok">{t.gunesCok}</option>
+                    <option value="az">{t.gunesAz}</option>
                   </select>
                 </div>
               </div>
@@ -311,25 +489,25 @@ export default function KapasiteHesaplayici() {
               {/* Sonuç Kutusu */}
               <div className="bg-slate-900 text-white p-6 rounded-xl space-y-3">
                 <p className="text-[11px] font-bold text-teal-400 uppercase tracking-widest">
-                  Tahmini Kapasite İhtiyacınız
+                  {t.tahmini}
                 </p>
                 <div className="flex items-baseline justify-between">
                   <div>
                     <p className="text-3xl font-extrabold font-mono text-white">
-                      {klimaSonuc.hesaplanan.toLocaleString("tr-TR")} BTU/h
+                      {klimaSonuc.hesaplanan.toLocaleString(t.sayiDili)} BTU/h
                     </p>
                     <p className="text-xs text-slate-400 mt-1">
-                      Önerilen Standart Cihaz Kapasitesi: <strong className="text-teal-300 font-mono">{klimaSonuc.enYakin.toLocaleString("tr-TR")} BTU/h</strong>
+                      {t.onerilen} <strong className="text-teal-300 font-mono">{klimaSonuc.enYakin.toLocaleString(t.sayiDili)} BTU/h</strong>
                     </p>
                   </div>
                 </div>
 
                 <div className="pt-3 border-t border-slate-800 flex justify-end">
                   <Link
-                    href="/iletisim"
+                    href={yol(dil, "/iletisim")}
                     className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold rounded-lg transition-colors"
                   >
-                    Bu Kapasitede Fiyat Teklifi İsteyin →
+                    {t.klimaTeklif}
                   </Link>
                 </div>
               </div>
@@ -347,16 +525,16 @@ export default function KapasiteHesaplayici() {
             onClick={() => setSeciliKategori(null)}
             className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
           >
-            ← Geri Dön
+            {t.geri}
           </button>
 
           <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm space-y-8">
             <div className="border-b border-slate-100 pb-4">
               <span className="text-[10px] font-bold text-teal-700 uppercase tracking-widest">
-                YENİLENEBİLİR ENERJİ & ISITMA
+                {t.ipEtiket}
               </span>
               <h2 className="text-2xl font-bold text-slate-900 mt-0.5">
-                Isı Pompası Güç Hesabı
+                {t.ipBaslik}
               </h2>
             </div>
 
@@ -364,7 +542,7 @@ export default function KapasiteHesaplayici() {
               {/* Isıtılacak Alan Slider */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center text-sm font-semibold">
-                  <label className="text-slate-700">Isıtılacak Net Alan</label>
+                  <label className="text-slate-700">{t.ipAlan}</label>
                   <span className="text-teal-700 font-bold font-mono text-base">{m2} m²</span>
                 </div>
                 <input
@@ -380,27 +558,27 @@ export default function KapasiteHesaplayici() {
               {/* Yalıtım Seçimi */}
               <div className="grid sm:grid-cols-2 gap-4 text-xs">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Yalıtım & Cam Durumu</label>
+                  <label className="block font-semibold text-slate-700 mb-1">{t.ipYalitim}</label>
                   <select
                     value={yalitim}
                     onChange={(e) => setYalitim(e.target.value)}
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 font-medium"
                   >
-                    <option value="iyi">İyi (Isı Yalıtımlı / Çift Cam)</option>
-                    <option value="orta">Orta Yalıtımlı</option>
-                    <option value="zayif">Eski / Yalıtımsız Bina</option>
+                    <option value="iyi">{t.ipIyi}</option>
+                    <option value="orta">{t.ipOrta}</option>
+                    <option value="zayif">{t.ipZayif}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Kat Tipi</label>
+                  <label className="block font-semibold text-slate-700 mb-1">{t.katTipi}</label>
                   <select
                     value={kat}
                     onChange={(e) => setKat(e.target.value)}
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 font-medium"
                   >
-                    <option value="ara">Müstakil / Ara Kat Villa</option>
-                    <option value="cati">Çatı Katı / Teraslı Villa</option>
+                    <option value="ara">{t.mustakil}</option>
+                    <option value="cati">{t.teras}</option>
                   </select>
                 </div>
               </div>
@@ -408,7 +586,7 @@ export default function KapasiteHesaplayici() {
               {/* Isı Pompası Sonuç Kutusu */}
               <div className="bg-slate-900 text-white p-6 rounded-xl space-y-3">
                 <p className="text-[11px] font-bold text-teal-400 uppercase tracking-widest">
-                  Gerekli Isı Pompası Kapasitesi
+                  {t.gerekli}
                 </p>
                 <div className="flex items-baseline justify-between">
                   <div>
@@ -416,17 +594,17 @@ export default function KapasiteHesaplayici() {
                       {isiPompasiSonuc.kw} kW
                     </p>
                     <p className="text-xs text-slate-400 mt-1">
-                      Önerilen Cihaz Gücü: <strong className="text-teal-300 font-mono">{isiPompasiSonuc.enYakinKw} kW Isı Pompası</strong>
+                      {t.onerilenGuc} <strong className="text-teal-300 font-mono">{isiPompasiSonuc.enYakinKw} {t.ipBirim}</strong>
                     </p>
                   </div>
                 </div>
 
                 <div className="pt-3 border-t border-slate-800 flex justify-end">
                   <Link
-                    href="/iletisim"
+                    href={yol(dil, "/iletisim")}
                     className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold rounded-lg transition-colors"
                   >
-                    Isı Pompası Fiyat Teklifi İsteyin →
+                    {t.ipTeklif}
                   </Link>
                 </div>
               </div>

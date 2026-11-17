@@ -1,11 +1,28 @@
 "use client";
 
+import type { Dil } from "@/lib/dil";
+
 // İletişim formundaki dosya alanı: çok büyük ya da desteklenmeyen dosyayı
 // göndermeden önce uyarır (sunucu tarafında da aynı kontrol yapılır).
 const EN_FAZLA_MB = 4;
 const IZINLI = [".pdf", ".dwg", ".dxf", ".jpg", ".jpeg", ".png"];
 
-export default function DosyaSecici() {
+const HATA: Record<Dil, { tur: string; boyut: string }> = {
+  tr: {
+    tur: "Yalnızca PDF, DWG, DXF, JPG veya PNG dosyası ekleyebilirsiniz.",
+    boyut: `Dosya ${EN_FAZLA_MB} MB'tan büyük. Daha küçük bir dosya seçin ya da dosyayı e-posta ile gönderin.`,
+  },
+  en: {
+    tur: "You can only attach PDF, DWG, DXF, JPG or PNG files.",
+    boyut: `The file is larger than ${EN_FAZLA_MB} MB. Choose a smaller file or send it by e-mail.`,
+  },
+  de: {
+    tur: "Sie können nur PDF-, DWG-, DXF-, JPG- oder PNG-Dateien anhängen.",
+    boyut: `Die Datei ist größer als ${EN_FAZLA_MB} MB. Wählen Sie eine kleinere Datei oder senden Sie sie per E-Mail.`,
+  },
+};
+
+export default function DosyaSecici({ dil = "tr" }: { dil?: Dil }) {
   return (
     <input
       id="dosya"
@@ -18,9 +35,8 @@ export default function DosyaSecici() {
         let hata = "";
         if (dosya) {
           const uzanti = dosya.name.toLowerCase().slice(dosya.name.lastIndexOf("."));
-          if (!IZINLI.includes(uzanti)) hata = "Yalnızca PDF, DWG, DXF, JPG veya PNG dosyası ekleyebilirsiniz.";
-          else if (dosya.size > EN_FAZLA_MB * 1024 * 1024)
-            hata = `Dosya ${EN_FAZLA_MB} MB'tan büyük. Daha küçük bir dosya seçin ya da dosyayı e-posta ile gönderin.`;
+          if (!IZINLI.includes(uzanti)) hata = HATA[dil].tur;
+          else if (dosya.size > EN_FAZLA_MB * 1024 * 1024) hata = HATA[dil].boyut;
         }
         girdi.setCustomValidity(hata);
         if (hata) girdi.reportValidity();
