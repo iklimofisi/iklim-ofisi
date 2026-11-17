@@ -2,7 +2,7 @@ import { getSirketAyarlari } from "@/lib/sirket";
 import Link from "next/link";
 import IletisimButonlari from "@/components/IletisimButonlari";
 import { IsletmeYapisalVerisi } from "@/components/YapisalVeri";
-import { ISTIRAK_METNI } from "@/lib/kurumsal";
+import { ISTIRAK_METNI, SOSYAL_MEDYA } from "@/lib/kurumsal";
 import { yol } from "@/lib/dil";
 import { dilAl } from "@/lib/dil-sunucu";
 import { SITE_METNI } from "@/lib/site-metin";
@@ -32,6 +32,28 @@ export default async function Footer() {
           )}
           {sirket.telefon && <p className="text-slate-400 text-xs">{t.tel}: {sirket.telefon}</p>}
           {sirket.email && <p className="text-slate-400 text-xs">{t.eposta}: {sirket.email}</p>}
+
+          {SOSYAL_MEDYA.length > 0 && (
+            <>
+              <h4 className="font-bold text-xs uppercase tracking-wider mt-6 mb-3 text-teal-400">{t.sosyal}</h4>
+              <div className="flex flex-wrap gap-2">
+                {SOSYAL_MEDYA.map((s) => (
+                  <a
+                    key={s.ad}
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={s.ad}
+                    title={s.ad}
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs font-medium text-slate-300 hover:border-teal-500 hover:text-white transition-colors"
+                  >
+                    <SosyalSimge ad={s.ad} />
+                    {s.ad}
+                  </a>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         <div>
@@ -56,4 +78,24 @@ export default async function Footer() {
       <IsletmeYapisalVerisi sirket={sirket} dil={dil} />
     </footer>
   );
+}
+
+function SosyalSimge({ ad }: { ad: string }) {
+  if (ad === "Instagram") {
+    return (
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="5" />
+        <circle cx="12" cy="12" r="4" />
+        <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+      </svg>
+    );
+  }
+  if (ad === "LinkedIn") {
+    return (
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+        <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z" />
+      </svg>
+    );
+  }
+  return null;
 }

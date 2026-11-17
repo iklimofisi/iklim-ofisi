@@ -57,6 +57,7 @@ const tr = {
       { href: "/iletisim", label: "İletişim & Konum" },
     ],
     kvkk: "KVKK Aydınlatma Metni & Çerezler",
+    sosyal: "Sosyal Medyalarımız",
   },
   iletisimDugme: {
     whatsappMesaji: "Merhaba, iklimofisi.com üzerinden ulaşıyorum. Bilgi almak istiyorum.",
@@ -132,6 +133,7 @@ const en: SiteMetni = {
       { href: "/iletisim", label: "Contact & Location" },
     ],
     kvkk: "Privacy Notice (KVKK) & Cookies",
+    sosyal: "Follow Us",
   },
   iletisimDugme: {
     whatsappMesaji: "Hello, I am contacting you via iklimofisi.com. I would like to get some information.",
@@ -205,6 +207,7 @@ const de: SiteMetni = {
       { href: "/iletisim", label: "Kontakt & Standort" },
     ],
     kvkk: "Datenschutzhinweis (KVKK) & Cookies",
+    sosyal: "Folgen Sie uns",
   },
   iletisimDugme: {
     whatsappMesaji: "Hallo, ich kontaktiere Sie über iklimofisi.com. Ich möchte gerne Informationen erhalten.",

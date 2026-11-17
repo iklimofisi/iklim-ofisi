@@ -7,6 +7,7 @@
 
 import type { Dil } from "@/lib/dil";
 import { SITE_METNI } from "@/lib/site-metin";
+import { SOSYAL_MEDYA } from "@/lib/kurumsal";
 
 export const SITE = "https://iklimofisi.com";
 
@@ -80,6 +81,7 @@ export function IsletmeYapisalVerisi({ sirket, dil = "tr" }: { sirket: Sirket; d
           },
         }
       : {}),
+    sameAs: SOSYAL_MEDYA.map((s) => s.url),
     areaServed: adres.il ? [adres.il, "Türkiye"] : ["İstanbul", "Türkiye"],
     ...(telefonlar.length
       ? {
