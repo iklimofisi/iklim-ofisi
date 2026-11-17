@@ -121,8 +121,9 @@ export default async function Iletisim({
         <form action={webTalebiOlustur} className="space-y-5">
           {/* Spam koruması: görünmez alan (gerçek ziyaretçiler görmez) + form açılış zamanı */}
           <div aria-hidden="true" className="absolute -left-[9999px] w-px h-px overflow-hidden">
-            <label htmlFor="firma_web_adresi">Bu alanı boş bırakın</label>
-            <input id="firma_web_adresi" name="firma_web_adresi" type="text" tabIndex={-1} autoComplete="off" />
+            {/* Ad, tarayıcının otomatik doldurmasına (şirket / adres / web) benzememeli */}
+            <label htmlFor="hp_k7">Bu alanı boş bırakın</label>
+            <input id="hp_k7" name="hp_k7" type="text" tabIndex={-1} autoComplete="off" />
           </div>
           <input type="hidden" name="form_acilis" value={formAcilis} />
 

@@ -21,24 +21,28 @@ function htmlKacir(metin: string) {
 
 export async function webTalebiOlustur(formData: FormData) {
   // --- Spam koruması ---
-  // 1) Görünmez alan: gerçek ziyaretçiler bu alanı görmez ve doldurmaz, botlar doldurur.
-  const tuzak = String(formData.get("firma_web_adresi") ?? "").trim();
-  // 2) Süre kontrolü: form sayfası açıldıktan saniyeler içinde gönderildiyse bot kabul edilir.
+  // 1) Süre kontrolü: form sayfası açıldıktan saniyeler içinde gönderildiyse bot kabul edilir.
+  //    Bota hata gösterilmez; hiçbir şey kaydedilmeden "başarılı" sayfasına gider.
   const acilis = Number(formData.get("form_acilis") ?? 0);
   const cokHizli = Number.isFinite(acilis) && acilis > 0 && Date.now() - acilis < EN_KISA_SURE_MS;
-  if (tuzak || cokHizli) {
-    // Bota hata gösterilmez; hiçbir şey kaydedilmeden "başarılı" sayfasına gider.
+  if (cokHizli) {
     redirect("/iletisim?basarili=true");
   }
+  // 2) Görünmez alan: gerçek ziyaretçiler görmez. DİKKAT: tarayıcının otomatik doldurması
+  //    (Chrome "firma" adlı alana şirket adını yazıyordu) gerçek müşteriyi de bot sandırıyordu.
+  //    Bu yüzden alan dolu gelse bile talep SİLİNMEZ; panelde "olası spam" notuyla kaydedilir.
+  //    (Eski sayfalardan gelen "firma_web_adresi" alanı artık dikkate alınmaz.)
+  const tuzak = String(formData.get("hp_k7") ?? "").trim();
 
   const ad = String(formData.get("ad") ?? "").trim().slice(0, 200);
   const telefon = String(formData.get("telefon") ?? "").trim().slice(0, 50);
   const email = String(formData.get("email") ?? "").trim().slice(0, 200);
-  const mesaj = String(formData.get("mesaj") ?? "").trim().slice(0, 5000);
+  const mesajHam = String(formData.get("mesaj") ?? "").trim().slice(0, 5000);
+  const mesaj = mesajHam && tuzak ? `⚠ Olası spam (gizli alan doldurulmuş)\n\n${mesajHam}` : mesajHam;
   const kvkk = formData.get("kvkk");
   const dosya = formData.get("dosya") as File | null;
 
-  if (!ad || !mesaj) {
+  if (!ad || !mesajHam) {
     redirect("/iletisim?hata=eksik-bilgi");
   }
   if (!telefon && !email) {
