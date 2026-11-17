@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { urunGorselAyarla } from "@/lib/actions";
 import { fotografYukle } from "@/lib/gorsel-yukle";
 import { bildirimGoster } from "@/lib/bildirim";
+import { onayIste } from "@/lib/onay";
 
 // Ürün kataloğunda küçük fotoğraf kutusu: tıklayınca fotoğraf seçilir ve hemen kaydedilir.
 export default function UrunFotografi({ urunId, gorselId, ad }: { urunId: string; gorselId: string | null; ad: string }) {
@@ -22,7 +23,7 @@ export default function UrunFotografi({ urunId, gorselId, ad }: { urunId: string
         bildirimGoster("Ürün fotoğrafı kaydedildi.");
       });
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : "Fotoğraf yüklenemedi");
+      bildirimGoster(e instanceof Error ? e.message : "Fotoğraf yüklenemedi.", { hata: true });
     } finally {
       setYukleniyor(false);
     }
@@ -63,8 +64,8 @@ export default function UrunFotografi({ urunId, gorselId, ad }: { urunId: string
           type="button"
           title="Fotoğrafı kaldır"
           aria-label="Fotoğrafı kaldır"
-          onClick={() => {
-            if (!window.confirm("Ürün fotoğrafı kaldırılsın mı?")) return;
+          onClick={async () => {
+            if (!(await onayIste("Ürün fotoğrafı kaldırılsın mı?", { onayMetni: "Kaldır", tehlikeli: true }))) return;
             startTransition(async () => {
               await urunGorselAyarla(urunId, null);
               setId(null);

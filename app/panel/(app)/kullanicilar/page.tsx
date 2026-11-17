@@ -71,7 +71,7 @@ export default async function KullanicilarSayfasi() {
                   <div className="flex items-center justify-end gap-3">
                     <SifreSifirlaFormu kullaniciId={k.id} />
                     {k.id !== giren.id && (
-                      <SilButon id={k.id} action={kullaniciSil} onayMesaji={`${k.ad} adlı kullanıcıyı silmek istediğine emin misin?`} />
+                      <SilButon id={k.id} action={kullaniciSil} onayMesaji={`${k.ad} adlı kullanıcıyı silmek istediğinize emin misiniz?`} />
                     )}
                   </div>
                 </td>

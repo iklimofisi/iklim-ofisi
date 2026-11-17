@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { useBitinceBildir } from "@/lib/bildirim";
+import { onayIste } from "@/lib/onay";
 import { siparisDurumGuncelle } from "@/lib/actions";
 
 export default function SiparisDurumSecici({
@@ -20,8 +21,8 @@ export default function SiparisDurumSecici({
         <button
           type="button"
           disabled={pending}
-          onClick={() => {
-            if (confirm("Durumu 'Hazırlanıyor'a geri almak istediğine emin misin?")) {
+          onClick={async () => {
+            if (await onayIste("Sipariş durumu 'Hazırlanıyor'a geri alınsın mı?", { onayMetni: "Hazırlanıyor'a al" })) {
               startTransition(() => siparisDurumGuncelle(siparisId, "HAZIRLANIYOR"));
             }
           }}
@@ -34,8 +35,8 @@ export default function SiparisDurumSecici({
         <button
           type="button"
           disabled={pending}
-          onClick={() => {
-            if (confirm("Bu siparişi iptal etmek istediğine emin misin?")) {
+          onClick={async () => {
+            if (await onayIste("Bu sipariş iptal edilsin mi?", { baslik: "Sipariş iptali", onayMetni: "Siparişi iptal et", tehlikeli: true })) {
               startTransition(() => siparisDurumGuncelle(siparisId, "IPTAL"));
             }
           }}

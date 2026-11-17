@@ -366,7 +366,7 @@ export default async function AyarlarSayfasi() {
                       <SilButon
                         id={s.id}
                         action={sablonSil}
-                        onayMesaji="Bu notu silmek istediğine emin misin? Bu notun seçili olduğu eski tekliflerden de kalkar."
+                        onayMesaji="Bu notu silmek istediğinize emin misiniz? Bu notun seçili olduğu eski tekliflerden de kalkar."
                       />
                     </div>
                   </form>

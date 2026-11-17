@@ -503,7 +503,7 @@ export default async function TekliflerSayfasi({
                       <SilButon
                         id={t.id}
                         action={teklifSil}
-                        onayMesaji="Bu teklifi silmek istediğine emin misin?"
+                        onayMesaji="Bu teklifi silmek istediğinize emin misiniz?"
                         ikonSinifi={`${ikonDugme} hover:!text-sicak-dim hover:!border-sicak/50 disabled:opacity-50`}
                       />
                     </div>

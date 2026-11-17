@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import PanelMobilMenu from "@/components/PanelMobilMenu";
 import PanelYanMenu, { type MenuGrubu } from "@/components/PanelYanMenu";
 import KayitBildirimi from "@/components/KayitBildirimi";
+import OnayPenceresi from "@/components/OnayPenceresi";
 import KurGostergesi from "@/components/KurGostergesi";
 import { LogoTam } from "@/components/Logo";
 import { Suspense } from "react";
@@ -118,6 +119,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       <Suspense fallback={null}>
         <KayitBildirimi />
       </Suspense>
+      <OnayPenceresi />
       <PanelMobilMenu gruplar={gruplar} rozetler={rozetler} />
       <aside className="w-56 shrink-0 border-r border-hat bg-yuzey hidden sm:flex flex-col print:hidden">
         <div className="h-16 flex items-center gap-2 px-6 border-b border-hat">

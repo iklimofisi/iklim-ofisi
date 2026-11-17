@@ -217,7 +217,7 @@ export default async function CariSayfasi({
                 </td>
 
                 <td className="px-4 py-3 text-right">
-                  <SilButon id={c.id} action={cariHareketSil} onayMesaji="Bu hareketi silmek istediğine emin misin?" />
+                  <SilButon id={c.id} action={cariHareketSil} onayMesaji="Bu hareketi silmek istediğinize emin misiniz?" />
                 </td>
               </tr>
             ))}

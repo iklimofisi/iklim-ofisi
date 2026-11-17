@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { onayIste } from "@/lib/onay";
 
 type Madde = { anahtar: number; baslik: string; icerik: string };
 let sayac = 0;
@@ -49,8 +50,8 @@ export default function SozlesmeMaddeleri({ baslangic }: { baslangic: { baslik: 
             </button>
             <button
               type="button"
-              onClick={() => {
-                if (!m.icerik.trim() || confirm(`"${m.baslik || "Bu madde"}" sözleşmeden çıkarılsın mı?`))
+              onClick={async () => {
+                if (!m.icerik.trim() || (await onayIste(`"${m.baslik || "Bu madde"}" sözleşmeden çıkarılsın mı?`, { onayMetni: "Çıkar", tehlikeli: true })))
                   setMaddeler((p) => p.filter((x) => x.anahtar !== m.anahtar));
               }}
               className="focus-ring px-2 py-1 text-xs text-sicak-dim border border-sicak-dim/30 rounded hover:bg-sicak-light"

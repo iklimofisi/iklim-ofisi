@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useContext, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { klimaHesapKaydet, klimaHesapTeklifeAktar } from "@/lib/klima-hesap-actions";
 import { bildirimGoster } from "@/lib/bildirim";
+import { onayIste } from "@/lib/onay";
 import { SayiAlani, Alan, Kart, Ozet, ElemanSatiri, Tablo, ELEMAN_DUGMELERI, girdi, Rehber, YardimBaglami, YardimDugmesi, useYardimDurumu } from "@/components/IsiHesapEditoru";
 import { yeniEleman, pencereMi, yeniId } from "@/lib/isi-hesap/tipler";
 import { ODA_TIPLERI, ISI_KOPRUSU, type Yon } from "@/lib/isi-hesap/katalog";
@@ -241,8 +242,8 @@ export default function KlimaHesapEditoru({ hesap, musteriler }: Props) {
                 });
                 setSeciliOda(kopya.id);
               }}
-              sil={() => {
-                if (!confirm(`"${oda.ad}" odası silinsin mi?`)) return;
+              sil={async () => {
+                if (!(await onayIste(`"${oda.ad}" odası silinsin mi?`, { baslik: "Silme onayı", onayMetni: "Sil", tehlikeli: true }))) return;
                 const i = veri.odalar.findIndex((o) => o.id === oda.id);
                 const kalan = veri.odalar.filter((o) => o.id !== oda.id);
                 setVeri((v) => ({ ...v, odalar: v.odalar.filter((o) => o.id !== oda.id) }));
@@ -439,8 +440,8 @@ function ProjeSekmesi({ veri, guncelle }: { veri: KlimaVerisi; guncelle: (p: Par
                 </Alan>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (!confirm(`${s.ad} silinsin mi? Bu sisteme bağlı odalar bağımsız split olur.`)) return;
+                  onClick={async () => {
+                    if (!(await onayIste(`${s.ad} silinsin mi? Bu sisteme bağlı odalar bağımsız split olur.`, { baslik: "Silme onayı", onayMetni: "Sil", tehlikeli: true }))) return;
                     guncelle({ sistemler: veri.sistemler.filter((x) => x.no !== s.no), odalar: veri.odalar.map((o) => (o.sistem === s.no ? { ...o, sistem: 0 } : o)) });
                   }}
                   className="focus-ring text-xs text-metin/40 hover:text-sicak-dim pb-2 ml-auto"

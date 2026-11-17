@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { useBitinceBildir } from "@/lib/bildirim";
+import { onayIste } from "@/lib/onay";
 
 export default function SilButon({
   id,
@@ -21,8 +22,8 @@ export default function SilButon({
     <button
       type="button"
       disabled={pending}
-      onClick={() => {
-        if (confirm(onayMesaji)) {
+      onClick={async () => {
+        if (await onayIste(onayMesaji, { baslik: "Silme onayı", onayMetni: "Sil", tehlikeli: true })) {
           startTransition(() => action(id));
         }
       }}

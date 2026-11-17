@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { teklifPaylasimOlustur, teklifPaylasimIptal } from "@/lib/actions";
 import KaydetButonu from "@/components/KaydetButonu";
 import { bildirimGoster } from "@/lib/bildirim";
+import { onayIste, uyariGoster } from "@/lib/onay";
 import { whatsappLinki, whatsappNumarasi } from "@/lib/gorusme";
 
 // Teklif sayfasında "WhatsApp ile Gönder" bölümü.
@@ -34,6 +35,7 @@ export default function TeklifWhatsapp({
   const [mesaj, setMesaj] = useState(
     `Merhaba ${hitapAd},\n\n${firma} olarak hazırladığımız ${teklifKodu} numaralı fiyat teklifimizi aşağıdaki bağlantıdan inceleyebilir, uygun bulursanız aynı sayfadan onaylayabilirsiniz:\n${link ?? "[link]"}\n\nSorularınız için bize her zaman ulaşabilirsiniz.\nİyi çalışmalar dileriz.`
   );
+  const iptalOnaylandi = useRef(false); // "Linki iptal et" onaylandı mı
 
   if (!link) {
     return (
@@ -60,7 +62,7 @@ export default function TeklifWhatsapp({
       await navigator.clipboard.writeText(link);
       bildirimGoster("Link kopyalandı.");
     } catch {
-      window.prompt("Linki kopyalayın:", link);
+      await uyariGoster("Link otomatik kopyalanamadı. Aşağıdaki linki seçip kopyalayın (Ctrl+C).", { baslik: "Teklif linki", kutuMetni: link });
     }
   };
 
@@ -125,8 +127,18 @@ export default function TeklifWhatsapp({
         </a>
         <form
           action={teklifPaylasimIptal}
-          onSubmit={(e) => {
-            if (!window.confirm("Link iptal edilsin mi? Müşteriye gönderdiğiniz eski link artık açılmaz.")) e.preventDefault();
+          onSubmit={async (e) => {
+            // Onaylandıktan sonraki ikinci gönderim: doğrudan geçsin
+            if (iptalOnaylandi.current) {
+              iptalOnaylandi.current = false;
+              return;
+            }
+            e.preventDefault();
+            const form = e.currentTarget;
+            if (await onayIste("Müşteriye gönderdiğiniz eski link artık açılmaz.", { baslik: "Link iptal edilsin mi?", onayMetni: "Linki iptal et", tehlikeli: true })) {
+              iptalOnaylandi.current = true;
+              form.requestSubmit();
+            }
           }}
         >
           <input type="hidden" name="teklifId" value={teklifId} />

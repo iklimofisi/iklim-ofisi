@@ -133,7 +133,7 @@ export default async function TaleplerSayfasi({
                     </KaydetButonu>
                   </form>
                 )}
-                <SilButon id={t.id} action={webTalebiSil} onayMesaji="Bu talebi silmek istediğine emin misin?" />
+                <SilButon id={t.id} action={webTalebiSil} onayMesaji="Bu talebi silmek istediğinize emin misiniz?" />
               </div>
             </div>
             <p className="text-sm text-metin/70 whitespace-pre-line mb-3">{t.mesaj}</p>

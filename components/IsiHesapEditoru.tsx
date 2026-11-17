@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, useTra
 import { isiHesapKaydet, isiHesapTeklifeAktar, isiHesapOnerileri, type OneriSonucu } from "@/lib/isi-hesap-actions";
 import type { Oneri } from "@/lib/isi-hesap/oneri";
 import { bildirimGoster } from "@/lib/bildirim";
+import { onayIste } from "@/lib/onay";
 import {
   ISITICILAR,
   yeniOda,
@@ -459,8 +460,8 @@ export default function IsiHesapEditoru({ hesap, musteriler, modeller }: Props) 
                 });
                 setSeciliOda(kopya.id);
               }}
-              sil={() => {
-                if (!confirm(`"${oda.ad}" odası silinsin mi?`)) return;
+              sil={async () => {
+                if (!(await onayIste(`"${oda.ad}" odası silinsin mi?`, { baslik: "Silme onayı", onayMetni: "Sil", tehlikeli: true }))) return;
                 const i = veri.odalar.findIndex((o) => o.id === oda.id);
                 const kalan = veri.odalar.filter((o) => o.id !== oda.id);
                 setVeri((v) => ({ ...v, odalar: v.odalar.filter((o) => o.id !== oda.id) }));

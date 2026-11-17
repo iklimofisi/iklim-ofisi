@@ -49,7 +49,7 @@ export default async function MarkalarSayfasi() {
               )}
               <span className="text-sm text-metin">{m.ad}</span>
             </div>
-            <SilButon id={m.id} action={markaSil} onayMesaji={`${m.ad} markasını silmek istediğine emin misin?`} />
+            <SilButon id={m.id} action={markaSil} onayMesaji={`${m.ad} markasını silmek istediğinize emin misiniz?`} />
           </div>
         ))}
         {markalar.length === 0 && (

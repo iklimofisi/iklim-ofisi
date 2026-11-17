@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useContext, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { havalandirmaHesapKaydet, havalandirmaHesapTeklifeAktar } from "@/lib/havalandirma-actions";
 import { bildirimGoster } from "@/lib/bildirim";
+import { onayIste } from "@/lib/onay";
 import { SayiAlani, Alan, Kart, Ozet, Tablo, girdi, Rehber, YardimBaglami, YardimDugmesi, useYardimDurumu } from "@/components/IsiHesapEditoru";
 import { yeniId } from "@/lib/isi-hesap/tipler";
 import { ILLER, ilBul } from "@/lib/isi-hesap/iklim";
@@ -86,8 +87,8 @@ export default function HavalandirmaHesapEditoru({ hesap, musteriler }: Props) {
     });
   };
   const elleDuzenle = () => setVeri((v) => elleyeGec(v));
-  const otomatigeDon = () => {
-    if (!confirm("Santral / fan seçimi ve mahal bağlantıları yeniden programa bırakılsın mı? Elle yaptığınız santral ayarları silinir.")) return;
+  const otomatigeDon = async () => {
+    if (!(await onayIste("Santral / fan seçimi ve mahal bağlantıları yeniden programa bırakılsın mı? Elle yaptığınız santral ayarları silinir.", { onayMetni: "Programa bırak", tehlikeli: true }))) return;
     setVeri((v) => ({ ...v, otoSistem: true, santraller: [] }));
   };
 
@@ -278,8 +279,8 @@ export default function HavalandirmaHesapEditoru({ hesap, musteriler }: Props) {
                   });
                   setSeciliMahal(kopya.id);
                 }}
-                sil={() => {
-                  if (!confirm(`"${mahal.ad}" mahali silinsin mi?`)) return;
+                sil={async () => {
+                  if (!(await onayIste(`"${mahal.ad}" mahali silinsin mi?`, { baslik: "Silme onayı", onayMetni: "Sil", tehlikeli: true }))) return;
                   const i = veri.mahaller.findIndex((m) => m.id === mahal.id);
                   const kalan = veri.mahaller.filter((m) => m.id !== mahal.id);
                   setVeri((v) => ({ ...v, mahaller: v.mahaller.filter((m) => m.id !== mahal.id) }));
@@ -510,8 +511,8 @@ function ProjeSekmesi({
                       </Alan>
                       <button
                         type="button"
-                        onClick={() => {
-                          if (!confirm(`${s.ad} silinsin mi? Bu santrale bağlı mahaller "santral yok" olur.`)) return;
+                        onClick={async () => {
+                          if (!(await onayIste(`${s.ad} silinsin mi? Bu santrale bağlı mahaller "santral yok" olur.`, { baslik: "Silme onayı", onayMetni: "Sil", tehlikeli: true }))) return;
                           guncelle({
                             santraller: veri.santraller.filter((x) => x.no !== s.no),
                             mahaller: veri.mahaller.map((m) => ({ ...m, santral: m.santral === s.no ? 0 : m.santral, egzozSantral: m.egzozSantral === s.no ? null : m.egzozSantral })),

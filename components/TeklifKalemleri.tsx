@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
+import { onayIste } from "@/lib/onay";
+import { bildirimGoster } from "@/lib/bildirim";
 import UrunArama from "@/components/UrunArama";
 import { toplamaGoreDagit, tutarOku } from "@/lib/toplam-dagit";
 import { donusumKalemleri } from "@/lib/satinalma-hesap";
@@ -288,10 +290,10 @@ export default function TeklifKalemleri({
       if (yeniKalemler.length > 0) {
         setSatirlar(bolumlereGoreDiz(yeniKalemler));
       } else {
-        alert("Excel'de uygun sütun başlıkları (Açıklama, Adet, Birim Fiyat) bulunamadı.");
+        bildirimGoster("Excel'de uygun sütun başlıkları (Açıklama, Adet, Birim Fiyat) bulunamadı.", { hata: true });
       }
     } catch (err) {
-      alert("Excel dosyası okunamadı. Lütfen geçerli bir .xlsx dosyası seçin.");
+      bildirimGoster("Excel dosyası okunamadı. Lütfen geçerli bir .xlsx dosyası seçin.", { hata: true });
     }
   };
 
@@ -418,9 +420,17 @@ export default function TeklifKalemleri({
     });
   };
   // Bölümü (tüm satırlarıyla) kaldır
-  const bolumuKaldir = (bolumAdi: string) => {
+  const bolumuKaldir = async (bolumAdi: string) => {
     const sayi = satirlar.filter((s) => (s.bolum || "Genel Kalemler") === bolumAdi && (s.aciklama ?? "").trim()).length;
-    if (sayi > 0 && !window.confirm(`"${bolumAdi}" bölümü ve içindeki ${sayi} kalem tekliften kaldırılsın mı? (Kaydetmeden önce geri almak için sayfayı yenileyebilirsiniz.)`)) return;
+    if (
+      sayi > 0 &&
+      !(await onayIste(`"${bolumAdi}" bölümü ve içindeki ${sayi} kalem tekliften kaldırılsın mı?\n\nKaydetmeden önce geri almak için sayfayı yenileyebilirsiniz.`, {
+        baslik: "Bölüm kaldırılsın mı?",
+        onayMetni: "Bölümü kaldır",
+        tehlikeli: true,
+      }))
+    )
+      return;
     setSatirlar((prev) => prev.filter((s) => (s.bolum || "Genel Kalemler") !== bolumAdi));
     setGizliBolumler((g) => {
       if (!g.has(bolumAdi)) return g;
@@ -593,7 +603,9 @@ export default function TeklifKalemleri({
   // Yeni ad başka bir bölümle aynıysa iki bölüm birleşir.
   const [duzenlenenBolum, setDuzenlenenBolum] = useState<string | null>(null);
   const [bolumAdiTaslak, setBolumAdiTaslak] = useState("");
-  const bolumAdiniKaydet = () => {
+  const bolumOnayAcik = useRef(false); // birleştirme sorusu açıkken (odak pencereye geçince) ikinci kez sorulmasın
+  const bolumAdiniKaydet = async () => {
+    if (bolumOnayAcik.current) return;
     const eski = duzenlenenBolum;
     const yeni = bolumAdiTaslak.trim().slice(0, 200);
     if (eski === null || !yeni || yeni === eski) {
@@ -602,11 +614,14 @@ export default function TeklifKalemleri({
     }
     // Aynı adda başka bölüm varsa sessizce birleştirme: sor; vazgeçilirse düzenleme açık kalır
     const varOlan = satirlar.some((s) => (s.bolum || "Genel Kalemler") === yeni);
-    if (
-      varOlan &&
-      !window.confirm(`"${yeni}" adında bir bölüm zaten var. "${eski}" bölümünün kalemleri o bölüme taşınıp iki bölüm birleştirilsin mi?\n\nBirleştirmek istemiyorsanız "İptal"e basıp farklı bir ad yazın.`)
-    ) {
-      return;
+    if (varOlan) {
+      bolumOnayAcik.current = true;
+      const birlestir = await onayIste(
+        `"${yeni}" adında bir bölüm zaten var. "${eski}" bölümünün kalemleri o bölüme taşınıp iki bölüm birleştirilsin mi?\n\nBirleştirmek istemiyorsanız "Vazgeç"e basıp farklı bir ad yazın.`,
+        { baslik: "Bölümler birleştirilsin mi?", onayMetni: "Birleştir" }
+      );
+      bolumOnayAcik.current = false;
+      if (!birlestir) return;
     }
     setDuzenlenenBolum(null);
     setGizliBolumler((g) => {

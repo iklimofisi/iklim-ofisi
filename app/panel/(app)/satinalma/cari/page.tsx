@@ -206,7 +206,7 @@ export default async function TedarikciCariSayfasi({
                 </td>
 
                 <td className="px-4 py-3 text-right">
-                  <SilButon id={h.id} action={tedarikciHareketSil} onayMesaji="Bu hareketi silmek istediğine emin misin?" />
+                  <SilButon id={h.id} action={tedarikciHareketSil} onayMesaji="Bu hareketi silmek istediğinize emin misiniz?" />
                 </td>
               </tr>
             ))}

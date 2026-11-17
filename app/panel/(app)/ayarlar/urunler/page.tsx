@@ -116,7 +116,7 @@ export default async function UrunlerSayfasi() {
                   <span className="text-metin/60">{u.birim}</span>
                   <span className="text-right font-mono text-metin whitespace-nowrap">{paraFormat(u.listeFiyati, u.paraBirimi)}</span>
                   <span className="text-right">
-                    <SilButon id={u.id} action={urunSil} onayMesaji={`${u.ad} ürününü silmek istediğine emin misin?`} />
+                    <SilButon id={u.id} action={urunSil} onayMesaji={`${u.ad} ürününü silmek istediğinize emin misiniz?`} />
                   </span>
                 </div>
               ),

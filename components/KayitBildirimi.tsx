@@ -96,9 +96,10 @@ export default function KayitBildirimi() {
   // Formlar ve butonlar da bildirim gönderebilir (bildirimGoster)
   useEffect(() => {
     const dinle = (e: Event) => {
-      const m = (e as CustomEvent<string>).detail;
+      const d = (e as CustomEvent<string | { metin: string; hata?: boolean }>).detail;
+      const m = typeof d === "string" ? d : d?.metin;
       if (m) {
-        setHata(false);
+        setHata(typeof d === "object" && !!d?.hata);
         setMetin(m);
       }
     };

@@ -48,7 +48,7 @@ export default async function ProjeDetay({ params }: { params: { id: string } })
           <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Proje</p>
           <h1 className="font-display text-2xl font-semibold text-metin">{proje.ad}</h1>
         </div>
-        <SilButon id={proje.id} action={projeSil} onayMesaji="Bu projeyi silmek istediğine emin misin?" />
+        <SilButon id={proje.id} action={projeSil} onayMesaji="Bu projeyi silmek istediğinize emin misiniz?" />
       </div>
 
       <details className="bg-yuzey border border-hat rounded-lg mb-8">

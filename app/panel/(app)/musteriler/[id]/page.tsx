@@ -210,7 +210,7 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
                 <SilButon
                   id={y.id}
                   action={musteriYetkiliSil}
-                  onayMesaji="Bu yetkiliyi silmek istediğine emin misin? Bu yetkiliye hazırlanan teklifler silinmez; müşterinin ana yetkilisine döner."
+                  onayMesaji="Bu yetkiliyi silmek istediğinize emin misiniz? Bu yetkiliye hazırlanan teklifler silinmez; müşterinin ana yetkilisine döner."
                 />
               </div>
             </details>

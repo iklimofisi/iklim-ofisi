@@ -82,7 +82,7 @@ export default async function KesifSayfasi() {
                 {k.olusturulanTeklif && " · Teklife dönüştürüldü"}
               </p>
             </Link>
-            <SilButon id={k.id} action={kesifSil} onayMesaji="Bu keşif kaydını silmek istediğine emin misin?" />
+            <SilButon id={k.id} action={kesifSil} onayMesaji="Bu keşif kaydını silmek istediğinize emin misiniz?" />
           </div>
           ),
         }))}

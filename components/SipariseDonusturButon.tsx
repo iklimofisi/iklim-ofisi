@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { siparisOlustur } from "@/lib/actions";
 import { useBitinceBildir } from "@/lib/bildirim";
+import { onayIste } from "@/lib/onay";
 
 export default function SipariseDonusturButon({ teklifId }: { teklifId: string }) {
   const [pending, startTransition] = useTransition();
@@ -12,8 +13,8 @@ export default function SipariseDonusturButon({ teklifId }: { teklifId: string }
     <button
       type="button"
       disabled={pending}
-      onClick={() => {
-        if (confirm("Bu teklifi siparişe dönüştürmek istediğine emin misin?")) {
+      onClick={async () => {
+        if (await onayIste("Bu teklif siparişe dönüştürülsün mü?", { onayMetni: "Siparişe dönüştür" })) {
           startTransition(() => siparisOlustur(teklifId));
         }
       }}

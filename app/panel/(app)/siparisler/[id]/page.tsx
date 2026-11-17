@@ -71,7 +71,7 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
         <div className="flex items-center gap-3 shrink-0 print:hidden">
           {aktifMi && <SiparisDurumSecici siparisId={siparis.id} mevcutDurum={siparis.durum} />}
           <YazdirButon />
-          <SilButon id={siparis.id} action={siparisSil} onayMesaji="Bu siparişi silmek istediğine emin misin? (Cari hesaba işlenmiş borç kaydı otomatik silinmez, gerekirse cari hesaptan ayrıca sil.)" />
+          <SilButon id={siparis.id} action={siparisSil} onayMesaji="Bu siparişi silmek istediğinize emin misiniz? (Cari hesaba işlenmiş borç kaydı otomatik silinmez, gerekirse cari hesaptan ayrıca sil.)" />
         </div>
       </div>
 
@@ -270,7 +270,7 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
                         <p className="text-metin">{s.adet}x {s.teklifKalem.aciklama}{s.not && ` — ${s.not}`}</p>
                         <p className="text-xs text-metin/50">{s.tarih.toISOString().slice(0, 10)}</p>
                       </div>
-                      <SilButon id={s.id} action={sevkiyatSil} onayMesaji="Bu sevkiyat kaydını silmek istediğine emin misin?" />
+                      <SilButon id={s.id} action={sevkiyatSil} onayMesaji="Bu sevkiyat kaydını silmek istediğinize emin misiniz?" />
                     </div>
                   ))}
                 </div>
@@ -375,7 +375,7 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
                           )}
                         </p>
                       </div>
-                      <SilButon id={t.id} action={teslimKaydiSil} onayMesaji="Bu teslim kaydını silmek istediğine emin misin?" />
+                      <SilButon id={t.id} action={teslimKaydiSil} onayMesaji="Bu teslim kaydını silmek istediğinize emin misiniz?" />
                     </div>
                   ))}
                 </div>

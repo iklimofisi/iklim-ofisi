@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { fiyatListesiKaydet } from "@/lib/actions";
 import KaydetButonu from "@/components/KaydetButonu";
 import { fotografYukle } from "@/lib/gorsel-yukle";
+import { bildirimGoster } from "@/lib/bildirim";
 import { DUZENLER, FIYAT_SUTUN_KALIPLARI, iskontoluFiyat, flParaYaz, sutunIskontolari, iskontoKapsamGecerli, iskontoUygula, yuzdeOku, YUVARLAMALAR, yuvarlamaGecerli, kartFiyati, karOku } from "@/lib/fiyat-listesi";
 import { tutarOku } from "@/lib/toplam-dagit";
 
@@ -386,7 +387,7 @@ export default function FiyatListesiDuzenleyici({
       onSubmit={(e) => {
         if (yuklenen) {
           e.preventDefault();
-          window.alert("Fotoğraf yüklemesi bitmeden kaydedilemez. Birkaç saniye bekleyin.");
+          bildirimGoster("Fotoğraf yüklemesi bitmeden kaydedilemez. Birkaç saniye bekleyin.", { hata: true });
           return;
         }
         setDegisti(false);

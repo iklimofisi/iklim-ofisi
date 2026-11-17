@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { siparisOnayla, siparisReddet } from "@/lib/actions";
 import { useBitinceBildir } from "@/lib/bildirim";
+import { onayIste } from "@/lib/onay";
 import KaydetButonu from "@/components/KaydetButonu";
 
 export default function SiparisOnayReddet({ siparisId }: { siparisId: string }) {
@@ -16,8 +17,8 @@ export default function SiparisOnayReddet({ siparisId }: { siparisId: string }) 
         <button
           type="button"
           disabled={pending}
-          onClick={() => {
-            if (confirm("Bu siparişi onaylıyor musun? Onaylandığında müşteri cari hesabına borç olarak işlenecek.")) {
+          onClick={async () => {
+            if (await onayIste("Onaylandığında sipariş tutarı müşterinin cari hesabına borç olarak işlenecek.", { baslik: "Sipariş onaylansın mı?", onayMetni: "Onayla" })) {
               startTransition(() => siparisOnayla(siparisId));
             }
           }}

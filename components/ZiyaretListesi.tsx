@@ -68,7 +68,7 @@ export default function ZiyaretListesi({
                   </>
                 )}
               </p>
-              <SilButon id={z.id} action={ziyaretSil} onayMesaji="Bu görüşme kaydını silmek istediğine emin misin?" />
+              <SilButon id={z.id} action={ziyaretSil} onayMesaji="Bu görüşme kaydını silmek istediğinize emin misiniz?" />
             </div>
             <p className="text-sm text-metin/80 whitespace-pre-line">{z.not}</p>
             {z.hatirlatmaTarihi && (

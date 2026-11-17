@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { sablonlariGrupla } from "@/lib/sablon";
 import { sablonHizliEkle, sablonIcerikGuncelle } from "@/lib/actions";
 import { bildirimGoster } from "@/lib/bildirim";
+import { onayIste } from "@/lib/onay";
 
 type Sablon = { id: string; baslik: string; grupBaslik: string | null; icerik: string };
 
@@ -267,12 +268,13 @@ function NotMetni({
       return k;
     });
 
-  const hazirNotaKaydet = () => {
+  const hazirNotaKaydet = async () => {
     if (!metin.trim()) return;
     if (
-      !window.confirm(
-        `"${not.baslik}" hazır notu bu metinle değiştirilsin mi?\n\nDikkat: Bu notu kullanan ESKİ tekliflerin çıktısında da yeni metin görünür (o tekliflere özel düzenleme yapılmadıysa).`
-      )
+      !(await onayIste(
+        `"${not.baslik}" hazır notu bu metinle değiştirilsin mi?\n\nDikkat: Bu notu kullanan ESKİ tekliflerin çıktısında da yeni metin görünür (o tekliflere özel düzenleme yapılmadıysa).`,
+        { baslik: "Hazır not değiştirilsin mi?", onayMetni: "Değiştir", tehlikeli: true }
+      ))
     )
       return;
     startTransition(async () => {
