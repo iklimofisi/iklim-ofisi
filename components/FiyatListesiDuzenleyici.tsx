@@ -99,11 +99,14 @@ export default function FiyatListesiDuzenleyici({
   kalemler,
   urunler,
   kurlar,
+  kodAlislari = null,
 }: {
   ayarlar: Ayarlar;
   kalemler: DuzenlenenKalem[];
   urunler: KatalogUrunu[];
   kurlar: { tarih: string; USD: number; EUR: number } | null;
+  // Hazır listede (ör. Niva) ürün koduna göre bayi alış fiyatları; alış iskontosu girilmemişse bunlar gösterilir (yalnız panelde)
+  kodAlislari?: Record<string, number> | null;
 }) {
   const [paraBirimi, setParaBirimi] = useState(ayarlar.paraBirimi);
   const [iskonto, setIskonto] = useState(String(ayarlar.iskontoYuzde || ""));
@@ -561,7 +564,9 @@ export default function FiyatListesiDuzenleyici({
           <p className="text-[11px] text-metin/60">
             {alisY !== null
               ? `Alış fiyatı = liste fiyatı − %${alisY.toLocaleString("tr-TR")}${ucFiyat && !kartOto ? ` (${fb1} ve ${fb3} için ayrı ayrı)` : ""}; her ürünün altında alış fiyatı ve kârı görünür. Alış fiyatı PDF'e ve müşteriye gitmez. `
-              : "Alış iskontosu girerseniz her ürünün altında alış fiyatı ve kârınız görünür (yalnız panelde). "}
+              : kodAlislari
+                ? "Alış fiyatları tedarikçinin bayi listesinden gelir (ürün koduna göre); her ürünün altında alış fiyatı ve kârınız görünür. Alış fiyatı PDF'e ve müşteriye gitmez. "
+                : "Alış iskontosu girerseniz her ürünün altında alış fiyatı ve kârınız görünür (yalnız panelde). "}
             {ikiFiyat &&
               (satisOto
                 ? `${fb2} satış fiyatı ${fb1} üzerinden${ucFiyat && !kartOto ? `, ${fb3} satış fiyatı kendi liste fiyatı üzerinden` : ""} %${(satisY as number).toLocaleString("tr-TR")} iskontoyla otomatik hesaplanır. PDF'te liste fiyatları gösterilmez; müşteriye yalnız ${ucFiyat ? `${fb2} ve ${fb3}` : fb2} satış fiyatları gider.`
@@ -930,6 +935,21 @@ export default function FiyatListesiDuzenleyici({
                           </span>
                         );
                       })}
+                    {alisY === null &&
+                      kodAlislari &&
+                      (() => {
+                        // Hazır listenin bayi alışı (ör. Niva): kâr, listedeki satış fiyatına göre
+                        const alis = kodAlislari[r.kod.trim()];
+                        if (!alis) return null;
+                        const satis = ikiFiyat ? ikinciFiyat(r) : fiyat;
+                        const kar = satis - alis;
+                        return (
+                          <span className={kar >= 0 ? "text-emerald-700" : "text-sicak-dim font-medium"}>
+                            {` · alış: ${flParaYaz(alis, paraBirimi)}`}
+                            {satis > 0 && ` · kâr: ${flParaYaz(kar, paraBirimi)} (%${((kar / alis) * 100).toLocaleString("tr-TR", { maximumFractionDigits: 1 })})`}
+                          </span>
+                        );
+                      })()}
                     {r.uyari && <span className="text-sicak-dim font-medium"> · {r.uyari}</span>}
                   </span>
                   <span className="flex items-center gap-1">

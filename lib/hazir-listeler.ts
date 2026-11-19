@@ -4,6 +4,8 @@
 // "Hazır listeler" kutusundan tek tıkla panele eklenir (fotoğraflarıyla birlikte).
 // Alış fiyatları burada TUTULMAZ (müşteriye giden belgeye karışmasın diye);
 // alış iskontosu tanımlıysa alış fiyatı yalnız panelde hesaplanıp gösterilir.
+// Niva gibi satış fiyatı "bayi alış + %kâr" olan listelerde (satisKarYuzde) alış fiyatı her ürün için
+// buradaki satış fiyatından geri hesaplanır ve yalnız panelde gösterilir (hazirAlisFiyatlari).
 // -----------------------------------------------------------------------------
 
 import { OLEFINI } from "@/lib/hazir-olefini";
@@ -39,6 +41,7 @@ export type HazirListe = {
   fiyat3Baslik?: string; // doluysa 3. fiyat sütunu (kalemlerde "kart")
   alisIskontoYuzde?: number; // liste fiyatından alış iskontosu (yalnız panelde)
   satisIskontoYuzde?: number; // satış fiyatı = liste fiyatı − bu iskonto (otomatik hesap)
+  satisKarYuzde?: number; // satış fiyatı = bayi alış + bu kâr (Niva): alış = satış ÷ (1 + kâr), yalnız panelde
   bolumler: HazirBolum[];
   gorseller: Record<string, { b64: string; genislik: number; yukseklik: number }>;
 };
@@ -54,6 +57,7 @@ const NIVA: HazirListe = {
   kdvDahil: false,
   fiyatBaslik: "Liste Fiyatı",
   fiyat2Baslik: "Satış Fiyatı",
+  satisKarYuzde: 15,
   bolumler: [
     {
       ad: "Linda Genel Tip Isıtıcısız",
@@ -293,3 +297,14 @@ const MONTAJ: HazirListe = {
 
 export const HAZIR_LISTELER: HazirListe[] = [NIVA, OLEFINI, BUDERUS, MONTAJ];
 export const hazirListeBul = (kod: string) => HAZIR_LISTELER.find((l) => l.kod === kod) ?? null;
+
+// Ürün koduna göre bayi alış fiyatları (yalnız satisKarYuzde tanımlı listelerde; ör. Niva).
+// Tedarikçinin bayi alışıdır: listede satış fiyatını elle değiştirseniz de alış değişmez, kâr ona göre görünür.
+export function hazirAlisFiyatlari(h: HazirListe | null | undefined): Record<string, number> | null {
+  if (!h || !h.satisKarYuzde || h.satisKarYuzde <= 0) return null;
+  const sonuc: Record<string, number> = {};
+  for (const b of h.bolumler)
+    for (const k of b.kalemler)
+      if (k.kod && k.satis > 0) sonuc[k.kod.trim()] = Math.round((k.satis / (1 + (h.satisKarYuzde as number) / 100)) * 100) / 100;
+  return sonuc;
+}

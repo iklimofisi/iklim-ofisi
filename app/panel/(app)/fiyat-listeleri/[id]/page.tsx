@@ -6,8 +6,8 @@ import FiyatListesiDuzenleyici from "@/components/FiyatListesiDuzenleyici";
 import KayaFiyatListesi from "@/components/KayaFiyatListesi";
 import ToptanFiyatListesi from "@/components/ToptanFiyatListesi";
 import { BARAN_KAYNAK, toptanKaynakMi, toptanDurumOku, toptanNotGruplari, anahtarla } from "@/lib/toptan-fiyat";
-import { kaynakDurumOku } from "@/lib/kaya-fiyat";
-import { HAZIR_LISTELER } from "@/lib/hazir-listeler";
+import { kaynakDurumOku, KAYA_ZAM_YUZDE } from "@/lib/kaya-fiyat";
+import { HAZIR_LISTELER, hazirAlisFiyatlari } from "@/lib/hazir-listeler";
 import { hazirListeTamamla, hazirListeFiyatGeriYukle } from "@/lib/actions";
 import OnayliGonderButonu from "@/components/OnayliGonderButonu";
 import FiyatListesiSecim from "@/components/FiyatListesiSecim";
@@ -131,7 +131,11 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
               { ad: liste.fiyatBaslik ?? "Nakit", deger: sayi(k.fiyat) },
               ...(k.fiyat2 !== null ? [{ ad: liste.fiyat2Baslik ?? "Kart", deger: sayi(k.fiyat2) }] : []),
             ],
-            alislar: [],
+            // Alış = Kaya'nın kendi fiyatı (listedeki fiyattan %5 geri alınır; Kaya sayfasındakiyle aynı hesap)
+            alislar: [
+              ...(sayi(k.fiyat) ? [{ ad: "Alış nakit", deger: Math.round(k.fiyat / (1 + KAYA_ZAM_YUZDE / 100)) }] : []),
+              ...(sayi(k.fiyat2) ? [{ ad: "Alış kart", deger: Math.round((k.fiyat2 as number) / (1 + KAYA_ZAM_YUZDE / 100)) }] : []),
+            ],
           }))}
         />
         <KayaFiyatListesi
@@ -155,6 +159,8 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
   const hazir = HAZIR_LISTELER.find((h) => h.baslik === liste.baslik) ?? null;
   // Liste içi arama: fiyat sütunları listenin kendi başlıklarıyla; alış iskontosu girildiyse alış fiyatı da
   const alisY = liste.alisIskontoYuzde !== null && liste.alisIskontoYuzde > 0 ? Math.min(100, liste.alisIskontoYuzde) : null;
+  // Niva gibi hazır listelerde ürün koduna göre bayi alış fiyatı (alış iskontosu girilmemişse)
+  const kodAlislari = alisY === null ? hazirAlisFiyatlari(hazir) : null;
   const aramaSatirlari: AramaSatiri[] = liste.kalemler.map((k) => ({
     id: k.id,
     bolum: k.bolum,
@@ -170,7 +176,9 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
     alislar:
       alisY !== null && k.fiyat > 0
         ? [{ ad: `Alış (−%${alisY.toLocaleString("tr-TR")})`, deger: Math.round(k.fiyat * (1 - alisY / 100) * 100) / 100 }]
-        : [],
+        : kodAlislari && k.kod && kodAlislari[k.kod.trim()]
+          ? [{ ad: "Alış", deger: kodAlislari[k.kod.trim()] }]
+          : [],
   }));
   return (
     <div className="max-w-4xl">
@@ -284,6 +292,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
           gorselId: u.gorselId,
         }))}
         kurlar={kurlar ? { tarih: kurlar.tarih, USD: kurlar.USD, EUR: kurlar.EUR } : null}
+        kodAlislari={kodAlislari}
       />
     </div>
   );
