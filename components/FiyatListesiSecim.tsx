@@ -27,6 +27,7 @@ export default function FiyatListesiSecim({
   fiyat3Baslik = "",
   satisIskontoYuzde = null,
   kartKarYuzde = null,
+  ilkArama = "",
 }: {
   listeId: string;
   satirlar: SecimSatir[];
@@ -36,10 +37,11 @@ export default function FiyatListesiSecim({
   fiyat3Baslik?: string; // doluysa 3. fiyat sütunu (1. fiyatın yanında)
   satisIskontoYuzde?: number | null; // doluysa PDF'teki gibi yalnız satış fiyatları gösterilir
   kartKarYuzde?: number | null; // doluysa 3. sütun fiyatı zaten satış fiyatıdır (alış + kâr)
+  ilkArama?: string; // Fiyat Listeleri sayfasındaki aramadan gelindiyse (?urun=…) bölüm açık ve arama dolu gelir
 }) {
   const depo = `liste-haric:${listeId}`;
   const [haric, setHaric] = useState<Set<string>>(new Set());
-  const [ara, setAra] = useState("");
+  const [ara, setAra] = useState(ilkArama);
   const [yuklendi, setYuklendi] = useState(false);
   const iki = fiyat2Baslik.trim().length > 0;
   const uc = iki && fiyat3Baslik.trim().length > 0;
@@ -114,7 +116,7 @@ export default function FiyatListesiSecim({
   const haricInputlari = haricIdler.map((id) => <input key={id} type="hidden" name="haric" value={id} />);
 
   return (
-    <details className="group bg-yuzey border border-hat rounded-lg mb-6">
+    <details id="urun-ara" open={ilkArama ? true : undefined} className="group bg-yuzey border border-hat rounded-lg mb-6 scroll-mt-6">
       <summary className="cursor-pointer list-none px-5 py-4 flex flex-wrap items-center justify-between gap-2">
         <span>
           <span className="font-display font-medium text-metin">☑ Ürün seçerek PDF al</span>

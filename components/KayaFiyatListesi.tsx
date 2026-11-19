@@ -31,14 +31,16 @@ export default function KayaFiyatListesi({
   liste,
   durum,
   satirlar,
+  ilkArama = "",
 }: {
   liste: { id: string; baslik: string; aciklama: string; notlar: string; duzen: string; fiyatBaslik: string; fiyat2Baslik: string; paraBirimi: string };
   durum: KaynakDurum;
   satirlar: KayaSatir[];
+  ilkArama?: string; // Fiyat Listeleri sayfasındaki aramadan gelindiyse (?urun=…) arama kutusu dolu açılır
 }) {
   const depo = `kaya-liste-haric:${liste.id}`;
   const [haric, setHaric] = useState<Set<string>>(new Set());
-  const [ara, setAra] = useState("");
+  const [ara, setAra] = useState(ilkArama);
   const [yuklendi, setYuklendi] = useState(false);
   const [yalnizDegisen, setYalnizDegisen] = useState(false);
 
@@ -230,7 +232,7 @@ export default function KayaFiyatListesi({
             </KaydetButonu>
           </form>
         </div>
-        <div className="flex flex-wrap items-center gap-3 text-xs">
+        <div id="urun-ara" className="flex flex-wrap items-center gap-3 text-xs scroll-mt-6">
           <input value={ara} onChange={(e) => setAra(e.target.value)} placeholder="Ürün ya da bölüm ara…" className="focus-ring border border-hat rounded-md px-3 py-1.5 text-sm bg-white w-64" />
           <button type="button" onClick={() => degistir(satirlar, true)} className="focus-ring text-soguk-dim hover:underline">
             Tümünü işaretle

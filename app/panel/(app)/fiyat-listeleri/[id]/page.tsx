@@ -19,7 +19,7 @@ export const maxDuration = 60;
 
 const gun = (d: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 
-export default async function FiyatListesiSayfasi({ params, searchParams }: { params: { id: string }; searchParams?: { yenile?: string } }) {
+export default async function FiyatListesiSayfasi({ params, searchParams }: { params: { id: string }; searchParams?: { yenile?: string; urun?: string } }) {
   const [liste, urunler, kurlar] = await Promise.all([
     prisma.fiyatListesi.findUnique({
       where: { id: params.id },
@@ -42,6 +42,8 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
     getTcmbKurlari(),
   ]);
   if (!liste) notFound();
+  // Fiyat Listeleri sayfasındaki ürün aramasından gelindiyse liste içindeki arama dolu açılır
+  const ilkArama = String(searchParams?.urun ?? "").slice(0, 100);
 
   const dugme = "focus-ring text-sm font-medium border px-4 py-2 rounded-md transition-colors";
 
@@ -85,6 +87,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
           satirlar={satirlar}
           notGruplari={toptanNotGruplari(durum)}
           kaynak={baran ? "BARAN" : "NETSA"}
+          ilkArama={ilkArama}
         />
       </div>
     );
@@ -112,6 +115,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
           }}
           durum={kaynakDurumOku(liste.kaynakDurum)}
           satirlar={liste.kalemler.map((k) => ({ id: k.id, bolum: k.bolum, ad: k.ad, aciklama: k.aciklama, fiyat: k.fiyat, fiyat2: k.fiyat2 }))}
+          ilkArama={ilkArama}
         />
       </div>
     );
@@ -172,6 +176,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
         fiyat3Baslik={liste.fiyat3Baslik ?? ""}
         satisIskontoYuzde={liste.satisIskontoYuzde}
         kartKarYuzde={liste.kartKarYuzde}
+        ilkArama={ilkArama}
         satirlar={liste.kalemler.map((k) => ({ id: k.id, bolum: k.bolum, ad: k.ad, kod: k.kod, fiyat: k.fiyat, fiyat2: k.fiyat2, fiyat3: k.fiyat3 }))}
       />
 
