@@ -20,7 +20,7 @@ export type TclSonuc = {
   fiyatsiz: boolean; // hiçbir kalemde birim fiyat yoksa true
   notlar: string[]; // "Bakır borulama ve montaj bedeli dahil değildir." gibi (bilgi için)
   uyarilar: string[];
-  firma?: "TCL" | "VIESSMANN"; // PDF'in biçimi (Viessmann tekliflerinde fiyatlar net alıştır)
+  firma?: "TCL" | "VIESSMANN" | "BOSCH"; // PDF'in biçimi (Viessmann tekliflerinde fiyatlar net alıştır; Bosch/Netisa teklifi birim fiyatsız)
 };
 
 type Parca = { s: string; x: number; x2: number; y: number };

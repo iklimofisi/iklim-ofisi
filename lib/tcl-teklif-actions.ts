@@ -1,8 +1,10 @@
 "use server";
 
 // -----------------------------------------------------------------------------
-// TCL / VIESSMANN TEKLİF PDF'İNDEN TEDARİKÇİ (SATINALMA) TEKLİFİ
-// PDF'in biçimi kendiliğinden tanınır (Viessmann teklifi ya da TCL teklifi).
+// TCL / VIESSMANN / BOSCH (NETİSA) TEKLİF PDF'İNDEN TEDARİKÇİ (SATINALMA) TEKLİFİ
+// PDF'in biçimi kendiliğinden tanınır (Viessmann, Bosch/Netisa ya da TCL teklifi).
+// Yazı katmanı olmayan PDF'te (ör. "Microsoft Print to PDF" ile basılmış Netisa teklifi)
+// sayfalar tarayıcıda görüntüden okunur (OCR) ve okunan metin "ocrMetni" alanıyla gelir.
 //   tclTeklifPdfOku    : yüklenen PDF'i okur, önizleme için döner (veritabanına YAZMAZ)
 //   tclSatinalmaKaydet : PDF'i yeniden okuyup satınalma teklifi olarak kaydeder
 //                        (ürün grupları bölüm olarak, PDF maliyet dosyası olarak saklanır)
@@ -17,8 +19,28 @@ import { islemKaydet } from "@/lib/islem-kaydi";
 import type { PdfSayfa } from "@/lib/netsa-ayikla";
 import { tclTeklifAyikla, tclKalemAciklamasi, type TclSonuc } from "@/lib/tcl-teklif-ayikla";
 import { viessmannTeklifAyikla, viessmannTeklifiMi } from "@/lib/viessmann-teklif-ayikla";
+import { netisaTeklifAyikla, netisaTeklifiMi } from "@/lib/netisa-teklif-ayikla";
 
 const EN_BUYUK = 10 * 1024 * 1024;
+const OCR_EN_UZUN = 200_000; // tarayıcıda okunan metin (karakter)
+// Yazı katmanı olmayan PDF: istemci bu işareti görünce sayfaları görüntüden okur (OCR) ve tekrar gönderir
+const METINSIZ = "METINSIZ";
+
+// Metin parçalarından satırlar (aynı yükseklikteki parçalar soldan sağa birleştirilir)
+function sayfaMetni(sayfalar: PdfSayfa[]): string {
+  return sayfalar
+    .map((s) => {
+      const og = s.items.filter((i) => i.s && i.s.trim()).sort((a, b) => a.y - b.y || a.x - b.x);
+      const satir: (typeof og)[] = [];
+      for (const i of og) {
+        const g = satir[satir.length - 1];
+        if (g && Math.abs(i.y - g[0].y) <= 2.5) g.push(i);
+        else satir.push([i]);
+      }
+      return satir.map((g) => g.sort((a, b) => a.x - b.x).map((i) => i.s.trim()).join(" ")).join("\n");
+    })
+    .join("\n\f\n");
+}
 
 // "35", "%35", "37,5" → 0 < x < 100; boş ya da geçersizse null (iskonto yok)
 function iskontoOku(v: FormDataEntryValue | null): number | null {
@@ -54,7 +76,10 @@ async function pdfSayfalari(pdf: Buffer): Promise<PdfSayfa[]> {
   return sayfalar;
 }
 
-async function dosyayiOku(dosya: FormDataEntryValue | null): Promise<{ pdf: Buffer; ad: string; tip: string; sonuc: TclSonuc } | { hata: string; ad: string }> {
+async function dosyayiOku(
+  dosya: FormDataEntryValue | null,
+  ocrHam?: FormDataEntryValue | null
+): Promise<{ pdf: Buffer; ad: string; tip: string; sonuc: TclSonuc } | { hata: string; ad: string }> {
   const ad = dosya && typeof dosya === "object" && "name" in dosya ? String((dosya as File).name).slice(0, 200) : "";
   if (!dosya || typeof dosya === "string" || dosya.size === 0) return { hata: "PDF dosyası seçilmedi.", ad };
   if (dosya.size > EN_BUYUK) return { hata: "Dosya çok büyük (10 MB üstü).", ad };
@@ -62,9 +87,23 @@ async function dosyayiOku(dosya: FormDataEntryValue | null): Promise<{ pdf: Buff
     const pdf = Buffer.from(await dosya.arrayBuffer());
     if (pdf.subarray(0, 5).toString("latin1") !== "%PDF-") return { hata: "Dosya PDF değil.", ad };
     const sayfalar = await pdfSayfalari(pdf);
-    const sonuc: TclSonuc = viessmannTeklifiMi(sayfalar)
-      ? { ...viessmannTeklifAyikla(sayfalar), firma: "VIESSMANN" }
-      : { ...tclTeklifAyikla(sayfalar), firma: "TCL" };
+    const yaziVar = sayfalar.reduce((a, s) => a + s.items.reduce((b, i) => b + i.s.trim().length, 0), 0) >= 40;
+    let sonuc: TclSonuc;
+    if (!yaziVar) {
+      // Yazı katmanı yok: tarayıcıda okunan metin (OCR) gelmediyse istemciden istenir
+      const ocr = typeof ocrHam === "string" ? ocrHam.slice(0, OCR_EN_UZUN) : "";
+      if (!ocr.trim()) return { hata: METINSIZ, ad };
+      if (!netisaTeklifiMi(ocr))
+        return { hata: "Bu PDF'te yazı katmanı yok ve görüntüden okunan metinde tanınan bir teklif biçimi bulunamadı (Bosch/Netisa teklifi bekleniyordu).", ad };
+      sonuc = netisaTeklifAyikla(ocr, true);
+    } else {
+      const metin = sayfaMetni(sayfalar);
+      sonuc = viessmannTeklifiMi(sayfalar)
+        ? { ...viessmannTeklifAyikla(sayfalar), firma: "VIESSMANN" }
+        : netisaTeklifiMi(metin)
+          ? netisaTeklifAyikla(metin)
+          : { ...tclTeklifAyikla(sayfalar), firma: "TCL" };
+    }
     if (!sonuc.kalemler.length) return { hata: sonuc.uyarilar[0] ?? "Teklifte ürün satırı bulunamadı.", ad };
     return { pdf, ad, tip: dosya.type || "application/pdf", sonuc };
   } catch (e) {
@@ -72,12 +111,17 @@ async function dosyayiOku(dosya: FormDataEntryValue | null): Promise<{ pdf: Buff
   }
 }
 
-export type TclOkumaSonucu = { basarili: true; dosya: string; sonuc: TclSonuc } | { basarili: false; dosya: string; hata: string };
+// metinsiz: PDF'te yazı katmanı yok; istemci sayfaları görüntüden okuyup (OCR) "ocrMetni" ile tekrar gönderir
+export type TclOkumaSonucu = { basarili: true; dosya: string; sonuc: TclSonuc } | { basarili: false; dosya: string; hata: string; metinsiz?: boolean };
 
 export async function tclTeklifPdfOku(formData: FormData): Promise<TclOkumaSonucu> {
   await girisZorunlu();
-  const r = await dosyayiOku(formData.get("pdf"));
-  return "hata" in r ? { basarili: false, dosya: r.ad, hata: r.hata } : { basarili: true, dosya: r.ad, sonuc: r.sonuc };
+  const r = await dosyayiOku(formData.get("pdf"), formData.get("ocrMetni"));
+  if ("hata" in r)
+    return r.hata === METINSIZ
+      ? { basarili: false, dosya: r.ad, hata: "PDF'te yazı katmanı yok; sayfalar görüntüden okunacak.", metinsiz: true }
+      : { basarili: false, dosya: r.ad, hata: r.hata };
+  return { basarili: true, dosya: r.ad, sonuc: r.sonuc };
 }
 
 export async function tclSatinalmaKaydet(formData: FormData) {
@@ -90,7 +134,7 @@ export async function tclSatinalmaKaydet(formData: FormData) {
   const tedarikci = await prisma.tedarikci.findUnique({ where: { id: tedarikciId }, select: { id: true } });
   if (!tedarikci) redirect(`${geri}?mesaj=tcl-teklif-eksik`);
 
-  const r = await dosyayiOku(formData.get("pdf"));
+  const r = await dosyayiOku(formData.get("pdf"), formData.get("ocrMetni"));
   if ("hata" in r) {
     await islemKaydet(kullanici, "tclSatinalmaKaydet", { baslik, hata: r.hata, dosya: r.ad });
     redirect(`${geri}?mesaj=tcl-teklif-okunamadi`);

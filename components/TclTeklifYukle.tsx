@@ -4,10 +4,13 @@ import { useMemo, useState } from "react";
 import { tclTeklifPdfOku, tclSatinalmaKaydet } from "@/lib/tcl-teklif-actions";
 import KaydetButonu from "@/components/KaydetButonu";
 import type { TclSonuc } from "@/lib/tcl-teklif-ayikla";
+import { pdfGoruntudenOku } from "@/lib/tarayici-ocr";
 
 // -----------------------------------------------------------------------------
-// TCL / VIESSMANN TEKLİF PDF'İ YÜKLE → satınalma teklifi
+// TCL / VIESSMANN / BOSCH (NETİSA) TEKLİF PDF'İ YÜKLE → satınalma teklifi
 // (biçim kendiliğinden tanınır; Viessmann tekliflerindeki fiyatlar zaten net alıştır)
+// Yazı katmanı olmayan PDF (ör. "Microsoft Print to PDF" ile basılmış Netisa teklifi)
+// tarayıcıda görüntüden okunur (OCR); okunan metin kaydederken de gönderilir.
 // PDF seçilince okunur ve önizlenir (ürün grupları, adet, birim fiyat, Net Tutar
 // kontrolü). PDF'teki fiyatlar liste fiyatıdır; firmanın verdiği alış iskontosu
 // yazılınca net alış fiyatları görünür. "Kaydet" ile satınalma teklifi oluşur;
@@ -30,6 +33,8 @@ export default function TclTeklifYukle({
   teklifeAktar?: boolean;
 }) {
   const [okunuyor, setOkunuyor] = useState(false);
+  const [durum, setDurum] = useState(""); // OCR ilerlemesi
+  const [ocrMetni, setOcrMetni] = useState(""); // görüntüden okunan metin (kaydederken sunucuya gider)
   const [sonuc, setSonuc] = useState<TclSonuc | null>(null);
   const [hata, setHata] = useState<string | null>(null);
   const [baslik, setBaslik] = useState(sabitKonu ?? "");
@@ -46,17 +51,27 @@ export default function TclTeklifYukle({
   async function oku(dosya: File | undefined) {
     setSonuc(null);
     setHata(null);
+    setOcrMetni("");
+    setDurum("");
     if (!dosya) return;
     setOkunuyor(true);
     try {
       const fd = new FormData();
       fd.append("pdf", dosya);
-      const r = await tclTeklifPdfOku(fd);
+      let r = await tclTeklifPdfOku(fd);
+      // PDF'te yazı katmanı yok: sayfalar tarayıcıda görüntüden okunur, metin sunucuya tekrar gönderilir
+      if (!r.basarili && r.metinsiz) {
+        const metin = await pdfGoruntudenOku(dosya, setDurum);
+        setDurum("Okunan metin işleniyor…");
+        fd.append("ocrMetni", metin);
+        r = await tclTeklifPdfOku(fd);
+        if (r.basarili) setOcrMetni(metin);
+      }
       if (r.basarili) {
         setSonuc(r.sonuc);
         // PDF hangi firmanınsa o tedarikçi seçili gelir (kullanıcı kendisi seçmediyse)
         if (!tedarikciElle) {
-          const desen = r.sonuc.firma === "VIESSMANN" ? /viessmann/i : /tcl/i;
+          const desen = r.sonuc.firma === "VIESSMANN" ? /viessmann/i : r.sonuc.firma === "BOSCH" ? /bosch|net[iİı]sa/i : /tcl/i;
           const t = tedarikciler.find((x) => desen.test(x.ad));
           if (t) setTedarikciId(t.id);
         }
@@ -66,6 +81,7 @@ export default function TclTeklifYukle({
       setHata(e instanceof Error ? e.message : "PDF okunamadı.");
     } finally {
       setOkunuyor(false);
+      setDurum("");
     }
   }
 
@@ -85,9 +101,10 @@ export default function TclTeklifYukle({
   return (
     <form action={tclSatinalmaKaydet} className="space-y-3">
       {teklifeAktar && <input type="hidden" name="sonra" value="teklif" />}
+      {ocrMetni && <input type="hidden" name="ocrMetni" value={ocrMetni} />}
       <div className={`grid gap-3 ${teklifeAktar ? "sm:grid-cols-5" : "sm:grid-cols-4"}`}>
         <div>
-          <label className="block text-xs font-medium text-metin/60 mb-1">TCL / Viessmann teklif PDF&apos;i *</label>
+          <label className="block text-xs font-medium text-metin/60 mb-1">TCL / Viessmann / Bosch teklif PDF&apos;i *</label>
           <input
             name="pdf"
             type="file"
@@ -165,7 +182,7 @@ export default function TclTeklifYukle({
       </div>
       {iskontoHatali && <p className="text-xs text-sicak-dim">İskonto 0 ile 100 arasında bir yüzde olmalı (örn. 35 ya da 37,5).</p>}
 
-      {okunuyor && <p className="text-sm text-soguk-dim">PDF okunuyor…</p>}
+      {okunuyor && <p className="text-sm text-soguk-dim">{durum || "PDF okunuyor…"}</p>}
       {hata && <p className="text-sm bg-sicak-light border border-sicak/40 text-sicak-dim rounded-md px-3 py-2">⚠ {hata}</p>}
 
       {sonuc && (
@@ -173,12 +190,15 @@ export default function TclTeklifYukle({
           <div className="px-3 py-2 border-b border-hat flex flex-wrap items-center justify-between gap-2 text-xs">
             <span>
               {sonuc.firma === "VIESSMANN" && <span className="mr-1.5 px-1.5 py-0.5 rounded bg-sicak/15 text-sicak-dim font-semibold">Viessmann</span>}
+              {sonuc.firma === "BOSCH" && <span className="mr-1.5 px-1.5 py-0.5 rounded bg-sicak/15 text-sicak-dim font-semibold">Bosch · Netisa</span>}
               <strong className="text-metin">{sonuc.projeAdi || "Proje adı okunamadı"}</strong>
               <span className="text-metin/50"> · {sonuc.tarih || "tarih yok"} · {sonuc.kalemler.length} kalem · {pb}</span>
             </span>
             <span className="font-mono">
               {sonuc.fiyatsiz ? (
-                <span className="text-amber-800">Birim fiyatsız teklif · Net Tutar {sonuc.netTutar != null ? para(sonuc.netTutar, pb) : "—"}</span>
+                <span className="text-amber-800">
+                  Birim fiyatsız teklif · {sonuc.firma === "BOSCH" ? "Toplam bedel" : "Net Tutar"} {sonuc.netTutar != null ? para(sonuc.netTutar, pb) : "—"}
+                </span>
               ) : (
                 <>
                   {sonuc.firma === "VIESSMANN" ? "Net alış toplamı" : "Liste toplamı"} <strong>{para(sonuc.kalemToplami, pb)}</strong>
