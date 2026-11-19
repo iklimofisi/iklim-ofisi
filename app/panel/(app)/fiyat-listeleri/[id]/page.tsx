@@ -12,14 +12,17 @@ import { hazirListeTamamla, hazirListeFiyatGeriYukle } from "@/lib/actions";
 import OnayliGonderButonu from "@/components/OnayliGonderButonu";
 import FiyatListesiSecim from "@/components/FiyatListesiSecim";
 import KaydetButonu from "@/components/KaydetButonu";
+import FiyatUrunArama, { type AramaSatiri } from "@/components/FiyatUrunArama";
 
 export const dynamic = "force-dynamic";
 // "Şimdi güncelle" Kaya'nın PDF'ini indirip okur (birkaç saniye sürebilir)
 export const maxDuration = 60;
 
 const gun = (d: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : "");
+// Liste içi ürün aramasında fiyat: 0 / boş = "Fiyat sorunuz"
+const sayi = (n: number | null | undefined) => (n && n > 0 ? n : null);
 
-export default async function FiyatListesiSayfasi({ params, searchParams }: { params: { id: string }; searchParams?: { yenile?: string; urun?: string } }) {
+export default async function FiyatListesiSayfasi({ params, searchParams }: { params: { id: string }; searchParams?: { yenile?: string } }) {
   const [liste, urunler, kurlar] = await Promise.all([
     prisma.fiyatListesi.findUnique({
       where: { id: params.id },
@@ -42,8 +45,6 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
     getTcmbKurlari(),
   ]);
   if (!liste) notFound();
-  // Fiyat Listeleri sayfasındaki ürün aramasından gelindiyse liste içindeki arama dolu açılır
-  const ilkArama = String(searchParams?.urun ?? "").slice(0, 100);
 
   const dugme = "focus-ring text-sm font-medium border px-4 py-2 rounded-md transition-colors";
 
@@ -65,6 +66,21 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
       alis: alislar.get(anahtar)?.alis ?? null,
       alis2: alislar.get(anahtar)?.alis2 ?? null,
     }));
+    const fb = liste.fiyatBaslik ?? "Nakit";
+    const fb2 = liste.fiyat2Baslik ?? "Kredi Kartı";
+    const aramaSatirlari: AramaSatiri[] = satirlar.map((r) => ({
+      id: r.id,
+      bolum: r.bolum,
+      ad: r.ad,
+      kod: r.kod,
+      marka: r.marka || null,
+      aciklama: r.aciklama,
+      fiyatlar: [{ ad: fb, deger: sayi(r.fiyat) }, ...(r.fiyat2 !== null || r.alis2 ? [{ ad: fb2, deger: sayi(r.fiyat2) }] : [])],
+      alislar: [
+        ...(r.alis !== null ? [{ ad: "Alış nakit", deger: sayi(r.alis) }] : []),
+        ...(r.alis2 ? [{ ad: "Alış kart", deger: sayi(r.alis2) }] : []),
+      ],
+    }));
     return (
       <div className="max-w-5xl">
         <Link href="/panel/fiyat-listeleri" className="focus-ring text-sm text-metin/60 hover:text-metin inline-block mb-6">
@@ -72,6 +88,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
         </Link>
         <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">{baran ? "Fiyat Listesi · Baran Isı" : "Fiyat Listesi · Toptan (Netsa)"}</p>
         <h1 className="font-display text-2xl font-semibold text-metin mb-6">{liste.baslik}</h1>
+        <FiyatUrunArama satirlar={aramaSatirlari} paraBirimi={liste.paraBirimi} />
         <ToptanFiyatListesi
           liste={{
             id: liste.id,
@@ -87,7 +104,6 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
           satirlar={satirlar}
           notGruplari={toptanNotGruplari(durum)}
           kaynak={baran ? "BARAN" : "NETSA"}
-          ilkArama={ilkArama}
         />
       </div>
     );
@@ -102,6 +118,22 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
         </Link>
         <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">Fiyat Listesi · Otomatik</p>
         <h1 className="font-display text-2xl font-semibold text-metin mb-6">{liste.baslik}</h1>
+        <FiyatUrunArama
+          paraBirimi={liste.paraBirimi}
+          satirlar={liste.kalemler.map((k) => ({
+            id: k.id,
+            bolum: k.bolum,
+            ad: k.ad,
+            kod: k.kod,
+            marka: k.marka,
+            aciklama: k.aciklama,
+            fiyatlar: [
+              { ad: liste.fiyatBaslik ?? "Nakit", deger: sayi(k.fiyat) },
+              ...(k.fiyat2 !== null ? [{ ad: liste.fiyat2Baslik ?? "Kart", deger: sayi(k.fiyat2) }] : []),
+            ],
+            alislar: [],
+          }))}
+        />
         <KayaFiyatListesi
           liste={{
             id: liste.id,
@@ -115,13 +147,31 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
           }}
           durum={kaynakDurumOku(liste.kaynakDurum)}
           satirlar={liste.kalemler.map((k) => ({ id: k.id, bolum: k.bolum, ad: k.ad, aciklama: k.aciklama, fiyat: k.fiyat, fiyat2: k.fiyat2 }))}
-          ilkArama={ilkArama}
         />
       </div>
     );
   }
 
   const hazir = HAZIR_LISTELER.find((h) => h.baslik === liste.baslik) ?? null;
+  // Liste içi arama: fiyat sütunları listenin kendi başlıklarıyla; alış iskontosu girildiyse alış fiyatı da
+  const alisY = liste.alisIskontoYuzde !== null && liste.alisIskontoYuzde > 0 ? Math.min(100, liste.alisIskontoYuzde) : null;
+  const aramaSatirlari: AramaSatiri[] = liste.kalemler.map((k) => ({
+    id: k.id,
+    bolum: k.bolum,
+    ad: k.ad,
+    kod: k.kod,
+    marka: k.marka,
+    aciklama: k.aciklama,
+    fiyatlar: [
+      { ad: liste.fiyatBaslik || "Fiyat", deger: sayi(k.fiyat) },
+      ...(liste.fiyat2Baslik ? [{ ad: liste.fiyat2Baslik, deger: sayi(k.fiyat2) }] : []),
+      ...(liste.fiyat2Baslik && liste.fiyat3Baslik ? [{ ad: liste.fiyat3Baslik, deger: sayi(k.fiyat3) }] : []),
+    ],
+    alislar:
+      alisY !== null && k.fiyat > 0
+        ? [{ ad: `Alış (−%${alisY.toLocaleString("tr-TR")})`, deger: Math.round(k.fiyat * (1 - alisY / 100) * 100) / 100 }]
+        : [],
+  }));
   return (
     <div className="max-w-4xl">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -140,6 +190,11 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
       <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">Fiyat Listesi</p>
       <h1 className="font-display text-2xl font-semibold text-metin mb-1">{liste.baslik}</h1>
       <p className="text-xs text-metin/50 mb-6">PDF her zaman son kaydedilen hâli gösterir; değişiklik yaptıysanız önce kaydedin.</p>
+      <FiyatUrunArama
+        satirlar={aramaSatirlari}
+        paraBirimi={liste.paraBirimi}
+        not={liste.iskontoYuzde > 0 ? `PDF'te %${liste.iskontoYuzde.toLocaleString("tr-TR")} iskonto uygulanır.` : ""}
+      />
       {hazir && hazir.bolumler.some((b) => b.kalemler.some((k) => k.genislik)) && (
         <form action={hazirListeTamamla} className="bg-soguk-light/40 border border-soguk/30 rounded-lg px-4 py-3 mb-6 flex flex-wrap items-center justify-between gap-3">
           <input type="hidden" name="kod" value={hazir.kod} />
@@ -176,7 +231,6 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
         fiyat3Baslik={liste.fiyat3Baslik ?? ""}
         satisIskontoYuzde={liste.satisIskontoYuzde}
         kartKarYuzde={liste.kartKarYuzde}
-        ilkArama={ilkArama}
         satirlar={liste.kalemler.map((k) => ({ id: k.id, bolum: k.bolum, ad: k.ad, kod: k.kod, fiyat: k.fiyat, fiyat2: k.fiyat2, fiyat3: k.fiyat3 }))}
       />
 

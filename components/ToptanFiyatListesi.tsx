@@ -61,14 +61,12 @@ export default function ToptanFiyatListesi({
   satirlar,
   notGruplari,
   kaynak = "NETSA",
-  ilkArama = "",
 }: {
   liste: { id: string; baslik: string; aciklama: string; notlar: string; duzen: string; fiyatBaslik: string; fiyat2Baslik: string; paraBirimi: string };
   durum: ToptanDurum;
   satirlar: ToptanSatir[];
   notGruplari: ToptanNotGrubu[];
   kaynak?: "NETSA" | "BARAN";
-  ilkArama?: string; // Fiyat Listeleri sayfasındaki aramadan gelindiyse (?urun=…) arama kutusu dolu açılır
 }) {
   const router = useRouter();
   const baran = kaynak === "BARAN";
@@ -176,7 +174,7 @@ export default function ToptanFiyatListesi({
   // ---------------- GÖNDERİM (ürün seçimi) ----------------
   const depo = `toptan-liste-haric:${liste.id}`;
   const [haric, setHaric] = useState<Set<string>>(new Set());
-  const [ara, setAra] = useState(ilkArama);
+  const [ara, setAra] = useState("");
   const [yuklendi, setYuklendi] = useState(false);
   const [yalnizDegisen, setYalnizDegisen] = useState(false);
   const [alisGoster, setAlisGoster] = useState(true);
@@ -572,7 +570,7 @@ export default function ToptanFiyatListesi({
             </KaydetButonu>
           </form>
         </div>
-        <div id="urun-ara" className="flex flex-wrap items-center gap-3 text-xs scroll-mt-6">
+        <div className="flex flex-wrap items-center gap-3 text-xs">
           <input value={ara} onChange={(e) => setAra(e.target.value)} placeholder="Ürün, model kodu ya da bölüm ara…" className="focus-ring border border-hat rounded-md px-3 py-1.5 text-sm bg-white w-64" />
           <button type="button" onClick={() => degistir(satirlar, true)} className="focus-ring text-soguk-dim hover:underline">
             Tümünü işaretle

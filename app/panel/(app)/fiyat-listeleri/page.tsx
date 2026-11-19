@@ -6,7 +6,6 @@ import { kaynakDurumOku, kayaDurumOzeti } from "@/lib/kaya-fiyat";
 import { toptanListeOlustur, baranListeOlustur } from "@/lib/toptan-actions";
 import { TOPTAN_KAYNAK, TOPTAN_BASLIK, BARAN_KAYNAK, toptanDurumOku } from "@/lib/toptan-fiyat";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
-import FiyatUrunArama from "@/components/FiyatUrunArama";
 import KaydetButonu from "@/components/KaydetButonu";
 import { FIYAT_SUTUN_KALIPLARI, ikiFiyatli, iskontoKapsamGecerli } from "@/lib/fiyat-listesi";
 import SilButon from "@/components/SilButon";
@@ -58,9 +57,6 @@ export default async function FiyatListeleriSayfasi() {
         </Link>{" "}
         sayfasından bir kez eklemeniz yeterli.
       </p>
-
-      {/* Bütün listelerdeki ürünlerde arama: fiyat, listeyi açmadan görünür */}
-      <FiyatUrunArama />
 
       <form action={fiyatListesiOlustur} className="bg-yuzey border border-hat rounded-lg p-5 mb-8 flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[16rem]">
