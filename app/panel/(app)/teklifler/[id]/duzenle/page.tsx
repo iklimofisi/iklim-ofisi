@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import { notFound } from "next/navigation";
 import { teklifGuncelle } from "@/lib/actions";
-import TeklifKalemleri from "@/components/TeklifKalemleri";
+import TeklifKalemleri, { type FiyatRevizyonu } from "@/components/TeklifKalemleri";
 import { getTcmbKurlari } from "@/lib/kur";
 import MusteriYetkiliSecici from "@/components/MusteriYetkiliSecici";
 import Link from "next/link";
@@ -28,6 +28,8 @@ export default async function TeklifDuzenle({
       include: {
         kalemler: { include: { _count: { select: { sevkiyatlar: true, teslimler: true } } }, orderBy: [{ sira: "asc" }, { id: "asc" }] },
         sablonlar: true,
+        // "Eski fiyatlara dön" için son revizyonlar (her kayıtta önceki hâl saklanır)
+        revizyonlar: { orderBy: { revizyonNo: "desc" }, take: 12, select: { revizyonNo: true, tarih: true, veriJson: true } },
       },
     }),
     prisma.musteri.findMany({ where: GERCEK_MUSTERI,
@@ -44,6 +46,33 @@ export default async function TeklifDuzenle({
   if (!teklif) notFound();
 
   const seciliSablonIdleri = new Set(teklif.sablonlar.map((s) => s.id));
+  // Kayıtlı revizyonların kalem fiyatları (okunamayan / kalemsiz revizyon atlanır)
+  const fiyatRevizyonlari: FiyatRevizyonu[] = teklif.revizyonlar.flatMap((r) => {
+    try {
+      const v = JSON.parse(r.veriJson) as { paraBirimi?: string; kalemler?: Record<string, unknown>[] };
+      const sayi = (x: unknown) => (typeof x === "number" && Number.isFinite(x) ? x : Number(x) || 0);
+      const kalemler = (Array.isArray(v.kalemler) ? v.kalemler : []).map((k) => ({
+        bolum: String(k.bolum ?? ""),
+        aciklama: String(k.aciklama ?? ""),
+        adet: sayi(k.adet),
+        birimFiyat: sayi(k.birimFiyat),
+        iskontoYuzde: sayi(k.iskontoYuzde),
+      }));
+      if (!kalemler.length) return [];
+      const toplam = Math.round(kalemler.reduce((a, k) => a + k.adet * k.birimFiyat * (1 - k.iskontoYuzde / 100), 0) * 100) / 100;
+      return [
+        {
+          ad: `Rev. ${r.revizyonNo}`,
+          tarih: new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Europe/Istanbul" }).format(r.tarih),
+          toplam,
+          paraBirimi: String(v.paraBirimi || "TRY"),
+          kalemler: kalemler.map((k) => ({ bolum: k.bolum, aciklama: k.aciklama, birimFiyat: k.birimFiyat, iskontoYuzde: k.iskontoYuzde })),
+        },
+      ];
+    } catch {
+      return [];
+    }
+  });
   const kayitliKalemSayisi = teklif.kalemler.filter((k) => k._count.sevkiyatlar + k._count.teslimler > 0).length;
 
   return (
@@ -147,6 +176,7 @@ export default async function TeklifDuzenle({
 
         <TeklifKalemleri
           kurlar={kurlar}
+          fiyatRevizyonlari={fiyatRevizyonlari}
           gizliFiyatBolumleri={[...gizliFiyatBolumleri(teklif.fiyatGizliBolumler)]}
           markalar={markalar.map((m) => ({ id: m.id, ad: m.ad }))}
           urunler={urunler.map((u) => ({

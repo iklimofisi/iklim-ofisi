@@ -8,6 +8,15 @@ import { toplamaGoreDagit, tutarOku } from "@/lib/toplam-dagit";
 import { donusumKalemleri } from "@/lib/satinalma-hesap";
 import { BIRIM_GRUPLARI, BIRIMLER, VARSAYILAN_BIRIM, birimNormal } from "@/lib/birimler";
 
+// Kayıtlı bir revizyonun kalem fiyatları ("Eski fiyatlara dön" listesi için)
+export type FiyatRevizyonu = {
+  ad: string; // "Rev. 3"
+  tarih: string; // gg.aa.yyyy
+  toplam: number; // o revizyonun iskontolu kalem toplamı (listede ayırt etmek için)
+  paraBirimi: string; // fiyatlar bu para birimindedir
+  kalemler: { bolum: string; aciklama: string; birimFiyat: number; iskontoYuzde: number }[];
+};
+
 export type Satir = {
   key: number | string;
   id?: string; // Düzenlemede mevcut kalemin veritabanı ID'si (sevkiyat/teslim kayıtlarını korumak için)
@@ -70,6 +79,7 @@ export default function TeklifKalemleri({
   kurlar = null,
   birimli = true,
   gizliFiyatBolumleri = [],
+  fiyatRevizyonlari = [],
 }: {
   baslangic?: Satir[];
   markalar?: { id: string; ad: string }[];
@@ -78,6 +88,8 @@ export default function TeklifKalemleri({
   kurlar?: { tarih: string; USD: number; EUR: number } | null; // TCMB efektif satış (1 birim = ? TL)
   birimli?: boolean; // ölçü birimi seçimi (müşteri teklifleri). Tedarikçi teklifi ekranında kapalı.
   gizliFiyatBolumleri?: string[]; // PDF'te birim fiyatı gizlenen bölümler (müşteri teklifleri)
+  // Düzenlemede: kayıtlı eski revizyonların kalem fiyatları ("Fiyatları geri yükle" için; en yeni önce)
+  fiyatRevizyonlari?: FiyatRevizyonu[];
 }) {
   // Bölüm bazında birim fiyat gizleme (PDF'te o bölümde yalnız bölüm toplamı görünür). Yalnız müşteri tekliflerinde.
   const [gizliBolumler, setGizliBolumler] = useState<Set<string>>(() => new Set(gizliFiyatBolumleri));
@@ -120,6 +132,13 @@ export default function TeklifKalemleri({
   const [dagitimOncesi, setDagitimOncesi] = useState<Satir[] | null>(null);
   const [dagitimMesaji, setDagitimMesaji] = useState<{ tip: "ok" | "uyari" | "hata"; metin: string } | null>(null);
   const dagitimSonrasi = useRef<Satir[] | null>(null);
+  // Sayfa açıldığındaki fiyatlar ("Toplamı Ayarla" ya da elle değişiklikten sonra ilk fiyatlara dönmek için)
+  const acilisFiyatlari = useRef<Map<string, { birimFiyat: string; iskontoYuzde: string }> | null>(null);
+  if (acilisFiyatlari.current === null)
+    acilisFiyatlari.current = new Map(
+      baslangic && baslangic.length > 0 ? satirlar.map((s) => [String(s.key), { birimFiyat: String(s.birimFiyat ?? "0"), iskontoYuzde: String(s.iskontoYuzde ?? "0") }]) : []
+    );
+  const [geriKaynak, setGeriKaynak] = useState(acilisFiyatlari.current.size > 0 ? "acilis" : fiyatRevizyonlari.length ? "0" : "");
   const kokRef = useRef<HTMLDivElement>(null);
   // Fiyatsız kalemlere dağıtırken "kalem fiyatlarını gizle" kutusu işaretlenir;
   // Geri Al'da eski hâline dönmesi için önceki durumu tutulur.
@@ -590,6 +609,74 @@ export default function TeklifKalemleri({
     setSatirlar(dagitimOncesi);
     setDagitimOncesi(null);
     setDagitimMesaji({ tip: "ok", metin: "Eski fiyatlara geri dönüldü." });
+  };
+
+  // FİYATLARI GERİ YÜKLE: sayfa açıldığındaki fiyatlar ya da kayıtlı bir revizyonun fiyatları.
+  // Yalnız birim fiyat ve iskonto değişir; açıklama, adet, sıra ve sonradan eklenen kalemler olduğu gibi kalır.
+  // Revizyonda kalemler bölüm + açıklamaya göre eşleştirilir (aynısı birden çoksa sırayla).
+  const fiyatlariGeriYukle = () => {
+    const yeni = satirlar.map((s) => ({ ...s }));
+    let eslesen = 0;
+    let degisen = 0;
+    const uygula = (s: Satir, birimFiyat: string, iskontoYuzde: string) => {
+      eslesen++;
+      if (parseSayi(s.birimFiyat) !== parseSayi(birimFiyat) || parseSayi(s.iskontoYuzde) !== parseSayi(iskontoYuzde)) degisen++;
+      s.birimFiyat = birimFiyat;
+      s.iskontoYuzde = iskontoYuzde;
+    };
+    let kaynakAdi = "";
+    const pbAdi = (pb: string) => (pb === "TRY" ? "TL" : pb);
+    if (geriKaynak === "acilis") {
+      const ilkPb = paraBirimi || "TRY";
+      if (seciliParaBirimi !== ilkPb) {
+        setDagitimMesaji({ tip: "hata", metin: `Sayfa açıldığında fiyatlar ${pbAdi(ilkPb)} idi; şu an ${pbAdi(seciliParaBirimi)} seçili. Önce para birimini ${pbAdi(ilkPb)} yapın.` });
+        return;
+      }
+      kaynakAdi = "sayfa açıldığındaki";
+      for (const s of yeni) {
+        const f = acilisFiyatlari.current?.get(String(s.key));
+        if (f) uygula(s, f.birimFiyat, f.iskontoYuzde);
+      }
+    } else {
+      const rev = fiyatRevizyonlari[Number(geriKaynak)];
+      if (!rev) return;
+      if (rev.paraBirimi !== seciliParaBirimi) {
+        setDagitimMesaji({ tip: "hata", metin: `${rev.ad} fiyatları ${pbAdi(rev.paraBirimi)}; şu an ${pbAdi(seciliParaBirimi)} seçili. Önce para birimini ${pbAdi(rev.paraBirimi)} yapın.` });
+        return;
+      }
+      kaynakAdi = `${rev.ad} revizyonundaki`;
+      const anahtar = (bolum: string | undefined, aciklama: string | undefined) =>
+        `${(bolum ?? "").trim().toLocaleLowerCase("tr-TR")}|${(aciklama ?? "").replace(/\s+/g, " ").trim().toLocaleLowerCase("tr-TR")}`;
+      const kuyruk = new Map<string, FiyatRevizyonu["kalemler"]>();
+      for (const k of rev.kalemler) {
+        const a = anahtar(k.bolum, k.aciklama);
+        if (!kuyruk.has(a)) kuyruk.set(a, []);
+        kuyruk.get(a)!.push(k);
+      }
+      for (const s of yeni) {
+        const k = kuyruk.get(anahtar(s.bolum, s.aciklama))?.shift();
+        if (k) uygula(s, String(k.birimFiyat), String(k.iskontoYuzde));
+      }
+    }
+    const dolu = satirlar.filter((s) => (s.aciklama ?? "").trim()).length;
+    if (!eslesen) {
+      setDagitimMesaji({ tip: "uyari", metin: `Eşleşen kalem bulunamadı (kalemlerin bölümü ya da açıklaması değişmiş olabilir).` });
+      return;
+    }
+    if (!degisen) {
+      setDagitimMesaji({ tip: "ok", metin: `Fiyatlar zaten ${kaynakAdi} fiyatlarla aynı.` });
+      return;
+    }
+    dagitimSonrasi.current = yeni;
+    gizleOncesi.current = null;
+    setDagitimOncesi(satirlar);
+    setSatirlar(yeni);
+    setHedefMetin("");
+    const eslesmeyen = dolu - eslesen;
+    setDagitimMesaji({
+      tip: eslesmeyen > 0 ? "uyari" : "ok",
+      metin: `${degisen} kalemin fiyatı ${kaynakAdi} hâline döndü.${eslesmeyen > 0 ? ` ${eslesmeyen} kalem eşleşmedi (sonradan eklenmiş ya da açıklaması değişmiş), onların fiyatı değişmedi.` : ""} Kaydetmeyi unutmayın.`,
+    });
   };
 
   // Yeni Bölüm Ekle
@@ -1151,6 +1238,36 @@ export default function TeklifKalemleri({
               </button>
             )}
           </div>
+          {/* FİYATLARI GERİ YÜKLE: ayarlamadan sonra (kaydedilmiş olsa bile) eski fiyatlara dönmek için */}
+          {(acilisFiyatlari.current.size > 0 || fiyatRevizyonlari.length > 0) && (
+            <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
+              <span className="text-metin/70">↺ Eski fiyatlara dön:</span>
+              <select
+                value={geriKaynak}
+                onChange={(e) => setGeriKaynak(e.target.value)}
+                aria-label="Geri yüklenecek fiyatlar"
+                className="focus-ring border border-hat rounded-md px-2 py-1.5 text-xs bg-white max-w-full"
+              >
+                {acilisFiyatlari.current.size > 0 && <option value="acilis">Sayfa açıldığındaki fiyatlar</option>}
+                {fiyatRevizyonlari.map((r, i) => (
+                  <option key={r.ad} value={String(i)}>
+                    {r.ad} · {r.tarih} · toplam {formatPara(r.toplam)} {r.paraBirimi === "TRY" ? "₺" : r.paraBirimi === "EUR" ? "€" : r.paraBirimi === "USD" ? "$" : r.paraBirimi}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={fiyatlariGeriYukle}
+                className="focus-ring bg-white border border-hat text-metin/80 px-3 py-1.5 rounded-md hover:bg-slate-50 font-medium"
+              >
+                Fiyatları geri yükle
+              </button>
+              <span className="text-[11px] text-metin/50 basis-full">
+                Yalnız birim fiyat ve iskonto eski hâline döner; açıklama, adet ve sonradan eklenen kalemler değişmez. Revizyonlar her kayıtta
+                otomatik saklanır.
+              </span>
+            </div>
+          )}
           {dagitimMesaji && (
             <p
               role="status"
