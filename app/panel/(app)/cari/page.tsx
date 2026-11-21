@@ -4,6 +4,7 @@ import { cariHareketEkle, cariHareketIptal } from "@/lib/actions";
 import CariFiltre from "@/components/CariFiltre";
 import KayitIslemButonu from "@/components/KayitIslemButonu";
 import { suankiKullanici } from "@/lib/oturum";
+import { finansYetkilisiMi } from "@/lib/roller";
 import OdemeAlModal from "@/components/OdemeAlModal";
 import KaydetButonu from "@/components/KaydetButonu";
 
@@ -45,7 +46,7 @@ export default async function CariSayfasi({
 
   // İptal edilen hareketler listede (üstü çizili) görünür ama bakiyeye girmez
   const bakiye = hareketler.reduce((a, c) => (c.iptalTarihi ? a : a + (c.tur === "BORC" ? c.tutar : -c.tutar)), 0);
-  const yonetici = giren?.rol === "ADMIN";
+  const yonetici = finansYetkilisiMi(giren?.rol); // finansal kayıt iptali: yönetici ya da muhasebe
 
   return (
     <div>
@@ -224,6 +225,12 @@ export default async function CariSayfasi({
                 <td className={`px-4 py-3 text-right font-mono font-bold ${c.tur === "BORC" ? "text-sicak-dim" : "text-soguk-dim"} ${c.iptalTarihi ? "line-through" : ""}`}>
                   {c.tur === "BORC" ? "+" : "-"}
                   {paraFormat(c.tutar)}
+                  {c.paraBirimi && c.dovizTutar != null && (
+                    <span className="block text-[10px] font-normal text-metin/50">
+                      {c.dovizTutar.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {c.paraBirimi}
+                      {c.kur ? ` · kur ${String(c.kur).replace(".", ",")}` : ""}
+                    </span>
+                  )}
                 </td>
 
                 <td className="px-4 py-3 text-right">

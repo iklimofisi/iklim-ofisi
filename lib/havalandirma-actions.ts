@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { girisZorunlu } from "@/lib/oturum";
+import { islemZorunlu } from "@/lib/oturum";
 import { islemKaydet } from "@/lib/islem-kaydi";
 import { musterisizMi } from "@/lib/musterisiz";
 import { musterisizKaydiHazirla } from "@/lib/musterisiz-sunucu";
@@ -17,7 +17,7 @@ import { ILLER } from "@/lib/isi-hesap/iklim";
 // -----------------------------------------------------------------------------
 
 async function yetki(islem: string, girdi?: FormData | Record<string, unknown>) {
-  const kullanici = await girisZorunlu();
+  const kullanici = await islemZorunlu();
   await islemKaydet(kullanici, islem, girdi);
   return kullanici;
 }

@@ -12,6 +12,7 @@ import KurGostergesi from "@/components/KurGostergesi";
 import { LogoTam } from "@/components/Logo";
 import { Suspense } from "react";
 import { trSimdi } from "@/lib/notlar";
+import { ROL_ETIKET, saltOkunurMu } from "@/lib/roller";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -62,6 +63,7 @@ const menuGruplari: MenuGrubu[] = [
     ogeler: [
       { href: "/panel/cari", label: "Cari Hesap" },
       { href: "/panel/genel-cari", label: "Genel Finans & Çekler" },
+      { href: "/panel/rapor", label: "📈 Yatırımcı Raporu" },
     ],
   },
 ];
@@ -142,7 +144,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         <div className="p-4 border-t border-hat space-y-2">
           <Link href="/panel/profil" className="block group">
             <p className="text-xs font-bold text-metin group-hover:text-soguk-dim transition-colors">
-              {kullanici.ad} <span className="text-metin/30">· {kullanici.rol === "ADMIN" ? "Yönetici" : "Satış"}</span>
+              {kullanici.ad} <span className="text-metin/30">· {ROL_ETIKET[kullanici.rol] ?? kullanici.rol}</span>
             </p>
             <p className="text-[10px] text-soguk-dim font-semibold group-hover:underline">⚙️ Profilim & Şifre Değiştir</p>
           </Link>
@@ -157,7 +159,14 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           </form>
         </div>
       </aside>
-      <main className="flex-1 px-6 sm:px-10 py-10 max-w-5xl print:p-0 print:max-w-none">{children}</main>
+      <main className="flex-1 px-6 sm:px-10 py-10 max-w-5xl print:p-0 print:max-w-none">
+        {saltOkunurMu(kullanici.rol) && (
+          <p className="mb-6 text-xs bg-soguk-light text-soguk-dim border border-soguk/30 rounded-md px-3 py-2 print:hidden">
+            👁 Yatırımcı görünümü: kayıtları görüntüleyebilirsiniz; hiçbir kayıt değiştirilemez.
+          </p>
+        )}
+        {children}
+      </main>
     </div>
   );
 }

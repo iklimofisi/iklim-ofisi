@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { saltOkunurMu } from "@/lib/roller";
 
 export async function suankiKullanici() {
   const token = cookies().get("oturum")?.value;
@@ -21,5 +22,13 @@ export async function suankiKullanici() {
 export async function girisZorunlu() {
   const kullanici = await suankiKullanici();
   if (!kullanici) redirect("/panel/giris");
+  return kullanici;
+}
+
+// Kayıt değiştiren her sunucu işlemi için: giriş zorunlu; yatırımcı (salt okunur) hesabı
+// hiçbir kaydı değiştiremez.
+export async function islemZorunlu() {
+  const kullanici = await girisZorunlu();
+  if (saltOkunurMu(kullanici.rol)) throw new Error("Yatırımcı hesabı yalnız görüntüleyebilir; kayıt değiştiremez.");
   return kullanici;
 }

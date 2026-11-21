@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
-import { girisZorunlu } from "@/lib/oturum";
+import { islemZorunlu } from "@/lib/oturum";
 import { islemKaydet } from "@/lib/islem-kaydi";
 import { paraBirimiDogrula, type ParaBirimi } from "@/lib/para";
 import { epostaGonder } from "@/lib/eposta";
@@ -29,6 +29,8 @@ import { listeNotlari } from "@/lib/toptan-fiyat";
 import { MUSTERISIZ_ID, musterisizMi, musterisizGoster } from "@/lib/musterisiz";
 import { musterisizKaydiHazirla } from "@/lib/musterisiz-sunucu";
 import { siparisDondurmaVerisi } from "@/lib/siparis-tutari";
+import { donemKilitliMi, KILIT_MESAJI } from "@/lib/finans";
+import { finansYetkilisiMi, gecerliRol } from "@/lib/roller";
 
 // Kayıt güvencesi işlemlerinin sonucu: düğme bu mesajı bildirim olarak gösterir
 export type IslemSonucu = { hata?: string; tamam?: string };
@@ -37,7 +39,7 @@ export type IslemSonucu = { hata?: string; tamam?: string };
 // Her sunucu işleminin ilk satırında çağrılır: giriş yapılmamışsa işlem yapılmaz
 // (giriş sayfasına yönlendirir), yapılmışsa kim, ne zaman, hangi işlemi yaptı kaydedilir.
 async function yetki(islem: string, girdi?: FormData | Record<string, unknown>) {
-  const kullanici = await girisZorunlu();
+  const kullanici = await islemZorunlu();
   await islemKaydet(kullanici, islem, girdi);
   return kullanici;
 }
@@ -582,6 +584,7 @@ export async function cariHareketEkle(formData: FormData) {
   const dosya = formData.get("evrak") as File | null;
 
   if (!musteriId || !aciklama || tutar <= 0) return;
+  if (await donemKilitliMi(new Date())) throw new Error(KILIT_MESAJI(new Date()));
 
   let evrakDosya: Buffer | undefined;
   let evrakDosyaAdi: string | undefined;
@@ -619,12 +622,13 @@ export async function cariHareketEkle(formData: FormData) {
 // çek listelerine girmez, listede üstü çizili ve iptal nedeniyle görünür. Yalnız yönetici.
 export async function cariHareketIptal(hareketId: string, neden: string): Promise<IslemSonucu> {
   const giren = await yetki("cariHareketIptal", { hareketId, neden });
-  if (giren.rol !== "ADMIN") return { hata: "Finansal kaydı yalnız yönetici iptal edebilir." };
+  if (!finansYetkilisiMi(giren.rol)) return { hata: "Finansal kaydı yalnız yönetici ya da muhasebe iptal edebilir." };
   const nedenTemiz = String(neden ?? "").trim().slice(0, 500);
   if (!nedenTemiz) return { hata: "İptal nedenini yazın." };
-  const h = hareketId ? await prisma.cariHareket.findUnique({ where: { id: hareketId }, select: { musteriId: true, iptalTarihi: true } }) : null;
+  const h = hareketId ? await prisma.cariHareket.findUnique({ where: { id: hareketId }, select: { musteriId: true, iptalTarihi: true, tarih: true } }) : null;
   if (!h) return { hata: "Hareket bulunamadı." };
   if (h.iptalTarihi) return { tamam: "Hareket zaten iptal edilmiş." };
+  if (await donemKilitliMi(h.tarih)) return { hata: KILIT_MESAJI(h.tarih) };
   await prisma.cariHareket.update({ where: { id: hareketId }, data: { iptalTarihi: new Date(), iptalEdenAdi: giren.ad, iptalNedeni: nedenTemiz } });
   revalidatePath("/panel/cari");
   revalidatePath(`/panel/musteriler/${h.musteriId}`);
@@ -652,6 +656,7 @@ export async function tedarikciHareketEkle(formData: FormData) {
   const dosya = formData.get("evrak") as File | null;
 
   if (!tedarikciId || !aciklama || tutar <= 0) return;
+  if (await donemKilitliMi(new Date())) throw new Error(KILIT_MESAJI(new Date()));
 
   let evrakDosya: Buffer | undefined;
   let evrakDosyaAdi: string | undefined;
@@ -685,11 +690,12 @@ export async function tedarikciHareketEkle(formData: FormData) {
 // FİNANSAL HAREKET İPTALİ (tedarikçi): silinmez, iptal edilir (bakiyeden düşer). Yalnız yönetici.
 export async function tedarikciHareketIptal(id: string, neden: string): Promise<IslemSonucu> {
   const giren = await yetki("tedarikciHareketIptal", { id, neden });
-  if (giren.rol !== "ADMIN") return { hata: "Finansal kaydı yalnız yönetici iptal edebilir." };
+  if (!finansYetkilisiMi(giren.rol)) return { hata: "Finansal kaydı yalnız yönetici ya da muhasebe iptal edebilir." };
   const nedenTemiz = String(neden ?? "").trim().slice(0, 500);
   if (!nedenTemiz) return { hata: "İptal nedenini yazın." };
-  const h = id ? await prisma.tedarikciHareket.findUnique({ where: { id }, select: { iptalTarihi: true } }) : null;
+  const h = id ? await prisma.tedarikciHareket.findUnique({ where: { id }, select: { iptalTarihi: true, tarih: true } }) : null;
   if (!h) return { hata: "Hareket bulunamadı." };
+  if (!h.iptalTarihi && (await donemKilitliMi(h.tarih))) return { hata: KILIT_MESAJI(h.tarih) };
   if (h.iptalTarihi) return { tamam: "Hareket zaten iptal edilmiş." };
   await prisma.tedarikciHareket.update({ where: { id }, data: { iptalTarihi: new Date(), iptalEdenAdi: giren.ad, iptalNedeni: nedenTemiz } });
   revalidatePath("/panel/satinalma/cari");
@@ -964,13 +970,24 @@ export async function kullaniciEkle(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const telefon = String(formData.get("telefon") ?? "").trim();
   const sifre = String(formData.get("sifre") ?? "");
-  const rol = String(formData.get("rol") ?? "SATIS") as "ADMIN" | "SATIS";
+  const rol = gecerliRol(formData.get("rol"));
   if (!ad || !email || sifre.length < 6) return;
 
   const sifreHash = await bcrypt.hash(sifre, 10);
   await prisma.kullanici.create({
     data: { ad, email, telefon: telefon || null, sifreHash, rol },
   });
+  revalidatePath("/panel/kullanicilar");
+}
+
+// Kullanıcının rolünü değiştirme (yalnız yönetici; kendi rolünü değiştiremez). Yeni rol hemen geçerli olur.
+export async function kullaniciRolGuncelle(formData: FormData) {
+  const giren = await yetki("kullaniciRolGuncelle", formData);
+  if (!giren || giren.rol !== "ADMIN") return;
+  const kullaniciId = String(formData.get("kullaniciId") ?? "");
+  if (!kullaniciId || kullaniciId === giren.id) return;
+  const rol = gecerliRol(formData.get("rol"));
+  await prisma.kullanici.update({ where: { id: kullaniciId }, data: { rol } });
   revalidatePath("/panel/kullanicilar");
 }
 
@@ -1052,6 +1069,7 @@ export async function siparisOnayla(siparisId: string) {
     include: { teklif: { include: { kalemler: true } } },
   });
   if (!siparis || siparis.durum !== "ONAY_BEKLIYOR") return;
+  if (await donemKilitliMi(new Date())) throw new Error(KILIT_MESAJI(new Date()));
 
   // Onay anında teklifin kalemleri ve tutarı siparişe dondurulur; cari borç da bu tutardan yazılır
   const dondurma = siparisDondurmaVerisi(siparis.teklif);
@@ -1070,6 +1088,10 @@ export async function siparisOnayla(siparisId: string) {
         aciklama: `Sipariş Onayı: ${siparis.teklif.baslik || siparis.teklifId}`,
         tur: "BORC",
         tutar: tlTutar,
+        // Dövizli siparişte orijinal tutar ve kur saklanır (tutar TL'dir)
+        ...(siparis.teklif.paraBirimi !== "TRY"
+          ? { paraBirimi: siparis.teklif.paraBirimi, dovizTutar: Math.round(kdvli * 100) / 100, kur: siparis.kur }
+          : {}),
       },
     }),
   ]);

@@ -8,7 +8,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { girisZorunlu } from "@/lib/oturum";
+import { islemZorunlu } from "@/lib/oturum";
 import { islemKaydet } from "@/lib/islem-kaydi";
 import { gunGecerli, saatGecerli, hatirlatmaVakti, alicilariOku } from "@/lib/notlar";
 
@@ -21,7 +21,7 @@ async function benimNotum(id: string, kullaniciId: string) {
 }
 
 export async function notKaydet(formData: FormData) {
-  const ben = await girisZorunlu();
+  const ben = await islemZorunlu();
   const id = String(formData.get("id") ?? "");
   const baslik = yaziAl(formData.get("baslik"), 200) || null;
   const icerik = yaziAl(formData.get("icerik"), 20000);
@@ -106,7 +106,7 @@ export async function notKaydet(formData: FormData) {
 
 // Tamamlandı / geri al / sabitle / sabitten çıkar
 export async function notDurum(formData: FormData) {
-  const ben = await girisZorunlu();
+  const ben = await islemZorunlu();
   const id = String(formData.get("id") ?? "");
   const islem = String(formData.get("islem") ?? "");
   const n = await benimNotum(id, ben.id);
@@ -121,7 +121,7 @@ export async function notDurum(formData: FormData) {
 }
 
 export async function notSil(id: string) {
-  const ben = await girisZorunlu();
+  const ben = await islemZorunlu();
   const n = await benimNotum(id, ben.id);
   if (!n) return;
   // Herkese açık notun silinen hâli İşlem Geçmişi'nde saklanır; gizli notun içeriği saklanmaz

@@ -329,6 +329,10 @@ model CariHareket {
   iptalTarihi   DateTime?
   iptalEdenAdi  String?
   iptalNedeni   String?
+  // Döviz bilgisi (tutar her zaman TL'dir): dövizli işlemde orijinal tutar ve kullanılan kur
+  paraBirimi    String?
+  dovizTutar    Float?
+  kur           Float?
 }
 
 model TeklifSablon {
@@ -629,6 +633,9 @@ enum ProjeIhaleDurumu {
 enum KullaniciRol {
   ADMIN
   SATIS
+  SATINALMA // satış yetkileri; satınalma ekranlarının sorumlusu
+  MUHASEBE  // satış yetkileri + finansal kayıt iptali ve ay kapanışı
+  YATIRIMCI // yalnız görüntüler, hiçbir kaydı değiştiremez
 }
 
 enum TeklifDurum {
@@ -864,4 +871,22 @@ model MalKabulKalemi {
 
   @@index([malKabulId])
   @@index([kalemId])
+}
+
+// -----------------------------------------------------------------------------
+// AY KAPANIŞI (dönem kilidi)
+// Kapatılan ayın tarihli finansal kayıtları (cari / tedarikçi hareketi, alış faturası) eklenemez,
+// iptal edilemez; düzeltme açık aya ters kayıtla yapılır. Kapanış anındaki ay özeti saklanır.
+// Yönetici, nedenini yazarak dönemi yeniden açabilir (kayıt tutulur).
+// -----------------------------------------------------------------------------
+model DonemKapanis {
+  id            String    @id @default(cuid())
+  donem         String    @unique // "2026-11"
+  kapatanAdi    String
+  kapanisTarihi DateTime  @default(now())
+  ozetJson      String?   // kapanış anındaki ay özeti (yatırımcı raporu rakamları)
+  acikMi        Boolean   @default(false) // yönetici yeniden açtıysa true
+  acanAdi       String?
+  acilisTarihi  DateTime?
+  acilisNedeni  String?
 }

@@ -8,17 +8,18 @@
 // -----------------------------------------------------------------------------
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { girisZorunlu } from "@/lib/oturum";
+import { islemZorunlu } from "@/lib/oturum";
 import { islemKaydet } from "@/lib/islem-kaydi";
 import { paraBirimiDogrula } from "@/lib/para";
 import { tutarOku } from "@/lib/toplam-dagit";
 import { birimNormal } from "@/lib/birimler";
+import { donemKilitliMi, KILIT_MESAJI } from "@/lib/finans";
 import { kalemNet, yuvarla2, sasNo, teslimDurumu, teslimAlinan, malKabulAcikMi, sasTl } from "@/lib/satinalma-siparis";
 
 export type SasSonuc = { hata?: string; tamam?: string; git?: string };
 
 async function yetki(islem: string, girdi?: FormData | Record<string, unknown>) {
-  const kullanici = await girisZorunlu();
+  const kullanici = await islemZorunlu();
   await islemKaydet(kullanici, islem, girdi);
   return kullanici;
 }
@@ -378,6 +379,7 @@ export async function alisFaturasiEkle(fd: FormData): Promise<SasSonuc> {
   if (!tarih) return { hata: "Fatura tarihi anlaşılamadı." };
   if (vadeHam && !vade) return { hata: "Vade tarihi anlaşılamadı." };
   if (dosya && dosya.size > 8 * 1024 * 1024) return { hata: "Fatura dosyası 8 MB'tan büyük olamaz." };
+  if (await donemKilitliMi(tarih)) return { hata: KILIT_MESAJI(tarih) };
 
   const s = id ? await prisma.satinalmaSiparisi.findUnique({ where: { id }, select: { no: true, baslik: true, tedarikciId: true, durum: true, siparisId: true } }) : null;
   if (!s) return { hata: "Sipariş bulunamadı." };

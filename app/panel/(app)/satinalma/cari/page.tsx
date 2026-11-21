@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { tedarikciHareketEkle, tedarikciHareketIptal } from "@/lib/actions";
 import KayitIslemButonu from "@/components/KayitIslemButonu";
 import { suankiKullanici } from "@/lib/oturum";
+import { finansYetkilisiMi } from "@/lib/roller";
 import TedarikciFiltre from "@/components/TedarikciFiltre";
 import Link from "next/link";
 import KaydetButonu from "@/components/KaydetButonu";
@@ -44,7 +45,7 @@ export default async function TedarikciCariSayfasi({
 
   // İptal edilen hareketler listede (üstü çizili) görünür ama bakiyeye girmez
   const bakiye = hareketler.reduce((a, h) => (h.iptalTarihi ? a : a + (h.tur === "BORC" ? h.tutar : -h.tutar)), 0);
-  const yonetici = giren?.rol === "ADMIN";
+  const yonetici = finansYetkilisiMi(giren?.rol); // finansal kayıt iptali: yönetici ya da muhasebe
 
   return (
     <div>

@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { girisZorunlu } from "@/lib/oturum";
+import { islemZorunlu } from "@/lib/oturum";
 import { islemKaydet } from "@/lib/islem-kaydi";
 import { musterisizMi } from "@/lib/musterisiz";
 import { musterisizKaydiHazirla } from "@/lib/musterisiz-sunucu";
@@ -20,7 +20,7 @@ import { getTcmbKurlari, type TcmbKurlari } from "@/lib/kur";
 // -----------------------------------------------------------------------------
 
 async function yetki(islem: string, girdi?: FormData | Record<string, unknown>) {
-  const kullanici = await girisZorunlu();
+  const kullanici = await islemZorunlu();
   await islemKaydet(kullanici, islem, girdi);
   return kullanici;
 }
@@ -180,7 +180,7 @@ export type OneriSonucu =
 
 // Düzenleme ekranının Malzeme sekmesinden çağrılır (yalnız okur, hiçbir şey kaydetmez)
 export async function isiHesapOnerileri(malzemeler: { aciklama: string; urunId?: string | null }[]): Promise<OneriSonucu> {
-  await girisZorunlu();
+  await islemZorunlu();
   if (!Array.isArray(malzemeler) || malzemeler.length > 400) return { ok: false, hata: "Malzeme listesi okunamadı." };
   const liste = malzemeler.map((m) => ({ aciklama: metinAl(m?.aciklama, 500), urunId: metinAl(m?.urunId, 40) || null }));
   try {

@@ -373,6 +373,12 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
                   >
                     {c.tur === "BORC" ? "+" : "-"}
                     {paraFormat(c.tutar)}
+                    {c.paraBirimi && c.dovizTutar != null && (
+                      <span className="block text-[10px] font-normal text-metin/50">
+                        {c.dovizTutar.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {c.paraBirimi}
+                        {c.kur ? ` · kur ${String(c.kur).replace(".", ",")}` : ""}
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}
