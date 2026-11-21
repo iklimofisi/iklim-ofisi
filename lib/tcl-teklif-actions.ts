@@ -1,8 +1,8 @@
 "use server";
 
 // -----------------------------------------------------------------------------
-// TCL / VIESSMANN / BOSCH (NETİSA) TEKLİF PDF'İNDEN TEDARİKÇİ (SATINALMA) TEKLİFİ
-// PDF'in biçimi kendiliğinden tanınır (Viessmann, Bosch/Netisa ya da TCL teklifi).
+// TCL / VIESSMANN / BOSCH (NETİSA) / MITSUBISHI HEAVY (FORM MHI) TEKLİF PDF'İNDEN TEDARİKÇİ (SATINALMA) TEKLİFİ
+// PDF'in biçimi kendiliğinden tanınır (Viessmann, Form MHI, Bosch/Netisa ya da TCL teklifi).
 // Yazı katmanı olmayan PDF'te (ör. "Microsoft Print to PDF" ile basılmış Netisa teklifi)
 // sayfalar tarayıcıda görüntüden okunur (OCR) ve okunan metin "ocrMetni" alanıyla gelir.
 //   tclTeklifPdfOku    : yüklenen PDF'i okur, önizleme için döner (veritabanına YAZMAZ)
@@ -20,6 +20,7 @@ import type { PdfSayfa } from "@/lib/netsa-ayikla";
 import { tclTeklifAyikla, tclKalemAciklamasi, type TclSonuc } from "@/lib/tcl-teklif-ayikla";
 import { viessmannTeklifAyikla, viessmannTeklifiMi } from "@/lib/viessmann-teklif-ayikla";
 import { netisaTeklifAyikla, netisaTeklifiMi } from "@/lib/netisa-teklif-ayikla";
+import { mhiTeklifAyikla, mhiTeklifiMi } from "@/lib/mhi-teklif-ayikla";
 
 const EN_BUYUK = 10 * 1024 * 1024;
 const OCR_EN_UZUN = 200_000; // tarayıcıda okunan metin (karakter)
@@ -100,7 +101,9 @@ async function dosyayiOku(
       const metin = sayfaMetni(sayfalar);
       sonuc = viessmannTeklifiMi(sayfalar)
         ? { ...viessmannTeklifAyikla(sayfalar), firma: "VIESSMANN" }
-        : netisaTeklifiMi(metin)
+        : mhiTeklifiMi(sayfalar)
+          ? mhiTeklifAyikla(sayfalar)
+          : netisaTeklifiMi(metin)
           ? netisaTeklifAyikla(metin)
           : { ...tclTeklifAyikla(sayfalar), firma: "TCL" };
     }
