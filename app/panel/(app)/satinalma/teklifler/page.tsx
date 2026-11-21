@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { satinalmaTeklifiEkle, satinalmaTeklifiSil, maliyetDosyaYukle } from "@/lib/actions";
 import TedarikciTeklifiEkleModal from "@/components/TedarikciTeklifiEkleModal"; // YENİ MODAL
-import SilButon from "@/components/SilButon";
+import KayitIslemButonu from "@/components/KayitIslemButonu";
 import Link from "next/link";
 import KaydetButonu from "@/components/KaydetButonu";
 import SatinalmaKalemGirisi from "@/components/SatinalmaKalemGirisi";
@@ -298,7 +298,7 @@ export default async function SatinalmaTekliflerPage() {
                           </td>
 
                           <td className="py-3 px-4 text-center">
-                            <SilButon id={st.id} action={satinalmaTeklifiSil} onayMesaji="Bu tedarikçi teklifini silmek istediğinize emin misiniz?" />
+                            <KayitIslemButonu id={st.id} action={satinalmaTeklifiSil} etiket="Sil" onayBasligi="Silme onayı" onayMesaji="Yalnız yönetici silebilir; satış teklifine bağlanmış tedarikçi teklifi silinmez." tehlikeli />
                           </td>
                         </tr>
                       );

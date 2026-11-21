@@ -58,8 +58,9 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
 
   if (!musteri) notFound();
 
+  // İptal edilen hareketler listede üstü çizili görünür ama bakiyeye girmez
   const bakiye = musteri.cariHareketler.reduce(
-    (a, c) => a + (c.tur === "BORC" ? c.tutar : -c.tutar),
+    (a, c) => (c.iptalTarihi ? a : a + (c.tur === "BORC" ? c.tutar : -c.tutar)),
     0
   );
 
@@ -325,7 +326,10 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
                 </p>
                 <div className="text-right shrink-0">
                   <p className="font-mono text-sm text-metin">{paraFormat(teklifToplamlari(t).araToplam, t.paraBirimi)}</p>
-                  <p className="text-xs text-metin/50">{teklifDurumEtiket[t.durum]}</p>
+                  <p className="text-xs text-metin/50">
+                    {teklifDurumEtiket[t.durum]}
+                    {t.arsivTarihi && " · Arşivde"}
+                  </p>
                 </div>
               </div>
             </Link>
@@ -354,10 +358,19 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
             </thead>
             <tbody>
               {musteri.cariHareketler.map((c) => (
-                <tr key={c.id} className="border-b border-hat last:border-0">
+                <tr key={c.id} className={`border-b border-hat last:border-0 ${c.iptalTarihi ? "opacity-60" : ""}`}>
                   <td className="px-5 py-3 font-mono text-metin/60 whitespace-nowrap">{c.tarih.toISOString().slice(0, 10)}</td>
-                  <td className="px-5 py-3 text-metin/70">{c.aciklama}</td>
-                  <td className={`px-5 py-3 text-right font-mono whitespace-nowrap ${c.tur === "BORC" ? "text-sicak-dim" : "text-soguk-dim"}`}>
+                  <td className="px-5 py-3 text-metin/70">
+                    <span className={c.iptalTarihi ? "line-through" : ""}>{c.aciklama}</span>
+                    {c.iptalTarihi && (
+                      <span className="block text-[11px] font-semibold text-sicak-dim">
+                        İptal: {c.iptalTarihi.toISOString().slice(0, 10)} · {c.iptalEdenAdi} · {c.iptalNedeni}
+                      </span>
+                    )}
+                  </td>
+                  <td
+                    className={`px-5 py-3 text-right font-mono whitespace-nowrap ${c.tur === "BORC" ? "text-sicak-dim" : "text-soguk-dim"} ${c.iptalTarihi ? "line-through" : ""}`}
+                  >
                     {c.tur === "BORC" ? "+" : "-"}
                     {paraFormat(c.tutar)}
                   </td>

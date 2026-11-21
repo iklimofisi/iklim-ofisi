@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import { musteriEkle, musteriSil } from "@/lib/actions"; // DÜZELTİLDİ: musteriEkle eklendi
-import SilButon from "@/components/SilButon";
+import KayitIslemButonu from "@/components/KayitIslemButonu";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
 import KaydetButonu from "@/components/KaydetButonu";
 import Link from "next/link";
@@ -187,10 +187,13 @@ export default async function MusterilerPage() {
                 <Link href={`/panel/musteriler/${m.id}`} className="text-xs font-medium text-soguk-dim hover:underline">
                   Görüntüle →
                 </Link>
-                <SilButon
+                <KayitIslemButonu
                   id={m.id}
                   action={musteriSil}
-                  onayMesaji="Bu müşteriyi ve tüm ilişkili kayıtlarını silmek istediğinizden emin misiniz?"
+                  etiket="Sil"
+                  onayBasligi="Silme onayı"
+                  onayMesaji="Yalnız hiç teklifi, siparişi, cari hareketi ve görüşmesi olmayan müşteri silinir; kaydı olan müşteri korunur."
+                  tehlikeli
                 />
               </div>
             </div>

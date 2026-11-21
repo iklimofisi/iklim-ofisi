@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import Link from "next/link";
 import { teklifToplamlari, tarihYaz } from "@/lib/teklif-hesap";
+import { siparisNetTutari } from "@/lib/siparis-tutari";
 import SatisPaneli, { DONEMLER, type Donem } from "@/components/SatisPaneli";
 
 export const dynamic = "force-dynamic";
@@ -38,17 +39,19 @@ export default async function PanelOzet({
     gelenHatirlatmalar,
   ] = await Promise.all([
     prisma.musteri.count({ where: GERCEK_MUSTERI }),
-    prisma.teklif.count({ where: { durum: "BEKLEMEDE" } }),
+    prisma.teklif.count({ where: { durum: "BEKLEMEDE", arsivTarihi: null } }),
     prisma.siparis.count({ where: { durum: "ONAY_BEKLIYOR" } }),
-    prisma.cariHareket.findMany(),
-    prisma.musteri.findMany({ where: GERCEK_MUSTERI, include: { cariHareketler: true } }),
+    // İptal edilen finansal hareketler bakiyelere girmez
+    prisma.cariHareket.findMany({ where: { iptalTarihi: null } }),
+    prisma.musteri.findMany({ where: GERCEK_MUSTERI, include: { cariHareketler: { where: { iptalTarihi: null } } } }),
     prisma.teklif.findMany({
+      where: { arsivTarihi: null },
       include: { musteri: true, kalemler: true },
       orderBy: { tarih: "desc" },
       take: 5,
     }),
     prisma.siparis.findMany({
-      where: { onayTarihi: { gte: ayBasi }, durum: { not: "REDDEDILDI" } },
+      where: { onayTarihi: { gte: ayBasi }, durum: { notIn: ["REDDEDILDI", "IPTAL"] } },
       include: { teklif: { include: { kalemler: true } } },
     }),
     prisma.webTalebi.findMany({ where: { okundu: false }, orderBy: { tarih: "desc" }, take: 3 }),
@@ -65,9 +68,10 @@ export default async function PanelOzet({
   const bekleyenTahsilat = toplamBorc - toplamAlacak;
 
   const buAyCiro = buAyOnaylananSiparisler.reduce((a, s) => {
-    const toplam = s.teklif.kalemler.reduce((b, k) => b + k.adet * k.birimFiyat * (1 - k.iskontoYuzde / 100), 0);
+    // Siparişin dondurulmuş tutarı (teklif sonradan değişse de ciro değişmez)
+    const toplam = siparisNetTutari(s);
     const kdvli = s.teklif.kdvDahil ? toplam : toplam * (1 + s.teklif.kdvOrani / 100);
-    const tl = s.teklif.paraBirimi === "TRY" ? kdvli : kdvli * s.kur;
+    const tl = (s.paraBirimi ?? s.teklif.paraBirimi) === "TRY" ? kdvli : kdvli * s.kur;
     return a + tl;
   }, 0);
 

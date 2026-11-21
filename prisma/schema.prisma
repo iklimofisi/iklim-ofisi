@@ -133,6 +133,9 @@ model Teklif {
   isiHesaplari             IsiHesap[]        // Bu teklife aktarılan ısı pompası hesapları
   klimaHesaplari           KlimaHesap[]      // Bu teklife aktarılan klima / VRF hesapları
   havalandirmaHesaplari    HavalandirmaHesap[] // Bu teklife aktarılan havalandırma hesapları
+  // Arşiv (teklif silinmez): arşivlenen teklif listelerden düşer, "Arşiv" görünümünde ve kendi sayfasında durur
+  arsivTarihi              DateTime?
+  arsivleyenAdi            String?
 }
 
 // Teklifin müşteriye gönderilen gizli linki (iklimofisi.com/t/<anahtar>).
@@ -321,6 +324,10 @@ model CariHareket {
   evrakDosya    Bytes?    // Fatura / Dekont / Çek Görseli veya PDF
   evrakDosyaAdi String?
   evrakDosyaTipi String?
+  // İptal (finansal kayıt silinmez): iptal edilen hareket bakiyeye ve çek listelerine girmez, listede üstü çizili görünür
+  iptalTarihi   DateTime?
+  iptalEdenAdi  String?
+  iptalNedeni   String?
 }
 
 model TeklifSablon {
@@ -356,6 +363,16 @@ model Siparis {
   faturaNo          String?
   faturaTarihi      DateTime?
   olusturmaTarihi   DateTime        @default(now())
+  // Dondurulmuş tutar: sipariş açılınca ve onaylanınca teklifin o anki kalemleri, net tutarı ve revizyonu
+  // buraya yazılır; teklif sonradan değişse de sipariş tutarı ve ciro raporu değişmez
+  tutarNet          Float?          // KDV hariç, iskontolu toplam (teklif para biriminde)
+  paraBirimi        String?
+  teklifRevizyonNo  Int?
+  kalemlerJson      String?         // [{bolum, aciklama, adet, birim, birimFiyat, iskontoYuzde}]
+  // Sipariş silinmez: iptal edilince kim, ne zaman, neden kaydedilir
+  iptalTarihi       DateTime?
+  iptalEdenAdi      String?
+  iptalNedeni       String?
   sevkiyatlar       SevkiyatKaydi[]
   teslimler         TeslimKaydi[]
 }
@@ -410,6 +427,10 @@ model TedarikciHareket {
   evrakDosya    Bytes?    // Fatura / Dekont / Çek Görseli veya PDF
   evrakDosyaAdi String?
   evrakDosyaTipi String?
+  // İptal (finansal kayıt silinmez): iptal edilen hareket bakiyeye ve ödeme listelerine girmez, listede üstü çizili görünür
+  iptalTarihi   DateTime?
+  iptalEdenAdi  String?
+  iptalNedeni   String?
 }
 
 model SatinalmaTeklifi {

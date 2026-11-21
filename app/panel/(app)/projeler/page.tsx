@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import { projeEkle, projeSil } from "@/lib/actions";
 import HizliMusteriEkleModal from "@/components/HizliMusteriEkleModal"; // MODAL İMPORT
-import SilButon from "@/components/SilButon";
+import KayitIslemButonu from "@/components/KayitIslemButonu";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
 import KaydetButonu from "@/components/KaydetButonu";
 import Link from "next/link";
@@ -31,7 +31,7 @@ export default async function ProjelerPage({
     prisma.proje.findMany({
       include: {
         musteri: true,
-        teklifler: true,
+        teklifler: { where: { arsivTarihi: null } }, // arşivdeki teklifler sayılmaz
         ziyaretler: true,
       },
       orderBy: { olusturmaTarihi: "desc" },
@@ -210,7 +210,7 @@ export default async function ProjelerPage({
                   {ihaleDurumEtiket[p.ihaleDurumu] || p.ihaleDurumu}
                 </span>
 
-                <SilButon id={p.id} action={projeSil} onayMesaji="Bu projeyi silmek istediğinize emin misiniz?" />
+                <KayitIslemButonu id={p.id} action={projeSil} etiket="Sil" onayBasligi="Silme onayı" onayMesaji="Yalnız teklifi olmayan proje silinebilir (yalnız yönetici). Teklifi olan proje korunur." tehlikeli />
               </div>
             </div>
           ),

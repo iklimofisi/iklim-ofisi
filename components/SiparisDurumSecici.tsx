@@ -31,20 +31,7 @@ export default function SiparisDurumSecici({
           Hazırlanıyor'a Al
         </button>
       )}
-      {mevcutDurum !== "IPTAL" && (
-        <button
-          type="button"
-          disabled={pending}
-          onClick={async () => {
-            if (await onayIste("Bu sipariş iptal edilsin mi?", { baslik: "Sipariş iptali", onayMetni: "Siparişi iptal et", tehlikeli: true })) {
-              startTransition(() => siparisDurumGuncelle(siparisId, "IPTAL"));
-            }
-          }}
-          className="focus-ring text-xs text-sicak-dim hover:underline"
-        >
-          İptal Et
-        </button>
-      )}
+      {/* İptal: sipariş sayfasının üstündeki "Siparişi iptal et" (yalnız yönetici, neden zorunlu) */}
     </div>
   );
 }

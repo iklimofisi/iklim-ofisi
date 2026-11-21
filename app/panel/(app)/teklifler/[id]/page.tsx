@@ -17,7 +17,8 @@ import ZiyaretListesi from "@/components/ZiyaretListesi";
 import { PAYLASIM_TABANI } from "@/lib/teklif-paylasim";
 import { redNedeniAdi } from "@/lib/teklif-durum";
 import { GERCEK_MUSTERI, MUSTERISIZ_HITAP, musterisizMi, musterisizGoster } from "@/lib/musterisiz";
-import { teklifMusteriyeBagla } from "@/lib/actions";
+import { teklifMusteriyeBagla, teklifArsivdenCikar } from "@/lib/actions";
+import KayitIslemButonu from "@/components/KayitIslemButonu";
 import KaydetButonu from "@/components/KaydetButonu";
 import { miktarYaz } from "@/lib/birimler";
 
@@ -213,6 +214,24 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
               </Link>
             </span>
           ))}
+        </div>
+      )}
+
+      {/* ARŞİVDEKİ TEKLİF (silinmedi; listelerde ve raporlarda görünmez) */}
+      {teklif.arsivTarihi && (
+        <div className="mb-3 text-sm bg-hat text-metin border border-hat rounded-md px-4 py-3 print:hidden flex flex-wrap items-center justify-between gap-2">
+          <p>
+            🗄 <b>Bu teklif arşivde:</b> {saatliTarih(teklif.arsivTarihi)}
+            {teklif.arsivleyenAdi && ` · ${teklif.arsivleyenAdi}`}. Listelerde ve raporlarda görünmez.
+          </p>
+          <KayitIslemButonu
+            id={teklif.id}
+            action={teklifArsivdenCikar}
+            etiket="Arşivden çıkar"
+            onayBasligi="Arşivden çıkar"
+            onayMesaji="Teklif yeniden teklif listesinde ve raporlarda görünecek."
+            className="focus-ring text-xs font-semibold text-soguk-dim hover:underline disabled:opacity-50"
+          />
         </div>
       )}
 

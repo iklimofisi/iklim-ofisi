@@ -73,7 +73,8 @@ export default async function SatisPaneli({ donem }: { donem: Donem }) {
     prisma.teklif.findMany({
       // İlk hazırlanma tarihi = ilkTarih, tarih ve revizyon tarihlerinin en erkeni.
       // Hepsi dönem içindeyse teklif bu dönemde hazırlanmıştır.
-      where: { ilkTarih: { gte: bas }, tarih: { gte: bas }, revizyonlar: { every: { tarih: { gte: bas } } } },
+      // Arşive kaldırılan teklifler sayılmaz.
+      where: { arsivTarihi: null, ilkTarih: { gte: bas }, tarih: { gte: bas }, revizyonlar: { every: { tarih: { gte: bas } } } },
       select: {
         durum: true,
         paraBirimi: true,
@@ -85,7 +86,7 @@ export default async function SatisPaneli({ donem }: { donem: Donem }) {
       },
     }),
     prisma.teklif.findMany({
-      where: { durum: "BEKLEMEDE" },
+      where: { durum: "BEKLEMEDE", arsivTarihi: null },
       select: {
         id: true,
         teklifNo: true,

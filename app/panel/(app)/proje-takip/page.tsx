@@ -18,6 +18,7 @@ export default async function ProjeTakipPage() {
       include: {
         musteri: true,
         teklifler: {
+          where: { arsivTarihi: null }, // arşivdeki teklifler takipte görünmez
           include: {
             kalemler: { include: { marka: true } },
             olusturanKullanici: true,
@@ -28,7 +29,7 @@ export default async function ProjeTakipPage() {
       orderBy: { olusturmaTarihi: "desc" },
     }),
     prisma.teklif.findMany({
-      where: { projeId: null },
+      where: { projeId: null, arsivTarihi: null },
       include: {
         musteri: true,
         yetkili: true,

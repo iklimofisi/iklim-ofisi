@@ -5,7 +5,7 @@ import {
   siparisFaturaGuncelle,
   sevkiyatEkle,
   sevkiyatSil,
-  siparisSil,
+  siparisIptal,
   teslimKaydiEkle,
   teslimKaydiSil,
 } from "@/lib/actions";
@@ -14,6 +14,8 @@ import SiparisDurumSecici from "@/components/SiparisDurumSecici";
 import SiparisOnayReddet from "@/components/SiparisOnayReddet";
 import SiparisSureciGostergesi from "@/components/SiparisSureciGostergesi";
 import SilButon from "@/components/SilButon";
+import KayitIslemButonu from "@/components/KayitIslemButonu";
+import { siparisNetTutari } from "@/lib/siparis-tutari";
 import YazdirButon from "@/components/YazdirButon";
 import KaydetButonu from "@/components/KaydetButonu";
 import { miktarYaz } from "@/lib/birimler";
@@ -40,10 +42,10 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
 
   if (!siparis) notFound();
 
-  const toplam = siparis.teklif.kalemler.reduce(
-    (a, k) => a + k.adet * k.birimFiyat * (1 - k.iskontoYuzde / 100),
-    0
-  );
+  // Sipariş tutarı: sipariş açılırken/onaylanırken dondurulan tutar (eski siparişlerde teklifin kalemleri)
+  const toplam = siparisNetTutari(siparis);
+  const pb = siparis.paraBirimi ?? siparis.teklif.paraBirimi;
+  const teklifDegisti = siparis.teklifRevizyonNo != null && siparis.teklif.revizyonNo > siparis.teklifRevizyonNo;
   const isAdmin = giren?.rol === "ADMIN";
   const aktifMi = siparis.durum !== "ONAY_BEKLIYOR" && siparis.durum !== "REDDEDILDI";
 
@@ -69,9 +71,17 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
           </p>
         </div>
         <div className="flex items-center gap-3 shrink-0 print:hidden">
-          {aktifMi && <SiparisDurumSecici siparisId={siparis.id} mevcutDurum={siparis.durum} />}
+          {aktifMi && (siparis.durum !== "IPTAL" || isAdmin) && <SiparisDurumSecici siparisId={siparis.id} mevcutDurum={siparis.durum} />}
           <YazdirButon />
-          <SilButon id={siparis.id} action={siparisSil} onayMesaji="Bu siparişi silmek istediğinize emin misiniz? (Cari hesaba işlenmiş borç kaydı otomatik silinmez, gerekirse cari hesaptan ayrıca sil.)" />
+          {isAdmin && siparis.durum !== "IPTAL" && (
+            <KayitIslemButonu
+              id={siparis.id}
+              action={siparisIptal}
+              etiket="Siparişi iptal et"
+              onayMesaji="Sipariş silinmez; iptal edilir ve kaydı kimin, ne zaman, neden iptal ettiğiyle saklanır."
+              nedenIste
+            />
+          )}
         </div>
       </div>
 
@@ -103,6 +113,26 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
       </div>
 
       <SiparisSureciGostergesi durum={siparis.durum} />
+
+      {siparis.durum === "IPTAL" && (
+        <div className="bg-hat rounded-lg p-5 mb-8">
+          <p className="text-sm font-medium text-metin mb-1">Bu sipariş iptal edildi.</p>
+          <p className="text-sm text-metin/60">
+            {siparis.iptalTarihi ? siparis.iptalTarihi.toLocaleDateString("tr-TR") : ""}
+            {siparis.iptalEdenAdi ? ` · ${siparis.iptalEdenAdi}` : ""}
+            {siparis.iptalNedeni ? ` · Neden: ${siparis.iptalNedeni}` : ""}
+          </p>
+        </div>
+      )}
+
+      {teklifDegisti && (
+        <div className="bg-sicak-light border border-sicak/30 rounded-lg p-4 mb-8 print:hidden">
+          <p className="text-sm text-sicak-dim">
+            Kaynak teklif sipariş açıldıktan sonra değiştirildi (sipariş Rev. {siparis.teklifRevizyonNo}, teklif şu an Rev. {siparis.teklif.revizyonNo}).
+            Sipariş tutarı, açıldığı andaki tutarla sabit kalır.
+          </p>
+        </div>
+      )}
 
       {siparis.durum === "ONAY_BEKLIYOR" && (
         <div className="bg-sicak-light border border-sicak/30 rounded-lg p-5 mb-8">
@@ -148,10 +178,10 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
       <div className="grid sm:grid-cols-2 gap-6 mb-8">
         <div className="bg-yuzey border border-hat rounded-lg p-5">
           <p className="text-xs text-metin/50 mb-1">Sipariş Tutarı</p>
-          <p className="font-mono text-xl text-metin">{paraFormat(toplam, siparis.teklif.paraBirimi)}</p>
-          {siparis.teklif.paraBirimi !== "TRY" && (
+          <p className="font-mono text-xl text-metin">{paraFormat(toplam, pb)}</p>
+          {pb !== "TRY" && (
             <p className="text-xs text-metin/50 mt-1">
-              Kur: 1 {siparis.teklif.paraBirimi} = {siparis.kur} TL · TL karşılığı ≈{" "}
+              Kur: 1 {pb} = {siparis.kur} TL · TL karşılığı ≈{" "}
               {paraFormat(toplam * siparis.kur, "TRY")}
             </p>
           )}
@@ -270,7 +300,7 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
                         <p className="text-metin">{s.adet}x {s.teklifKalem.aciklama}{s.not && ` — ${s.not}`}</p>
                         <p className="text-xs text-metin/50">{s.tarih.toISOString().slice(0, 10)}</p>
                       </div>
-                      <SilButon id={s.id} action={sevkiyatSil} onayMesaji="Bu sevkiyat kaydını silmek istediğinize emin misiniz?" />
+                      {isAdmin && <SilButon id={s.id} action={sevkiyatSil} onayMesaji="Bu sevkiyat kaydını silmek istediğinize emin misiniz?" />}
                     </div>
                   ))}
                 </div>
@@ -375,7 +405,7 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
                           )}
                         </p>
                       </div>
-                      <SilButon id={t.id} action={teslimKaydiSil} onayMesaji="Bu teslim kaydını silmek istediğinize emin misiniz?" />
+                      {isAdmin && <SilButon id={t.id} action={teslimKaydiSil} onayMesaji="Bu teslim kaydını silmek istediğinize emin misiniz?" />}
                     </div>
                   ))}
                 </div>

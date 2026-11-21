@@ -9,11 +9,14 @@ function paraFormat(n: number) {
 
 export default async function GenelCariPage() {
   const [musteriHareketleri, tedarikciHareketleri] = await Promise.all([
+    // İptal edilen finansal hareketler özet ve çek listelerine girmez
     prisma.cariHareket.findMany({
+      where: { iptalTarihi: null },
       include: { musteri: true },
       orderBy: { tarih: "desc" },
     }),
     prisma.tedarikciHareket.findMany({
+      where: { iptalTarihi: null },
       include: { tedarikci: true },
       orderBy: { tarih: "desc" },
     }),

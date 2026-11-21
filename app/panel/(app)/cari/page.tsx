@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { GERCEK_MUSTERI } from "@/lib/musterisiz";
-import { cariHareketEkle, cariHareketSil } from "@/lib/actions";
+import { cariHareketEkle, cariHareketIptal } from "@/lib/actions";
 import CariFiltre from "@/components/CariFiltre";
-import SilButon from "@/components/SilButon";
+import KayitIslemButonu from "@/components/KayitIslemButonu";
+import { suankiKullanici } from "@/lib/oturum";
 import OdemeAlModal from "@/components/OdemeAlModal";
 import KaydetButonu from "@/components/KaydetButonu";
 
@@ -23,7 +24,7 @@ export default async function CariSayfasi({
   const onBesGunSonra = new Date();
   onBesGunSonra.setDate(bugun.getDate() + 15);
 
-  const [musteriler, hareketler, yaklasanCekler] = await Promise.all([
+  const [musteriler, hareketler, yaklasanCekler, giren] = await Promise.all([
     prisma.musteri.findMany({ where: GERCEK_MUSTERI, orderBy: { ad: "asc" } }),
     prisma.cariHareket.findMany({
       where: seciliMusteri === "hepsi" ? {} : { musteriId: seciliMusteri },
@@ -34,13 +35,17 @@ export default async function CariSayfasi({
     prisma.cariHareket.findMany({
       where: {
         vadeTarihi: { gte: bugun, lte: onBesGunSonra },
+        iptalTarihi: null,
       },
       include: { musteri: true },
       orderBy: { vadeTarihi: "asc" },
     }),
+    suankiKullanici(),
   ]);
 
-  const bakiye = hareketler.reduce((a, c) => a + (c.tur === "BORC" ? c.tutar : -c.tutar), 0);
+  // İptal edilen hareketler listede (üstü çizili) görünür ama bakiyeye girmez
+  const bakiye = hareketler.reduce((a, c) => (c.iptalTarihi ? a : a + (c.tur === "BORC" ? c.tutar : -c.tutar)), 0);
+  const yonetici = giren?.rol === "ADMIN";
 
   return (
     <div>
@@ -174,11 +179,16 @@ export default async function CariSayfasi({
           </thead>
           <tbody>
             {hareketler.map((c) => (
-              <tr key={c.id} className="border-b border-hat last:border-0 hover:bg-slate-50/50">
+              <tr key={c.id} className={`border-b border-hat last:border-0 hover:bg-slate-50/50 ${c.iptalTarihi ? "opacity-60" : ""}`}>
                 <td className="px-4 py-3 font-mono text-metin/60 text-xs">{c.tarih.toISOString().slice(0, 10)}</td>
                 <td className="px-4 py-3 text-metin font-semibold">{c.musteri.ad}</td>
                 <td className="px-4 py-3 text-metin/70 text-xs">
-                  {c.aciklama}
+                  <span className={c.iptalTarihi ? "line-through" : ""}>{c.aciklama}</span>
+                  {c.iptalTarihi && (
+                    <span className="block text-[10px] font-bold text-sicak-dim">
+                      İPTAL · {c.iptalTarihi.toISOString().slice(0, 10)} · {c.iptalEdenAdi} · {c.iptalNedeni}
+                    </span>
+                  )}
                   {c.odemeYontemi && <span className="block text-[10px] font-bold text-soguk-dim">Yöntem: {c.odemeYontemi}</span>}
                   {c.odemeDetay && <span className="block text-[10px] text-metin/50">{c.odemeDetay}</span>}
                 </td>
@@ -211,13 +221,23 @@ export default async function CariSayfasi({
                   )}
                 </td>
 
-                <td className={`px-4 py-3 text-right font-mono font-bold ${c.tur === "BORC" ? "text-sicak-dim" : "text-soguk-dim"}`}>
+                <td className={`px-4 py-3 text-right font-mono font-bold ${c.tur === "BORC" ? "text-sicak-dim" : "text-soguk-dim"} ${c.iptalTarihi ? "line-through" : ""}`}>
                   {c.tur === "BORC" ? "+" : "-"}
                   {paraFormat(c.tutar)}
                 </td>
 
                 <td className="px-4 py-3 text-right">
-                  <SilButon id={c.id} action={cariHareketSil} onayMesaji="Bu hareketi silmek istediğinize emin misiniz?" />
+                  {c.iptalTarihi ? (
+                    <span className="text-[11px] text-metin/40">İptal edildi</span>
+                  ) : yonetici ? (
+                    <KayitIslemButonu
+                      id={c.id}
+                      action={cariHareketIptal}
+                      etiket="İptal et"
+                      nedenIste
+                      onayMesaji="Hareket silinmez; iptal edilir ve bakiyeden düşer. Kayıt üstü çizili olarak kalır."
+                    />
+                  ) : null}
                 </td>
               </tr>
             ))}

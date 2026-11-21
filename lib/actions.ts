@@ -28,6 +28,10 @@ import { birimNormal } from "@/lib/birimler";
 import { listeNotlari } from "@/lib/toptan-fiyat";
 import { MUSTERISIZ_ID, musterisizMi, musterisizGoster } from "@/lib/musterisiz";
 import { musterisizKaydiHazirla } from "@/lib/musterisiz-sunucu";
+import { siparisDondurmaVerisi } from "@/lib/siparis-tutari";
+
+// Kayıt güvencesi işlemlerinin sonucu: düğme bu mesajı bildirim olarak gösterir
+export type IslemSonucu = { hata?: string; tamam?: string };
 
 // --- Yetki kontrolü + işlem kaydı ---
 // Her sunucu işleminin ilk satırında çağrılır: giriş yapılmamışsa işlem yapılmaz
@@ -503,8 +507,40 @@ export async function teklifReddet(teklifId: string, bilgi: { neden: string; rak
   revalidatePath("/panel");
 }
 
+// TEKLİF ARŞİVİ: teklif silinmez; arşivlenen teklif listelerden düşer, kendi sayfasında ve
+// "Arşiv" görünümünde durur, istenince arşivden çıkarılır. Siparişi süren teklif arşivlenmez.
+export async function teklifArsivle(teklifId: string): Promise<IslemSonucu> {
+  const giren = await yetki("teklifArsivle", { teklifId });
+  const teklif = teklifId
+    ? await prisma.teklif.findUnique({ where: { id: teklifId }, select: { id: true, arsivTarihi: true, siparis: { select: { durum: true } } } })
+    : null;
+  if (!teklif) return { hata: "Teklif bulunamadı." };
+  if (teklif.arsivTarihi) return { tamam: "Teklif zaten arşivde." };
+  if (teklif.siparis && teklif.siparis.durum !== "IPTAL" && teklif.siparis.durum !== "REDDEDILDI")
+    return { hata: "Bu teklifin süren bir siparişi var; önce siparişi iptal edin." };
+  await prisma.teklif.update({ where: { id: teklifId }, data: { arsivTarihi: new Date(), arsivleyenAdi: giren.ad } });
+  revalidatePath("/panel/teklifler");
+  revalidatePath(`/panel/teklifler/${teklifId}`);
+  revalidatePath("/panel");
+  return { tamam: "Teklif arşive kaldırıldı." };
+}
+
+export async function teklifArsivdenCikar(teklifId: string): Promise<IslemSonucu> {
+  await yetki("teklifArsivdenCikar", { teklifId });
+  if (!teklifId) return { hata: "Teklif bulunamadı." };
+  await prisma.teklif.update({ where: { id: teklifId }, data: { arsivTarihi: null, arsivleyenAdi: null } });
+  revalidatePath("/panel/teklifler");
+  revalidatePath(`/panel/teklifler/${teklifId}`);
+  revalidatePath("/panel");
+  return { tamam: "Teklif arşivden çıkarıldı." };
+}
+
+// Eski kalıcı silme: artık hiçbir ekranda düğmesi yok; yalnız yönetici, siparişsiz teklif için
+// (deneme kayıtları). Silinen teklifin kopyası işlem geçmişinde saklanır.
 export async function teklifSil(teklifId: string) {
   const silen = await yetki("teklifSil", { teklifId });
+  if (silen.rol !== "ADMIN") return;
+  if (await prisma.siparis.findUnique({ where: { teklifId }, select: { id: true } })) return;
   // Teklife bağlı sözleşme taslağı da silinir; önce kopyası işlem geçmişine yazılır
   const sozlesme = await prisma.sozlesme.findUnique({ where: { teklifId }, select: { id: true } }).catch(() => null);
   if (sozlesme) await islemKaydet(silen, "sozlesmeSil", { id: sozlesme.id, teklifId });
@@ -579,11 +615,27 @@ export async function cariHareketEkle(formData: FormData) {
   revalidatePath("/panel");
 }
 
+// FİNANSAL HAREKET İPTALİ: tahsilat / borç kaydı silinmez. İptal edilen hareket bakiyeye ve
+// çek listelerine girmez, listede üstü çizili ve iptal nedeniyle görünür. Yalnız yönetici.
+export async function cariHareketIptal(hareketId: string, neden: string): Promise<IslemSonucu> {
+  const giren = await yetki("cariHareketIptal", { hareketId, neden });
+  if (giren.rol !== "ADMIN") return { hata: "Finansal kaydı yalnız yönetici iptal edebilir." };
+  const nedenTemiz = String(neden ?? "").trim().slice(0, 500);
+  if (!nedenTemiz) return { hata: "İptal nedenini yazın." };
+  const h = hareketId ? await prisma.cariHareket.findUnique({ where: { id: hareketId }, select: { musteriId: true, iptalTarihi: true } }) : null;
+  if (!h) return { hata: "Hareket bulunamadı." };
+  if (h.iptalTarihi) return { tamam: "Hareket zaten iptal edilmiş." };
+  await prisma.cariHareket.update({ where: { id: hareketId }, data: { iptalTarihi: new Date(), iptalEdenAdi: giren.ad, iptalNedeni: nedenTemiz } });
+  revalidatePath("/panel/cari");
+  revalidatePath(`/panel/musteriler/${h.musteriId}`);
+  revalidatePath("/panel/genel-cari");
+  revalidatePath("/panel");
+  return { tamam: "Hareket iptal edildi; bakiyeden düşüldü." };
+}
+
+// Eski kalıcı silme: artık hiçbir ekranda düğmesi yok; finansal kayıt silinmez (iptal edilir)
 export async function cariHareketSil(hareketId: string) {
   await yetki("cariHareketSil", { hareketId });
-  await prisma.cariHareket.delete({ where: { id: hareketId } });
-  revalidatePath("/panel/cari");
-  revalidatePath("/panel");
 }
 
 // --- Satınalma: Tedarikçi Cari ---
@@ -630,10 +682,26 @@ export async function tedarikciHareketEkle(formData: FormData) {
   revalidatePath("/panel");
 }
 
+// FİNANSAL HAREKET İPTALİ (tedarikçi): silinmez, iptal edilir (bakiyeden düşer). Yalnız yönetici.
+export async function tedarikciHareketIptal(id: string, neden: string): Promise<IslemSonucu> {
+  const giren = await yetki("tedarikciHareketIptal", { id, neden });
+  if (giren.rol !== "ADMIN") return { hata: "Finansal kaydı yalnız yönetici iptal edebilir." };
+  const nedenTemiz = String(neden ?? "").trim().slice(0, 500);
+  if (!nedenTemiz) return { hata: "İptal nedenini yazın." };
+  const h = id ? await prisma.tedarikciHareket.findUnique({ where: { id }, select: { iptalTarihi: true } }) : null;
+  if (!h) return { hata: "Hareket bulunamadı." };
+  if (h.iptalTarihi) return { tamam: "Hareket zaten iptal edilmiş." };
+  await prisma.tedarikciHareket.update({ where: { id }, data: { iptalTarihi: new Date(), iptalEdenAdi: giren.ad, iptalNedeni: nedenTemiz } });
+  revalidatePath("/panel/satinalma/cari");
+  revalidatePath("/panel/satinalma");
+  revalidatePath("/panel/genel-cari");
+  revalidatePath("/panel");
+  return { tamam: "Hareket iptal edildi; bakiyeden düşüldü." };
+}
+
+// Eski kalıcı silme: artık hiçbir ekranda düğmesi yok; finansal kayıt silinmez (iptal edilir)
 export async function tedarikciHareketSil(id: string) {
   await yetki("tedarikciHareketSil", { id });
-  await prisma.tedarikciHareket.delete({ where: { id } });
-  revalidatePath("/panel/satinalma/cari");
 }
 
 // --- AKILLI STOK VEYA KATALOG GİRİŞİ (WAC - AĞIRLIKLI ORTALAMA MALİYET HESAPLI) ---
@@ -941,7 +1009,7 @@ export async function siparisTalebiOlustur(formData: FormData) {
   const dosya = formData.get("sozlesmeDosyasi") as File | null;
   if (!teklifId) return;
 
-  const teklif = await prisma.teklif.findUnique({ where: { id: teklifId } });
+  const teklif = await prisma.teklif.findUnique({ where: { id: teklifId }, include: { kalemler: true } });
   if (!teklif) return;
   // Müşterisiz teklif siparişe çevrilemez (sipariş ve cari hareket müşteriye yazılır)
   if (musterisizMi(teklif.musteriId)) redirect(`/panel/teklifler/${teklifId}?mesaj=musterisiz-siparis`);
@@ -967,6 +1035,7 @@ export async function siparisTalebiOlustur(formData: FormData) {
       sozlesmeDosyaTipi,
       olusturanKullaniciId: kullanici?.id || null,
       olusturanAdi: kullanici?.ad ?? "",
+      ...siparisDondurmaVerisi(teklif),
     },
   });
   revalidatePath("/panel/siparisler");
@@ -984,17 +1053,16 @@ export async function siparisOnayla(siparisId: string) {
   });
   if (!siparis || siparis.durum !== "ONAY_BEKLIYOR") return;
 
-  const toplam = siparis.teklif.kalemler.reduce((a, k) => {
-    const satir = k.adet * k.birimFiyat * (1 - k.iskontoYuzde / 100);
-    return a + satir;
-  }, 0);
+  // Onay anında teklifin kalemleri ve tutarı siparişe dondurulur; cari borç da bu tutardan yazılır
+  const dondurma = siparisDondurmaVerisi(siparis.teklif);
+  const toplam = dondurma.tutarNet;
   const kdvli = siparis.teklif.kdvDahil ? toplam : toplam * (1 + siparis.teklif.kdvOrani / 100);
   const tlTutar = siparis.teklif.paraBirimi === "TRY" ? kdvli : kdvli * siparis.kur;
 
   await prisma.$transaction([
     prisma.siparis.update({
       where: { id: siparisId },
-      data: { durum: "HAZIRLANIYOR", onaylayanAdi: giren.ad, onayTarihi: new Date() },
+      data: { durum: "HAZIRLANIYOR", onaylayanAdi: giren.ad, onayTarihi: new Date(), ...dondurma },
     }),
     prisma.cariHareket.create({
       data: {
@@ -1030,17 +1098,48 @@ export async function siparisDurumGuncelle(
   siparisId: string,
   durum: "HAZIRLANIYOR" | "IPTAL"
 ) {
-  await yetki("siparisDurumGuncelle", { siparisId, durum });
-  await prisma.siparis.update({ where: { id: siparisId }, data: { durum } });
+  const giren = await yetki("siparisDurumGuncelle", { siparisId, durum });
+  // İptal etmek ve iptal edilmiş siparişi geri almak yalnız yöneticinin işi
+  if (giren.rol !== "ADMIN") {
+    if (durum === "IPTAL") return;
+    const mevcut = await prisma.siparis.findUnique({ where: { id: siparisId }, select: { durum: true } });
+    if (mevcut?.durum === "IPTAL") return;
+  }
+  await prisma.siparis.update({
+    where: { id: siparisId },
+    data: durum === "IPTAL" ? { durum, iptalTarihi: new Date(), iptalEdenAdi: giren.ad } : { durum },
+  });
   revalidatePath("/panel/siparisler");
   revalidatePath(`/panel/siparisler/${siparisId}`);
 }
 
+// SİPARİŞ İPTALİ: sipariş silinmez; durumu "İptal" olur, kim / ne zaman / neden kaydedilir.
+// Sevkiyat, teslim ve cari kayıtlarına dokunulmaz (onaylı siparişin cari borcu ayrıca iptal edilir).
+export async function siparisIptal(siparisId: string, neden: string): Promise<IslemSonucu> {
+  const giren = await yetki("siparisIptal", { siparisId, neden });
+  if (giren.rol !== "ADMIN") return { hata: "Siparişi yalnız yönetici iptal edebilir." };
+  const nedenTemiz = String(neden ?? "").trim().slice(0, 500);
+  if (!nedenTemiz) return { hata: "İptal nedenini yazın." };
+  const s = siparisId ? await prisma.siparis.findUnique({ where: { id: siparisId }, select: { durum: true, onayTarihi: true } }) : null;
+  if (!s) return { hata: "Sipariş bulunamadı." };
+  if (s.durum === "IPTAL") return { tamam: "Sipariş zaten iptal edilmiş." };
+  await prisma.siparis.update({
+    where: { id: siparisId },
+    data: { durum: "IPTAL", iptalTarihi: new Date(), iptalEdenAdi: giren.ad, iptalNedeni: nedenTemiz },
+  });
+  revalidatePath("/panel/siparisler");
+  revalidatePath(`/panel/siparisler/${siparisId}`);
+  revalidatePath("/panel");
+  return {
+    tamam: s.onayTarihi
+      ? "Sipariş iptal edildi. Onaylıydı: müşterinin cari hesabındaki sipariş borcunu da Cari Hesap'tan iptal edin."
+      : "Sipariş iptal edildi.",
+  };
+}
+
+// Eski kalıcı silme: artık hiçbir ekranda düğmesi yok; sipariş silinmez (iptal edilir)
 export async function siparisSil(siparisId: string) {
   await yetki("siparisSil", { siparisId });
-  await prisma.siparis.delete({ where: { id: siparisId } });
-  revalidatePath("/panel/siparisler");
-  revalidatePath("/panel");
 }
 
 export async function siparisFaturaGuncelle(formData: FormData) {
@@ -1094,7 +1193,9 @@ export async function sevkiyatEkle(formData: FormData) {
 }
 
 export async function sevkiyatSil(id: string) {
-  await yetki("sevkiyatSil", { id });
+  const giren = await yetki("sevkiyatSil", { id });
+  // Yanlış girilen sevkiyat kaydını yalnız yönetici siler (kopyası işlem geçmişinde kalır)
+  if (giren.rol !== "ADMIN") return;
   const kayit = await prisma.sevkiyatKaydi.delete({ where: { id } });
   revalidatePath(`/panel/siparisler/${kayit.siparisId}`);
   revalidatePath("/panel/siparisler");
@@ -1139,7 +1240,9 @@ export async function teslimKaydiEkle(formData: FormData) {
 }
 
 export async function teslimKaydiSil(id: string) {
-  await yetki("teslimKaydiSil", { id });
+  const giren = await yetki("teslimKaydiSil", { id });
+  // Yanlış girilen teslim kaydını yalnız yönetici siler (kopyası işlem geçmişinde kalır)
+  if (giren.rol !== "ADMIN") return;
   const kayit = await prisma.teslimKaydi.delete({ where: { id } });
   revalidatePath(`/panel/siparisler/${kayit.siparisId}`);
   revalidatePath("/panel/siparisler");
@@ -1256,10 +1359,15 @@ export async function satinalmaTeklifiGuncelle(formData: FormData) {
   revalidatePath(`/panel/satinalma/teklifler/${id}`);
 }
 
-export async function satinalmaTeklifiSil(id: string) {
-  await yetki("satinalmaTeklifiSil", { id });
+// Tedarikçi teklifi: müşteri teklifine aktarıldıysa silinmez (maliyetin kaynağıdır). Yalnız yönetici.
+export async function satinalmaTeklifiSil(id: string): Promise<IslemSonucu> {
+  const giren = await yetki("satinalmaTeklifiSil", { id });
+  if (giren.rol !== "ADMIN") return { hata: "Tedarikçi teklifini yalnız yönetici silebilir." };
+  const bagli = id ? await prisma.teklif.count({ where: { kaynakSatinalmaTeklifiId: id } }) : 0;
+  if (bagli > 0) return { hata: `Bu tedarikçi teklifinden ${bagli} müşteri teklifi hazırlanmış; maliyet kaynağı olduğu için silinmez.` };
   await prisma.satinalmaTeklifi.delete({ where: { id } });
   revalidatePath("/panel/satinalma/teklifler");
+  return { tamam: "Tedarikçi teklifi silindi." };
 }
 
 export async function satinalmaTeklifiniDonustur(formData: FormData) {
@@ -2200,11 +2308,16 @@ export async function projeGuncelle(formData: FormData) {
 }
 
 // PROJE SİLME
-export async function projeSil(id: string) {
-  await yetki("projeSil", { id });
+export async function projeSil(id: string): Promise<IslemSonucu> {
+  const giren = await yetki("projeSil", { id });
+  // Teklifi olan proje silinmez (teklifler projeden kopmasın). Boş projeyi yalnız yönetici siler.
+  if (giren.rol !== "ADMIN") return { hata: "Projeyi yalnız yönetici silebilir." };
+  const teklifSayisi = id ? await prisma.teklif.count({ where: { projeId: id } }) : 0;
+  if (teklifSayisi > 0) return { hata: `Bu projeye bağlı ${teklifSayisi} teklif var (arşivdekiler dahil); proje silinmez.` };
   await prisma.proje.delete({ where: { id } });
   revalidatePath("/panel/proje-takip"); // PROJE TAKİP EKRANI CANLI GÜNCELLENİR
   revalidatePath("/panel/projeler");
+  return { tamam: "Proje silindi." };
 }
 
 // --- Ziyaret Modülü ---
@@ -2332,7 +2445,7 @@ export async function siparisOlustur(teklifId: string) {
   const kullanici = await yetki("siparisOlustur", { teklifId });
   if (!teklifId) return;
 
-  const teklif = await prisma.teklif.findUnique({ where: { id: teklifId } });
+  const teklif = await prisma.teklif.findUnique({ where: { id: teklifId }, include: { kalemler: true } });
   if (!teklif) return;
   if (musterisizMi(teklif.musteriId)) redirect(`/panel/teklifler/${teklifId}?mesaj=musterisiz-siparis`);
 
@@ -2349,6 +2462,7 @@ export async function siparisOlustur(teklifId: string) {
       kur: 1,
       olusturanKullaniciId: kullanici?.id || null,
       olusturanAdi: kullanici?.ad ?? "",
+      ...siparisDondurmaVerisi(teklif),
     },
   });
 
@@ -2358,22 +2472,32 @@ export async function siparisOlustur(teklifId: string) {
 }
 
 // MÜŞTERİ SİLME FONKSİYONU
-export async function musteriSil(musteriId: string) {
+export async function musteriSil(musteriId: string): Promise<IslemSonucu> {
   const giren = await yetki("musteriSil", { musteriId });
-  if (!giren || giren.rol !== "ADMIN") return;
+  if (!giren || giren.rol !== "ADMIN") return { hata: "Müşteriyi yalnız yönetici silebilir." };
 
   // Müşterisiz teklif sistem kaydı silinmez (müşterisiz teklifler ona bağlı)
-  if (!musteriId || musteriId === MUSTERISIZ_ID) return;
+  if (!musteriId || musteriId === MUSTERISIZ_ID) return { hata: "Bu kayıt silinemez." };
 
-  // Bağlı ilişkili cari hareketleri ve ziyaretleri sil
-  await prisma.cariHareket.deleteMany({ where: { musteriId } });
-  await prisma.ziyaret.deleteMany({ where: { musteriId } });
+  // Teklifi, siparişi ya da cari hareketi olan müşteri silinmez (finansal geçmişi kaybolmasın).
+  // Yalnız hiç işlem görmemiş (ör. yanlışlıkla iki kez açılmış) müşteri silinebilir.
+  const [teklifSayisi, siparisSayisi, cariSayisi, gorusmeSayisi] = await Promise.all([
+    prisma.teklif.count({ where: { musteriId } }),
+    prisma.siparis.count({ where: { musteriId } }),
+    prisma.cariHareket.count({ where: { musteriId } }),
+    prisma.ziyaret.count({ where: { musteriId } }),
+  ]);
+  if (teklifSayisi + siparisSayisi + cariSayisi + gorusmeSayisi > 0)
+    return {
+      hata: `Bu müşterinin ${teklifSayisi} teklifi, ${siparisSayisi} siparişi, ${cariSayisi} cari hareketi ve ${gorusmeSayisi} görüşme kaydı var; müşteri silinmez.`,
+    };
+
   await prisma.proje.updateMany({ where: { musteriId }, data: { musteriId: null } });
 
   await prisma.musteri.delete({ where: { id: musteriId } });
 
   revalidatePath("/panel/musteriler");
-  redirect("/panel/musteriler");
+  return { tamam: "Müşteri silindi." };
 }
 
 // --- TEKLİF PAYLAŞIM LİNKİ (WhatsApp ile müşteriye gönderilen gizli link) ---

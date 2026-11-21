@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { siparisNetTutari } from "@/lib/siparis-tutari";
 
 export const dynamic = "force-dynamic";
 
@@ -25,8 +26,8 @@ export default async function CiroRaporlariPage() {
   siparisler.forEach((s) => {
     const personelAd = s.olusturanKullanici?.ad || s.olusturanAdi || "Bilinmeyen Personel";
     const email = s.olusturanKullanici?.email || "—";
-    const tutar = s.teklif.kalemler.reduce((acc, k) => acc + k.adet * k.birimFiyat * (1 - k.iskontoYuzde / 100), 0);
-    const tlTutar = s.teklif.paraBirimi === "TRY" ? tutar : tutar * s.kur;
+    const tutar = siparisNetTutari(s); // dondurulmuş sipariş tutarı (eski siparişlerde teklifin kalemleri)
+    const tlTutar = (s.paraBirimi ?? s.teklif.paraBirimi) === "TRY" ? tutar : tutar * s.kur;
 
     if (!personelCiro[personelAd]) {
       personelCiro[personelAd] = { ad: personelAd, email, ciro: 0, siparisAdet: 0 };

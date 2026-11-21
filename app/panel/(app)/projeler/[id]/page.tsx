@@ -3,7 +3,7 @@ import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { projeGuncelle, projeSil } from "@/lib/actions";
-import SilButon from "@/components/SilButon";
+import KayitIslemButonu from "@/components/KayitIslemButonu";
 import ZiyaretListesi from "@/components/ZiyaretListesi";
 import { teklifToplamlari } from "@/lib/teklif-hesap";
 import KaydetButonu from "@/components/KaydetButonu";
@@ -28,7 +28,7 @@ export default async function ProjeDetay({ params }: { params: { id: string } })
       where: { id: params.id },
       include: {
         musteri: true,
-        teklifler: { include: { musteri: true, kalemler: true }, orderBy: { tarih: "desc" } },
+        teklifler: { where: { arsivTarihi: null }, include: { musteri: true, kalemler: true }, orderBy: { tarih: "desc" } }, // arşivdekiler Teklifler › Arşiv'de
         ziyaretler: { orderBy: { tarih: "desc" }, include: { musteri: { select: { id: true, ad: true } }, teklif: { select: { id: true, teklifNo: true } } } },
       },
     }),
@@ -48,7 +48,7 @@ export default async function ProjeDetay({ params }: { params: { id: string } })
           <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Proje</p>
           <h1 className="font-display text-2xl font-semibold text-metin">{proje.ad}</h1>
         </div>
-        <SilButon id={proje.id} action={projeSil} onayMesaji="Bu projeyi silmek istediğinize emin misiniz?" />
+        <KayitIslemButonu id={proje.id} action={projeSil} sonraGit="/panel/projeler" etiket="Sil" onayBasligi="Silme onayı" onayMesaji="Yalnız teklifi olmayan proje silinebilir (yalnız yönetici). Teklifi olan proje korunur." tehlikeli />
       </div>
 
       <details className="bg-yuzey border border-hat rounded-lg mb-8">

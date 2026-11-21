@@ -22,6 +22,11 @@ const SILME_KAYNAKLARI: Record<string, { model: string; include?: Record<string,
   musteriYetkiliSil: { model: "musteriYetkili" },
   teklifSil: { model: "teklif", include: { kalemler: true, revizyonlar: true } },
   cariHareketSil: { model: "cariHareket" },
+  // Kayıt güvencesi: iptal / arşivden önceki hâl de saklanır
+  cariHareketIptal: { model: "cariHareket" },
+  tedarikciHareketIptal: { model: "tedarikciHareket" },
+  siparisIptal: { model: "siparis" },
+  teklifArsivle: { model: "teklif" },
   tedarikciHareketSil: { model: "tedarikciHareket" },
   sablonSil: { model: "teklifSablon" },
   // Hazır not metni değişmeden önceki hâli saklanır

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import { tedarikciHareketEkle, tedarikciHareketSil } from "@/lib/actions";
-import SilButon from "@/components/SilButon";
+import { tedarikciHareketEkle, tedarikciHareketIptal } from "@/lib/actions";
+import KayitIslemButonu from "@/components/KayitIslemButonu";
+import { suankiKullanici } from "@/lib/oturum";
 import TedarikciFiltre from "@/components/TedarikciFiltre";
 import Link from "next/link";
 import KaydetButonu from "@/components/KaydetButonu";
@@ -22,7 +23,7 @@ export default async function TedarikciCariSayfasi({
   const onBesGunSonra = new Date();
   onBesGunSonra.setDate(bugun.getDate() + 15);
 
-  const [tedarikciler, hareketler, yaklasanOdemeler] = await Promise.all([
+  const [tedarikciler, hareketler, yaklasanOdemeler, giren] = await Promise.all([
     prisma.tedarikci.findMany({ orderBy: { ad: "asc" } }),
     prisma.tedarikciHareket.findMany({
       where: secili === "hepsi" ? {} : { tedarikciId: secili },
@@ -33,13 +34,17 @@ export default async function TedarikciCariSayfasi({
     prisma.tedarikciHareket.findMany({
       where: {
         vadeTarihi: { gte: bugun, lte: onBesGunSonra },
+        iptalTarihi: null,
       },
       include: { tedarikci: true },
       orderBy: { vadeTarihi: "asc" },
     }),
+    suankiKullanici(),
   ]);
 
-  const bakiye = hareketler.reduce((a, h) => a + (h.tur === "BORC" ? h.tutar : -h.tutar), 0);
+  // İptal edilen hareketler listede (üstü çizili) görünür ama bakiyeye girmez
+  const bakiye = hareketler.reduce((a, h) => (h.iptalTarihi ? a : a + (h.tur === "BORC" ? h.tutar : -h.tutar)), 0);
+  const yonetici = giren?.rol === "ADMIN";
 
   return (
     <div>
@@ -162,11 +167,16 @@ export default async function TedarikciCariSayfasi({
           </thead>
           <tbody>
             {hareketler.map((h) => (
-              <tr key={h.id} className="border-b border-hat last:border-0 hover:bg-slate-50/50">
+              <tr key={h.id} className={`border-b border-hat last:border-0 hover:bg-slate-50/50 ${h.iptalTarihi ? "opacity-60" : ""}`}>
                 <td className="px-4 py-3 font-mono text-metin/60 text-xs">{h.tarih.toISOString().slice(0, 10)}</td>
                 <td className="px-4 py-3 text-metin font-semibold">{h.tedarikci.ad}</td>
                 <td className="px-4 py-3 text-metin/70 text-xs">
-                  {h.aciklama}
+                  <span className={h.iptalTarihi ? "line-through" : ""}>{h.aciklama}</span>
+                  {h.iptalTarihi && (
+                    <span className="block text-[10px] font-bold text-sicak-dim">
+                      İPTAL · {h.iptalTarihi.toISOString().slice(0, 10)} · {h.iptalEdenAdi} · {h.iptalNedeni}
+                    </span>
+                  )}
                   <span className={`block text-[10px] font-bold ${h.tur === 'BORC' ? 'text-rose-700' : 'text-emerald-700'}`}>
                     {h.tur === 'BORC' ? 'GELEN FATURA (BORÇ)' : 'ÖDEME YAPILDI'}
                   </span>
@@ -200,13 +210,23 @@ export default async function TedarikciCariSayfasi({
                   )}
                 </td>
 
-                <td className={`px-4 py-3 text-right font-mono font-bold ${h.tur === "BORC" ? "text-sicak-dim" : "text-soguk-dim"}`}>
+                <td className={`px-4 py-3 text-right font-mono font-bold ${h.tur === "BORC" ? "text-sicak-dim" : "text-soguk-dim"} ${h.iptalTarihi ? "line-through" : ""}`}>
                   {h.tur === "BORC" ? "+" : "-"}
                   {paraFormat(h.tutar)}
                 </td>
 
                 <td className="px-4 py-3 text-right">
-                  <SilButon id={h.id} action={tedarikciHareketSil} onayMesaji="Bu hareketi silmek istediğinize emin misiniz?" />
+                  {h.iptalTarihi ? (
+                    <span className="text-[11px] text-metin/40">İptal edildi</span>
+                  ) : yonetici ? (
+                    <KayitIslemButonu
+                      id={h.id}
+                      action={tedarikciHareketIptal}
+                      etiket="İptal et"
+                      nedenIste
+                      onayMesaji="Hareket silinmez; iptal edilir ve bakiyeden düşer. Kayıt üstü çizili olarak kalır."
+                    />
+                  ) : null}
                 </td>
               </tr>
             ))}

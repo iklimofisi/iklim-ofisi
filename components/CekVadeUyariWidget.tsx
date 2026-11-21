@@ -10,6 +10,7 @@ export default async function CekVadeUyariWidget() {
   const yaklasanTahsilatlar = await prisma.cariHareket.findMany({
     where: {
       vadeTarihi: { gte: bugun, lte: yediGunSonra },
+      iptalTarihi: null, // iptal edilen çek uyarı vermez
     },
     include: { musteri: true },
     orderBy: { vadeTarihi: "asc" },
@@ -19,6 +20,7 @@ export default async function CekVadeUyariWidget() {
   const yaklasanOdemeler = await prisma.tedarikciHareket.findMany({
     where: {
       vadeTarihi: { gte: bugun, lte: yediGunSonra },
+      iptalTarihi: null, // iptal edilen çek uyarı vermez
     },
     include: { tedarikci: true },
     orderBy: { vadeTarihi: "asc" },

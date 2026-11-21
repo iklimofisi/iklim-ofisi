@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { GERCEK_MUSTERI, MUSTERISIZ_ID, musterisizMi, musteriEtiketi } from "@/lib/musterisiz";
-import { teklifSil } from "@/lib/actions";
+import { teklifArsivle, teklifArsivdenCikar } from "@/lib/actions";
 import TeklifDurumSecici from "@/components/TeklifDurumSecici";
-import SilButon from "@/components/SilButon";
+import KayitIslemButonu from "@/components/KayitIslemButonu";
 import TeklifOnizleButon from "@/components/TeklifOnizleButon";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
 import Link from "next/link";
@@ -76,6 +76,7 @@ export default async function TekliflerSayfasi({
     proje?: string;
     no?: string;
     durum?: string;
+    arsiv?: string; // "1": arşivlenen teklifler
     seciliProjeId?: string;
     seciliMusteriId?: string; // Yeni Eklenen Müşteri ID'si
     basarili?: string;
@@ -89,10 +90,13 @@ export default async function TekliflerSayfasi({
     redirect(`/panel/teklifler/yeni?${q}`);
   }
 
-  const [musteriler, tumTeklifler, kullanicilar] = await Promise.all([
+  const arsivGorunumu = searchParams.arsiv === "1";
+  const [musteriler, tumTeklifler, kullanicilar, arsivSayisi] = await Promise.all([
     prisma.musteri.findMany({ where: GERCEK_MUSTERI, orderBy: { ad: "asc" }, select: { id: true, ad: true } }),
     prisma.teklif.findMany({
       where: {
+        // Arşivlenen teklifler yalnız "Arşiv" görünümünde listelenir
+        arsivTarihi: arsivGorunumu ? { not: null } : null,
         ...(searchParams.musteri ? { musteriId: searchParams.musteri } : {}),
         ...(searchParams.hazirlayan ? { olusturanKullaniciId: searchParams.hazirlayan } : {}),
         ...(searchParams.proje ? { baslik: { contains: searchParams.proje, mode: "insensitive" } } : {}),
@@ -118,6 +122,7 @@ export default async function TekliflerSayfasi({
       orderBy: { tarih: "desc" },
     }),
     prisma.kullanici.findMany({ select: { id: true, ad: true }, orderBy: { ad: "asc" } }),
+    prisma.teklif.count({ where: { arsivTarihi: { not: null } } }),
   ]);
 
   const min = searchParams.min ? Number(searchParams.min) : null;
@@ -207,9 +212,20 @@ export default async function TekliflerSayfasi({
       <div className="flex items-center justify-between mb-8">
         <div>
           <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Panel</p>
-          <h1 className="font-display text-2xl font-semibold text-metin">Teklifler</h1>
+          <h1 className="font-display text-2xl font-semibold text-metin">{arsivGorunumu ? "Teklifler · Arşiv" : "Teklifler"}</h1>
+          {arsivGorunumu && (
+            <p className="text-xs text-metin/55 mt-1">
+              Arşivlenen teklifler silinmez; burada durur ve istenince arşivden çıkarılır. Özet kutuları yalnız arşivdekileri sayar.
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href={arsivGorunumu ? "/panel/teklifler" : "/panel/teklifler?arsiv=1"}
+            className="focus-ring text-sm font-medium text-metin/60 border border-hat px-3 py-2 rounded-md hover:border-soguk hover:text-soguk-dim transition-colors"
+          >
+            {arsivGorunumu ? "← Güncel teklifler" : `Arşiv (${arsivSayisi})`}
+          </Link>
           <a
             href={`/api/export/teklifler${disaAktarQuery ? `?${disaAktarQuery}` : ""}`}
             className="focus-ring text-sm font-medium text-metin/70 border border-hat px-4 py-2 rounded-md hover:border-soguk hover:text-soguk-dim transition-colors"
@@ -500,12 +516,25 @@ export default async function TekliflerSayfasi({
                       <Link href={`/panel/teklifler/${t.id}/kopyala`} className={ikonDugme} title="Kopyala" aria-label="Kopyala">
                         <Ikon d="M9 9h13v13H9zM5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                       </Link>
-                      <SilButon
-                        id={t.id}
-                        action={teklifSil}
-                        onayMesaji="Bu teklifi silmek istediğinize emin misiniz?"
-                        ikonSinifi={`${ikonDugme} hover:!text-sicak-dim hover:!border-sicak/50 disabled:opacity-50`}
-                      />
+                      {t.arsivTarihi ? (
+                        <KayitIslemButonu
+                          id={t.id}
+                          action={teklifArsivdenCikar}
+                          etiket="Arşivden çıkar"
+                          onayMesaji="Teklif arşivden çıkarılıp güncel teklifler listesine dönsün mü?"
+                          className={`${ikonDugme} disabled:opacity-50`}
+                          icerik={<Ikon d="M3 7h18M5 7v13h14V7M9 13l3-3 3 3M12 10v7M4 3h16v4H4z" />}
+                        />
+                      ) : (
+                        <KayitIslemButonu
+                          id={t.id}
+                          action={teklifArsivle}
+                          etiket="Arşivle"
+                          onayMesaji="Teklif silinmez; arşive kaldırılır ve listeden düşer. Arşivden istediğiniz zaman geri alabilirsiniz."
+                          className={`${ikonDugme} hover:!text-sicak-dim hover:!border-sicak/50 disabled:opacity-50`}
+                          icerik={<Ikon d="M3 7h18M5 7v13h14V7M10 12h4M4 3h16v4H4z" />}
+                        />
+                      )}
                     </div>
                   </div>
                 </div>
