@@ -16,6 +16,7 @@ import SiparisSureciGostergesi from "@/components/SiparisSureciGostergesi";
 import SilButon from "@/components/SilButon";
 import KayitIslemButonu from "@/components/KayitIslemButonu";
 import { siparisNetTutari } from "@/lib/siparis-tutari";
+import { SAS_DURUM_ETIKET, sasNo, sasTl, maliyeteSayilirMi } from "@/lib/satinalma-siparis";
 import YazdirButon from "@/components/YazdirButon";
 import KaydetButonu from "@/components/KaydetButonu";
 import { miktarYaz } from "@/lib/birimler";
@@ -35,6 +36,10 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
         teklif: { include: { kalemler: { orderBy: [{ sira: "asc" }, { id: "asc" }] } } },
         sevkiyatlar: { include: { teklifKalem: true }, orderBy: { tarih: "desc" } },
         teslimler: { include: { teklifKalem: true }, orderBy: { tarih: "desc" } },
+        satinalmaSiparisleri: {
+          select: { id: true, no: true, baslik: true, durum: true, tutarNet: true, kur: true, paraBirimi: true, tedarikci: { select: { ad: true } } },
+          orderBy: { no: "asc" },
+        },
       },
     }),
     suankiKullanici(),
@@ -46,6 +51,10 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
   const toplam = siparisNetTutari(siparis);
   const pb = siparis.paraBirimi ?? siparis.teklif.paraBirimi;
   const teklifDegisti = siparis.teklifRevizyonNo != null && siparis.teklif.revizyonNo > siparis.teklifRevizyonNo;
+  // Gerçek maliyet: bu siparişe bağlı (iptal / red olmayan) satınalma siparişlerinin TL karşılığı, KDV hariç
+  const satisTl = pb === "TRY" ? toplam : toplam * siparis.kur;
+  const maliyetTl = siparis.satinalmaSiparisleri.filter((x) => maliyeteSayilirMi(x.durum)).reduce((a, x) => a + sasTl(x), 0);
+  const brutKar = satisTl - maliyetTl;
   const isAdmin = giren?.rol === "ADMIN";
   const aktifMi = siparis.durum !== "ONAY_BEKLIYOR" && siparis.durum !== "REDDEDILDI";
 
@@ -190,6 +199,58 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
           <p className="text-xs text-metin/50 mb-1">Sevk Adresi</p>
           <p className="text-sm text-metin">{siparis.sevkAdresi ?? siparis.musteri.sevkAdresi ?? "Sevk adresi girilmemiş."}</p>
         </div>
+      </div>
+
+      {/* GERÇEK MALİYET (satınalma siparişlerinden) */}
+      <div className="bg-yuzey border border-hat rounded-lg p-5 mb-8 print:hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <h2 className="font-display font-medium text-metin">Maliyet & Brüt Kâr</h2>
+          {siparis.durum !== "IPTAL" && siparis.durum !== "REDDEDILDI" && (
+            <Link href={`/panel/satinalma/siparisler?siparis=${siparis.id}#yeni`} className="focus-ring text-xs font-medium text-soguk-dim hover:underline">
+              + Bu iş için satınalma siparişi aç
+            </Link>
+          )}
+        </div>
+        {siparis.satinalmaSiparisleri.length === 0 ? (
+          <p className="text-sm text-metin/50">Bu siparişe bağlı satınalma siparişi yok; gerçek maliyet henüz hesaplanamıyor.</p>
+        ) : (
+          <>
+            <ul className="text-sm divide-y divide-hat mb-3">
+              {siparis.satinalmaSiparisleri.map((x) => (
+                <li key={x.id} className={`flex flex-wrap items-center justify-between gap-2 py-1.5 ${maliyeteSayilirMi(x.durum) ? "" : "text-metin/40 line-through"}`}>
+                  <span>
+                    <Link href={`/panel/satinalma/siparisler/${x.id}`} className="font-mono text-soguk-dim hover:underline">
+                      {sasNo(x.no)}
+                    </Link>{" "}
+                    · {x.tedarikci.ad} · {x.baslik} <span className="text-xs text-metin/50">({SAS_DURUM_ETIKET[x.durum] ?? x.durum})</span>
+                  </span>
+                  <span className="font-mono whitespace-nowrap">
+                    {paraFormat(x.tutarNet, x.paraBirimi)}
+                    {x.paraBirimi !== "TRY" && <span className="text-xs text-metin/50"> ≈ {paraFormat(sasTl(x), "TRY")}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div className="grid grid-cols-3 gap-3 text-sm border-t border-hat pt-3">
+              <div>
+                <p className="text-xs text-metin/50">Satış (TL, KDV hariç)</p>
+                <p className="font-mono">{paraFormat(satisTl, "TRY")}</p>
+              </div>
+              <div>
+                <p className="text-xs text-metin/50">Maliyet (TL, KDV hariç)</p>
+                <p className="font-mono">{paraFormat(maliyetTl, "TRY")}</p>
+              </div>
+              <div>
+                <p className="text-xs text-metin/50">Brüt kâr</p>
+                <p className={`font-mono font-semibold ${brutKar < 0 ? "text-red-700" : "text-emerald-700"}`}>
+                  {paraFormat(brutKar, "TRY")}
+                  {satisTl > 0 && <span className="text-xs font-normal"> · %{((brutKar / satisTl) * 100).toFixed(1).replace(".", ",")}</span>}
+                </p>
+              </div>
+            </div>
+            <p className="text-[11px] text-metin/40 mt-2">Döviz tutarları siparişlerin açıldığı günkü kurla TL&apos;ye çevrilir. Montaj / işçilik gibi satınalma dışı giderler dahil değildir.</p>
+          </>
+        )}
       </div>
 
       {aktifMi && (

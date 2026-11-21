@@ -235,6 +235,7 @@ model Urun {
   depoStoklar         DepoStok[]
   seriNolar           UrunSeriNo[]
   isiPompasiModelleri IsiPompasiModeli[]
+  satinalmaSiparisKalemleri SatinalmaSiparisKalemi[]
 
   @@unique([kod])
 }
@@ -375,6 +376,7 @@ model Siparis {
   iptalNedeni       String?
   sevkiyatlar       SevkiyatKaydi[]
   teslimler         TeslimKaydi[]
+  satinalmaSiparisleri SatinalmaSiparisi[] // bu satış siparişi için verilen tedarikçi siparişleri (gerçek maliyet)
 }
 
 model SevkiyatKaydi {
@@ -411,6 +413,7 @@ model Tedarikci {
   createdAt DateTime           @default(now())
   hareketler TedarikciHareket[]
   teklifler  SatinalmaTeklifi[]
+  satinalmaSiparisleri SatinalmaSiparisi[]
 }
 
 model TedarikciHareket {
@@ -431,6 +434,10 @@ model TedarikciHareket {
   iptalTarihi   DateTime?
   iptalEdenAdi  String?
   iptalNedeni   String?
+  // Alış faturası eşleşmesi: fatura borcu hangi satınalma siparişine ait
+  faturaNo            String?
+  satinalmaSiparisiId String?
+  satinalmaSiparisi   SatinalmaSiparisi? @relation(fields: [satinalmaSiparisiId], references: [id])
 }
 
 model SatinalmaTeklifi {
@@ -451,6 +458,7 @@ model SatinalmaTeklifi {
   alisIskontoYuzde Float?             // Fiyatlar liste fiyatıysa bize özel alış iskontosu (%); net alış = liste × (1 − iskonto). Boş = yok
   kalemler    SatinalmaTeklifKalemi[]
   tekliflar   Teklif[]
+  satinalmaSiparisleri SatinalmaSiparisi[]
 }
 
 model SatinalmaTeklifKalemi {
@@ -506,6 +514,7 @@ model Proje {
   olusturmaTarihi DateTime         @default(now())
   teklifler       Teklif[]
   ziyaretler      Ziyaret[]
+  satinalmaSiparisleri SatinalmaSiparisi[]
 }
 
 model Ziyaret {
@@ -539,6 +548,7 @@ model SirketAyarlari {
   vergiDairesi String?
   vergiNo      String?
   whatsapp     String?  // Sitede görünen WhatsApp numarası (boşsa WhatsApp butonu çıkmaz)
+  satinalmaOnayEsigi Float? // Satınalma siparişi onay eşiği (TL, KDV hariç). Altındaki siparişler kendiliğinden onaylanır; boşsa yöneticinin açtıkları dışında hepsi onay bekler
   updatedAt    DateTime @updatedAt
 }
 
@@ -764,4 +774,94 @@ model PanelNotu {
 
   @@index([olusturanId])
   @@index([hatirlatmaGunu])
+}
+
+// -----------------------------------------------------------------------------
+// SATINALMA SİPARİŞİ (tedarikçiye verilen sipariş) — satınalma zinciri
+// Tedarikçi teklifinden ya da elle açılır; tutar eşiği aşarsa yönetici onaylar.
+// Mal kabul edildikçe kalemlerin teslim alınan miktarı artar (ürün koduyla eşleşen kalem stoğa girer),
+// tedarikçinin alış faturası cari borç olarak bu siparişe bağlanır.
+// Satış siparişine bağlıysa o siparişin gerçek maliyeti ve brüt kârı buradan hesaplanır.
+// Kayıt silinmez: iptal edilir (kim, ne zaman, neden).
+// -----------------------------------------------------------------------------
+model SatinalmaSiparisi {
+  id                   String                   @id @default(cuid())
+  no                   Int                      @unique @default(autoincrement())
+  tedarikci            Tedarikci                @relation(fields: [tedarikciId], references: [id])
+  tedarikciId          String
+  satinalmaTeklifi     SatinalmaTeklifi?        @relation(fields: [satinalmaTeklifiId], references: [id])
+  satinalmaTeklifiId   String?
+  siparis              Siparis?                 @relation(fields: [siparisId], references: [id])
+  siparisId            String?
+  proje                Proje?                   @relation(fields: [projeId], references: [id])
+  projeId              String?
+  baslik               String
+  paraBirimi           String                   @default("TRY")
+  kur                  Float                    @default(1)   // 1 birim = ? TL (sipariş açılırken)
+  tutarNet             Float                    @default(0)   // KDV hariç, iskontolu toplam (sipariş para biriminde)
+  durum                String                   @default("ONAY_BEKLIYOR") // ONAY_BEKLIYOR · ONAYLANDI · KISMEN_TESLIM · TESLIM_ALINDI · REDDEDILDI · IPTAL
+  beklenenTeslimTarihi DateTime?
+  notlar               String?
+  olusturanAdi         String                   @default("")
+  olusturmaTarihi      DateTime                 @default(now())
+  onaylayanAdi         String?
+  onayTarihi           DateTime?
+  redNedeni            String?
+  iptalTarihi          DateTime?
+  iptalEdenAdi         String?
+  iptalNedeni          String?
+  kalemler             SatinalmaSiparisKalemi[]
+  malKabuller          MalKabul[]
+  faturalar            TedarikciHareket[]
+
+  @@index([tedarikciId])
+  @@index([siparisId])
+}
+
+model SatinalmaSiparisKalemi {
+  id                  String            @id @default(cuid())
+  satinalmaSiparisi   SatinalmaSiparisi @relation(fields: [satinalmaSiparisiId], references: [id])
+  satinalmaSiparisiId String
+  sira                Int               @default(0)
+  bolum               String?
+  kod                 String?           // ürün kodu (stok kartıyla eşleşirse mal kabulde stoğa girer)
+  urun                Urun?             @relation(fields: [urunId], references: [id])
+  urunId              String?
+  aciklama            String
+  adet                Float
+  birim               String            @default("Adet")
+  birimFiyat          Float
+  iskontoYuzde        Float             @default(0)
+  malKabulKalemleri   MalKabulKalemi[]
+
+  @@index([satinalmaSiparisiId])
+}
+
+model MalKabul {
+  id                  String            @id @default(cuid())
+  satinalmaSiparisi   SatinalmaSiparisi @relation(fields: [satinalmaSiparisiId], references: [id])
+  satinalmaSiparisiId String
+  tarih               DateTime          @default(now())
+  irsaliyeNo          String?
+  not                 String?
+  olusturanAdi        String            @default("")
+  olusturmaTarihi     DateTime          @default(now())
+  iptalTarihi         DateTime?
+  iptalEdenAdi        String?
+  iptalNedeni         String?
+  kalemler            MalKabulKalemi[]
+
+  @@index([satinalmaSiparisiId])
+}
+
+model MalKabulKalemi {
+  id         String                 @id @default(cuid())
+  malKabul   MalKabul               @relation(fields: [malKabulId], references: [id])
+  malKabulId String
+  kalem      SatinalmaSiparisKalemi @relation(fields: [kalemId], references: [id])
+  kalemId    String
+  miktar     Float
+
+  @@index([malKabulId])
+  @@index([kalemId])
 }

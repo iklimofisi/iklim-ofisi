@@ -1365,6 +1365,8 @@ export async function satinalmaTeklifiSil(id: string): Promise<IslemSonucu> {
   if (giren.rol !== "ADMIN") return { hata: "Tedarikçi teklifini yalnız yönetici silebilir." };
   const bagli = id ? await prisma.teklif.count({ where: { kaynakSatinalmaTeklifiId: id } }) : 0;
   if (bagli > 0) return { hata: `Bu tedarikçi teklifinden ${bagli} müşteri teklifi hazırlanmış; maliyet kaynağı olduğu için silinmez.` };
+  const sas = id ? await prisma.satinalmaSiparisi.count({ where: { satinalmaTeklifiId: id } }).catch(() => 0) : 0;
+  if (sas > 0) return { hata: `Bu tedarikçi teklifinden ${sas} satınalma siparişi verilmiş; silinmez.` };
   await prisma.satinalmaTeklifi.delete({ where: { id } });
   revalidatePath("/panel/satinalma/teklifler");
   return { tamam: "Tedarikçi teklifi silindi." };
@@ -1687,17 +1689,25 @@ export async function urunEkle(formData: FormData) {
   revalidatePath("/panel/ayarlar/urunler");
 }
 
-export async function urunSil(id: string) {
-  await yetki("urunSil", { id });
-  await prisma.urun.delete({ where: { id } });
+// Stok hareketi, seri numarası ya da satınalma siparişi kalemi olan ürün silinmez
+// (silinirse stok geçmişi de silinirdi). Yalnız yönetici.
+const SILINEBILIR_URUN = { stokHareketleri: { none: {} }, seriNolar: { none: {} }, satinalmaSiparisKalemleri: { none: {} } } as const;
+export async function urunSil(id: string): Promise<IslemSonucu> {
+  const giren = await yetki("urunSil", { id });
+  if (giren.rol !== "ADMIN") return { hata: "Ürünü yalnız yönetici silebilir." };
+  if (!id) return { hata: "Ürün bulunamadı." };
+  const r = await prisma.urun.deleteMany({ where: { id, ...SILINEBILIR_URUN } });
   revalidatePath("/panel/ayarlar/urunler");
+  if (r.count === 0) return { hata: "Bu ürünün stok hareketi, seri numarası ya da satınalma kaydı var; geçmişi korunmak için silinmez." };
+  return { tamam: "Ürün silindi." };
 }
 
 export async function urunlerTumunuSil() {
   const giren = await yetki("urunlerTumunuSil");
   // Tüm ürün kataloğunu silen toplu işlem: yalnızca yönetici yapabilir
   if (giren.rol !== "ADMIN") return;
-  await prisma.urun.deleteMany({});
+  // Stok geçmişi / satınalma kaydı olan ürünler korunur
+  await prisma.urun.deleteMany({ where: SILINEBILIR_URUN });
   revalidatePath("/panel/ayarlar/urunler");
 }
 
@@ -2314,6 +2324,8 @@ export async function projeSil(id: string): Promise<IslemSonucu> {
   if (giren.rol !== "ADMIN") return { hata: "Projeyi yalnız yönetici silebilir." };
   const teklifSayisi = id ? await prisma.teklif.count({ where: { projeId: id } }) : 0;
   if (teklifSayisi > 0) return { hata: `Bu projeye bağlı ${teklifSayisi} teklif var (arşivdekiler dahil); proje silinmez.` };
+  const sas = id ? await prisma.satinalmaSiparisi.count({ where: { projeId: id } }).catch(() => 0) : 0;
+  if (sas > 0) return { hata: `Bu projeye bağlı ${sas} satınalma siparişi var; proje silinmez.` };
   await prisma.proje.delete({ where: { id } });
   revalidatePath("/panel/proje-takip"); // PROJE TAKİP EKRANI CANLI GÜNCELLENİR
   revalidatePath("/panel/projeler");

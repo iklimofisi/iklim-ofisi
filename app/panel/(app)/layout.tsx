@@ -53,6 +53,7 @@ const menuGruplari: MenuGrubu[] = [
     ogeler: [
       { href: "/panel/siparisler", label: "Siparişler" },
       { href: "/panel/satinalma", label: "Satınalma" },
+      { href: "/panel/satinalma/siparisler", label: "Satınalma Siparişleri" },
       { href: "/panel/stok", label: "Stok & Envanter" },
     ],
   },
@@ -94,6 +95,9 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       })
       .catch(() => 0),
   ]);
+  // Yöneticiye: onay bekleyen satınalma siparişleri (tablo henüz yoksa 0)
+  const onayBekleyenSatinalma =
+    kullanici.rol === "ADMIN" ? await prisma.satinalmaSiparisi.count({ where: { durum: "ONAY_BEKLIYOR" } }).catch(() => 0) : 0;
 
   const rozetler: Record<string, number> = {
     "/panel/talepler": okunmamisTalep,
@@ -101,6 +105,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     "/panel/kesif": yeniKesifSayisi,
     "/panel/projeler": takiptekiProjeSayisi,
     "/panel/notlar": gunuGelenNot,
+    "/panel/satinalma/siparisler": onayBekleyenSatinalma,
   };
 
   const gruplar: MenuGrubu[] = [

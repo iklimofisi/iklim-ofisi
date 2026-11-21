@@ -24,6 +24,7 @@ export default function KayitIslemButonu({
   className,
   icerik,
   sonraGit,
+  nedenEtiketi = "İptal nedeni",
 }: {
   id: string;
   action: (id: string, neden: string) => Promise<IslemSonucu | void>;
@@ -35,6 +36,7 @@ export default function KayitIslemButonu({
   className?: string;
   icerik?: React.ReactNode; // düğmenin içinde yazı yerine (ör. ikon); etiket yine onay düğmesinde ve ipucunda kullanılır
   sonraGit?: string; // işlem başarılıysa bu sayfaya gidilir (ör. silinen kaydın detay sayfasından listeye)
+  nedenEtiketi?: string; // neden kutusunun adı (ör. "Red nedeni")
 }) {
   const router = useRouter();
   const [bekliyor, setBekliyor] = useState(false);
@@ -78,8 +80,8 @@ export default function KayitIslemButonu({
             }
           }}
           maxLength={500}
-          placeholder="İptal nedeni (zorunlu)"
-          aria-label="İptal nedeni"
+          placeholder={`${nedenEtiketi} (zorunlu)`}
+          aria-label={nedenEtiketi}
           className="focus-ring border border-hat rounded px-2 py-1 text-xs bg-white w-48"
         />
         <button

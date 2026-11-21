@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { urunEkle, urunSil } from "@/lib/actions";
 import { paraFormat } from "@/lib/para";
-import SilButon from "@/components/SilButon";
+import KayitIslemButonu from "@/components/KayitIslemButonu";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
 import UrunExcelYukle from "@/components/UrunExcelYukle";
 import Link from "next/link";
@@ -116,7 +116,7 @@ export default async function UrunlerSayfasi() {
                   <span className="text-metin/60">{u.birim}</span>
                   <span className="text-right font-mono text-metin whitespace-nowrap">{paraFormat(u.listeFiyati, u.paraBirimi)}</span>
                   <span className="text-right">
-                    <SilButon id={u.id} action={urunSil} onayMesaji={`${u.ad} ürününü silmek istediğinize emin misiniz?`} />
+                    <KayitIslemButonu id={u.id} action={urunSil} etiket="Sil" onayBasligi="Silme onayı" onayMesaji={`${u.ad} silinsin mi? Stok hareketi ya da satınalma kaydı olan ürün silinmez.`} tehlikeli />
                   </span>
                 </div>
               ),

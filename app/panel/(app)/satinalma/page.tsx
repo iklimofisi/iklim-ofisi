@@ -21,7 +21,9 @@ export default async function SatinalmaSayfasi() {
         {" "}sayfasından tedarikçiden aldığın bir teklifi sisteme yükleyip kâr marjı ekleyerek
         kendi teklif formatına dönüştürebilirsin.{" "}
         <Link href="/panel/satinalma/cari" className="text-soguk-dim hover:underline">Tedarikçi Cari Hesabı</Link>
-        {" "}sayfasından borç/ödeme takibi yapabilirsin.
+        {" "}sayfasından borç/ödeme takibi yapabilirsin.{" "}
+        <Link href="/panel/satinalma/siparisler" className="text-soguk-dim hover:underline">Satınalma Siparişleri</Link>
+        {" "}sayfasından tedarikçiye sipariş verip mal kabul ve alış faturasını takip edebilirsin.
       </p>
 
       <form action={tedarikciEkle} className="bg-yuzey border border-hat rounded-lg p-5 mb-8 flex flex-wrap gap-3 items-end">

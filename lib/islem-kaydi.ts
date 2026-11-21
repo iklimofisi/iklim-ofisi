@@ -27,6 +27,8 @@ const SILME_KAYNAKLARI: Record<string, { model: string; include?: Record<string,
   tedarikciHareketIptal: { model: "tedarikciHareket" },
   siparisIptal: { model: "siparis" },
   teklifArsivle: { model: "teklif" },
+  satinalmaSiparisiIptal: { model: "satinalmaSiparisi", include: { kalemler: true } },
+  malKabulIptal: { model: "malKabul", include: { kalemler: true } },
   tedarikciHareketSil: { model: "tedarikciHareket" },
   sablonSil: { model: "teklifSablon" },
   // Hazır not metni değişmeden önceki hâli saklanır
@@ -102,6 +104,8 @@ function formVerisiOzeti(fd: FormData) {
 }
 
 const HEDEF_ANAHTARLARI = [
+  "satinalmaSiparisiId",
+  "malKabulId",
   "talepId",
   "teklifId",
   "siparisId",

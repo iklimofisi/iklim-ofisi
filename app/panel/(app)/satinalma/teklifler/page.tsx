@@ -295,6 +295,13 @@ export default async function SatinalmaTekliflerPage() {
                             >
                               Teklife Dönüştür →
                             </Link>
+                            <Link
+                              href={`/panel/satinalma/siparisler?teklif=${st.id}#yeni`}
+                              className="block mt-1.5 text-[11px] text-soguk-dim font-semibold hover:underline"
+                              title="Bu tedarikçi teklifinin kalemleriyle tedarikçiye satınalma siparişi aç"
+                            >
+                              Tedarikçiye sipariş ver →
+                            </Link>
                           </td>
 
                           <td className="py-3 px-4 text-center">
