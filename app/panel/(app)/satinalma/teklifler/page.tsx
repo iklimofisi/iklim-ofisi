@@ -23,35 +23,41 @@ export default async function SatinalmaTekliflerPage() {
       orderBy: { tarih: "desc" },
     }),
     prisma.teklif.findMany({
+      where: { arsivTarihi: null }, // arşivdeki teklifler gösterilmez
       include: { musteri: true, olusturanKullanici: true, kalemler: true, proje: true },
       orderBy: { tarih: "desc" },
     }),
   ]);
 
   // TÜM SATIŞ TEKLİFLERİNİ VE TEDARİKÇİ TEKLİFLERİNİ PROJE/KONU BAŞLIĞINA GÖRE BİRLEŞTİRİP GRUPLA
+  // Bir konuda birden fazla müşteri teklifi olabilir (hepsi listelenir).
   const tumKonular: {
     [konu: string]: {
-      satisTeklifi?: (typeof satisTeklifleri)[0];
+      satisTeklifleri: typeof satisTeklifleri;
       satinalmaTeklifleri: typeof satinalmaTeklifleri;
     };
   } = {};
+  const konuAc = (konu: string) => (tumKonular[konu] ??= { satisTeklifleri: [], satinalmaTeklifleri: [] });
+  const satisKonusu = (st: (typeof satisTeklifleri)[0]) => st.proje?.ad || st.baslik || "Genel Satış Teklifleri";
 
   // 1. Satış Tekliflerini Konu Listesine Ekle
+  satisTeklifleri.forEach((st) => konuAc(satisKonusu(st)).satisTeklifleri.push(st));
+
+  // Tedarikçi teklifinden hazırlanan müşteri teklifleri (PDF yüklenerek ya da "Teklife Dönüştür" ile)
+  const kullanildigiTeklifler = new Map<string, typeof satisTeklifleri>();
   satisTeklifleri.forEach((st) => {
-    const konu = st.proje?.ad || st.baslik || "Genel Satış Teklifleri";
-    if (!tumKonular[konu]) {
-      tumKonular[konu] = { satinalmaTeklifleri: [] };
-    }
-    tumKonular[konu].satisTeklifi = st;
+    if (!st.kaynakSatinalmaTeklifiId) return;
+    const l = kullanildigiTeklifler.get(st.kaynakSatinalmaTeklifiId) ?? [];
+    l.push(st);
+    kullanildigiTeklifler.set(st.kaynakSatinalmaTeklifiId, l);
   });
 
-  // 2. Tedarikçi Tekliflerini Aynı Konu Listesine Ekle
+  // 2. Tedarikçi Tekliflerini Konu Listesine Ekle: bir müşteri teklifine kaynak olduysa o teklifin
+  // konusuna (başlıkları farklı yazılmış olsa bile), olmadıysa kendi başlığına göre
   satinalmaTeklifleri.forEach((sat) => {
-    const konu = sat.baslik || "Genel Satınalma Talepleri";
-    if (!tumKonular[konu]) {
-      tumKonular[konu] = { satinalmaTeklifleri: [] };
-    }
-    tumKonular[konu].satinalmaTeklifleri.push(sat);
+    const bagli = kullanildigiTeklifler.get(sat.id);
+    const konu = bagli?.length ? satisKonusu(bagli[0]) : sat.baslik || "Genel Satınalma Talepleri";
+    konuAc(konu).satinalmaTeklifleri.push(sat);
   });
 
   return (
@@ -142,7 +148,6 @@ export default async function SatinalmaTekliflerPage() {
         </h2>
 
         {Object.entries(tumKonular).map(([konuBasligi, veri]) => {
-          const satisTeklifi = veri.satisTeklifi;
           const satinalmaListesi = veri.satinalmaTeklifleri;
 
           return (
@@ -159,9 +164,9 @@ export default async function SatinalmaTekliflerPage() {
                 <TedarikciTeklifiEkleModal konuBasligi={konuBasligi} tedarikciler={tedarikciler} />
               </div>
 
-              {/* A. MÜŞTERİYE VERİLEN SATIŞ TEKLİFİ (VARSA EN ÜSTTE GÖRÜNÜR) */}
-              {satisTeklifi && (
-                <div className="p-3 bg-teal-50/50 border-b border-teal-200/80 flex flex-wrap justify-between items-center text-xs gap-3">
+              {/* A. MÜŞTERİYE VERİLEN SATIŞ TEKLİFLERİ (VARSA EN ÜSTTE GÖRÜNÜR) */}
+              {veri.satisTeklifleri.map((satisTeklifi) => (
+                <div key={satisTeklifi.id} className="p-3 bg-teal-50/50 border-b border-teal-200/80 flex flex-wrap justify-between items-center text-xs gap-3">
                   <div>
                     <span className="font-bold text-teal-800 bg-teal-100 px-2 py-0.5 rounded text-[10px] mr-2">
                       MÜŞTERİ SATIŞ TEKLİFİ
@@ -200,7 +205,7 @@ export default async function SatinalmaTekliflerPage() {
                     )}
                   </div>
                 </div>
-              )}
+              ))}
 
               {/* B. TEDARİKÇİLERDEN ALINAN MALİYET TEKLİFLERİ TABLOSU */}
               <div className="overflow-x-auto">
@@ -232,6 +237,14 @@ export default async function SatinalmaTekliflerPage() {
                             {st.kalemler.length > 0 && (
                               <span className="block text-[10px] font-normal text-metin/50">{st.kalemler.length} kalem</span>
                             )}
+                            {st.baslik && st.baslik !== konuBasligi && (
+                              <span className="block text-[10px] font-normal text-metin/50">Yüklenen başlık: {st.baslik}</span>
+                            )}
+                            {(kullanildigiTeklifler.get(st.id) ?? []).map((t) => (
+                              <Link key={t.id} href={`/panel/teklifler/${t.id}`} className="block text-[10px] font-semibold text-teal-700 hover:underline">
+                                → TKL-{String(t.teklifNo).padStart(4, "0")} teklifinde kullanıldı
+                              </Link>
+                            ))}
                           </td>
 
                           <td className="py-3 px-4 font-mono text-metin/60">
