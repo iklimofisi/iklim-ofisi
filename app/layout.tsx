@@ -21,10 +21,10 @@ const CLARITY_ID = "zdojkwvtd3";
 // Dile göre site geneli başlık ve açıklama (sayfalar kendi başlıklarını ekler)
 const GENEL: Record<Dil, { baslik: string; aciklama: string; ogBaslik: string; ogAciklama: string }> = {
   tr: {
-    baslik: "İklim Ofisi Mühendislik — İstanbul VRF, Klima & Mekanik Tesisat",
+    baslik: "İklim Ofisi Mekanik Mühendislik — İstanbul VRF, Klima & Isı Pompası",
     aciklama:
       "İstanbul'da konut, ofis, otel ve endüstriyel tesisler için TCL ve Mitsubishi Electric VRF sistemleri, klima ve multi klima, ısı pompası, Fraenkische yerden ısıtma, kazan dairesi yenileme, havalandırma ve mekanik tesisat. Ücretsiz keşif ve projelendirme.",
-    ogBaslik: "İklim Ofisi Mühendislik — VRF, Klima, Isı Pompası & Yerden Isıtma",
+    ogBaslik: "İklim Ofisi Mekanik Mühendislik — VRF, Klima, Isı Pompası & Yerden Isıtma",
     ogAciklama:
       "TCL ve Mitsubishi Electric VRF, klima ve multi klima; ısı pompası, Fraenkische yerden ısıtma ve kazan dairesi yenileme. 24 saatte ücretsiz keşif imkanı.",
   },
@@ -49,13 +49,13 @@ const GENEL: Record<Dil, { baslik: string; aciklama: string; ogBaslik: string; o
 export function generateMetadata(): Metadata {
   const dil = dilAl();
   const g = GENEL[dil];
-  return { ...metadata, title: { default: g.baslik, template: dil === "tr" ? "%s | İklim Ofisi Mühendislik" : "%s | İklim Ofisi Engineering" }, description: g.aciklama, openGraph: { ...metadata.openGraph, title: g.ogBaslik, description: g.ogAciklama, locale: OG_DIL[dil], ...(dil === "tr" ? {} : { url: `https://iklimofisi.com/${dil}` }) } };
+  return { ...metadata, title: { default: g.baslik, template: dil === "tr" ? "%s | İklim Ofisi Mekanik Mühendislik" : "%s | İklim Ofisi Engineering" }, description: g.aciklama, openGraph: { ...metadata.openGraph, title: g.ogBaslik, description: g.ogAciklama, locale: OG_DIL[dil], ...(dil === "tr" ? {} : { url: `https://iklimofisi.com/${dil}` }) } };
 }
 
 const metadata: Metadata = {
   title: {
-    default: "İklim Ofisi Mühendislik — İstanbul VRF, Klima & Mekanik Tesisat",
-    template: "%s | İklim Ofisi Mühendislik",
+    default: "İklim Ofisi Mekanik Mühendislik — İstanbul VRF, Klima & Isı Pompası",
+    template: "%s | İklim Ofisi Mekanik Mühendislik",
   },
   description:
     "İstanbul'da konut, ofis, otel ve endüstriyel tesisler için TCL ve Mitsubishi Electric VRF sistemleri, klima ve multi klima, ısı pompası, Fraenkische yerden ısıtma, kazan dairesi yenileme, havalandırma ve mekanik tesisat. Ücretsiz keşif ve projelendirme.",
@@ -78,7 +78,7 @@ const metadata: Metadata = {
     "Elektrostatik Filtre",
     "Mühendislik Keşif",
   ],
-  authors: [{ name: "İklim Ofisi Mühendislik" }],
+  authors: [{ name: "İklim Ofisi Mekanik Mühendislik" }],
   metadataBase: new URL("https://iklimofisi.com"),
   
   // CHROME SEKMESİNDEKİ LOGO (FAVICON) BURAYA TANIMLANDI
@@ -90,11 +90,11 @@ const metadata: Metadata = {
 
   // WHATSAPP, LINKEDIN & SOSYAL MEDYA PAYLAŞIM KARTI (OPEN GRAPH)
   openGraph: {
-    title: "İklim Ofisi Mühendislik — VRF, Klima, Isı Pompası & Yerden Isıtma",
+    title: "İklim Ofisi Mekanik Mühendislik — VRF, Klima, Isı Pompası & Yerden Isıtma",
     description:
       "TCL ve Mitsubishi Electric VRF, klima ve multi klima; ısı pompası, Fraenkische yerden ısıtma ve kazan dairesi yenileme. 24 saatte ücretsiz keşif imkanı.",
     url: "https://iklimofisi.com",
-    siteName: "İklim Ofisi Mühendislik",
+    siteName: "İklim Ofisi Mekanik Mühendislik",
     locale: "tr_TR",
     type: "website",
     images: [
@@ -102,7 +102,7 @@ const metadata: Metadata = {
         url: "/og-image.png", // public/og-image.png dosyasından çekilir
         width: 1200,
         height: 630,
-        alt: "İklim Ofisi Mühendislik",
+        alt: "İklim Ofisi Mekanik Mühendislik",
       },
     ],
   },
@@ -111,7 +111,10 @@ const metadata: Metadata = {
   // Kodlar Vercel → Settings → Environment Variables'a yazılır; kod değişikliği gerekmez.
   // Tanımlı değilse sayfaya hiçbir şey eklenmez.
   verification: {
-    ...(process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : {}),
+    // Değer yanlışlıkla "google-site-verification=..." diye girilmişse ön ek atılır (meta etikette yalnız kod olmalı)
+    ...(process.env.GOOGLE_SITE_VERIFICATION
+      ? { google: process.env.GOOGLE_SITE_VERIFICATION.trim().replace(/^google-site-verification=/i, "") }
+      : {}),
     ...(process.env.YANDEX_VERIFICATION ? { yandex: process.env.YANDEX_VERIFICATION } : {}),
     ...(process.env.BING_SITE_VERIFICATION ? { other: { "msvalidate.01": process.env.BING_SITE_VERIFICATION } } : {}),
   },
