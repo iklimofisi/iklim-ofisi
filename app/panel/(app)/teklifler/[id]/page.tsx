@@ -19,6 +19,8 @@ import { redNedeniAdi } from "@/lib/teklif-durum";
 import { GERCEK_MUSTERI, MUSTERISIZ_HITAP, musterisizMi, musterisizGoster } from "@/lib/musterisiz";
 import { teklifMusteriyeBagla, teklifArsivdenCikar } from "@/lib/actions";
 import KayitIslemButonu from "@/components/KayitIslemButonu";
+import { satinalmaToplami, satinalmaNetToplami, iskontoGecerli, netAlis } from "@/lib/satinalma-hesap";
+import { satirNet } from "@/lib/siparis-tutari";
 import KaydetButonu from "@/components/KaydetButonu";
 import { miktarYaz } from "@/lib/birimler";
 
@@ -37,6 +39,9 @@ const belgeTarihi = (d: Date) =>
   );
 
 // Panel içi bilgi: 05.10.2026 14:32 (Türkiye saati)
+// Tedarikçi teklifi bölümündeki tutarlar: "3.528,00 $"
+const tutarYaz = (n: number, p: string) =>
+  `${n.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${p === "EUR" ? "€" : p === "USD" ? "$" : "₺"}`;
 const saatliTarih = (d: Date) =>
   new Intl.DateTimeFormat("tr-TR", {
     day: "2-digit",
@@ -90,6 +95,38 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
   ]);
 
   if (!teklifHam) notFound();
+
+  // TEDARİKÇİ (SATINALMA) TEKLİFLERİ — yalnız panelde görünür, müşteri belgesine girmez:
+  // bu teklifin hazırlandığı tedarikçi teklifi + aynı proje / konu başlığıyla girilmiş diğer tedarikçi teklifleri
+  const tedarikciKonusu = teklifHam.proje?.ad || teklifHam.baslik || "";
+  const tedarikciKosullari = [
+    ...(teklifHam.kaynakSatinalmaTeklifiId ? [{ id: teklifHam.kaynakSatinalmaTeklifiId }] : []),
+    ...(tedarikciKonusu ? [{ baslik: tedarikciKonusu }] : []),
+  ];
+  const tedarikciTeklifleri = tedarikciKosullari.length
+    ? await prisma.satinalmaTeklifi
+        .findMany({
+          where: { OR: tedarikciKosullari },
+          select: {
+            id: true,
+            baslik: true,
+            tarih: true,
+            paraBirimi: true,
+            toplamTutar: true,
+            alisIskontoYuzde: true,
+            maliyetPdfAdi: true,
+            maliyetExcelAdi: true,
+            tedarikci: { select: { ad: true } },
+            kalemler: { select: { id: true, bolum: true, aciklama: true, adet: true, birimFiyat: true } },
+          },
+          orderBy: { tarih: "desc" },
+          take: 20,
+        })
+        .catch(() => [])
+    : [];
+  // Kaynak teklif en üstte
+  tedarikciTeklifleri.sort((a, b) => Number(b.id === teklifHam.kaynakSatinalmaTeklifiId) - Number(a.id === teklifHam.kaynakSatinalmaTeklifiId));
+  const satisNet = teklifHam.kalemler.reduce((a, k) => a + satirNet(k), 0); // bu teklifin KDV hariç, iskontolu toplamı
   // Müşterisiz teklif: belgede müşteri yerine muhatap görünür; sipariş / sözleşme için önce müşteriye bağlanır
   const musterisiz = musterisizMi(teklifHam.musteriId);
   const teklif = musterisizGoster(teklifHam);
@@ -307,6 +344,126 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
         )}
         </div>
       </div>
+
+      {/* TEDARİKÇİ TEKLİFİ (MALİYET) — yalnız panelde; yazdırmada ve müşteri PDF'inde yok */}
+      <details open={tedarikciTeklifleri.length > 0} className="mb-6 bg-amber-50/40 border border-amber-200 rounded-lg print:hidden">
+        <summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-metin flex flex-wrap items-center justify-between gap-2">
+          <span>
+            🚚 Tedarikçi teklifi (maliyet){" "}
+            {tedarikciTeklifleri.length > 0 && <span className="font-normal text-metin/60">· {tedarikciTeklifleri.length} teklif</span>}
+          </span>
+          <span className="flex items-center gap-3 text-xs font-normal">
+            {teklif.maliyetPdfAdi && (
+              <a href={`/api/maliyet-pdf/${teklif.id}`} target="_blank" rel="noopener noreferrer" className="text-emerald-800 underline">
+                📄 Bu teklifin maliyet PDF&apos;i
+              </a>
+            )}
+            {teklif.maliyetExcelAdi && (
+              <a href={`/api/maliyet-excel/${teklif.id}`} target="_blank" rel="noopener noreferrer" className="text-blue-800 underline">
+                📊 Maliyet Excel&apos;i
+              </a>
+            )}
+          </span>
+        </summary>
+        <div className="px-4 pb-4 space-y-3">
+          {tedarikciTeklifleri.length === 0 && (
+            <p className="text-sm text-metin/60">
+              Bu teklife bağlı tedarikçi teklifi yok.{" "}
+              <Link href="/panel/satinalma/teklifler" className="text-soguk-dim hover:underline">
+                Gelen Teklifler
+              </Link>{" "}
+              sayfasından &quot;{tedarikciKonusu || "proje adı"}&quot; başlığıyla eklerseniz burada görünür.
+            </p>
+          )}
+          {tedarikciTeklifleri.map((st) => {
+            const isk = iskontoGecerli(st.alisIskontoYuzde);
+            const maliyet = isk > 0 ? satinalmaNetToplami(st) : satinalmaToplami(st);
+            const kaynak = st.id === teklifHam.kaynakSatinalmaTeklifiId;
+            const ayniPb = st.paraBirimi === teklif.paraBirimi;
+            const kar = satisNet - maliyet;
+            return (
+              <div key={st.id} className="bg-white border border-hat rounded-md">
+                <div className="px-3 py-2.5 flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <div>
+                    {kaynak && <span className="text-[10px] font-bold text-teal-800 bg-teal-100 px-1.5 py-0.5 rounded mr-2">BU TEKLİFİN KAYNAĞI</span>}
+                    <Link href={`/panel/satinalma/teklifler/${st.id}`} className="font-semibold text-metin hover:underline">
+                      {st.tedarikci.ad}
+                    </Link>
+                    <span className="text-xs text-metin/50">
+                      {" "}
+                      · {st.tarih.toLocaleDateString("tr-TR")} · {st.kalemler.length} kalem
+                    </span>
+                    {st.baslik !== tedarikciKonusu && <span className="block text-[11px] text-metin/50">{st.baslik}</span>}
+                  </div>
+                  <div className="text-right">
+                    <p className="font-mono font-semibold">
+                      {maliyet > 0 ? tutarYaz(maliyet, st.paraBirimi) : "—"}
+                      {isk > 0 && <span className="text-[11px] font-normal text-metin/50"> (liste −%{isk})</span>}
+                    </p>
+                    {ayniPb && maliyet > 0 && satisNet > 0 && (
+                      <p className={`text-[11px] ${kar < 0 ? "text-red-700" : "text-emerald-700"}`}>
+                        Bu teklif {tutarYaz(satisNet, teklif.paraBirimi)} (KDV hariç) · fark {tutarYaz(kar, teklif.paraBirimi)} · %
+                        {((kar / satisNet) * 100).toFixed(1).replace(".", ",")}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="px-3 pb-2.5 flex flex-wrap items-center gap-3 text-xs">
+                  {st.maliyetPdfAdi && (
+                    <a href={`/api/maliyet-pdf/${st.id}`} target="_blank" rel="noopener noreferrer" className="text-emerald-800 font-semibold underline">
+                      📄 Tedarikçi PDF&apos;i
+                    </a>
+                  )}
+                  {st.maliyetExcelAdi && (
+                    <a href={`/api/maliyet-excel/${st.id}`} target="_blank" rel="noopener noreferrer" className="text-blue-800 font-semibold underline">
+                      📊 Excel
+                    </a>
+                  )}
+                  <Link href={`/panel/satinalma/siparisler?teklif=${st.id}#yeni`} className="text-soguk-dim font-semibold hover:underline">
+                    Tedarikçiye sipariş ver →
+                  </Link>
+                </div>
+                {st.kalemler.length > 0 && (
+                  <details className="border-t border-hat">
+                    <summary className="cursor-pointer px-3 py-2 text-xs text-soguk-dim">Kalemleri göster</summary>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs min-w-[520px]">
+                        <thead>
+                          <tr className="text-left text-metin/50 border-b border-hat">
+                            <th className="px-3 py-1.5 font-medium">Açıklama</th>
+                            <th className="px-3 py-1.5 font-medium text-right">Adet</th>
+                            <th className="px-3 py-1.5 font-medium text-right">Birim{isk > 0 ? " (liste)" : ""}</th>
+                            {isk > 0 && <th className="px-3 py-1.5 font-medium text-right">Net birim</th>}
+                            <th className="px-3 py-1.5 font-medium text-right">Tutar</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {st.kalemler.map((k) => (
+                            <tr key={k.id} className="border-b border-hat last:border-0">
+                              <td className="px-3 py-1.5">
+                                {k.aciklama}
+                                {k.bolum && <span className="block text-[10px] text-metin/40">{k.bolum}</span>}
+                              </td>
+                              <td className="px-3 py-1.5 text-right font-mono">{k.adet}</td>
+                              <td className="px-3 py-1.5 text-right font-mono whitespace-nowrap">{k.birimFiyat > 0 ? tutarYaz(k.birimFiyat, st.paraBirimi) : "—"}</td>
+                              {isk > 0 && (
+                                <td className="px-3 py-1.5 text-right font-mono whitespace-nowrap">{k.birimFiyat > 0 ? tutarYaz(netAlis(k.birimFiyat, isk), st.paraBirimi) : "—"}</td>
+                              )}
+                              <td className="px-3 py-1.5 text-right font-mono whitespace-nowrap">
+                                {k.birimFiyat > 0 ? tutarYaz(k.adet * (isk > 0 ? netAlis(k.birimFiyat, isk) : k.birimFiyat), st.paraBirimi) : "—"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </details>
 
       <div className="bg-yuzey border border-hat rounded-lg p-8 sm:p-12 print:border-0 print:p-0">
         {/* ŞİRKET BİLGİLERİ VE ADRESİ */}
