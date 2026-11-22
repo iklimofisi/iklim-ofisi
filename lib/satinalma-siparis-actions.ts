@@ -14,6 +14,9 @@ import { paraBirimiDogrula } from "@/lib/para";
 import { tutarOku } from "@/lib/toplam-dagit";
 import { birimNormal } from "@/lib/birimler";
 import { donemKilitliMi, KILIT_MESAJI } from "@/lib/finans";
+import { epostaGonder } from "@/lib/eposta";
+import { sasBelgesi, TEDARIKCI_LINK_TABANI } from "@/lib/satinalma-siparis-belge";
+import { randomBytes } from "crypto";
 import { kalemNet, yuvarla2, sasNo, teslimDurumu, teslimAlinan, malKabulAcikMi, sasTl } from "@/lib/satinalma-siparis";
 
 export type SasSonuc = { hata?: string; tamam?: string; git?: string };
@@ -424,4 +427,79 @@ export async function satinalmaOnayEsigiKaydet(fd: FormData): Promise<SasSonuc> 
   });
   revalidatePath("/panel/satinalma/siparisler");
   return { tamam: esik == null ? "Eşik kaldırıldı: yöneticinin açtıkları dışındaki siparişler onay bekler." : "Onay eşiği kaydedildi." };
+}
+
+// --- TEDARİKÇİYE GÖNDERME (e-posta ya da WhatsApp; kanalı kullanıcı seçer) ----------------------
+const GONDERILEBILIR = ["ONAYLANDI", "KISMEN_TESLIM", "TESLIM_ALINDI"];
+const EPOSTA_RE = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]{2,}$/;
+const htmlGuvenli = (m: string) => m.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+async function gonderimKaydet(id: string, kanal: "EPOSTA" | "WHATSAPP", alici: string, gonderen: string) {
+  await prisma.satinalmaSiparisi.update({
+    where: { id },
+    data: { sonGonderimTarihi: new Date(), sonGonderimKanali: kanal, sonGonderimAlici: alici.slice(0, 200), sonGonderenAdi: gonderen, gonderimSayisi: { increment: 1 } },
+  });
+}
+
+// E-posta: sipariş PDF'i ekte gider; yanıtlar gönderen personele döner.
+export async function satinalmaSiparisiEpostaGonder(fd: FormData): Promise<SasSonuc> {
+  const giren = await yetki("satinalmaSiparisiEpostaGonder", fd);
+  const id = metin(fd, "satinalmaSiparisiId", 100);
+  const alici = metin(fd, "alici", 200).toLowerCase();
+  const konu = metin(fd, "konu", 200);
+  const mesaj = String(fd.get("mesaj") ?? "").trim().slice(0, 5000);
+  const kartaKaydet = fd.get("kartaKaydet") === "1";
+  if (!EPOSTA_RE.test(alici)) return { hata: "Geçerli bir e-posta adresi yazın." };
+  if (!konu) return { hata: "Konu yazın." };
+  const s = id ? await prisma.satinalmaSiparisi.findUnique({ where: { id }, select: { no: true, durum: true, siparisId: true, tedarikciId: true, tedarikci: { select: { email: true } } } }) : null;
+  if (!s) return { hata: "Sipariş bulunamadı." };
+  if (!GONDERILEBILIR.includes(s.durum)) return { hata: "Onaylanmamış, iptal ya da reddedilmiş sipariş tedarikçiye gönderilemez." };
+  const belge = await sasBelgesi({ id });
+  if (!belge) return { hata: "Sipariş belgesi oluşturulamadı." };
+
+  const govde = mesaj
+    .split(/\n{2,}/)
+    .map((p) => `<p style="margin:0 0 12px">${htmlGuvenli(p).replace(/\n/g, "<br/>")}</p>`)
+    .join("");
+  const r = await epostaGonder({
+    konu,
+    icerikHtml: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#12212B;line-height:1.5">${govde}<p style="margin:16px 0 0;color:#64748b;font-size:12px">Ek: ${htmlGuvenli(belge.dosyaAdi)}</p></div>`,
+    aliciEmail: alici,
+    replyTo: giren.email,
+    gonderenAd: giren.ad,
+    ekler: [{ filename: belge.dosyaAdi, content: belge.pdf }],
+  });
+  if (!r.basarili) return { hata: `E-posta gönderilemedi: ${r.hata ?? "bilinmeyen hata"}` };
+  await gonderimKaydet(id, "EPOSTA", alici, giren.ad);
+  if (kartaKaydet && s.tedarikci.email?.toLowerCase() !== alici) await prisma.tedarikci.update({ where: { id: s.tedarikciId }, data: { email: alici } });
+  yenile(id, s.siparisId);
+  return { tamam: `${sasNo(s.no)} ${alici} adresine gönderildi.` };
+}
+
+// WhatsApp: siparişin PDF'ine giden tahmin edilemez bir link üretilir (bir kez); mesaj WhatsApp'ta açılır.
+export async function satinalmaSiparisiWhatsappLinki(id: string): Promise<SasSonuc & { link?: string }> {
+  await yetki("satinalmaSiparisiWhatsappLinki", { satinalmaSiparisiId: id });
+  const s = id ? await prisma.satinalmaSiparisi.findUnique({ where: { id }, select: { durum: true, paylasimAnahtari: true } }) : null;
+  if (!s) return { hata: "Sipariş bulunamadı." };
+  if (!GONDERILEBILIR.includes(s.durum)) return { hata: "Onaylanmamış, iptal ya da reddedilmiş sipariş tedarikçiye gönderilemez." };
+  let anahtar = s.paylasimAnahtari;
+  if (!anahtar) {
+    anahtar = randomBytes(18).toString("base64url"); // 24 karakter
+    await prisma.satinalmaSiparisi.update({ where: { id }, data: { paylasimAnahtari: anahtar } });
+  }
+  return { link: TEDARIKCI_LINK_TABANI + anahtar };
+}
+
+// "WhatsApp'ta aç"a basılınca gönderim kaydedilir (mesajı gönder tuşuna kullanıcı WhatsApp'ta basar).
+export async function satinalmaSiparisiWhatsappKaydet(fd: FormData): Promise<SasSonuc> {
+  const giren = await yetki("satinalmaSiparisiWhatsappKaydet", fd);
+  const id = metin(fd, "satinalmaSiparisiId", 100);
+  const telefon = metin(fd, "telefon", 40);
+  const kartaKaydet = fd.get("kartaKaydet") === "1";
+  const s = id ? await prisma.satinalmaSiparisi.findUnique({ where: { id }, select: { durum: true, siparisId: true, tedarikciId: true, tedarikci: { select: { telefon: true } } } }) : null;
+  if (!s || !GONDERILEBILIR.includes(s.durum)) return {};
+  await gonderimKaydet(id, "WHATSAPP", telefon || "(kişi WhatsApp'ta seçildi)", giren.ad);
+  if (kartaKaydet && telefon && s.tedarikci.telefon !== telefon) await prisma.tedarikci.update({ where: { id: s.tedarikciId }, data: { telefon } });
+  yenile(id, s.siparisId);
+  return {};
 }

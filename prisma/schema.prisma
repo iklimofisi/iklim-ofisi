@@ -414,6 +414,7 @@ model Tedarikci {
   telefon   String?
   vergiNo   String?
   adres     String?
+  email     String?            // satınalma siparişinin e-postayla gönderileceği adres
   createdAt DateTime           @default(now())
   hareketler TedarikciHareket[]
   teklifler  SatinalmaTeklifi[]
@@ -817,6 +818,13 @@ model SatinalmaSiparisi {
   iptalTarihi          DateTime?
   iptalEdenAdi         String?
   iptalNedeni          String?
+  // Tedarikçiye gönderim: PDF linki (WhatsApp için, tahmin edilemez anahtar) ve son gönderim bilgisi
+  paylasimAnahtari     String?                  @unique
+  sonGonderimTarihi    DateTime?
+  sonGonderimKanali    String?                  // EPOSTA · WHATSAPP
+  sonGonderimAlici     String?
+  sonGonderenAdi       String?
+  gonderimSayisi       Int                      @default(0)
   kalemler             SatinalmaSiparisKalemi[]
   malKabuller          MalKabul[]
   faturalar            TedarikciHareket[]

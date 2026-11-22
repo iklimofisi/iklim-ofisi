@@ -1278,12 +1278,28 @@ export async function tedarikciEkle(formData: FormData) {
   const telefon = String(formData.get("telefon") ?? "").trim();
   const vergiNo = String(formData.get("vergiNo") ?? "").trim();
   const adres = String(formData.get("adres") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 200);
   if (!ad) return;
 
   await prisma.tedarikci.create({
-    data: { ad, telefon: telefon || null, vergiNo: vergiNo || null, adres: adres || null },
+    data: { ad, telefon: telefon || null, vergiNo: vergiNo || null, adres: adres || null, email: email || null },
   });
   revalidatePath("/panel/satinalma");
+}
+
+// Tedarikçi bilgilerini düzenleme (ad, telefon, e-posta, vergi no, adres). Hareketlere dokunulmaz.
+export async function tedarikciGuncelle(formData: FormData) {
+  await yetki("tedarikciGuncelle", formData);
+  const tedarikciId = String(formData.get("tedarikciId") ?? "");
+  const ad = String(formData.get("ad") ?? "").trim().slice(0, 200);
+  const alan = (a: string, sinir = 300) => String(formData.get(a) ?? "").trim().slice(0, sinir) || null;
+  if (!tedarikciId || !ad) return;
+  await prisma.tedarikci.update({
+    where: { id: tedarikciId },
+    data: { ad, telefon: alan("telefon", 40), email: alan("email", 200)?.toLowerCase() ?? null, vergiNo: alan("vergiNo", 40), adres: alan("adres") },
+  });
+  revalidatePath("/panel/satinalma");
+  revalidatePath("/panel/satinalma/cari");
 }
 
 // --- Satınalma: Gelen Teklifler ---

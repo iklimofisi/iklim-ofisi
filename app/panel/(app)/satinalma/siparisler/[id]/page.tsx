@@ -16,6 +16,9 @@ import {
 import { SAS_DURUM_ETIKET, SAS_DURUM_RENK, sasNo, sasTl, kalemNet, teslimAlinan, malKabulAcikMi } from "@/lib/satinalma-siparis";
 import SonucluForm from "@/components/SonucluForm";
 import KayitIslemButonu from "@/components/KayitIslemButonu";
+import SatinalmaGonder from "@/components/SatinalmaGonder";
+import { getSirketAyarlari } from "@/lib/sirket";
+import { TEDARIKCI_LINK_TABANI } from "@/lib/satinalma-siparis-belge";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +31,7 @@ export default async function SatinalmaSiparisDetay({ params }: { params: { id: 
     prisma.satinalmaSiparisi.findUnique({
       where: { id: params.id },
       include: {
-        tedarikci: { select: { id: true, ad: true, telefon: true, vergiNo: true, adres: true } },
+        tedarikci: { select: { id: true, ad: true, telefon: true, vergiNo: true, adres: true, email: true } },
         satinalmaTeklifi: { select: { id: true, baslik: true } },
         proje: { select: { id: true, ad: true } },
         siparis: { select: { id: true, durum: true, teklif: { select: { teklifNo: true, baslik: true } }, musteri: { select: { ad: true } } } },
@@ -58,6 +61,10 @@ export default async function SatinalmaSiparisDetay({ params }: { params: { id: 
   const malKabulAcik = malKabulAcikMi(s.durum);
   const iptalEdilebilir = yonetici && s.durum !== "IPTAL" && s.durum !== "REDDEDILDI";
   const faturaAcik = ["ONAYLANDI", "KISMEN_TESLIM", "TESLIM_ALINDI"].includes(s.durum);
+
+  const sirket = await getSirketAyarlari();
+  const gonderilebilir = ["ONAYLANDI", "KISMEN_TESLIM", "TESLIM_ALINDI"].includes(s.durum);
+  const saatli = (d: Date) => d.toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Istanbul" });
 
   const satisSiparisleri = await prisma.siparis.findMany({
     where: { OR: [{ durum: { notIn: ["IPTAL", "REDDEDILDI"] } }, ...(s.siparisId ? [{ id: s.siparisId }] : [])] },
@@ -128,6 +135,39 @@ export default async function SatinalmaSiparisDetay({ params }: { params: { id: 
           {s.iptalNedeni && ` · Neden: ${s.iptalNedeni}`}
         </div>
       )}
+
+      {/* TEDARİKÇİYE GÖNDER (kanalı kullanıcı seçer) */}
+      <section className="bg-yuzey border border-hat rounded-lg p-5 mb-8 print:hidden">
+        <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+          <h2 className="font-display font-medium text-metin">Tedarikçiye gönder</h2>
+          {s.sonGonderimTarihi && (
+            <p className="text-xs text-emerald-700">
+              ✓ Son gönderim: {s.sonGonderimKanali === "WHATSAPP" ? "WhatsApp" : "E-posta"} · {s.sonGonderimAlici} · {saatli(s.sonGonderimTarihi)}
+              {s.sonGonderenAdi && ` · ${s.sonGonderenAdi}`}
+              {s.gonderimSayisi > 1 && ` (${s.gonderimSayisi}. gönderim)`}
+            </p>
+          )}
+        </div>
+        {gonderilebilir ? (
+          <SatinalmaGonder
+            id={s.id}
+            no={sasNo(s.no)}
+            tedarikciAd={s.tedarikci.ad}
+            email={s.tedarikci.email ?? ""}
+            telefon={s.tedarikci.telefon ?? ""}
+            firma={sirket.unvan}
+            gonderenAd={giren?.ad ?? ""}
+            mevcutLink={s.paylasimAnahtari ? TEDARIKCI_LINK_TABANI + s.paylasimAnahtari : null}
+          />
+        ) : (
+          <p className="text-sm text-metin/60">
+            {s.durum === "ONAY_BEKLIYOR" ? "Sipariş onaylanınca tedarikçiye e-posta ya da WhatsApp ile gönderilebilir." : "İptal / reddedilmiş sipariş gönderilemez."}{" "}
+            <a href={`/api/satinalma-siparis/${s.id}/pdf`} target="_blank" rel="noreferrer" className="text-soguk-dim hover:underline">
+              📄 PDF&apos;i gör
+            </a>
+          </p>
+        )}
+      </section>
 
       {/* ÖZET */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

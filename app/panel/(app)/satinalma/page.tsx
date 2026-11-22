@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { tedarikciEkle } from "@/lib/actions";
+import { tedarikciEkle, tedarikciGuncelle } from "@/lib/actions";
 import Link from "next/link";
 import KaydetButonu from "@/components/KaydetButonu";
 
@@ -35,6 +35,10 @@ export default async function SatinalmaSayfasi() {
           <label className="block text-xs font-medium text-metin/60 mb-1">Telefon</label>
           <input name="telefon" className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm" />
         </div>
+        <div className="flex-1 min-w-[180px]">
+          <label className="block text-xs font-medium text-metin/60 mb-1">E-posta (sipariş için)</label>
+          <input name="email" type="email" className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm" />
+        </div>
         <div className="flex-1 min-w-[160px]">
           <label className="block text-xs font-medium text-metin/60 mb-1">Vergi No</label>
           <input name="vergiNo" className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm" />
@@ -53,7 +57,7 @@ export default async function SatinalmaSayfasi() {
           <thead>
             <tr className="text-left text-xs text-metin/50 border-b border-hat">
               <th className="px-5 py-3 font-medium">Ad</th>
-              <th className="px-5 py-3 font-medium">Telefon</th>
+              <th className="px-5 py-3 font-medium">Telefon · E-posta</th>
               <th className="px-5 py-3 font-medium">Vergi No</th>
               <th className="px-5 py-3 font-medium">Adres</th>
             </tr>
@@ -61,10 +65,27 @@ export default async function SatinalmaSayfasi() {
           <tbody>
             {tedarikciler.map((t) => (
               <tr key={t.id} className="border-b border-hat last:border-0">
-                <td className="px-5 py-3 text-metin">{t.ad}</td>
-                <td className="px-5 py-3 font-mono text-metin/70">{t.telefon ?? "—"}</td>
-                <td className="px-5 py-3 font-mono text-metin/50">{t.vergiNo ?? "—"}</td>
-                <td className="px-5 py-3 text-metin/60">{t.adres ?? "—"}</td>
+                <td className="px-5 py-3 text-metin align-top">
+                  {t.ad}
+                  <details className="mt-1">
+                    <summary className="cursor-pointer text-[11px] text-soguk-dim hover:underline">Düzenle</summary>
+                    <form action={tedarikciGuncelle} className="mt-2 grid gap-2 w-64">
+                      <input type="hidden" name="tedarikciId" value={t.id} />
+                      <input name="ad" required defaultValue={t.ad} aria-label="Ad" className="focus-ring border border-hat rounded-md px-2 py-1.5 text-xs" />
+                      <input name="telefon" defaultValue={t.telefon ?? ""} placeholder="Telefon" aria-label="Telefon" className="focus-ring border border-hat rounded-md px-2 py-1.5 text-xs" />
+                      <input name="email" type="email" defaultValue={t.email ?? ""} placeholder="E-posta" aria-label="E-posta" className="focus-ring border border-hat rounded-md px-2 py-1.5 text-xs" />
+                      <input name="vergiNo" defaultValue={t.vergiNo ?? ""} placeholder="Vergi no" aria-label="Vergi no" className="focus-ring border border-hat rounded-md px-2 py-1.5 text-xs" />
+                      <input name="adres" defaultValue={t.adres ?? ""} placeholder="Adres" aria-label="Adres" className="focus-ring border border-hat rounded-md px-2 py-1.5 text-xs" />
+                      <KaydetButonu className="focus-ring bg-soguk text-white px-3 py-1.5 rounded-md text-xs font-medium hover:bg-soguk-dim">Kaydet</KaydetButonu>
+                    </form>
+                  </details>
+                </td>
+                <td className="px-5 py-3 align-top">
+                  <span className="font-mono text-metin/70">{t.telefon ?? "—"}</span>
+                  {t.email && <span className="block text-xs text-metin/60">{t.email}</span>}
+                </td>
+                <td className="px-5 py-3 font-mono text-metin/50 align-top">{t.vergiNo ?? "—"}</td>
+                <td className="px-5 py-3 text-metin/60 align-top">{t.adres ?? "—"}</td>
               </tr>
             ))}
             {tedarikciler.length === 0 && (
