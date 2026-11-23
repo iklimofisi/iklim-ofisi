@@ -39,13 +39,23 @@ export function tcmbXmlCoz(xml: string): TcmbKurlari | null {
   return { tarih, USD: usd, EUR: eur, ...(gbp ? { GBP: gbp } : {}) };
 }
 
+// TCMB sitesi zaman zaman yavaş cevap verir: 10 sn beklenir, olmazsa bir kez daha denenir.
+// (Önbellek yenilenirken hata olursa sayfalar bir önceki kuru göstermeye devam eder.)
+async function tcmbdenOku(): Promise<TcmbKurlari> {
+  const yanit = await fetch(KAYNAK, { cache: "no-store", signal: AbortSignal.timeout(10000) });
+  if (!yanit.ok) throw new Error(`TCMB ${yanit.status}`);
+  const sonuc = tcmbXmlCoz(await yanit.text());
+  if (!sonuc) throw new Error("TCMB bülteni okunamadı");
+  return sonuc;
+}
+
 const onbellekli = unstable_cache(
   async (): Promise<TcmbKurlari | null> => {
-    const yanit = await fetch(KAYNAK, { cache: "no-store", signal: AbortSignal.timeout(5000) });
-    if (!yanit.ok) throw new Error(`TCMB ${yanit.status}`);
-    const sonuc = tcmbXmlCoz(await yanit.text());
-    if (!sonuc) throw new Error("TCMB bülteni okunamadı");
-    return sonuc;
+    try {
+      return await tcmbdenOku();
+    } catch {
+      return await tcmbdenOku();
+    }
   },
   ["tcmb-kurlari"],
   { revalidate: 3600 }
