@@ -13,14 +13,12 @@ npm install
 ### 2) `.env` dosyası — yeni değişken yok
 
 ### 3) Veritabanını güncelle
-```
-npx prisma migrate dev --name proje-ziyaret-toplu-fiyat
-```
+> ⚠️ Site yayında. `prisma migrate`, `prisma db push` ve `npm run prisma:seed` **çalıştırılmaz**
+> (canlı veriyi silebilir). Şema değişiklikleri `prisma/manuel/` klasöründeki SQL dosyalarıyla
+> yapılır: dosya Neon SQL Editor'da çalıştırılır, ardından `git push`. Ayrıntı: `CLAUDE.md`.
 
-### 4) Demo verileri tekrar yükle (veritabanını sıfırladıysan)
-```
-npm run prisma:seed
-```
+### 4) Demo veriler
+Canlı veritabanında demo veri yüklenmez.
 
 ### 5) Çalıştır
 ```
