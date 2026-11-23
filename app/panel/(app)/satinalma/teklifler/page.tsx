@@ -7,6 +7,7 @@ import KaydetButonu from "@/components/KaydetButonu";
 import SatinalmaKalemGirisi from "@/components/SatinalmaKalemGirisi";
 import { satinalmaToplami, satinalmaNetToplami, iskontoGecerli } from "@/lib/satinalma-hesap";
 import TclTeklifYukle from "@/components/TclTeklifYukle";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ function paraFormat(n: number, pb: string = "TRY") {
 }
 
 export default async function SatinalmaTekliflerPage() {
+  await sayfaYetkisi("satinalma");
   const [tedarikciler, satinalmaTeklifleri, satisTeklifleri] = await Promise.all([
     prisma.tedarikci.findMany({ orderBy: { ad: "asc" } }),
     prisma.satinalmaTeklifi.findMany({
@@ -318,7 +320,7 @@ export default async function SatinalmaTekliflerPage() {
                           </td>
 
                           <td className="py-3 px-4 text-center">
-                            <KayitIslemButonu id={st.id} action={satinalmaTeklifiSil} etiket="Sil" onayBasligi="Silme onayı" onayMesaji="Yalnız yönetici silebilir; satış teklifine bağlanmış tedarikçi teklifi silinmez." tehlikeli />
+                            <KayitIslemButonu id={st.id} action={satinalmaTeklifiSil} etiket="Sil" onayBasligi="Silme onayı" onayMesaji="Yalnız admin silebilir; satış teklifine bağlanmış tedarikçi teklifi silinmez." tehlikeli />
                           </td>
                         </tr>
                       );

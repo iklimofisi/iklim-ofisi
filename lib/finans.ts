@@ -49,7 +49,7 @@ export async function donemKilitliMi(tarih: Date): Promise<boolean> {
 }
 
 export const KILIT_MESAJI = (tarih: Date) =>
-  `${donemAdi(donemAnahtari(tarih))} kapatıldı; bu aya kayıt eklenemez ya da iptal edilemez. Düzeltmeyi açık aya ters kayıtla yapın (gerekirse yönetici dönemi yeniden açar).`;
+  `${donemAdi(donemAnahtari(tarih))} kapatıldı; bu aya kayıt eklenemez ya da iptal edilemez. Düzeltmeyi açık aya ters kayıtla yapın (gerekirse admin dönemi yeniden açar).`;
 
 // --- AYLIK ÖZET ------------------------------------------------------------------------
 export type AylikOzet = {

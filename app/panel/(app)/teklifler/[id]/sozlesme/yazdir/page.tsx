@@ -7,6 +7,7 @@ import { ISTIRAK_METNI } from "@/lib/kurumsal";
 import YazdirButon from "@/components/YazdirButon";
 import { kalemleriOku, maddeleriOku, sozlesmeHesap, paraYaz, tutariYaziyla, sayiyiYaziyla, sozlesmeNo } from "@/lib/sozlesme";
 import { miktarYaz } from "@/lib/birimler";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ const trTarih = (d: Date) =>
 
 // İmzalatılacak sözleşme belgesi (A4, yazdır / PDF olarak kaydet)
 export default async function SozlesmeYazdir({ params }: { params: { id: string } }) {
+  await sayfaYetkisi("teklif");
   const [teklif, sozlesme, sirket] = await Promise.all([
     prisma.teklif.findUnique({
       where: { id: params.id },

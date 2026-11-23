@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { siparisNetTutari } from "@/lib/siparis-tutari";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,7 @@ function formatTL(n: number) {
 }
 
 export default async function CiroRaporlariPage() {
+  await sayfaYetkisi("finans");
   const siparisler = await prisma.siparis.findMany({
     include: {
       teklif: { include: { kalemler: true } },

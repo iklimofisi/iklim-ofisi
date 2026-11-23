@@ -3,7 +3,7 @@ import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { ziyaretHatirlatmaTamamlandi } from "@/lib/actions";
-import { suankiKullanici } from "@/lib/oturum";
+import { suankiKullanici, sayfaYetkisi } from "@/lib/oturum";
 import ZiyaretKayitFormu from "@/components/ZiyaretKayitFormu";
 import ZiyaretListesi from "@/components/ZiyaretListesi";
 import KaydetButonu from "@/components/KaydetButonu";
@@ -45,6 +45,7 @@ function gunAnahtari(d: Date) {
 }
 
 export default async function ZiyaretlerSayfasi({ searchParams = {} }: { searchParams?: Arama }) {
+  await sayfaYetkisi("crm");
   const bugun = bugunTR();
 
   // --- Parametreleri doğrula ---

@@ -4,10 +4,12 @@ import SilButon from "@/components/SilButon";
 import Image from "next/image";
 import Link from "next/link";
 import KaydetButonu from "@/components/KaydetButonu";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
 export default async function MarkalarSayfasi() {
+  await sayfaYetkisi("urun");
   const markalar = await prisma.marka.findMany({ orderBy: { ad: "asc" } });
 
   return (

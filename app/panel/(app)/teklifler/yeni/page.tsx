@@ -13,6 +13,8 @@ import Link from "next/link";
 import { donusumKalemleri } from "@/lib/satinalma-hesap";
 import type { Satir } from "@/components/TeklifKalemleri";
 import TclTeklifYukle from "@/components/TclTeklifYukle";
+import { sayfaYetkisi } from "@/lib/oturum";
+import { maliyetGorur, yazabilir } from "@/lib/roller";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +32,9 @@ export default async function YeniTeklifSayfasi({
     marj?: string; // kâr %
   };
 }) {
+  const giren = await sayfaYetkisi("teklif");
+  // Tedarikçi teklifinden aktarma ve TCL / Viessmann PDF kutusu alış fiyatı içerir: satış personeline kapalı
+  const satinalmaYetkisi = maliyetGorur(giren.rol) && yazabilir(giren.rol, "satinalma");
   const [musteriler, sablonlar, markalar, urunler, projeler, kurlar, tedarikciler, konuKayitlari] = await Promise.all([
     prisma.musteri.findMany({ where: GERCEK_MUSTERI,
       orderBy: { ad: "asc" },
@@ -46,7 +51,7 @@ export default async function YeniTeklifSayfasi({
   ]);
 
   // --- Tedarikçi teklifinden aktarma (ör. TCL teklif PDF'i): kalemler bölümleriyle, kâr eklenmiş fiyatla gelir ---
-  const satinalma = searchParams.satinalma
+  const satinalma = searchParams.satinalma && maliyetGorur(giren.rol)
     ? await prisma.satinalmaTeklifi.findUnique({
         where: { id: searchParams.satinalma },
         include: { tedarikci: { select: { ad: true } }, kalemler: { orderBy: { id: "asc" } } },
@@ -101,7 +106,7 @@ export default async function YeniTeklifSayfasi({
       )}
 
       {/* TCL TEKLİF PDF'İNDEN DOLDUR: PDF + iskonto + kâr → satınalma teklifi kaydedilir, form dolu açılır */}
-      {!satinalma && (
+      {!satinalma && satinalmaYetkisi && (
         <details className="group bg-soguk-light/30 border border-soguk/40 rounded-lg p-4 mb-5">
           <summary className="cursor-pointer list-none flex items-center justify-between gap-3">
             <span className="text-sm font-semibold text-soguk-dim">📄 TCL / Viessmann teklif PDF&apos;inden doldur</span>

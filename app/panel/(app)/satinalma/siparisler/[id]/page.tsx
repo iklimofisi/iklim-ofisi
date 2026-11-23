@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { suankiKullanici } from "@/lib/oturum";
+import { suankiKullanici, sayfaYetkisi } from "@/lib/oturum";
 import { paraFormat } from "@/lib/para";
 import { miktarYaz } from "@/lib/birimler";
 import {
@@ -27,6 +27,7 @@ const tarihYaz = (d: Date | null | undefined) => (d ? d.toLocaleDateString("tr-T
 const bugunIso = () => new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10); // Türkiye saati
 
 export default async function SatinalmaSiparisDetay({ params }: { params: { id: string } }) {
+  await sayfaYetkisi("satinalma");
   const [s, giren] = await Promise.all([
     prisma.satinalmaSiparisi.findUnique({
       where: { id: params.id },
@@ -119,8 +120,8 @@ export default async function SatinalmaSiparisDetay({ params }: { params: { id: 
 
       {s.durum === "ONAY_BEKLIYOR" && (
         <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-lg p-4 mb-6 text-sm">
-          Bu sipariş yönetici onayı bekliyor. Onaylanana kadar mal kabul yapılamaz ve fatura bağlanamaz.
-          {!yonetici && " Onayı yalnız bir yönetici verebilir."}
+          Bu sipariş admin onayı bekliyor. Onaylanana kadar mal kabul yapılamaz ve fatura bağlanamaz.
+          {!yonetici && " Onayı yalnız bir admin verebilir."}
         </div>
       )}
       {s.durum === "REDDEDILDI" && (
@@ -412,7 +413,7 @@ export default async function SatinalmaSiparisDetay({ params }: { params: { id: 
                   <span className="font-mono whitespace-nowrap">{paraFormat(f.tutar, "TRY")}</span>
                 </div>
               ))}
-              <p className="text-xs text-metin/50 pt-1">Faturayı düzeltmek / iptal etmek için tedarikçi cari hesabını kullanın (yalnız yönetici).</p>
+              <p className="text-xs text-metin/50 pt-1">Faturayı düzeltmek / iptal etmek için tedarikçi cari hesabını kullanın (yalnız admin).</p>
             </div>
           )}
         </section>

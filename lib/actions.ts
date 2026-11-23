@@ -30,7 +30,7 @@ import { MUSTERISIZ_ID, musterisizMi, musterisizGoster } from "@/lib/musterisiz"
 import { musterisizKaydiHazirla } from "@/lib/musterisiz-sunucu";
 import { siparisDondurmaVerisi } from "@/lib/siparis-tutari";
 import { donemKilitliMi, KILIT_MESAJI } from "@/lib/finans";
-import { finansYetkilisiMi, gecerliRol } from "@/lib/roller";
+import { finansYetkilisiMi, gecerliRol, islemBolumu } from "@/lib/roller";
 
 // Kayıt güvencesi işlemlerinin sonucu: düğme bu mesajı bildirim olarak gösterir
 export type IslemSonucu = { hata?: string; tamam?: string };
@@ -39,7 +39,8 @@ export type IslemSonucu = { hata?: string; tamam?: string };
 // Her sunucu işleminin ilk satırında çağrılır: giriş yapılmamışsa işlem yapılmaz
 // (giriş sayfasına yönlendirir), yapılmışsa kim, ne zaman, hangi işlemi yaptı kaydedilir.
 async function yetki(islem: string, girdi?: FormData | Record<string, unknown>) {
-  const kullanici = await islemZorunlu();
+  // Rol yetkisi: işlemin bölümü lib/roller.ts → ISLEM_BOLUMU (listede yoksa yalnız admin)
+  const kullanici = await islemZorunlu(islemBolumu(islem));
   await islemKaydet(kullanici, islem, girdi);
   return kullanici;
 }
@@ -537,7 +538,7 @@ export async function teklifArsivdenCikar(teklifId: string): Promise<IslemSonucu
   return { tamam: "Teklif arşivden çıkarıldı." };
 }
 
-// Eski kalıcı silme: artık hiçbir ekranda düğmesi yok; yalnız yönetici, siparişsiz teklif için
+// Eski kalıcı silme: artık hiçbir ekranda düğmesi yok; yalnız admin, siparişsiz teklif için
 // (deneme kayıtları). Silinen teklifin kopyası işlem geçmişinde saklanır.
 export async function teklifSil(teklifId: string) {
   const silen = await yetki("teklifSil", { teklifId });
@@ -619,10 +620,10 @@ export async function cariHareketEkle(formData: FormData) {
 }
 
 // FİNANSAL HAREKET İPTALİ: tahsilat / borç kaydı silinmez. İptal edilen hareket bakiyeye ve
-// çek listelerine girmez, listede üstü çizili ve iptal nedeniyle görünür. Yalnız yönetici.
+// çek listelerine girmez, listede üstü çizili ve iptal nedeniyle görünür. Yalnız admin.
 export async function cariHareketIptal(hareketId: string, neden: string): Promise<IslemSonucu> {
   const giren = await yetki("cariHareketIptal", { hareketId, neden });
-  if (!finansYetkilisiMi(giren.rol)) return { hata: "Finansal kaydı yalnız yönetici ya da muhasebe iptal edebilir." };
+  if (!finansYetkilisiMi(giren.rol)) return { hata: "Finansal kaydı yalnız admin ya da muhasebe iptal edebilir." };
   const nedenTemiz = String(neden ?? "").trim().slice(0, 500);
   if (!nedenTemiz) return { hata: "İptal nedenini yazın." };
   const h = hareketId ? await prisma.cariHareket.findUnique({ where: { id: hareketId }, select: { musteriId: true, iptalTarihi: true, tarih: true } }) : null;
@@ -687,10 +688,10 @@ export async function tedarikciHareketEkle(formData: FormData) {
   revalidatePath("/panel");
 }
 
-// FİNANSAL HAREKET İPTALİ (tedarikçi): silinmez, iptal edilir (bakiyeden düşer). Yalnız yönetici.
+// FİNANSAL HAREKET İPTALİ (tedarikçi): silinmez, iptal edilir (bakiyeden düşer). Yalnız admin.
 export async function tedarikciHareketIptal(id: string, neden: string): Promise<IslemSonucu> {
   const giren = await yetki("tedarikciHareketIptal", { id, neden });
-  if (!finansYetkilisiMi(giren.rol)) return { hata: "Finansal kaydı yalnız yönetici ya da muhasebe iptal edebilir." };
+  if (!finansYetkilisiMi(giren.rol)) return { hata: "Finansal kaydı yalnız admin ya da muhasebe iptal edebilir." };
   const nedenTemiz = String(neden ?? "").trim().slice(0, 500);
   if (!nedenTemiz) return { hata: "İptal nedenini yazın." };
   const h = id ? await prisma.tedarikciHareket.findUnique({ where: { id }, select: { iptalTarihi: true, tarih: true } }) : null;
@@ -980,7 +981,7 @@ export async function kullaniciEkle(formData: FormData) {
   revalidatePath("/panel/kullanicilar");
 }
 
-// Kullanıcının rolünü değiştirme (yalnız yönetici; kendi rolünü değiştiremez). Yeni rol hemen geçerli olur.
+// Kullanıcının rolünü değiştirme (yalnız admin; kendi rolünü değiştiremez). Yeni rol hemen geçerli olur.
 export async function kullaniciRolGuncelle(formData: FormData) {
   const giren = await yetki("kullaniciRolGuncelle", formData);
   if (!giren || giren.rol !== "ADMIN") return;
@@ -1121,7 +1122,7 @@ export async function siparisDurumGuncelle(
   durum: "HAZIRLANIYOR" | "IPTAL"
 ) {
   const giren = await yetki("siparisDurumGuncelle", { siparisId, durum });
-  // İptal etmek ve iptal edilmiş siparişi geri almak yalnız yöneticinin işi
+  // İptal etmek ve iptal edilmiş siparişi geri almak yalnız admin'in işi
   if (giren.rol !== "ADMIN") {
     if (durum === "IPTAL") return;
     const mevcut = await prisma.siparis.findUnique({ where: { id: siparisId }, select: { durum: true } });
@@ -1139,7 +1140,7 @@ export async function siparisDurumGuncelle(
 // Sevkiyat, teslim ve cari kayıtlarına dokunulmaz (onaylı siparişin cari borcu ayrıca iptal edilir).
 export async function siparisIptal(siparisId: string, neden: string): Promise<IslemSonucu> {
   const giren = await yetki("siparisIptal", { siparisId, neden });
-  if (giren.rol !== "ADMIN") return { hata: "Siparişi yalnız yönetici iptal edebilir." };
+  if (giren.rol !== "ADMIN") return { hata: "Siparişi yalnız admin iptal edebilir." };
   const nedenTemiz = String(neden ?? "").trim().slice(0, 500);
   if (!nedenTemiz) return { hata: "İptal nedenini yazın." };
   const s = siparisId ? await prisma.siparis.findUnique({ where: { id: siparisId }, select: { durum: true, onayTarihi: true } }) : null;
@@ -1216,7 +1217,7 @@ export async function sevkiyatEkle(formData: FormData) {
 
 export async function sevkiyatSil(id: string) {
   const giren = await yetki("sevkiyatSil", { id });
-  // Yanlış girilen sevkiyat kaydını yalnız yönetici siler (kopyası işlem geçmişinde kalır)
+  // Yanlış girilen sevkiyat kaydını yalnız admin siler (kopyası işlem geçmişinde kalır)
   if (giren.rol !== "ADMIN") return;
   const kayit = await prisma.sevkiyatKaydi.delete({ where: { id } });
   revalidatePath(`/panel/siparisler/${kayit.siparisId}`);
@@ -1263,7 +1264,7 @@ export async function teslimKaydiEkle(formData: FormData) {
 
 export async function teslimKaydiSil(id: string) {
   const giren = await yetki("teslimKaydiSil", { id });
-  // Yanlış girilen teslim kaydını yalnız yönetici siler (kopyası işlem geçmişinde kalır)
+  // Yanlış girilen teslim kaydını yalnız admin siler (kopyası işlem geçmişinde kalır)
   if (giren.rol !== "ADMIN") return;
   const kayit = await prisma.teslimKaydi.delete({ where: { id } });
   revalidatePath(`/panel/siparisler/${kayit.siparisId}`);
@@ -1397,10 +1398,10 @@ export async function satinalmaTeklifiGuncelle(formData: FormData) {
   revalidatePath(`/panel/satinalma/teklifler/${id}`);
 }
 
-// Tedarikçi teklifi: müşteri teklifine aktarıldıysa silinmez (maliyetin kaynağıdır). Yalnız yönetici.
+// Tedarikçi teklifi: müşteri teklifine aktarıldıysa silinmez (maliyetin kaynağıdır). Yalnız admin.
 export async function satinalmaTeklifiSil(id: string): Promise<IslemSonucu> {
   const giren = await yetki("satinalmaTeklifiSil", { id });
-  if (giren.rol !== "ADMIN") return { hata: "Tedarikçi teklifini yalnız yönetici silebilir." };
+  if (giren.rol !== "ADMIN") return { hata: "Tedarikçi teklifini yalnız admin silebilir." };
   const bagli = id ? await prisma.teklif.count({ where: { kaynakSatinalmaTeklifiId: id } }) : 0;
   if (bagli > 0) return { hata: `Bu tedarikçi teklifinden ${bagli} müşteri teklifi hazırlanmış; maliyet kaynağı olduğu için silinmez.` };
   const sas = id ? await prisma.satinalmaSiparisi.count({ where: { satinalmaTeklifiId: id } }).catch(() => 0) : 0;
@@ -1728,11 +1729,11 @@ export async function urunEkle(formData: FormData) {
 }
 
 // Stok hareketi, seri numarası ya da satınalma siparişi kalemi olan ürün silinmez
-// (silinirse stok geçmişi de silinirdi). Yalnız yönetici.
+// (silinirse stok geçmişi de silinirdi). Yalnız admin.
 const SILINEBILIR_URUN = { stokHareketleri: { none: {} }, seriNolar: { none: {} }, satinalmaSiparisKalemleri: { none: {} } } as const;
 export async function urunSil(id: string): Promise<IslemSonucu> {
   const giren = await yetki("urunSil", { id });
-  if (giren.rol !== "ADMIN") return { hata: "Ürünü yalnız yönetici silebilir." };
+  if (giren.rol !== "ADMIN") return { hata: "Ürünü yalnız admin silebilir." };
   if (!id) return { hata: "Ürün bulunamadı." };
   const r = await prisma.urun.deleteMany({ where: { id, ...SILINEBILIR_URUN } });
   revalidatePath("/panel/ayarlar/urunler");
@@ -1742,7 +1743,7 @@ export async function urunSil(id: string): Promise<IslemSonucu> {
 
 export async function urunlerTumunuSil() {
   const giren = await yetki("urunlerTumunuSil");
-  // Tüm ürün kataloğunu silen toplu işlem: yalnızca yönetici yapabilir
+  // Tüm ürün kataloğunu silen toplu işlem: yalnızca admin yapabilir
   if (giren.rol !== "ADMIN") return;
   // Stok geçmişi / satınalma kaydı olan ürünler korunur
   await prisma.urun.deleteMany({ where: SILINEBILIR_URUN });
@@ -2358,8 +2359,8 @@ export async function projeGuncelle(formData: FormData) {
 // PROJE SİLME
 export async function projeSil(id: string): Promise<IslemSonucu> {
   const giren = await yetki("projeSil", { id });
-  // Teklifi olan proje silinmez (teklifler projeden kopmasın). Boş projeyi yalnız yönetici siler.
-  if (giren.rol !== "ADMIN") return { hata: "Projeyi yalnız yönetici silebilir." };
+  // Teklifi olan proje silinmez (teklifler projeden kopmasın). Boş projeyi yalnız admin siler.
+  if (giren.rol !== "ADMIN") return { hata: "Projeyi yalnız admin silebilir." };
   const teklifSayisi = id ? await prisma.teklif.count({ where: { projeId: id } }) : 0;
   if (teklifSayisi > 0) return { hata: `Bu projeye bağlı ${teklifSayisi} teklif var (arşivdekiler dahil); proje silinmez.` };
   const sas = id ? await prisma.satinalmaSiparisi.count({ where: { projeId: id } }).catch(() => 0) : 0;
@@ -2524,7 +2525,7 @@ export async function siparisOlustur(teklifId: string) {
 // MÜŞTERİ SİLME FONKSİYONU
 export async function musteriSil(musteriId: string): Promise<IslemSonucu> {
   const giren = await yetki("musteriSil", { musteriId });
-  if (!giren || giren.rol !== "ADMIN") return { hata: "Müşteriyi yalnız yönetici silebilir." };
+  if (!giren || giren.rol !== "ADMIN") return { hata: "Müşteriyi yalnız admin silebilir." };
 
   // Müşterisiz teklif sistem kaydı silinmez (müşterisiz teklifler ona bağlı)
   if (!musteriId || musteriId === MUSTERISIZ_ID) return { hata: "Bu kayıt silinemez." };
@@ -2858,7 +2859,7 @@ export async function maliyetDosyaYukle(formData: FormData) {
 }
 
 // --- E-POSTA TESTİ (Ayarlar → E-posta Durumu) ---
-// Bildirim adresine bir deneme e-postası gönderir. Sadece yönetici.
+// Bildirim adresine bir deneme e-postası gönderir. Sadece admin.
 export async function epostaTestiGonder(formData: FormData) {
   const kullanici = await yetki("epostaTestiGonder", formData);
   if (!kullanici || kullanici.rol !== "ADMIN") redirect("/panel?hata=yetkisiz-erisim");
@@ -3006,7 +3007,7 @@ export async function sozlesmeKalemleriYenile(formData: FormData) {
   redirect(`/panel/teklifler/${teklifId}/sozlesme?mesaj=sozlesme-kalemler`);
 }
 
-// Sözleşme taslağını siler (kopyası işlem geçmişine yazılır). Yalnızca yönetici.
+// Sözleşme taslağını siler (kopyası işlem geçmişine yazılır). Yalnızca admin.
 export async function sozlesmeSil(id: string) {
   const kullanici = await yetki("sozlesmeSil", { id });
   if (!kullanici || kullanici.rol !== "ADMIN" || !id) return;

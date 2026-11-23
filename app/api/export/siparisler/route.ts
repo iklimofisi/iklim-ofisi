@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { suankiKullanici } from "@/lib/oturum";
+import { apiYetkisi } from "@/lib/oturum";
 import { csvOlustur, csvYaniti } from "@/lib/csv";
 
 const durumEtiket: Record<string, string> = {
@@ -15,7 +15,7 @@ const durumEtiket: Record<string, string> = {
 };
 
 export async function GET() {
-  const kullanici = await suankiKullanici();
+  const kullanici = await apiYetkisi("siparis");
   if (!kullanici) return new Response("Yetkisiz", { status: 401 });
 
   const siparisler = await prisma.siparis.findMany({

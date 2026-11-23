@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { suankiKullanici } from "@/lib/oturum";
+import { apiYetkisi } from "@/lib/oturum";
 import { prisma } from "@/lib/prisma";
 import { getSirketAyarlari } from "@/lib/sirket";
 import { fiyatListesiPdfOlustur, type PdfGorsel } from "@/lib/fiyat-listesi-pdf";
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 }
 
 async function pdfYanit(id: string, haric: Set<string>, indir: boolean) {
-  if (!(await suankiKullanici())) return new Response("Yetkisiz", { status: 401 });
+  if (!(await apiYetkisi("fiyat"))) return new Response("Yetkisiz", { status: 401 });
 
   const liste = await prisma.fiyatListesi.findUnique({
     where: { id },

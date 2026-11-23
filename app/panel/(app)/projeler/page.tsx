@@ -6,6 +6,7 @@ import KayitIslemButonu from "@/components/KayitIslemButonu";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
 import KaydetButonu from "@/components/KaydetButonu";
 import Link from "next/link";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ export default async function ProjelerPage({
 }: {
   searchParams?: { seciliMusteriId?: string; basarili?: string };
 }) {
+  await sayfaYetkisi("crm");
   const [projeler, musteriler] = await Promise.all([
     prisma.proje.findMany({
       include: {
@@ -210,7 +212,7 @@ export default async function ProjelerPage({
                   {ihaleDurumEtiket[p.ihaleDurumu] || p.ihaleDurumu}
                 </span>
 
-                <KayitIslemButonu id={p.id} action={projeSil} etiket="Sil" onayBasligi="Silme onayı" onayMesaji="Yalnız teklifi olmayan proje silinebilir (yalnız yönetici). Teklifi olan proje korunur." tehlikeli />
+                <KayitIslemButonu id={p.id} action={projeSil} etiket="Sil" onayBasligi="Silme onayı" onayMesaji="Yalnız teklifi olmayan proje silinebilir (yalnız admin). Teklifi olan proje korunur." tehlikeli />
               </div>
             </div>
           ),

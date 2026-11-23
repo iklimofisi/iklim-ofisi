@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { suankiKullanici } from "@/lib/oturum";
+import { apiYetkisi } from "@/lib/oturum";
 import { sasBelgesi } from "@/lib/satinalma-siparis-belge";
 
 // Panel: satınalma siparişinin tedarikçiye giden PDF'i. Yalnız giriş yapmış kullanıcılar.
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  if (!(await suankiKullanici())) return new Response("Yetkisiz", { status: 401 });
+  if (!(await apiYetkisi("satinalma"))) return new Response("Yetkisiz", { status: 401 });
   const b = await sasBelgesi({ id: params.id });
   if (!b) return new Response("Sipariş bulunamadı", { status: 404 });
   const indir = req.nextUrl.searchParams.get("indir") === "1";

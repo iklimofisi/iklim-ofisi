@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { urunStokVeMaliyetGuncelle } from "@/lib/actions";
 import StokGirisFormu from "@/components/StokGirisFormu";
 import Link from "next/link";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,7 @@ function paraFormat(n: number, pb: string = "TRY") {
 }
 
 export default async function StokYonetimiPage() {
+  await sayfaYetkisi("stok");
   const [urunler, markalar] = await Promise.all([
     prisma.urun.findMany({
       include: { marka: true },

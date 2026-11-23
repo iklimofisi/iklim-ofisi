@@ -1,13 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { suankiKullanici } from "@/lib/oturum";
+import { gorebilir } from "@/lib/roller";
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   // Panel dosyası: yalnızca giriş yapmış kullanıcılar indirebilir
-  if (!(await suankiKullanici())) {
+  const giren = await suankiKullanici();
+  if (!giren) {
     return new NextResponse("Yetkisiz", { status: 401 });
   }
 
@@ -21,8 +23,16 @@ export async function GET(
         select: { evrakDosya: true, evrakDosyaTipi: true, evrakDosyaAdi: true },
       });
 
-    // 2. Bulunamazsa Tedarikçi Cari Hareketinde ara
+    // Müşteri evrakı: finans ya da müşteri yetkisi olan görür
+    if (kayit && kayit.evrakDosya && !gorebilir(giren.rol, "finans") && !gorebilir(giren.rol, "musteri")) {
+      return new NextResponse("Yetkisiz", { status: 401 });
+    }
+
+    // 2. Bulunamazsa Tedarikçi Cari Hareketinde ara (tedarikçi evrakı: satış personeli göremez)
     if (!kayit || !kayit.evrakDosya) {
+      if (!gorebilir(giren.rol, "tedarikci") && !gorebilir(giren.rol, "satinalma")) {
+        return new NextResponse("Yetkisiz", { status: 401 });
+      }
       kayit = await prisma.tedarikciHareket.findUnique({
         where: { id },
         select: { evrakDosya: true, evrakDosyaTipi: true, evrakDosyaAdi: true },

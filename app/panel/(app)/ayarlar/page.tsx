@@ -8,10 +8,12 @@ import SilButon from "@/components/SilButon";
 import KaydetButonu from "@/components/KaydetButonu";
 import { sablonGrubu, sablonlariGrupla } from "@/lib/sablon";
 import Link from "next/link";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
 export default async function AyarlarSayfasi() {
+  await sayfaYetkisi("yonetim");
   const kullanici = await suankiKullanici();
 
   // YÖNETİCİ DEĞİLSE AYARLAR SAYFASINA ERİŞEMEZ

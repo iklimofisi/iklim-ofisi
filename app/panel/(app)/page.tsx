@@ -4,6 +4,8 @@ import Link from "next/link";
 import { teklifToplamlari, tarihYaz } from "@/lib/teklif-hesap";
 import { siparisNetTutari } from "@/lib/siparis-tutari";
 import SatisPaneli, { DONEMLER, type Donem } from "@/components/SatisPaneli";
+import { sayfaYetkisi } from "@/lib/oturum";
+import { gorebilir } from "@/lib/roller";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +18,17 @@ export default async function PanelOzet({
 }: {
   searchParams?: Record<string, string | string[] | undefined>;
 }) {
+  const giren = await sayfaYetkisi("ozet");
+  // Özet, kullanıcının rolüne göre: her kutu yalnız o bölümü görebilene gösterilir
+  const gor = {
+    crm: gorebilir(giren.rol, "crm"),
+    teklif: gorebilir(giren.rol, "teklif"),
+    musteri: gorebilir(giren.rol, "musteri"),
+    siparis: gorebilir(giren.rol, "siparis"),
+    satinalma: gorebilir(giren.rol, "satinalma"),
+    finans: gorebilir(giren.rol, "finans"),
+  };
+  const yetkiYok = searchParams?.yetki === "yok";
   const donemGirdi = searchParams?.donem;
   const donemKodu = Array.isArray(donemGirdi) ? donemGirdi[0] : donemGirdi;
   const donem: Donem = DONEMLER.some((d) => d.kod === donemKodu) ? (donemKodu as Donem) : "3ay";
@@ -37,6 +50,7 @@ export default async function PanelOzet({
     buAyOnaylananSiparisler,
     sonTalepler,
     gelenHatirlatmalar,
+    satinalmaDurumlari,
   ] = await Promise.all([
     prisma.musteri.count({ where: GERCEK_MUSTERI }),
     prisma.teklif.count({ where: { durum: "BEKLEMEDE", arsivTarihi: null } }),
@@ -61,7 +75,12 @@ export default async function PanelOzet({
       orderBy: { hatirlatmaTarihi: "asc" },
       take: 5,
     }),
+    // Satınalma özeti (tablo henüz yoksa boş)
+    gor.satinalma
+      ? prisma.satinalmaSiparisi.groupBy({ by: ["durum"], _count: { _all: true } }).catch(() => [] as { durum: string; _count: { _all: number } }[])
+      : Promise.resolve([] as { durum: string; _count: { _all: number } }[]),
   ]);
+  const sasSay = (...d: string[]) => satinalmaDurumlari.filter((x) => d.includes(x.durum)).reduce((a, x) => a + x._count._all, 0);
 
   const toplamBorc = cariHareketler.filter((c) => c.tur === "BORC").reduce((a, c) => a + c.tutar, 0);
   const toplamAlacak = cariHareketler.filter((c) => c.tur === "ALACAK").reduce((a, c) => a + c.tutar, 0);
@@ -85,11 +104,21 @@ export default async function PanelOzet({
     .sort((a, b) => b.bakiye - a.bakiye)
     .slice(0, 5);
 
-  const kartlar = [
-    { baslik: "Müşteri Sayısı", deger: musteriSayisi.toString() },
-    { baslik: "Bu Ay Onaylanan Sipariş Cirosu", deger: paraFormat(buAyCiro) },
-    { baslik: "Bekleyen Tahsilat", deger: paraFormat(bekleyenTahsilat), vurgu: bekleyenTahsilat > 0 },
-    { baslik: "Teklif Bekleyen", deger: bekleyenTeklif.toString() },
+  const kartlar: { baslik: string; deger: string; vurgu?: boolean; href?: string }[] = [
+    ...(gor.musteri ? [{ baslik: "Müşteri Sayısı", deger: musteriSayisi.toString() }] : []),
+    ...(gor.finans
+      ? [
+          { baslik: "Bu Ay Onaylanan Sipariş Cirosu", deger: paraFormat(buAyCiro) },
+          { baslik: "Bekleyen Tahsilat", deger: paraFormat(bekleyenTahsilat), vurgu: bekleyenTahsilat > 0 },
+        ]
+      : []),
+    ...(gor.teklif ? [{ baslik: "Teklif Bekleyen", deger: bekleyenTeklif.toString() }] : []),
+    ...(gor.satinalma
+      ? [
+          { baslik: "Onay Bekleyen Satınalma", deger: sasSay("ONAY_BEKLIYOR").toString(), vurgu: sasSay("ONAY_BEKLIYOR") > 0, href: "/panel/satinalma/siparisler" },
+          { baslik: "Teslim Bekleyen Satınalma", deger: sasSay("ONAYLANDI", "KISMEN_TESLIM").toString(), href: "/panel/satinalma/siparisler" },
+        ]
+      : []),
   ];
 
   return (
@@ -97,7 +126,13 @@ export default async function PanelOzet({
       <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Panel</p>
       <h1 className="font-display text-2xl font-semibold text-metin mb-8">Genel Özet</h1>
 
-      {onayBekleyenSiparis > 0 && (
+      {yetkiYok && (
+        <p className="bg-sicak-light border border-sicak/30 text-sicak-dim text-sm rounded-lg p-4 mb-4">
+          Açmak istediğiniz sayfa için yetkiniz yok. Gerekirse admin ile görüşün.
+        </p>
+      )}
+
+      {gor.siparis && onayBekleyenSiparis > 0 && (
         <Link
           href="/panel/siparisler"
           className="focus-ring block bg-sicak-light border border-sicak/30 rounded-lg p-4 mb-4 hover:border-sicak transition-colors"
@@ -108,7 +143,7 @@ export default async function PanelOzet({
         </Link>
       )}
 
-      {gelenHatirlatmalar.length > 0 && (
+      {gor.crm && gelenHatirlatmalar.length > 0 && (
         <div className="bg-sicak-light border border-sicak/30 rounded-lg p-4 mb-6">
           <p className="text-sm text-sicak-dim font-medium mb-2">
             ⏰ {gelenHatirlatmalar.length} hatırlatma bugün veya öncesi için
@@ -132,19 +167,29 @@ export default async function PanelOzet({
       )}
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {kartlar.map((k) => (
-          <div key={k.baslik} className="bg-yuzey border border-hat rounded-lg p-5">
-            <p className="text-xs text-metin/55 mb-2">{k.baslik}</p>
-            <p className={`font-mono text-xl font-medium ${"vurgu" in k && k.vurgu ? "text-sicak-dim" : "text-metin"}`}>
-              {k.deger}
-            </p>
-          </div>
-        ))}
+        {kartlar.map((k) => {
+          const ic = (
+            <>
+              <p className="text-xs text-metin/55 mb-2">{k.baslik}</p>
+              <p className={`font-mono text-xl font-medium ${k.vurgu ? "text-sicak-dim" : "text-metin"}`}>{k.deger}</p>
+            </>
+          );
+          return k.href ? (
+            <Link key={k.baslik} href={k.href} className="focus-ring block bg-yuzey border border-hat rounded-lg p-5 hover:border-soguk transition-colors">
+              {ic}
+            </Link>
+          ) : (
+            <div key={k.baslik} className="bg-yuzey border border-hat rounded-lg p-5">
+              {ic}
+            </div>
+          );
+        })}
       </div>
 
-      <SatisPaneli donem={donem} />
+      {gor.crm && <SatisPaneli donem={donem} />}
 
       <div className="grid sm:grid-cols-2 gap-6">
+        {gor.teklif && (
         <div className="bg-yuzey border border-hat rounded-lg p-5">
           <h2 className="font-display font-medium text-metin mb-4">Son Teklifler</h2>
           {sonTeklifler.length === 0 && (
@@ -187,8 +232,12 @@ export default async function PanelOzet({
             })}
           </div>
         </div>
+        )}
 
+        {(gor.finans || gor.crm) && (
         <div className="bg-yuzey border border-hat rounded-lg p-5">
+          {gor.finans && (
+          <>
           <h2 className="font-display font-medium text-metin mb-4">En Yüksek Bakiyeli Müşteriler</h2>
           {enBorcluMusteriler.length === 0 && (
             <p className="text-sm text-metin/50">Bekleyen tahsilat yok.</p>
@@ -205,9 +254,11 @@ export default async function PanelOzet({
               </Link>
             ))}
           </div>
+          </>
+          )}
 
-          {sonTalepler.length > 0 && (
-            <div className="mt-6 pt-5 border-t border-hat">
+          {gor.crm && sonTalepler.length > 0 && (
+            <div className={gor.finans ? "mt-6 pt-5 border-t border-hat" : ""}>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-display font-medium text-sm text-metin">Okunmamış Web Talepleri</h3>
                 <Link href="/panel/talepler" className="text-xs text-soguk-dim hover:underline">
@@ -223,7 +274,9 @@ export default async function PanelOzet({
               </div>
             </div>
           )}
+          {!gor.finans && sonTalepler.length === 0 && <p className="text-sm text-metin/50">Okunmamış web talebi yok.</p>}
         </div>
+        )}
       </div>
     </div>
   );

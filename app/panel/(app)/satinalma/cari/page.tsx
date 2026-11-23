@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { tedarikciHareketEkle, tedarikciHareketIptal } from "@/lib/actions";
 import KayitIslemButonu from "@/components/KayitIslemButonu";
-import { suankiKullanici } from "@/lib/oturum";
+import { suankiKullanici, sayfaYetkisi } from "@/lib/oturum";
 import { finansYetkilisiMi } from "@/lib/roller";
 import TedarikciFiltre from "@/components/TedarikciFiltre";
 import Link from "next/link";
@@ -18,6 +18,7 @@ export default async function TedarikciCariSayfasi({
 }: {
   searchParams: { tedarikci?: string };
 }) {
+  await sayfaYetkisi("tedarikci");
   const secili = searchParams?.tedarikci ?? "hepsi";
 
   const bugun = new Date();
@@ -45,7 +46,7 @@ export default async function TedarikciCariSayfasi({
 
   // İptal edilen hareketler listede (üstü çizili) görünür ama bakiyeye girmez
   const bakiye = hareketler.reduce((a, h) => (h.iptalTarihi ? a : a + (h.tur === "BORC" ? h.tutar : -h.tutar)), 0);
-  const yonetici = finansYetkilisiMi(giren?.rol); // finansal kayıt iptali: yönetici ya da muhasebe
+  const yonetici = finansYetkilisiMi(giren?.rol); // finansal kayıt iptali: admin ya da muhasebe
 
   return (
     <div>

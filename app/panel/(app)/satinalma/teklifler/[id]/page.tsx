@@ -7,6 +7,7 @@ import KaydetButonu from "@/components/KaydetButonu";
 import SatinalmaKalemGirisi from "@/components/SatinalmaKalemGirisi";
 import { satinalmaToplami, kalemToplami, iskontoGecerli, netAlis, satinalmaNetToplami } from "@/lib/satinalma-hesap";
 import { satinalmaIskontoKaydet } from "@/lib/tcl-teklif-actions";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ function paraFormat(n: number, paraBirimi: string = "TRY") {
 }
 
 export default async function SatinalmaTeklifiDetay({ params }: { params: { id: string } }) {
+  await sayfaYetkisi("satinalma");
   const [satinalmaTeklifi, musteriler] = await Promise.all([
     prisma.satinalmaTeklifi.findUnique({
       where: { id: params.id },

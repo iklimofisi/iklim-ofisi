@@ -4,6 +4,7 @@ import TakipNotuEditor from "@/components/TakipNotuEditor";
 import Link from "next/link";
 import { teklifToplamlari } from "@/lib/teklif-hesap";
 import KaydetButonu from "@/components/KaydetButonu";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ function paraFormat(n: number, pb: string = "TRY") {
 }
 
 export default async function ProjeTakipPage() {
+  await sayfaYetkisi("crm");
   const [projeler, bagimsizTeklifler] = await Promise.all([
     prisma.proje.findMany({
       include: {

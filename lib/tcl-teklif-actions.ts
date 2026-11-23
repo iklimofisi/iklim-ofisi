@@ -118,7 +118,7 @@ async function dosyayiOku(
 export type TclOkumaSonucu = { basarili: true; dosya: string; sonuc: TclSonuc } | { basarili: false; dosya: string; hata: string; metinsiz?: boolean };
 
 export async function tclTeklifPdfOku(formData: FormData): Promise<TclOkumaSonucu> {
-  await islemZorunlu();
+  await islemZorunlu("satinalma");
   const r = await dosyayiOku(formData.get("pdf"), formData.get("ocrMetni"));
   if ("hata" in r)
     return r.hata === METINSIZ
@@ -128,7 +128,7 @@ export async function tclTeklifPdfOku(formData: FormData): Promise<TclOkumaSonuc
 }
 
 export async function tclSatinalmaKaydet(formData: FormData) {
-  const kullanici = await islemZorunlu();
+  const kullanici = await islemZorunlu("satinalma");
   const baslik = String(formData.get("baslik") ?? "").trim().slice(0, 300);
   const tedarikciId = String(formData.get("tedarikciId") ?? "");
   // Hata olursa kullanıcı yüklemeyi yaptığı sayfaya döner
@@ -188,7 +188,7 @@ export async function tclSatinalmaKaydet(formData: FormData) {
 
 // Satınalma teklifinin alış iskontosu (liste fiyatlarından düşülecek %). Kalemler değişmez.
 export async function satinalmaIskontoKaydet(formData: FormData) {
-  const kullanici = await islemZorunlu();
+  const kullanici = await islemZorunlu("satinalma");
   const id = String(formData.get("satinalmaTeklifiId") ?? "");
   const st = id ? await prisma.satinalmaTeklifi.findUnique({ where: { id }, select: { id: true, alisIskontoYuzde: true } }) : null;
   if (!st) redirect("/panel/satinalma/teklifler");

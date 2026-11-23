@@ -7,10 +7,12 @@ import UrunExcelYukle from "@/components/UrunExcelYukle";
 import Link from "next/link";
 import KaydetButonu from "@/components/KaydetButonu";
 import UrunFotografi from "@/components/UrunFotografi";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
 export default async function UrunlerSayfasi() {
+  await sayfaYetkisi("urun");
   const [urunler, markalar] = await Promise.all([
     prisma.urun.findMany({ include: { marka: true }, orderBy: { ad: "asc" } }),
     prisma.marka.findMany({ orderBy: { ad: "asc" } }),

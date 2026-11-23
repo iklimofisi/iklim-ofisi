@@ -9,6 +9,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { islemZorunlu } from "@/lib/oturum";
+import { islemBolumu } from "@/lib/roller";
 import { islemKaydet } from "@/lib/islem-kaydi";
 import { paraBirimiDogrula } from "@/lib/para";
 import { tutarOku } from "@/lib/toplam-dagit";
@@ -22,7 +23,8 @@ import { kalemNet, yuvarla2, sasNo, teslimDurumu, teslimAlinan, malKabulAcikMi, 
 export type SasSonuc = { hata?: string; tamam?: string; git?: string };
 
 async function yetki(islem: string, girdi?: FormData | Record<string, unknown>) {
-  const kullanici = await islemZorunlu();
+  // Rol yetkisi: işlemin bölümü lib/roller.ts → ISLEM_BOLUMU (listede yoksa yalnız admin)
+  const kullanici = await islemZorunlu(islemBolumu(islem));
   await islemKaydet(kullanici, islem, girdi);
   return kullanici;
 }
@@ -162,7 +164,7 @@ export async function satinalmaSiparisiOlustur(fd: FormData): Promise<SasSonuc> 
   });
   yenile(yeni.id, siparisId);
   return {
-    tamam: otomatik ? `${sasNo(yeni.no)} açıldı ve onaylandı.` : `${sasNo(yeni.no)} açıldı; tutar onay eşiğinin üstünde olduğu için yönetici onayı bekliyor.`,
+    tamam: otomatik ? `${sasNo(yeni.no)} açıldı ve onaylandı.` : `${sasNo(yeni.no)} açıldı; tutar onay eşiğinin üstünde olduğu için admin onayı bekliyor.`,
     git: `/panel/satinalma/siparisler/${yeni.id}`,
   };
 }
@@ -170,7 +172,7 @@ export async function satinalmaSiparisiOlustur(fd: FormData): Promise<SasSonuc> 
 // --- ONAY / RED -------------------------------------------------------------------
 export async function satinalmaSiparisiOnayla(id: string): Promise<SasSonuc> {
   const giren = await yetki("satinalmaSiparisiOnayla", { satinalmaSiparisiId: id });
-  if (giren.rol !== "ADMIN") return { hata: "Satınalma siparişini yalnız yönetici onaylayabilir." };
+  if (giren.rol !== "ADMIN") return { hata: "Satınalma siparişini yalnız admin onaylayabilir." };
   const s = await prisma.satinalmaSiparisi.findUnique({ where: { id }, select: { durum: true, siparisId: true } });
   if (!s) return { hata: "Sipariş bulunamadı." };
   if (s.durum !== "ONAY_BEKLIYOR") return { hata: "Bu sipariş onay beklemiyor." };
@@ -181,7 +183,7 @@ export async function satinalmaSiparisiOnayla(id: string): Promise<SasSonuc> {
 
 export async function satinalmaSiparisiReddet(id: string, neden: string): Promise<SasSonuc> {
   const giren = await yetki("satinalmaSiparisiReddet", { satinalmaSiparisiId: id, neden });
-  if (giren.rol !== "ADMIN") return { hata: "Satınalma siparişini yalnız yönetici reddedebilir." };
+  if (giren.rol !== "ADMIN") return { hata: "Satınalma siparişini yalnız admin reddedebilir." };
   const nedenTemiz = String(neden ?? "").trim().slice(0, 500);
   if (!nedenTemiz) return { hata: "Red nedenini yazın." };
   const s = await prisma.satinalmaSiparisi.findUnique({ where: { id }, select: { durum: true, siparisId: true } });
@@ -195,7 +197,7 @@ export async function satinalmaSiparisiReddet(id: string, neden: string): Promis
 // --- İPTAL (silinmez) -------------------------------------------------------------
 export async function satinalmaSiparisiIptal(id: string, neden: string): Promise<SasSonuc> {
   const giren = await yetki("satinalmaSiparisiIptal", { satinalmaSiparisiId: id, neden });
-  if (giren.rol !== "ADMIN") return { hata: "Satınalma siparişini yalnız yönetici iptal edebilir." };
+  if (giren.rol !== "ADMIN") return { hata: "Satınalma siparişini yalnız admin iptal edebilir." };
   const nedenTemiz = String(neden ?? "").trim().slice(0, 500);
   if (!nedenTemiz) return { hata: "İptal nedenini yazın." };
   const s = await prisma.satinalmaSiparisi.findUnique({
@@ -326,7 +328,7 @@ export async function malKabulEkle(fd: FormData): Promise<SasSonuc> {
 
 export async function malKabulIptal(malKabulId: string, neden: string): Promise<SasSonuc> {
   const giren = await yetki("malKabulIptal", { malKabulId, neden });
-  if (giren.rol !== "ADMIN") return { hata: "Mal kabulü yalnız yönetici iptal edebilir." };
+  if (giren.rol !== "ADMIN") return { hata: "Mal kabulü yalnız admin iptal edebilir." };
   const nedenTemiz = String(neden ?? "").trim().slice(0, 500);
   if (!nedenTemiz) return { hata: "İptal nedenini yazın." };
   const m = await prisma.malKabul.findUnique({
@@ -413,10 +415,10 @@ export async function alisFaturasiEkle(fd: FormData): Promise<SasSonuc> {
   return { tamam: "Alış faturası tedarikçi cari hesabına borç olarak işlendi." };
 }
 
-// --- ONAY EŞİĞİ (yönetici) ------------------------------------------------------------------
+// --- ONAY EŞİĞİ (admin) ------------------------------------------------------------------
 export async function satinalmaOnayEsigiKaydet(fd: FormData): Promise<SasSonuc> {
   const giren = await yetki("satinalmaOnayEsigiKaydet", fd);
-  if (giren.rol !== "ADMIN") return { hata: "Onay eşiğini yalnız yönetici değiştirebilir." };
+  if (giren.rol !== "ADMIN") return { hata: "Onay eşiğini yalnız admin değiştirebilir." };
   const ham = metin(fd, "esik", 30);
   const esik = ham ? tutarOku(ham) : null;
   if (ham && (esik === null || esik < 0)) return { hata: "Eşik tutarı anlaşılamadı." };
@@ -426,7 +428,7 @@ export async function satinalmaOnayEsigiKaydet(fd: FormData): Promise<SasSonuc> 
     create: { id: "default", satinalmaOnayEsigi: esik },
   });
   revalidatePath("/panel/satinalma/siparisler");
-  return { tamam: esik == null ? "Eşik kaldırıldı: yöneticinin açtıkları dışındaki siparişler onay bekler." : "Onay eşiği kaydedildi." };
+  return { tamam: esik == null ? "Eşik kaldırıldı: admin'in açtıkları dışındaki siparişler onay bekler." : "Onay eşiği kaydedildi." };
 }
 
 // --- TEDARİKÇİYE GÖNDERME (e-posta ya da WhatsApp; kanalı kullanıcı seçer) ----------------------

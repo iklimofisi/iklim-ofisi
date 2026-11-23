@@ -4,10 +4,12 @@ import Link from "next/link";
 import { siparisTalebiOlustur } from "@/lib/actions";
 import KaydetButonu from "@/components/KaydetButonu";
 import { musterisizMi } from "@/lib/musterisiz";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
 export default async function SiparisTalebi({ params }: { params: { id: string } }) {
+  await sayfaYetkisi("teklif");
   const teklif = await prisma.teklif.findUnique({
     where: { id: params.id },
     include: { musteri: true, kalemler: true, siparis: true },
@@ -39,7 +41,7 @@ export default async function SiparisTalebi({ params }: { params: { id: string }
 
       <p className="text-sm text-metin/60 mb-6 bg-soguk-light text-soguk-dim rounded-md px-4 py-3">
         Bu talep gönderildikten sonra sipariş "Onay Bekliyor" durumunda olacak.
-        Bir Yönetici onaylamadan sipariş aktif olmaz, cari hesaba borç
+        Bir Admin onaylamadan sipariş aktif olmaz, cari hesaba borç
         yazılmaz ve sevkiyat başlatılamaz.
       </p>
 

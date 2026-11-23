@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { girisZorunlu } from "@/lib/oturum";
+import { girisZorunlu, sayfaYetkisi } from "@/lib/oturum";
 import NotFormu from "@/components/NotFormu";
 import NotKarti, { type NotKartVerisi } from "@/components/NotKarti";
 import { trSimdi, alicilariOku } from "@/lib/notlar";
@@ -22,6 +22,7 @@ const sade = (s: string) =>
   s.toLocaleLowerCase("tr-TR").replace(/ı/g, "i").replace(/ğ/g, "g").replace(/ü/g, "u").replace(/ş/g, "s").replace(/ö/g, "o").replace(/ç/g, "c");
 
 export default async function NotlarSayfasi({ searchParams }: { searchParams: { g?: string; q?: string } }) {
+  await sayfaYetkisi("genel");
   const ben = await girisZorunlu();
   const sekme = SEKMELER.some((s) => s.kod === searchParams.g) ? searchParams.g! : "hepsi";
   const ara = (searchParams.q ?? "").trim().slice(0, 100);

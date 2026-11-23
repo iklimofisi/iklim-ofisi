@@ -9,7 +9,8 @@ import {
   teslimKaydiEkle,
   teslimKaydiSil,
 } from "@/lib/actions";
-import { suankiKullanici } from "@/lib/oturum";
+import { suankiKullanici, sayfaYetkisi } from "@/lib/oturum";
+import { maliyetGorur } from "@/lib/roller";
 import SiparisDurumSecici from "@/components/SiparisDurumSecici";
 import SiparisOnayReddet from "@/components/SiparisOnayReddet";
 import SiparisSureciGostergesi from "@/components/SiparisSureciGostergesi";
@@ -28,6 +29,7 @@ function paraFormat(n: number, paraBirimi: string) {
 }
 
 export default async function SiparisDetay({ params }: { params: { id: string } }) {
+  await sayfaYetkisi("siparis");
   const [siparis, giren] = await Promise.all([
     prisma.siparis.findUnique({
       where: { id: params.id },
@@ -56,6 +58,7 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
   const maliyetTl = siparis.satinalmaSiparisleri.filter((x) => maliyeteSayilirMi(x.durum)).reduce((a, x) => a + sasTl(x), 0);
   const brutKar = satisTl - maliyetTl;
   const isAdmin = giren?.rol === "ADMIN";
+  const maliyetGor = maliyetGorur(giren?.rol); // satış personeli maliyet / kâr görmez
   const aktifMi = siparis.durum !== "ONAY_BEKLIYOR" && siparis.durum !== "REDDEDILDI";
 
   return (
@@ -153,7 +156,7 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
           {isAdmin ? (
             <SiparisOnayReddet siparisId={siparis.id} />
           ) : (
-            <p className="text-sm text-metin/50">Bu talebi sadece bir Yönetici onaylayabilir.</p>
+            <p className="text-sm text-metin/50">Bu talebi sadece bir Admin onaylayabilir.</p>
           )}
         </div>
       )}
@@ -201,7 +204,8 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
         </div>
       </div>
 
-      {/* GERÇEK MALİYET (satınalma siparişlerinden) */}
+      {/* GERÇEK MALİYET (satınalma siparişlerinden) — satış rolüne gösterilmez */}
+      {maliyetGor && (
       <div className="bg-yuzey border border-hat rounded-lg p-5 mb-8 print:hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <h2 className="font-display font-medium text-metin">Maliyet & Brüt Kâr</h2>
@@ -252,6 +256,7 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
           </>
         )}
       </div>
+      )}
 
       {aktifMi && (
         <>

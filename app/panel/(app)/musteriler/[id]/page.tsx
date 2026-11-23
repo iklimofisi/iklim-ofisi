@@ -8,6 +8,8 @@ import GorusmeFormu from "@/components/GorusmeFormu";
 import SilButon from "@/components/SilButon";
 import { teklifToplamlari, tarihYaz } from "@/lib/teklif-hesap";
 import KaydetButonu from "@/components/KaydetButonu";
+import { sayfaYetkisi } from "@/lib/oturum";
+import { gorebilir } from "@/lib/roller";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +38,10 @@ const teklifDurumEtiket: Record<string, string> = {
 };
 
 export default async function MusteriDetay({ params }: { params: { id: string } }) {
+  const giren = await sayfaYetkisi("musteri");
+  // Proje ve görüşmeler satış bölümüdür (muhasebe görmez); teklifler teklif yetkisi olana
+  const crmGor = gorebilir(giren.rol, "crm");
+  const teklifGor = gorebilir(giren.rol, "teklif");
   // Müşterisiz teklif sistem kaydının müşteri kartı yoktur; o tekliflerin listesine gidilir
   if (params.id === MUSTERISIZ_ID) redirect(`/panel/teklifler?musteri=${MUSTERISIZ_ID}`);
   const musteri = await prisma.musteri.findUnique({
@@ -74,12 +80,14 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
         <div>
           <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Müşteri</p>
           <h1 className="font-display text-2xl font-semibold text-metin">{musteri.ad}</h1>
+          {crmGor && (
           <a
             href="#gorusmeler"
             className="focus-ring inline-block mt-2 text-xs text-soguk-dim border border-soguk/40 bg-soguk-light rounded-full px-3 py-1 hover:border-soguk"
           >
             📞 Görüşme notu / hatırlatma ekle
           </a>
+          )}
         </div>
         <div className="bg-yuzey border border-hat rounded-lg px-5 py-3 text-right shrink-0">
           <p className="text-xs text-metin/50">Cari Bakiye</p>
@@ -245,6 +253,7 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
       </div>
 
       {/* PROJELER (Projeler ekranındaki bu müşteriye ait bilgiler) */}
+      {crmGor && (
       <div className="mb-10">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-display font-medium text-metin">Projeler ({musteri.projeler.length})</h2>
@@ -304,7 +313,9 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
           )}
         </div>
       </div>
+      )}
 
+      {teklifGor && (
       <div className="mb-10">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-display font-medium text-metin">Teklifler ({musteri.teklifler.length})</h2>
@@ -339,6 +350,7 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
           )}
         </div>
       </div>
+      )}
 
       <div>
         <div className="flex items-center justify-between mb-3">
@@ -392,6 +404,7 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
         </div>
       </div>
 
+      {crmGor && (
       <div id="gorusmeler" className="mt-10 scroll-mt-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-display font-medium text-metin">Görüşmeler & Ziyaretler ({musteri.ziyaretler.length})</h2>
@@ -407,6 +420,7 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
         </div>
         <ZiyaretListesi ziyaretler={musteri.ziyaretler} />
       </div>
+      )}
     </div>
   );
 }

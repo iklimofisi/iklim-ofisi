@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { suankiKullanici } from "@/lib/oturum";
+import { suankiKullanici, sayfaYetkisi } from "@/lib/oturum";
 import { getTcmbKurlari } from "@/lib/kur";
 import { paraFormat } from "@/lib/para";
 import { satinalmaSiparisiOlustur, satinalmaOnayEsigiKaydet } from "@/lib/satinalma-siparis-actions";
@@ -28,6 +28,7 @@ const SUZGECLER: { anahtar: string; etiket: string; durumlar?: string[] }[] = [
 const teklifNoYaz = (n: number) => `TKL-${String(n).padStart(4, "0")}`;
 
 export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { searchParams?: { teklif?: string; siparis?: string; durum?: string; yeni?: string } }) {
+  await sayfaYetkisi("satinalma");
   const giren = await suankiKullanici();
   const yonetici = giren?.rol === "ADMIN";
   const suzgec = SUZGECLER.find((s) => s.anahtar === searchParams?.durum) ?? SUZGECLER[0];
@@ -171,8 +172,8 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-metin/50">
               {esik != null
-                ? `Onay eşiği: ${paraFormat(esik, "TRY")} (KDV hariç). Üstündeki siparişler yönetici onayı bekler.`
-                : "Onay eşiği tanımlı değil: yöneticinin açtıkları dışındaki siparişler yönetici onayı bekler."}
+                ? `Onay eşiği: ${paraFormat(esik, "TRY")} (KDV hariç). Üstündeki siparişler admin onayı bekler.`
+                : "Onay eşiği tanımlı değil: admin'in açtıkları dışındaki siparişler admin onayı bekler."}
             </p>
             <button type="submit" className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors disabled:opacity-60">
               Siparişi aç
@@ -259,7 +260,7 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
         </table>
       </div>
 
-      {/* ONAY EŞİĞİ (yönetici) */}
+      {/* ONAY EŞİĞİ (admin) */}
       {yonetici && (
         <SonucluForm action={satinalmaOnayEsigiKaydet} className="mt-8 bg-yuzey border border-hat rounded-lg p-5 flex flex-wrap items-end gap-3">
           <div>
@@ -276,7 +277,7 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
             Eşiği kaydet
           </button>
           <p className="text-xs text-metin/50 basis-full">
-            Personelin açtığı ve TL karşılığı bu tutarı aşmayan siparişler kendiliğinden onaylanır; aşanlar yönetici onayına düşer. Yöneticinin
+            Personelin açtığı ve TL karşılığı bu tutarı aşmayan siparişler kendiliğinden onaylanır; aşanlar admin onayına düşer. Admin'in
             açtığı siparişler doğrudan onaylıdır.
           </p>
         </SonucluForm>

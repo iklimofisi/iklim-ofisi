@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { suankiKullanici } from "@/lib/oturum";
+import { suankiKullanici, sayfaYetkisi } from "@/lib/oturum";
 import { paraFormat } from "@/lib/para";
 import { finansYetkilisiMi } from "@/lib/roller";
 import { aylikOzet, alacakYaslandirma, aySiniri, donemAnahtari, donemAdi, gecerliDonem, sonAylar, YAS_DILIMLERI, type AylikOzet } from "@/lib/finans";
@@ -29,6 +29,7 @@ function ozetOku(json: string | null): AylikOzet | null {
 }
 
 export default async function RaporSayfasi({ searchParams }: { searchParams?: { ay?: string } }) {
+  await sayfaYetkisi("finans");
   const giren = await suankiKullanici();
   const buAy = donemAnahtari(new Date());
   const ay = gecerliDonem(searchParams?.ay) ?? buAy;
@@ -74,7 +75,7 @@ export default async function RaporSayfasi({ searchParams }: { searchParams?: { 
       <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Finans</p>
-          <h1 className="font-display text-2xl font-semibold text-metin">Yatırımcı Raporu · {donemAdi(ay)}</h1>
+          <h1 className="font-display text-2xl font-semibold text-metin">Yönetim Raporu · {donemAdi(ay)}</h1>
           <p className="text-sm text-metin/60 mt-1">
             {kapali
               ? `Kapalı dönem · ${kapanis!.kapatanAdi} · ${kapanis!.kapanisTarihi.toLocaleDateString("tr-TR")} (rakamlar kapanış anındaki değerlerdir)`
@@ -110,7 +111,7 @@ export default async function RaporSayfasi({ searchParams }: { searchParams?: { 
                 🔓 Yeniden açıldı · {kapanis.acanAdi} · {kapanis.acilisTarihi?.toLocaleDateString("tr-TR")} · Neden: {kapanis.acilisNedeni}
               </>
             ) : (
-              <>Ay kapanınca bu ayın finansal kayıtları kilitlenir ve rakamlar yatırımcı raporu için sabitlenir.</>
+              <>Ay kapanınca bu ayın finansal kayıtları kilitlenir ve rakamlar yönetim raporu için sabitlenir.</>
             )}
           </p>
           {finansci && !kapali && ay <= buAy && (
@@ -119,7 +120,7 @@ export default async function RaporSayfasi({ searchParams }: { searchParams?: { 
               action={donemKapat}
               etiket={`${donemAdi(ay)} dönemini kapat`}
               onayBasligi="Ay kapanışı"
-              onayMesaji={`${donemAdi(ay)} kapatılsın mı? Bu aya tarihli finansal kayıtlar kilitlenir; rakamlar rapor için saklanır. Yeniden açmayı yalnız yönetici yapabilir.`}
+              onayMesaji={`${donemAdi(ay)} kapatılsın mı? Bu aya tarihli finansal kayıtlar kilitlenir; rakamlar rapor için saklanır. Yeniden açmayı yalnız admin yapabilir.`}
               className="focus-ring text-sm font-medium text-white bg-soguk hover:bg-soguk-dim rounded-md px-4 py-2 disabled:opacity-50"
             />
           )}

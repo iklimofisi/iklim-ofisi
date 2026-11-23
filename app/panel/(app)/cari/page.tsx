@@ -3,7 +3,7 @@ import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import { cariHareketEkle, cariHareketIptal } from "@/lib/actions";
 import CariFiltre from "@/components/CariFiltre";
 import KayitIslemButonu from "@/components/KayitIslemButonu";
-import { suankiKullanici } from "@/lib/oturum";
+import { suankiKullanici, sayfaYetkisi } from "@/lib/oturum";
 import { finansYetkilisiMi } from "@/lib/roller";
 import OdemeAlModal from "@/components/OdemeAlModal";
 import KaydetButonu from "@/components/KaydetButonu";
@@ -19,6 +19,7 @@ export default async function CariSayfasi({
 }: {
   searchParams: { musteri?: string };
 }) {
+  await sayfaYetkisi("finans");
   const seciliMusteri = searchParams?.musteri ?? "hepsi";
 
   const bugun = new Date();
@@ -46,7 +47,7 @@ export default async function CariSayfasi({
 
   // İptal edilen hareketler listede (üstü çizili) görünür ama bakiyeye girmez
   const bakiye = hareketler.reduce((a, c) => (c.iptalTarihi ? a : a + (c.tur === "BORC" ? c.tutar : -c.tutar)), 0);
-  const yonetici = finansYetkilisiMi(giren?.rol); // finansal kayıt iptali: yönetici ya da muhasebe
+  const yonetici = finansYetkilisiMi(giren?.rol); // finansal kayıt iptali: admin ya da muhasebe
 
   return (
     <div>

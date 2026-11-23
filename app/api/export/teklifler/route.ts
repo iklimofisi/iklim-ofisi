@@ -2,7 +2,7 @@ import { durumFiltresi } from "@/lib/teklif-durum";
 import { musteriEtiketi } from "@/lib/musterisiz";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { suankiKullanici } from "@/lib/oturum";
+import { apiYetkisi } from "@/lib/oturum";
 import { csvOlustur, csvYaniti } from "@/lib/csv";
 
 const durumEtiket: Record<string, string> = {
@@ -16,7 +16,7 @@ function kalemToplam(k: { adet: number; birimFiyat: number; iskontoYuzde: number
 }
 
 export async function GET(req: NextRequest) {
-  const kullanici = await suankiKullanici();
+  const kullanici = await apiYetkisi("teklif");
   if (!kullanici) return new Response("Yetkisiz", { status: 401 });
 
   const sp = req.nextUrl.searchParams;

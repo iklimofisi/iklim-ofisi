@@ -4,10 +4,12 @@ import SilButon from "@/components/SilButon";
 import Link from "next/link";
 import KaydetButonu from "@/components/KaydetButonu";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
 export default async function KesifSayfasi() {
+  await sayfaYetkisi("crm");
   const kesifler = await prisma.kesifFormu.findMany({
     include: { olusturulanTeklif: true },
     orderBy: { tarih: "desc" },

@@ -7,6 +7,7 @@ import HizliAramaListesi from "@/components/HizliAramaListesi";
 import KaydetButonu from "@/components/KaydetButonu";
 import SilButon from "@/components/SilButon";
 import HavalandirmaKaynakSecici from "@/components/HavalandirmaKaynakSecici";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ const tarih = (d: Date) =>
 const m3 = (x: number) => x.toLocaleString("tr-TR", { maximumFractionDigits: 0 });
 
 export default async function HavalandirmaHesaplariSayfasi() {
+  await sayfaYetkisi("hesap");
   const [hesaplar, musteriler, klimaHesaplari] = await Promise.all([
     prisma.havalandirmaHesap.findMany({
       orderBy: { updatedAt: "desc" },

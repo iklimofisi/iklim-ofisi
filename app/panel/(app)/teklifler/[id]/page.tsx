@@ -23,6 +23,8 @@ import { satinalmaToplami, satinalmaNetToplami, iskontoGecerli, netAlis } from "
 import { satirNet } from "@/lib/siparis-tutari";
 import KaydetButonu from "@/components/KaydetButonu";
 import { miktarYaz } from "@/lib/birimler";
+import { sayfaYetkisi } from "@/lib/oturum";
+import { maliyetGorur, gorebilir } from "@/lib/roller";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +62,9 @@ function kurumsalTeklifKodu(teklifNo: number, tarih: Date) {
 }
 
 export default async function TeklifDetay({ params }: { params: { id: string } }) {
+  const giren = await sayfaYetkisi("teklif");
+  const maliyetGor = maliyetGorur(giren.rol); // satış personeli tedarikçi maliyetini görmez
+  const gorusmeGor = gorebilir(giren.rol, "crm");
   const [teklifHam, sirket, sozlesme, kopyalar, paylasim, gorusmeler] = await Promise.all([
     prisma.teklif.findUnique({
       where: { id: params.id },
@@ -103,7 +108,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
     ...(teklifHam.kaynakSatinalmaTeklifiId ? [{ id: teklifHam.kaynakSatinalmaTeklifiId }] : []),
     ...(tedarikciKonusu ? [{ baslik: tedarikciKonusu }] : []),
   ];
-  const tedarikciTeklifleri = tedarikciKosullari.length
+  const tedarikciTeklifleri = maliyetGor && tedarikciKosullari.length
     ? await prisma.satinalmaTeklifi
         .findMany({
           where: { OR: tedarikciKosullari },
@@ -346,6 +351,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
       </div>
 
       {/* TEDARİKÇİ TEKLİFİ (MALİYET) — yalnız panelde; yazdırmada ve müşteri PDF'inde yok */}
+      {maliyetGor && (
       <details open={tedarikciTeklifleri.length > 0} className="mb-6 bg-amber-50/40 border border-amber-200 rounded-lg print:hidden">
         <summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-metin flex flex-wrap items-center justify-between gap-2">
           <span>
@@ -464,6 +470,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
           })}
         </div>
       </details>
+      )}
 
       <div className="bg-yuzey border border-hat rounded-lg p-8 sm:p-12 print:border-0 print:p-0">
         {/* ŞİRKET BİLGİLERİ VE ADRESİ */}
@@ -709,6 +716,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
         />
       </section>
 
+      {gorusmeGor && (
       <section id="gorusmeler" className="mt-6 scroll-mt-6 print:hidden">
         <h2 className="font-display font-medium text-metin mb-3">
           📞 Bu Teklifle İlgili Görüşmeler{gorusmeler ? ` (${gorusmeler.length})` : ""}
@@ -718,6 +726,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
         </div>
         {gorusmeler && <ZiyaretListesi ziyaretler={gorusmeler} bosMetin="Bu teklif için henüz görüşme notu yok." />}
       </section>
+      )}
     </div>
   );
 }

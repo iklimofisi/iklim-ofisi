@@ -12,7 +12,7 @@ import KurGostergesi from "@/components/KurGostergesi";
 import { LogoTam } from "@/components/Logo";
 import { Suspense } from "react";
 import { trSimdi } from "@/lib/notlar";
-import { ROL_ETIKET, saltOkunurMu } from "@/lib/roller";
+import { ROL_ETIKET, saltOkunurMu, gorebilir, yolBolumu } from "@/lib/roller";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -56,6 +56,7 @@ const menuGruplari: MenuGrubu[] = [
       { href: "/panel/satinalma", label: "Satınalma" },
       { href: "/panel/satinalma/siparisler", label: "Satınalma Siparişleri" },
       { href: "/panel/stok", label: "Stok & Envanter" },
+      { href: "/panel/ayarlar/urunler", label: "Ürün Kataloğu" },
     ],
   },
   {
@@ -63,7 +64,7 @@ const menuGruplari: MenuGrubu[] = [
     ogeler: [
       { href: "/panel/cari", label: "Cari Hesap" },
       { href: "/panel/genel-cari", label: "Genel Finans & Çekler" },
-      { href: "/panel/rapor", label: "📈 Yatırımcı Raporu" },
+      { href: "/panel/rapor", label: "📈 Yönetim Raporu" },
     ],
   },
 ];
@@ -97,7 +98,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       })
       .catch(() => 0),
   ]);
-  // Yöneticiye: onay bekleyen satınalma siparişleri (tablo henüz yoksa 0)
+  // Admin'e: onay bekleyen satınalma siparişleri (tablo henüz yoksa 0)
   const onayBekleyenSatinalma =
     kullanici.rol === "ADMIN" ? await prisma.satinalmaSiparisi.count({ where: { durum: "ONAY_BEKLIYOR" } }).catch(() => 0) : 0;
 
@@ -110,16 +111,16 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     "/panel/satinalma/siparisler": onayBekleyenSatinalma,
   };
 
+  // Menüde yalnız kullanıcının rolünün görebildiği sayfalar (lib/roller.ts); boş kalan grup gizlenir
   const gruplar: MenuGrubu[] = [
     ...menuGruplari,
     {
       baslik: "Yönetim",
-      ogeler:
-        kullanici.rol === "ADMIN"
-          ? [...yonetimTemel, { href: "/panel/kullanicilar", label: "Kullanıcılar" }, { href: "/panel/islem-gecmisi", label: "İşlem Geçmişi" }]
-          : yonetimTemel,
+      ogeler: [...yonetimTemel, { href: "/panel/kullanicilar", label: "Kullanıcılar" }, { href: "/panel/islem-gecmisi", label: "İşlem Geçmişi" }],
     },
-  ];
+  ]
+    .map((g) => ({ ...g, ogeler: g.ogeler.filter((o) => gorebilir(kullanici.rol, yolBolumu(o.href))) }))
+    .filter((g) => g.ogeler.length > 0);
 
   return (
     <div className="min-h-screen flex flex-col sm:flex-row bg-zemin">
@@ -162,7 +163,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       <main className="flex-1 px-6 sm:px-10 py-10 max-w-5xl print:p-0 print:max-w-none">
         {saltOkunurMu(kullanici.rol) && (
           <p className="mb-6 text-xs bg-soguk-light text-soguk-dim border border-soguk/30 rounded-md px-3 py-2 print:hidden">
-            👁 Yatırımcı görünümü: kayıtları görüntüleyebilirsiniz; hiçbir kayıt değiştirilemez.
+            👁 İzleme yetkisi: kayıtları görüntüleyebilirsiniz; değişiklik yapamazsınız.
           </p>
         )}
         {children}

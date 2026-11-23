@@ -1,4 +1,4 @@
-import { suankiKullanici } from "@/lib/oturum";
+import { suankiKullanici, sayfaYetkisi } from "@/lib/oturum";
 import { profilGuncelle } from "@/lib/actions";
 import Link from "next/link";
 import KaydetButonu from "@/components/KaydetButonu";
@@ -10,6 +10,7 @@ export default async function ProfilPage({
 }: {
   searchParams: { basarili?: string; hata?: string };
 }) {
+  await sayfaYetkisi("genel");
   const kullanici = await suankiKullanici();
 
   return (

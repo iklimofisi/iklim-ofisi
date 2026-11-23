@@ -7,6 +7,7 @@ import KayitIslemButonu from "@/components/KayitIslemButonu";
 import ZiyaretListesi from "@/components/ZiyaretListesi";
 import { teklifToplamlari } from "@/lib/teklif-hesap";
 import KaydetButonu from "@/components/KaydetButonu";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ function paraFormat(n: number, paraBirimi: string = "TRY") {
 }
 
 export default async function ProjeDetay({ params }: { params: { id: string } }) {
+  await sayfaYetkisi("crm");
   const [proje, musteriler] = await Promise.all([
     prisma.proje.findUnique({
       where: { id: params.id },
@@ -48,7 +50,7 @@ export default async function ProjeDetay({ params }: { params: { id: string } })
           <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Proje</p>
           <h1 className="font-display text-2xl font-semibold text-metin">{proje.ad}</h1>
         </div>
-        <KayitIslemButonu id={proje.id} action={projeSil} sonraGit="/panel/projeler" etiket="Sil" onayBasligi="Silme onayı" onayMesaji="Yalnız teklifi olmayan proje silinebilir (yalnız yönetici). Teklifi olan proje korunur." tehlikeli />
+        <KayitIslemButonu id={proje.id} action={projeSil} sonraGit="/panel/projeler" etiket="Sil" onayBasligi="Silme onayı" onayMesaji="Yalnız teklifi olmayan proje silinebilir (yalnız admin). Teklifi olan proje korunur." tehlikeli />
       </div>
 
       <details className="bg-yuzey border border-hat rounded-lg mb-8">

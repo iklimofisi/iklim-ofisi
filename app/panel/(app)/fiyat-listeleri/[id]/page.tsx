@@ -13,6 +13,8 @@ import OnayliGonderButonu from "@/components/OnayliGonderButonu";
 import FiyatListesiSecim from "@/components/FiyatListesiSecim";
 import KaydetButonu from "@/components/KaydetButonu";
 import FiyatUrunArama, { type AramaSatiri } from "@/components/FiyatUrunArama";
+import { sayfaYetkisi } from "@/lib/oturum";
+import { maliyetGorur, yazabilir } from "@/lib/roller";
 
 export const dynamic = "force-dynamic";
 // "Şimdi güncelle" Kaya'nın PDF'ini indirip okur (birkaç saniye sürebilir)
@@ -23,6 +25,7 @@ const gun = (d: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : ""
 const sayi = (n: number | null | undefined) => (n && n > 0 ? n : null);
 
 export default async function FiyatListesiSayfasi({ params, searchParams }: { params: { id: string }; searchParams?: { yenile?: string } }) {
+  const giren = await sayfaYetkisi("fiyat");
   const [liste, urunler, kurlar] = await Promise.all([
     prisma.fiyatListesi.findUnique({
       where: { id: params.id },
@@ -47,6 +50,31 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
   if (!liste) notFound();
 
   const dugme = "focus-ring text-sm font-medium border px-4 py-2 rounded-md transition-colors";
+
+  // Satış personeli listeleri yalnız görür (arama + PDF); düzenleyici ve alış fiyatları gösterilmez
+  const salt = !yazabilir(giren.rol, "fiyat");
+  const alisGoster = maliyetGorur(giren.rol);
+  const saltGorunum = (etiket: string, satirlar: AramaSatiri[], not = "") => (
+    <div className="max-w-5xl">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <Link href="/panel/fiyat-listeleri" className="focus-ring text-sm text-metin/60 hover:text-metin">
+          ← Fiyat listelerine dön
+        </Link>
+        <div className="flex flex-wrap gap-2">
+          <a href={`/api/fiyat-listesi/${liste.id}/pdf`} target="_blank" rel="noopener" className={`${dugme} border-hat bg-white text-metin/70 hover:border-soguk`}>
+            📄 PDF Görüntüle
+          </a>
+          <a href={`/api/fiyat-listesi/${liste.id}/pdf?indir=1`} className={`${dugme} bg-soguk text-white border-soguk hover:bg-soguk-dim`}>
+            ⬇ PDF İndir
+          </a>
+        </div>
+      </div>
+      <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">{etiket}</p>
+      <h1 className="font-display text-2xl font-semibold text-metin mb-1">{liste.baslik}</h1>
+      <p className="text-xs text-metin/50 mb-6">Bu listeyi yalnız görüntüleyebilirsiniz: ürün aramak için aşağıdaki kutuyu, listenin tamamı için PDF&apos;i kullanın.</p>
+      <FiyatUrunArama satirlar={alisGoster ? satirlar : satirlar.map((s) => ({ ...s, alislar: [] }))} paraBirimi={liste.paraBirimi} not={not} />
+    </div>
+  );
 
   // İklimOfisi Toptan listesi (Netsa PDF'lerinden) ve Baran Isı listesi (HTML dosyasından):
   // alış fiyatları yalnız burada görünür
@@ -81,6 +109,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
         ...(r.alis2 ? [{ ad: "Alış kart", deger: sayi(r.alis2) }] : []),
       ],
     }));
+    if (salt) return saltGorunum(baran ? "Fiyat Listesi · Baran Isı" : "Fiyat Listesi · Toptan (Netsa)", aramaSatirlari);
     return (
       <div className="max-w-5xl">
         <Link href="/panel/fiyat-listeleri" className="focus-ring text-sm text-metin/60 hover:text-metin inline-block mb-6">
@@ -111,6 +140,24 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
 
   // Otomatik güncellenen liste (Kaya İklimlendirme): ürünler düzenlenmez, gönderirken seçilir
   if (liste.kaynak) {
+    const kayaSatirlari: AramaSatiri[] = liste.kalemler.map((k) => ({
+      id: k.id,
+      bolum: k.bolum,
+      ad: k.ad,
+      kod: k.kod,
+      marka: k.marka,
+      aciklama: k.aciklama,
+      fiyatlar: [
+        { ad: liste.fiyatBaslik ?? "Nakit", deger: sayi(k.fiyat) },
+        ...(k.fiyat2 !== null ? [{ ad: liste.fiyat2Baslik ?? "Kart", deger: sayi(k.fiyat2) }] : []),
+      ],
+      // Alış = Kaya'nın kendi fiyatı (listedeki fiyattan %5 geri alınır; Kaya sayfasındakiyle aynı hesap)
+      alislar: [
+        ...(sayi(k.fiyat) ? [{ ad: "Alış nakit", deger: Math.round(k.fiyat / (1 + KAYA_ZAM_YUZDE / 100)) }] : []),
+        ...(sayi(k.fiyat2) ? [{ ad: "Alış kart", deger: Math.round((k.fiyat2 as number) / (1 + KAYA_ZAM_YUZDE / 100)) }] : []),
+      ],
+    }));
+    if (salt) return saltGorunum("Fiyat Listesi · Otomatik", kayaSatirlari);
     return (
       <div className="max-w-5xl">
         <Link href="/panel/fiyat-listeleri" className="focus-ring text-sm text-metin/60 hover:text-metin inline-block mb-6">
@@ -118,26 +165,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
         </Link>
         <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">Fiyat Listesi · Otomatik</p>
         <h1 className="font-display text-2xl font-semibold text-metin mb-6">{liste.baslik}</h1>
-        <FiyatUrunArama
-          paraBirimi={liste.paraBirimi}
-          satirlar={liste.kalemler.map((k) => ({
-            id: k.id,
-            bolum: k.bolum,
-            ad: k.ad,
-            kod: k.kod,
-            marka: k.marka,
-            aciklama: k.aciklama,
-            fiyatlar: [
-              { ad: liste.fiyatBaslik ?? "Nakit", deger: sayi(k.fiyat) },
-              ...(k.fiyat2 !== null ? [{ ad: liste.fiyat2Baslik ?? "Kart", deger: sayi(k.fiyat2) }] : []),
-            ],
-            // Alış = Kaya'nın kendi fiyatı (listedeki fiyattan %5 geri alınır; Kaya sayfasındakiyle aynı hesap)
-            alislar: [
-              ...(sayi(k.fiyat) ? [{ ad: "Alış nakit", deger: Math.round(k.fiyat / (1 + KAYA_ZAM_YUZDE / 100)) }] : []),
-              ...(sayi(k.fiyat2) ? [{ ad: "Alış kart", deger: Math.round((k.fiyat2 as number) / (1 + KAYA_ZAM_YUZDE / 100)) }] : []),
-            ],
-          }))}
-        />
+        <FiyatUrunArama paraBirimi={liste.paraBirimi} satirlar={kayaSatirlari} />
         <KayaFiyatListesi
           liste={{
             id: liste.id,
@@ -180,6 +208,8 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
           ? [{ ad: "Alış", deger: kodAlislari[k.kod.trim()] }]
           : [],
   }));
+  if (salt)
+    return saltGorunum("Fiyat Listesi", aramaSatirlari, liste.iskontoYuzde > 0 ? `PDF'te %${liste.iskontoYuzde.toLocaleString("tr-TR")} iskonto uygulanır.` : "");
   return (
     <div className="max-w-4xl">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">

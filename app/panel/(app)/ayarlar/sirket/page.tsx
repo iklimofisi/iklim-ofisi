@@ -2,10 +2,12 @@ import { getSirketAyarlari } from "@/lib/sirket";
 import { sirketAyarlariGuncelle } from "@/lib/actions";
 import Link from "next/link";
 import KaydetButonu from "@/components/KaydetButonu";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
 export default async function SirketAyarlariPage() {
+  await sayfaYetkisi("yonetim");
   const sirket = await getSirketAyarlari();
 
   return (

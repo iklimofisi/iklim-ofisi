@@ -42,7 +42,7 @@ const TOPTAN_MARKALAR_SINIRI = 40; // tek seferde işlenecek en fazla marka (Bar
 const BARAN_EN_AZ_TOPLAM = 20;
 
 async function yetki(islem: string, girdi?: FormData | Record<string, unknown>) {
-  const kullanici = await islemZorunlu();
+  const kullanici = await islemZorunlu("fiyat");
   await islemKaydet(kullanici, islem, girdi);
   return kullanici;
 }
@@ -60,7 +60,7 @@ export async function baranListeOlustur() {
   await listeAc(BARAN_KAYNAK, BARAN_BASLIK, "baranListeOlustur");
 }
 async function listeAc(kaynak: string, baslik: string, islem: string) {
-  const giren = await islemZorunlu();
+  const giren = await islemZorunlu("fiyat");
   const mevcut = await prisma.fiyatListesi.findFirst({ where: { kaynak }, orderBy: { createdAt: "asc" }, select: { id: true } });
   if (mevcut) redirect(`/panel/fiyat-listeleri/${mevcut.id}`);
   await islemKaydet(giren, islem, {});
@@ -114,7 +114,7 @@ export type ToptanOkumaSonucu = { basarili: true; dosya: string; sonuc: NetsaSon
 
 // Tek PDF okur (her dosya ayrı çağrılır: Vercel'de bir istek en fazla ~4,5 MB olabilir)
 export async function toptanPdfOku(formData: FormData): Promise<ToptanOkumaSonucu> {
-  await islemZorunlu();
+  await islemZorunlu("fiyat");
   const dosya = formData.get("pdf");
   const ad = dosya && typeof dosya === "object" && "name" in dosya ? String((dosya as File).name).slice(0, 200) : "";
   if (!dosya || typeof dosya === "string" || dosya.size === 0) return { basarili: false, dosya: ad, hata: "Dosya seçilmedi." };

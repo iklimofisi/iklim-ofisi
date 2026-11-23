@@ -9,6 +9,8 @@ import HizliAramaListesi from "@/components/HizliAramaListesi";
 import KaydetButonu from "@/components/KaydetButonu";
 import { FIYAT_SUTUN_KALIPLARI, ikiFiyatli, iskontoKapsamGecerli } from "@/lib/fiyat-listesi";
 import SilButon from "@/components/SilButon";
+import { sayfaYetkisi } from "@/lib/oturum";
+import { yazabilir } from "@/lib/roller";
 
 export const dynamic = "force-dynamic";
 // Kaya listesini ilk kez getirmek PDF indirip okumayı gerektirir
@@ -18,6 +20,9 @@ const tarih = (d: Date) =>
   new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Europe/Istanbul" }).format(new Date(d));
 
 export default async function FiyatListeleriSayfasi() {
+  const giren = await sayfaYetkisi("fiyat");
+  // Satış personeli listeleri görür ve PDF alır; oluşturma / kopyalama / silme yalnız yetkililerde
+  const yaz = yazabilir(giren.rol, "fiyat");
   const listeler = await prisma.fiyatListesi.findMany({
     orderBy: { updatedAt: "desc" },
     select: {
@@ -58,6 +63,8 @@ export default async function FiyatListeleriSayfasi() {
         sayfasından bir kez eklemeniz yeterli.
       </p>
 
+      {yaz && (
+      <>
       <form action={fiyatListesiOlustur} className="bg-yuzey border border-hat rounded-lg p-5 mb-8 flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[16rem]">
           <label className="block text-xs font-medium text-metin/60 mb-1">Yeni fiyat listesi adı</label>
@@ -185,6 +192,8 @@ export default async function FiyatListeleriSayfasi() {
           </form>
         </div>
       )}
+      </>
+      )}
 
       <HizliAramaListesi
         yerTutucu="Hızlı ara: liste adı, hazırlayan…"
@@ -268,14 +277,18 @@ export default async function FiyatListeleriSayfasi() {
                   PDF İndir
                 </a>
                 <Link href={`/panel/fiyat-listeleri/${l.id}`} className={dugme}>
-                  Düzenle
+                  {yaz ? "Düzenle" : "Görüntüle"}
                 </Link>
-                <form action={fiyatListesiKopyala.bind(null, l.id)}>
-                  <KaydetButonu basari={null} bekleme="…" className={dugme}>
-                    Kopyala
-                  </KaydetButonu>
-                </form>
-                <SilButon id={l.id} action={fiyatListesiSil} onayMesaji={`"${l.baslik}" fiyat listesi silinsin mi?`} />
+                {yaz && (
+                  <>
+                    <form action={fiyatListesiKopyala.bind(null, l.id)}>
+                      <KaydetButonu basari={null} bekleme="…" className={dugme}>
+                        Kopyala
+                      </KaydetButonu>
+                    </form>
+                    <SilButon id={l.id} action={fiyatListesiSil} onayMesaji={`"${l.baslik}" fiyat listesi silinsin mi?`} />
+                  </>
+                )}
               </div>
             </div>
           ),

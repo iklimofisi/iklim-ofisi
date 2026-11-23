@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { suankiKullanici } from "@/lib/oturum";
+import { apiYetkisi } from "@/lib/oturum";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const kullanici = await suankiKullanici();
+  const kullanici = await apiYetkisi("siparis");
   if (!kullanici) {
     return new NextResponse("Yetkisiz", { status: 401 });
   }

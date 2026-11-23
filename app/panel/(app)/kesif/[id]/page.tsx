@@ -4,10 +4,12 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { kesifiTeklifeDonustur } from "@/lib/actions";
 import KaydetButonu from "@/components/KaydetButonu";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
 export default async function KesifDetay({ params }: { params: { id: string } }) {
+  await sayfaYetkisi("crm");
   const [kesif, musteriler] = await Promise.all([
     prisma.kesifFormu.findUnique({
       where: { id: params.id },

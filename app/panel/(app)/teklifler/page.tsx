@@ -9,6 +9,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { teklifToplamlari, ilkHazirlanmaTarihi, tarihYaz } from "@/lib/teklif-hesap";
 import { RED_NEDENLERI, redNedeniAdi, DURUM_FILTRELERI } from "@/lib/teklif-durum";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 function paraFormat(n: number, paraBirimi: string = "TRY") {
   return n.toLocaleString("tr-TR", { style: "currency", currency: paraBirimi });
@@ -82,6 +83,7 @@ export default async function TekliflerSayfasi({
     basarili?: string;
   };
 }) {
+  await sayfaYetkisi("teklif");
   // Eski bağlantılar (projeden "yeni teklif", hızlı müşteri ekleme) artık yeni teklif sayfasına gider
   if (searchParams.seciliProjeId || searchParams.seciliMusteriId) {
     const q = new URLSearchParams(

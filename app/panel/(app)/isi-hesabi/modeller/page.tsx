@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { isiPompasiModeliKaydet, isiPompasiModeliSil } from "@/lib/isi-hesap-actions";
 import KaydetButonu from "@/components/KaydetButonu";
 import SilButon from "@/components/SilButon";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
@@ -106,6 +107,7 @@ function ModelFormu({ m, urunler }: { m?: Model; urunler: { id: string; ad: stri
 }
 
 export default async function IsiPompasiModelleriSayfasi() {
+  await sayfaYetkisi("hesap");
   const [modeller, urunler] = await Promise.all([
     prisma.isiPompasiModeli.findMany({ orderBy: [{ marka: "asc" }, { kapA7W35: "asc" }] }),
     prisma.urun.findMany({ orderBy: { ad: "asc" }, select: { id: true, ad: true, kod: true } }),

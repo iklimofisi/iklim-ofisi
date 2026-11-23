@@ -31,7 +31,7 @@ export default function SiparisDurumSecici({
           Hazırlanıyor'a Al
         </button>
       )}
-      {/* İptal: sipariş sayfasının üstündeki "Siparişi iptal et" (yalnız yönetici, neden zorunlu) */}
+      {/* İptal: sipariş sayfasının üstündeki "Siparişi iptal et" (yalnız admin, neden zorunlu) */}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,7 @@ function paraFormat(n: number) {
 }
 
 export default async function GenelCariPage() {
+  await sayfaYetkisi("finans");
   const [musteriHareketleri, tedarikciHareketleri] = await Promise.all([
     // İptal edilen finansal hareketler özet ve çek listelerine girmez
     prisma.cariHareket.findMany({

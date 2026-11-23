@@ -17,7 +17,7 @@ import { ILLER } from "@/lib/isi-hesap/iklim";
 // -----------------------------------------------------------------------------
 
 async function yetki(islem: string, girdi?: FormData | Record<string, unknown>) {
-  const kullanici = await islemZorunlu();
+  const kullanici = await islemZorunlu("hesap");
   await islemKaydet(kullanici, islem, girdi);
   return kullanici;
 }

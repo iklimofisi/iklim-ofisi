@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { suankiKullanici } from "@/lib/oturum";
+import { suankiKullanici, sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
@@ -212,6 +212,7 @@ export default async function IslemGecmisiSayfasi({
 }: {
   searchParams: Record<string, string | string[] | undefined>;
 }) {
+  await sayfaYetkisi("yonetim");
   const giren = await suankiKullanici();
   if (!giren || giren.rol !== "ADMIN") redirect("/panel");
 
@@ -277,7 +278,7 @@ export default async function IslemGecmisiSayfasi({
 
   return (
     <div>
-      <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Panel · Yönetici</p>
+      <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Panel · Admin</p>
       <h1 className="font-display text-2xl font-semibold text-metin mb-2">İşlem Geçmişi</h1>
       <p className="text-sm text-metin/60 mb-6">
         Panelde kim, ne zaman, hangi işlemi yaptı. Silinen kayıtların silinmeden önceki hâli de burada saklanır —

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { suankiKullanici } from "@/lib/oturum";
+import { apiYetkisi } from "@/lib/oturum";
 import { belgeTeklifi } from "@/lib/teklif-paylasim";
 import { teklifPdfOlustur } from "@/lib/pdf-olustur";
 import { getSirketAyarlari } from "@/lib/sirket";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  if (!(await suankiKullanici())) return new Response("Yetkisiz", { status: 401 });
+  if (!(await apiYetkisi("teklif", "siparis"))) return new Response("Yetkisiz", { status: 401 });
 
   const teklif = await belgeTeklifi(params.id);
   if (!teklif) return new Response("Teklif bulunamadı", { status: 404 });

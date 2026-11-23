@@ -45,8 +45,15 @@ müşteri, cari ve yatırımcı verisi var. Kullanıcı Türkçe konuşur; yanı
 - Sunucu işlemleri: `lib/actions.ts` (ana), `lib/*-actions.ts`. Her işlem `islemZorunlu()`
   ile başlar (giriş + yatırımcı salt okunur) ve `islemKaydet()` ile **İşlem Geçmişi**'ne yazılır.
   Silme/iptal öncesi kaydın eski hâli `lib/islem-kaydi.ts` → `SILME_KAYNAKLARI` ile saklanır.
-- Roller (`lib/roller.ts`): ADMIN, SATIS, SATINALMA, MUHASEBE (finans iptali + ay kapanışı),
-  YATIRIMCI (salt okunur). Onay/iptal yetkileri sunucu tarafında kontrol edilir.
+- Roller (`lib/roller.ts`): ADMIN, SATIS, SATINALMA, MUHASEBE, YATIRIMCI ("Yönetici (izleme)",
+  salt okunur). Yetki **bölüm** bazlıdır: `ROL_BOLUMLERI` (rol → bölüm → gör/yaz), `yolBolumu()`
+  (panel adresi → bölüm), `ISLEM_BOLUMU` (sunucu işlemi → bölüm; listede yoksa yalnız admin).
+  - Her panel sayfası `await sayfaYetkisi("<bölüm>")` ile başlar (yoksa /panel?yetki=yok).
+  - `yetki("<işlemAdı>")` → `islemZorunlu(islemBolumu(...))`; diğer action dosyaları
+    `islemZorunlu("<bölüm>")`. İndirme adresleri `apiYetkisi("<bölüm>")`.
+  - Sol menü aynı tabloyla süzülür. **Yeni sayfa / işlem eklerken bölümünü de ekle.**
+  - Satış personeli maliyet / alış / kâr görmez (`maliyetGorur`); satınalma ve muhasebe
+    proje / görüşme (crm) görmez. Onay/iptal/silme admin kontrolleri ayrıca action içinde.
 - Sipariş tutarı onayda dondurulur (`lib/siparis-tutari.ts`); ciro/rapor bu tutardan hesaplanır.
 - Satınalma zinciri: tedarikçi teklifi → satınalma siparişi (SAS-0001, onay eşiği) → mal kabul
   (stok hareketi) → alış faturası (tedarikçi cari) → satış siparişinde maliyet/brüt kâr.

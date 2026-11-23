@@ -13,6 +13,7 @@ import { montajKalemleri } from "@/lib/montaj";
 import { ozelNotlariOku } from "@/lib/sablon";
 import KaydetButonu from "@/components/KaydetButonu";
 import { gizliFiyatBolumleri } from "@/lib/teklif-hesap";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export default async function TeklifKopyala({
   params: { id: string };
   searchParams?: { seciliMusteriId?: string; basarili?: string };
 }) {
+  await sayfaYetkisi("teklif");
   const [kaynak, musteriler, sablonlar, markalar, urunler, projeler, kurlar] = await Promise.all([
     prisma.teklif.findUnique({
       where: { id: params.id },

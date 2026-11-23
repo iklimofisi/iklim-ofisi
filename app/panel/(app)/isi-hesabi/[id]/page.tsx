@@ -4,10 +4,12 @@ import { GERCEK_MUSTERI } from "@/lib/musterisiz";
 import { veriOku } from "@/lib/isi-hesap/tipler";
 import { aktifPompaModelleri } from "@/lib/isi-hesap/modeller-db";
 import IsiHesapEditoru from "@/components/IsiHesapEditoru";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
 export default async function IsiHesapSayfasi({ params }: { params: { id: string } }) {
+  await sayfaYetkisi("hesap");
   const [hesap, musteriler, modeller] = await Promise.all([
     prisma.isiHesap.findUnique({
       where: { id: params.id },

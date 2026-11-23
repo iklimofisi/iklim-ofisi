@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ const durumRenk: Record<string, string> = {
 };
 
 export default async function SiparislerSayfasi() {
+  await sayfaYetkisi("siparis");
   const siparisler = await prisma.siparis.findMany({
     include: {
       musteri: true,

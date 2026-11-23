@@ -4,7 +4,7 @@ import { musterisizMi } from "@/lib/musterisiz";
 import { prisma } from "@/lib/prisma";
 import { sozlesmeOlustur, sozlesmeKaydet, sozlesmeKalemleriYenile, sozlesmeSil } from "@/lib/actions";
 import { sablonlariGrupla, notlariUygula } from "@/lib/sablon";
-import { suankiKullanici } from "@/lib/oturum";
+import { suankiKullanici, sayfaYetkisi } from "@/lib/oturum";
 import {
   kalemleriOku,
   maddeleriOku,
@@ -29,6 +29,7 @@ const tarihGirdisi = (d: Date) =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Istanbul", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 
 export default async function SozlesmeSayfasi({ params }: { params: { id: string } }) {
+  await sayfaYetkisi("teklif");
   const [teklif, sozlesme, kullanici] = await Promise.all([
     prisma.teklif.findUnique({
       where: { id: params.id },

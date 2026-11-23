@@ -6,6 +6,7 @@ import { ILLER } from "@/lib/isi-hesap/iklim";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
 import KaydetButonu from "@/components/KaydetButonu";
 import SilButon from "@/components/SilButon";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ const tarih = (d: Date) =>
 const kw = (x: number) => x.toLocaleString("tr-TR", { maximumFractionDigits: 1 });
 
 export default async function IsiHesaplariSayfasi() {
+  await sayfaYetkisi("hesap");
   const [hesaplar, musteriler, modelSayisi] = await Promise.all([
     prisma.isiHesap.findMany({
       orderBy: { updatedAt: "desc" },

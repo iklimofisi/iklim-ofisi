@@ -6,6 +6,7 @@ import Link from "next/link";
 import { MusteriListesiSaglayici, TalepDonustur } from "@/components/TalepDonusturFormu";
 import KaydetButonu from "@/components/KaydetButonu";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 // Telefonu karşılaştırmak için son 10 hane (0532..., +90532... aynı sayılır)
 const telAnahtar = (t: string | null | undefined) => {
@@ -21,6 +22,7 @@ export default async function TaleplerSayfasi({
 }: {
   searchParams?: Record<string, string | string[] | undefined>;
 }) {
+  await sayfaYetkisi("crm");
   const [talepler, musteriler] = await Promise.all([
     // Dosya içeriği (dosya) listede gerekmediği için çekilmez; indirme ayrı adresten yapılır
     prisma.webTalebi.findMany({

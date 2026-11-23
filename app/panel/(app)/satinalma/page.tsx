@@ -2,10 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { tedarikciEkle, tedarikciGuncelle } from "@/lib/actions";
 import Link from "next/link";
 import KaydetButonu from "@/components/KaydetButonu";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
 export default async function SatinalmaSayfasi() {
+  await sayfaYetkisi("satinalma");
   const tedarikciler = await prisma.tedarikci.findMany({
     orderBy: { createdAt: "desc" },
     include: { hareketler: true },

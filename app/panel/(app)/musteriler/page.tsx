@@ -5,10 +5,12 @@ import KayitIslemButonu from "@/components/KayitIslemButonu";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
 import KaydetButonu from "@/components/KaydetButonu";
 import Link from "next/link";
+import { sayfaYetkisi } from "@/lib/oturum";
 
 export const dynamic = "force-dynamic";
 
 export default async function MusterilerPage() {
+  await sayfaYetkisi("musteri");
   const musteriler = await prisma.musteri.findMany({ where: GERCEK_MUSTERI,
     orderBy: { ad: "asc" },
     include: { yetkililer: { select: { ad: true, telefon: true, email: true } } },

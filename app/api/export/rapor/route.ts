@@ -1,15 +1,15 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { suankiKullanici } from "@/lib/oturum";
+import { apiYetkisi } from "@/lib/oturum";
 import { csvOlustur, csvYaniti } from "@/lib/csv";
 import { aylikOzet, alacakYaslandirma, aySiniri, donemAnahtari, donemAdi, gecerliDonem, YAS_DILIMLERI, type AylikOzet } from "@/lib/finans";
 
-// Yatırımcı raporu (aylık) — Excel'de açılan CSV (noktalı virgül ayraçlı, Türkçe ondalık)
+// Yönetim raporu (aylık) — Excel'de açılan CSV (noktalı virgül ayraçlı, Türkçe ondalık)
 // Kapalı ayda kapanış anındaki rakamlar verilir.
 const sayi = (n: number) => n.toFixed(2).replace(".", ",");
 
 export async function GET(req: NextRequest) {
-  if (!(await suankiKullanici())) return new Response("Yetkisiz", { status: 401 });
+  if (!(await apiYetkisi("finans"))) return new Response("Yetkisiz", { status: 401 });
   const ay = gecerliDonem(req.nextUrl.searchParams.get("ay")) ?? donemAnahtari(new Date());
 
   const kapanis = await prisma.donemKapanis.findUnique({ where: { donem: ay } }).catch(() => null);
@@ -54,5 +54,5 @@ export async function GET(req: NextRequest) {
     ["TOPLAM", sayi(yas.toplam.reduce((a, x) => a + x, 0)), ...yas.toplam.map(sayi)],
   ];
 
-  return csvYaniti(`yatirimci-raporu-${ay}.csv`, csvOlustur(["Kalem", "Değer"], satirlar));
+  return csvYaniti(`yonetim-raporu-${ay}.csv`, csvOlustur(["Kalem", "Değer"], satirlar));
 }

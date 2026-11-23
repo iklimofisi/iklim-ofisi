@@ -2,8 +2,8 @@
 
 // -----------------------------------------------------------------------------
 // AY KAPANIŞI İŞLEMLERİ
-// Kapatma: yönetici ya da muhasebe (yalnız geçmiş ya da içinde bulunulan ay).
-// Yeniden açma: yalnız yönetici, neden zorunlu. Her ikisi de İşlem Geçmişi'ne yazılır.
+// Kapatma: admin ya da muhasebe (yalnız geçmiş ya da içinde bulunulan ay).
+// Yeniden açma: yalnız admin, neden zorunlu. Her ikisi de İşlem Geçmişi'ne yazılır.
 // -----------------------------------------------------------------------------
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
@@ -15,9 +15,9 @@ import { aylikOzet, gecerliDonem, donemAnahtari, donemAdi } from "@/lib/finans";
 export type FinansSonuc = { hata?: string; tamam?: string };
 
 export async function donemKapat(donemGirdi: string): Promise<FinansSonuc> {
-  const giren = await islemZorunlu();
+  const giren = await islemZorunlu("finans");
   await islemKaydet(giren, "donemKapat", { donem: donemGirdi });
-  if (!finansYetkilisiMi(giren.rol)) return { hata: "Ayı yalnız yönetici ya da muhasebe kapatabilir." };
+  if (!finansYetkilisiMi(giren.rol)) return { hata: "Ayı yalnız admin ya da muhasebe kapatabilir." };
   const donem = gecerliDonem(donemGirdi);
   if (!donem) return { hata: "Dönem anlaşılamadı." };
   if (donem > donemAnahtari(new Date())) return { hata: "Henüz başlamamış bir ay kapatılamaz." };
@@ -32,9 +32,9 @@ export async function donemKapat(donemGirdi: string): Promise<FinansSonuc> {
 }
 
 export async function donemAc(donemGirdi: string, neden: string): Promise<FinansSonuc> {
-  const giren = await islemZorunlu();
+  const giren = await islemZorunlu("finans");
   await islemKaydet(giren, "donemAc", { donem: donemGirdi, neden });
-  if (giren.rol !== "ADMIN") return { hata: "Kapalı dönemi yalnız yönetici yeniden açabilir." };
+  if (giren.rol !== "ADMIN") return { hata: "Kapalı dönemi yalnız admin yeniden açabilir." };
   const donem = gecerliDonem(donemGirdi);
   const nedenTemiz = String(neden ?? "").trim().slice(0, 500);
   if (!donem) return { hata: "Dönem anlaşılamadı." };
