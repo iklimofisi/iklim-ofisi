@@ -45,6 +45,8 @@ import { ILLER, ilBul } from "@/lib/isi-hesap/iklim";
 import { sistemiHesapla, elemanU, sy, type HesapSonucu, type OdaSonucu } from "@/lib/isi-hesap/hesap";
 import { tesisatSemasi, serimKrokisi, yerlesimSemasi } from "@/lib/isi-hesap/cizim";
 import { cizimSvg } from "@/lib/isi-hesap/svg";
+import BinaGorunusu from "@/components/BinaGorunusu";
+import { isiGorunusGirdisi } from "@/lib/bina-gorunus";
 
 // -----------------------------------------------------------------------------
 // ISI POMPASI HESABI — DÜZENLEME EKRANI
@@ -487,7 +489,7 @@ export default function IsiHesapEditoru({ hesap, musteriler, modeller }: Props) 
 
       {sekme === "sonuclar" && <SonuclarSekmesi sonuc={sonuc} veri={veri} />}
 
-      {sekme === "sema" && <SemaSekmesi sonuc={sonuc} veri={veri} ad={ad} malzemeyeGit={() => setSekme("malzeme")} />}
+      {sekme === "sema" && <SemaSekmesi sonuc={sonuc} veri={veri} ad={ad} malzemeyeGit={() => setSekme("malzeme")} guncelle={guncelle} />}
 
       {sekme === "malzeme" && (
         <MalzemeSekmesi
@@ -1481,7 +1483,20 @@ function YukGrafigi({ s }: { s: HesapSonucu }) {
 // =============================================================================
 // 4. ŞEMA VE KROKİLER
 // =============================================================================
-function SemaSekmesi({ sonuc, veri, ad, malzemeyeGit }: { sonuc: HesapSonucu; veri: HesapVerisi; ad: string; malzemeyeGit: () => void }) {
+function SemaSekmesi({
+  sonuc,
+  veri,
+  ad,
+  malzemeyeGit,
+  guncelle,
+}: {
+  sonuc: HesapSonucu;
+  veri: HesapVerisi;
+  ad: string;
+  malzemeyeGit: () => void;
+  guncelle: (p: Partial<HesapVerisi>) => void;
+}) {
+  const gorunusGirdisi = useMemo(() => isiGorunusGirdisi(sonuc, ad || "Isı pompası projesi"), [sonuc, ad]);
   const sema = useMemo(() => cizimSvg(tesisatSemasi(sonuc, ad || "Isı pompası projesi"), "Tesisat prensip şeması"), [sonuc, ad]);
   const yerlesim = useMemo(
     () =>
@@ -1516,9 +1531,11 @@ function SemaSekmesi({ sonuc, veri, ad, malzemeyeGit }: { sonuc: HesapSonucu; ve
           <>Prensip şeması hesaptan otomatik çizilir: ısı pompası, boyler, tampon tank, genleşme tankı, pompalar, karışım vanası ve devreler gerçek seçilen boyutlarıyla görünür. Ölçekli değildir, bağlantı mantığını gösterir.</>,
           <>Yerleşim şeması sizin girdiğiniz odalarla çizilir: her oda en × boy ölçüsüyle bir kutu, içinde o odanın radyatörleri (tip · yükseklik × boy) ve yerden ısıtması (devre, boru aralığı, kollektör). Isı pompası, tampon, boyler, pompalar ve kollektör odaların dışında, mekanik oda kutusunda durur. Oda sırası Odalar sekmesindeki sıradır; mimari plan değildir.</>,
           <>Serim krokileri yalnız yerden ısıtmalı odalar için çıkar: boru aralığı, devre sayısı, gidiş-dönüş ve kollektör yönü. Krokiyi değiştirmek için Odalar sekmesinde ölçü, boru aralığı, desen ve boru döşenmeyen alanı değiştirin.</>,
+          <>Ön görünüş evin önden çizimidir: ısı pompası dış ünitesi, boyler, tampon tank ve kollektörler içinde durur. Cihazları sürükleyerek yerlerini siz belirleyin (dış üniteyi bahçeye, çatıya…); kat sayısı ve çatı tipini seçin.</>,
           <>Hepsi PDF raporunda da yer alır.</>,
         ]}
       />
+      <BinaGorunusu ayar={veri.gorunus} girdi={gorunusGirdisi} onChange={(gorunus) => guncelle({ gorunus })} />
       <div className="flex flex-wrap items-center justify-between gap-3 bg-soguk/5 border border-soguk/20 rounded-lg px-4 py-3">
         <p className="text-xs text-metin/70 max-w-3xl">
           Şemadaki ısı pompası, boyler, tampon (buffer) tank, genleşme tankları, pompalar, vanalar ve kollektörler için{" "}

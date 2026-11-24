@@ -8,6 +8,7 @@ import { ISITICILAR } from "./tipler";
 import { RADYATOR_TIPLERI, RADYATOR_KATALOG_KAYNAGI } from "./katalog";
 import { IL_KAYNAGI } from "./iklim";
 import { tesisatSemasi, serimKrokisi, yerlesimSemasi, type Cizim } from "./cizim";
+import { binaGorunusu, isiGorunusGirdisi } from "@/lib/bina-gorunus";
 
 // -----------------------------------------------------------------------------
 // ISI POMPASI SİSTEM HESABI — PDF RAPORU
@@ -633,6 +634,13 @@ export function isiHesapPdfOlustur(
   const sema = tesisatSemasi(s, bilgi.baslik);
   const semaW = SAG - SOL;
   cizimBas(sema, SOL, 12, Math.min(semaW, (185 * sema.w) / sema.h), 1.12);
+
+  // ===========================================================================
+  // ÖN GÖRÜNÜŞ VE CİHAZ YERLEŞİMİ (yatay sayfa; cihaz yerleri panelde belirlenir)
+  // ===========================================================================
+  yeniSayfa(true);
+  const gorunus = binaGorunusu(v.gorunus, isiGorunusGirdisi(s, bilgi.baslik));
+  cizimBas(gorunus, SOL, 12, Math.min(SAG - SOL, (182 * gorunus.w) / gorunus.h), 1.12);
 
   // ===========================================================================
   // ODALARA GÖRE YERLEŞİM ŞEMASI (yatay sayfa)

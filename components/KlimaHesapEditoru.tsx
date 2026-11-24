@@ -17,6 +17,8 @@ import { kapasiteListesi, yukseklikteKapasiteler, uygunsuzluk } from "@/lib/klim
 import { klimaHesapla, sy, type KlimaSonucu, type KlimaOdaSonucu } from "@/lib/klima-hesap/hesap";
 import { boruSemasi, kotSemasi, katAdi } from "@/lib/klima-hesap/cizim";
 import { cizimSvg } from "@/lib/isi-hesap/svg";
+import BinaGorunusu from "@/components/BinaGorunusu";
+import { klimaGorunusGirdisi } from "@/lib/bina-gorunus";
 import type { Eleman } from "@/lib/isi-hesap/tipler";
 
 // -----------------------------------------------------------------------------
@@ -1017,6 +1019,18 @@ function SemaSekmesi({
       })),
     [s, baslik, veri.katYuksekligi]
   );
+  // Ön görünüş: evin önden çizimi, dış ve iç üniteler (sürüklenerek yerleştirilir)
+  const gorunusGirdisi = useMemo(() => klimaGorunusGirdisi(s, veri, baslik), [s, veri, baslik]);
+  const gorunus = (
+    <div className="space-y-2">
+      <p className="text-sm font-semibold text-metin">🏠 Ön görünüş ve cihaz yerleşimi</p>
+      <p className="text-xs text-metin/60">
+        Dış ve iç üniteler katlarına (kotlarına) göre yerleşir. Dış üniteyi çatıya, bahçeye ya da balkona sürükleyin; iç üniteleri odalarının yerine
+        kaydırın. Kat sayısı otomatik gelir, isterseniz değiştirin. PDF raporunda da aynı görünüş çıkar.
+      </p>
+      <BinaGorunusu ayar={veri.gorunus} girdi={gorunusGirdisi} onChange={(g) => guncelle({ gorunus: g })} />
+    </div>
+  );
 
   // Tıklanan ölçünün hangi girdiye bağlı olduğu
   const hedef = (anahtar: string): Omit<DuzenHedef, "x" | "y" | "anahtar"> | null => {
@@ -1079,7 +1093,13 @@ function SemaSekmesi({
     setMetin(String(b.deger).replace(".", ","));
   };
 
-  if (!cizimler.length) return <p className="text-sm text-metin/50">Sisteme bağlı oda yok (yalnız bağımsız split klimalar için boru şeması çizilmez).</p>;
+  if (!cizimler.length)
+    return (
+      <div className="space-y-5">
+        {gorunusGirdisi.cihazlar.length > 0 && gorunus}
+        <p className="text-sm text-metin/50">Sisteme bağlı oda yok (yalnız bağımsız split klimalar için boru şeması çizilmez).</p>
+      </div>
+    );
   return (
     <div className="space-y-5">
       <style>{`.sema-kap .dz{cursor:pointer;text-decoration:underline;text-decoration-style:dotted}.sema-kap .dz:hover{fill:#d9480f}.sema-kap .dz-git{cursor:pointer}.sema-kap .dz-git:hover{fill:#1864ab;text-decoration:underline}`}</style>
@@ -1092,6 +1112,7 @@ function SemaSekmesi({
           <>Düşey şemadaki ölçü okları: <span className="text-[#2b8a3e] font-semibold">yeşil</span> sınır içinde, <span className="text-[#c92a2a] font-semibold">kırmızı</span> sınır aşılmış (dış ünite – iç ünite ve iç üniteler arası kot farkı).</>,
         ]}
       />
+      {gorunus}
       <div ref={kap} className="sema-kap relative space-y-5" onClick={tikla}>
         {cizimler.map(({ x, boru, kot }) => (
           <div key={x.no} className="space-y-3">

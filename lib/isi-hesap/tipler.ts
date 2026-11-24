@@ -25,6 +25,7 @@ import {
   type RadyatorYukseklik,
 } from "./katalog";
 import { ILLER } from "./iklim";
+import { gorunusOku, VARSAYILAN_GORUNUS, type GorunusAyari } from "@/lib/bina-gorunus-veri";
 
 export type Isitici = "RADYATOR" | "YERDEN" | "YERDEN_RADYATOR" | "YOK";
 export const ISITICILAR: Record<Isitici, string> = {
@@ -110,6 +111,7 @@ export type HesapVerisi = {
   statikYukseklik: number; // m
   modelId: string; // seçili ısı pompası modeli ("" = otomatik öneri)
   odalar: Oda[];
+  gorunus: GorunusAyari; // ön görünüş çizimi: kat sayısı, çatı, cihaz yerleri (lib/bina-gorunus.ts)
 };
 
 // ---------------------------------------------------------------------------
@@ -244,6 +246,7 @@ export function varsayilanVeri(il = "İstanbul"): HesapVerisi {
     statikYukseklik: 6,
     modelId: "",
     odalar: [],
+    gorunus: { ...VARSAYILAN_GORUNUS, konumlar: {} },
   };
 }
 
@@ -349,6 +352,7 @@ export function veriOku(ham: unknown): HesapVerisi {
     statikYukseklik: sayi(obj.statikYukseklik, v.statikYukseklik, 0, 60),
     modelId: metin(obj.modelId, 40),
     odalar: Array.isArray(obj.odalar) ? (obj.odalar.map(odaOku).filter(Boolean) as Oda[]).slice(0, 80) : [],
+    gorunus: gorunusOku(obj.gorunus),
   };
 }
 

@@ -4,6 +4,7 @@
 // parçaları ve ısı kaybı kodu kullanılır); üzerine soğutma ve cihaz alanları eklenir.
 // -----------------------------------------------------------------------------
 import { ILLER } from "@/lib/isi-hesap/iklim";
+import { gorunusOku, VARSAYILAN_GORUNUS, type GorunusAyari } from "@/lib/bina-gorunus-veri";
 import { veriOku as isiVeriOku, yeniOda, yeniEleman, yeniId, type Oda } from "@/lib/isi-hesap/tipler";
 import type { OdaTipi, Yon } from "@/lib/isi-hesap/katalog";
 import { GOLGELER, IC_UNITE_TIPLERI, KULLANIMLAR, SISTEM_TIPLERI, AKISKANLAR, type IcUniteTipi, type SistemTipi, type Kullanim, type Akiskan } from "./katalog";
@@ -74,6 +75,7 @@ export type KlimaVerisi = {
   katYuksekligi: number; // m — kat kotu ↔ kat numarası dönüşümü (döşemeden döşemeye)
   sistemler: Sistem[];
   odalar: KlimaOda[];
+  gorunus: GorunusAyari; // ön görünüş çizimi: kat sayısı, çatı, cihaz yerleri (lib/bina-gorunus.ts)
 };
 
 function sayi(v: unknown, varsayilan: number, min: number, maks: number): number {
@@ -172,6 +174,7 @@ export function varsayilanKlimaVerisi(il = "İstanbul"): KlimaVerisi {
     katYuksekligi: 3,
     sistemler: [yeniSistem(1, "VRF")],
     odalar: [],
+    gorunus: { ...VARSAYILAN_GORUNUS, konumlar: {} },
   };
 }
 
@@ -272,6 +275,7 @@ export function klimaVeriOku(ham: unknown): KlimaVerisi {
     katYuksekligi: sayi(obj.katYuksekligi, 3, 2.4, 8),
     sistemler: tekil.length ? tekil : [yeniSistem(1)],
     odalar,
+    gorunus: gorunusOku(obj.gorunus),
   };
 }
 

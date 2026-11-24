@@ -9,6 +9,7 @@ import type { KlimaVerisi } from "./tipler";
 import { AKISKANLAR, IC_UNITE_TIPLERI, borAdi } from "./katalog";
 import { HRV_VERIM } from "./hesap";
 import { boruSemasi, kotSemasi } from "./cizim";
+import { binaGorunusu, klimaGorunusGirdisi } from "@/lib/bina-gorunus";
 
 // -----------------------------------------------------------------------------
 // KLİMA / VRF SİSTEM HESABI — PDF RAPORU
@@ -468,6 +469,14 @@ export function klimaHesapPdfOlustur(
     ].join(" "),
     7.2
   );
+
+  // ÖN GÖRÜNÜŞ VE CİHAZ YERLEŞİMİ (cihaz yerleri panelde belirlenir)
+  const gorunusGirdisi = klimaGorunusGirdisi(s, v, bilgi.baslik);
+  if (gorunusGirdisi.cihazlar.length) {
+    yeniSayfa();
+    const g = binaGorunusu(v.gorunus, gorunusGirdisi);
+    cizimBas(g, SOL, 12, 180);
+  }
 
   // BORU ŞEMALARI
   for (const x of s.sistemler) {
