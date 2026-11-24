@@ -226,8 +226,21 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
   const hazir = HAZIR_LISTELER.find((h) => h.baslik === liste.baslik) ?? null;
   // Liste içi arama: fiyat sütunları listenin kendi başlıklarıyla; alış iskontosu girildiyse alış fiyatı da
   const alisY = liste.alisIskontoYuzde !== null && liste.alisIskontoYuzde > 0 ? Math.min(100, liste.alisIskontoYuzde) : null;
-  // Niva gibi hazır listelerde ürün koduna göre bayi alış fiyatı (alış iskontosu girilmemişse)
-  const kodAlislari = alisY === null ? hazirAlisFiyatlari(hazir) : null;
+  // Hazır listelerde ürün koduna göre bayi / taşeron alış fiyatı (Niva, Montaj)
+  const hazirAlislar = hazirAlisFiyatlari(hazir);
+  // ALIŞ FİYATI (tek kural; düzenleyicideki ile aynı):
+  // * Tek fiyatlı listede hazır alışı olan ürün (Montaj): alış = hazır alış − alış iskontosu (ör. 70 $ − %5 = 66,50 $)
+  // * Alış iskontosu girilmişse: alış = liste fiyatı − alış iskontosu (tedarikçi liste fiyatı olan listeler)
+  // * İki fiyatlı hazır listede iskonto yoksa (Niva): alış = hazır alış
+  const alisBul = (k: { kod: string | null; fiyat: number }): { deger: number; ad: string } | null => {
+    const h = hazirAlislar && k.kod ? hazirAlislar[k.kod.trim()] : undefined;
+    if (!liste.fiyat2Baslik && h)
+      return alisY !== null
+        ? { deger: Math.round(h * (1 - alisY / 100) * 100) / 100, ad: `Alış (−%${alisY.toLocaleString("tr-TR")})` }
+        : { deger: h, ad: "Alış" };
+    if (alisY !== null) return k.fiyat > 0 ? { deger: Math.round(k.fiyat * (1 - alisY / 100) * 100) / 100, ad: `Alış (−%${alisY.toLocaleString("tr-TR")})` } : null;
+    return h ? { deger: h, ad: "Alış" } : null;
+  };
   const aramaSatirlari: AramaSatiri[] = liste.kalemler.map((k) => ({
     id: k.id,
     bolum: k.bolum,
@@ -240,24 +253,17 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
       ...(liste.fiyat2Baslik ? [{ ad: liste.fiyat2Baslik, deger: sayi(k.fiyat2) }] : []),
       ...(liste.fiyat2Baslik && liste.fiyat3Baslik ? [{ ad: liste.fiyat3Baslik, deger: sayi(k.fiyat3) }] : []),
     ],
-    alislar:
-      alisY !== null && k.fiyat > 0
-        ? [{ ad: `Alış (−%${alisY.toLocaleString("tr-TR")})`, deger: Math.round(k.fiyat * (1 - alisY / 100) * 100) / 100 }]
-        : kodAlislari && k.kod && kodAlislari[k.kod.trim()]
-          ? [{ ad: "Alış", deger: kodAlislari[k.kod.trim()] }]
-          : [],
+    alislar: (() => {
+      const a = alisBul(k);
+      return a ? [a] : [];
+    })(),
   }));
   // ALIŞ / SATIŞ TABLOSU (yalnız panel, maliyet görebilenlere): alış iskontosu girilmiş ya da
   // hazır listesinde alış tanımlı listelerde (Niva, Montaj) her ürünün alışı, satışı ve kârı
   const sonFiyat = (k: (typeof liste.kalemler)[number]) => (liste.fiyat2Baslik && k.fiyat2 !== null && k.fiyat2 > 0 ? k.fiyat2 : k.fiyat);
   const alisSatirlari = liste.kalemler
     .map((k) => {
-      const alis =
-        alisY !== null && k.fiyat > 0
-          ? Math.round(k.fiyat * (1 - alisY / 100) * 100) / 100
-          : kodAlislari && k.kod && kodAlislari[k.kod.trim()]
-            ? kodAlislari[k.kod.trim()]
-            : null;
+      const alis = alisBul(k)?.deger ?? null;
       return { k, alis, satis: sonFiyat(k) };
     })
     .filter((r) => r.alis !== null && r.alis > 0);
@@ -298,9 +304,11 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
             </tbody>
           </table>
           <p className="text-[11px] text-metin/45 mt-2">
-            {alisY !== null
-              ? `Alış = liste fiyatı − %${alisY.toLocaleString("tr-TR")} alış iskontosu.`
-              : "Alış, hazır listedeki tedarikçi / taşeron fiyatıdır; satış fiyatını değiştirseniz de alış aynı kalır."}{" "}
+            {!liste.fiyat2Baslik && hazirAlislar
+              ? `Alış, hazır listedeki taşeron / bayi fiyatıdır${alisY !== null ? `; üzerine %${alisY.toLocaleString("tr-TR")} alış iskontonuz düşüldü` : ""}. Satış fiyatını değiştirseniz de alış aynı kalır.`
+              : alisY !== null
+                ? `Alış = liste fiyatı − %${alisY.toLocaleString("tr-TR")} alış iskontosu.`
+                : "Alış, hazır listedeki tedarikçi / taşeron fiyatıdır; satış fiyatını değiştirseniz de alış aynı kalır."}{" "}
             Kâr, alışa göre yüzdedir.
           </p>
         </div>
@@ -423,7 +431,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
           gorselId: u.gorselId,
         }))}
         kurlar={kurlar ? { tarih: kurlar.tarih, USD: kurlar.USD, EUR: kurlar.EUR } : null}
-        kodAlislari={hazirAlisFiyatlari(hazir)}
+        kodAlislari={hazirAlislar}
       />
     </div>
   );

@@ -140,15 +140,10 @@ export default function FiyatListesiDuzenleyici({
   const satisY = ikiFiyat ? yuzdeOku(satisIsk) : null;
   const satisOto = satisY !== null;
   const alisHatali = alisIsk.trim() !== "" && alisY === null;
-  // Tek fiyatlı listede "kârım %": fiyat bizim satış fiyatımızdır → alış = fiyat ÷ (1 + kâr).
-  // Kâr yazılınca alış iskontosu = 100 − 100 ÷ (1 + kâr) hesaplanır (ör. %17 kâr → %14,5299 iskonto).
-  const [tekKarMetni, setTekKarMetni] = useState("");
-  const tekKarOdak = useRef(false);
-  useEffect(() => {
-    if (tekKarOdak.current) return;
-    setTekKarMetni(alisY !== null && alisY < 100 ? String(Math.round((100 / (100 - alisY) - 1) * 10000) / 100).replace(".", ",") : "");
-  }, [alisY]);
-  const tekKarHatali = tekKarMetni.trim() !== "" && karOku(tekKarMetni) === null;
+  // Tek fiyatlı hazır listede (Montaj) alış = hazır alış (taşeron fiyatı) − alış iskontosu (ör. 70 $ − %5 = 66,50 $).
+  // Diğer listelerde alış iskontosu liste fiyatından düşülür (tedarikçi liste fiyatı).
+  const hazirMod = !ikiFiyat && !!kodAlislari;
+  const hazirAlis = (kod: string) => (kodAlislari ? kodAlislari[kod.trim()] : undefined);
   const satisHatali = ikiFiyat && satisIsk.trim() !== "" && satisY === null;
   // Kredi kartı kârı (3. sütun): yazılırsa kart fiyatı = alış (liste − alış iskontosu) + bu kâr; boşsa kart fiyatı elle / listeden
   const [kartKar, setKartKar] = useState(yuzdeMetni(ayarlar.kartKarYuzde ?? null));
@@ -506,41 +501,16 @@ export default function FiyatListesiDuzenleyici({
         <div className="border border-soguk/30 rounded-md p-3 space-y-2 bg-soguk-light/30">
           <div className="flex flex-wrap items-end gap-3">
             <div className="w-52">
-              <label className={etiket}>Alış iskontom % ({ikiFiyat ? "listeden" : "fiyattan"})</label>
+              <label className={etiket}>Alış iskontom % ({hazirMod ? "alış fiyatımdan" : "listeden"})</label>
               <input
                 name="alisIskontoYuzde"
                 inputMode="decimal"
                 value={alisIsk}
                 onChange={(e) => setAlisIsk(e.target.value)}
-                placeholder={kodAlislari ? "boş: hazır alış fiyatları" : "örn. 25"}
+                placeholder={hazirMod ? "örn. 5" : "örn. 25"}
                 className={`${kutu} ${alisHatali ? "border-sicak" : ""}`}
               />
             </div>
-            {!ikiFiyat && (
-              <div className="w-52">
-                <label className={etiket}>veya kârım % (alış üzerine)</label>
-                <input
-                  inputMode="decimal"
-                  value={tekKarMetni}
-                  onFocus={() => (tekKarOdak.current = true)}
-                  onBlur={() => (tekKarOdak.current = false)}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setTekKarMetni(v);
-                    if (!v.trim()) {
-                      setAlisIsk("");
-                      return;
-                    }
-                    const k = karOku(v);
-                    if (k === null) return;
-                    setAlisIsk(String(Math.round((100 - 100 / (1 + k / 100)) * 10000) / 10000).replace(".", ","));
-                  }}
-                  placeholder={kodAlislari ? "boş: hazır alış fiyatları" : "örn. 17"}
-                  title="Kâr yazınca alış fiyatı = fiyat ÷ (1 + kâr) olur; alış iskontosu kendiliğinden hesaplanır"
-                  className={`${kutu} ${tekKarHatali ? "border-sicak" : ""}`}
-                />
-              </div>
-            )}
             {ikiFiyat ? (
               <div className="w-52">
                 <label className={etiket}>Satış iskontosu % (listeden)</label>
@@ -596,21 +566,13 @@ export default function FiyatListesiDuzenleyici({
             )}
           </div>
           <p className="text-[11px] text-metin/60">
-            {alisY !== null
-              ? ikiFiyat
+            {hazirMod
+              ? `Alış fiyatlarınız hazır listeden gelir (taşeron / bayi fiyatı)${alisY !== null ? ` ve üzerine %${alisY.toLocaleString("tr-TR")} alış iskontonuz düşülür (ör. 70,00 → ${flParaYaz(Math.round(70 * (1 - alisY / 100) * 100) / 100, paraBirimi)})` : ""}; her ürünün altında alış fiyatı ve kârınız görünür. Alış fiyatı PDF'e ve müşteriye gitmez. `
+              : alisY !== null
                 ? `Alış fiyatı = liste fiyatı − %${alisY.toLocaleString("tr-TR")}${ucFiyat && !kartOto ? ` (${fb1} ve ${fb3} için ayrı ayrı)` : ""}; her ürünün altında alış fiyatı ve kârı görünür. Alış fiyatı PDF'e ve müşteriye gitmez. `
-                : `Alış fiyatı = fiyat − %${alisY.toLocaleString("tr-TR", { maximumFractionDigits: 4 })}${
-                    alisY < 100 ? ` (yani her üründe %${(Math.round((100 / (100 - alisY) - 1) * 10000) / 100).toLocaleString("tr-TR")} kâr)` : ""
-                  }; her ürünün altında alış fiyatı ve kârı görünür. Alış fiyatı PDF'e ve müşteriye gitmez. `
-              : kodAlislari
-                ? "Alış fiyatları hazır listeden gelir (ürün koduna göre; bayi / taşeron fiyatı); her ürünün altında alış fiyatı ve kârınız görünür. Alış fiyatı PDF'e ve müşteriye gitmez. "
-                : `Alış iskontosu${ikiFiyat ? "" : " ya da kârınızı"} girerseniz her ürünün altında alış fiyatı ve kârınız görünür (yalnız panelde). `}
-            {alisY !== null && kodAlislari && (
-              <span className="text-sicak-dim font-medium">
-                Bu listenin hazır alış fiyatları var; yazdığınız oran onların yerine geçer. Hazır alış fiyatlarına dönmek için kutuyu boşaltın.{" "}
-              </span>
-            )}
-            {tekKarHatali && <span className="text-sicak-dim font-medium"> Kâr 0 ile 1000 arasında bir sayı olmalı. </span>}
+                : kodAlislari
+                  ? "Alış fiyatları hazır listeden gelir (ürün koduna göre; bayi / taşeron fiyatı); her ürünün altında alış fiyatı ve kârınız görünür. Alış fiyatı PDF'e ve müşteriye gitmez. "
+                  : "Alış iskontosu girerseniz her ürünün altında alış fiyatı ve kârınız görünür (yalnız panelde). "}
             {ikiFiyat &&
               (satisOto
                 ? `${fb2} satış fiyatı ${fb1} üzerinden${ucFiyat && !kartOto ? `, ${fb3} satış fiyatı kendi liste fiyatı üzerinden` : ""} %${(satisY as number).toLocaleString("tr-TR")} iskontoyla otomatik hesaplanır. PDF'te liste fiyatları gösterilmez; müşteriye yalnız ${ucFiyat ? `${fb2} ve ${fb3}` : fb2} satış fiyatları gider.`
@@ -960,6 +922,7 @@ export default function FiyatListesiDuzenleyici({
                     {fiyat > 0 && isk1 > 0 && ` · ${ikiFiyat ? `${fb1} ` : ""}iskontolu: ${flParaYaz(iskontoluFiyat(fiyat, isk1, yuvarlamaAdim), paraBirimi)}`}
                     {ikiFiyat && ikinciFiyat(r) > 0 && isk2 > 0 && ` · ${fb2} iskontolu: ${flParaYaz(iskontoluFiyat(ikinciFiyat(r), isk2, yuvarlamaAdim), paraBirimi)}`}
                     {alisY !== null &&
+                      !(hazirMod && hazirAlis(r.kod)) &&
                       // Alış ve kâr: liste fiyatı (nakit) ve varsa 3. sütun (ör. kredi kartı) için ayrı ayrı
                       (
                         [
@@ -979,17 +942,20 @@ export default function FiyatListesiDuzenleyici({
                           </span>
                         );
                       })}
-                    {alisY === null &&
+                    {(alisY === null || hazirMod) &&
                       kodAlislari &&
                       (() => {
-                        // Hazır listenin bayi alışı (ör. Niva): kâr, listedeki satış fiyatına göre
-                        const alis = kodAlislari[r.kod.trim()];
-                        if (!alis) return null;
+                        // Hazır listenin bayi / taşeron alışı (Niva, Montaj): tek fiyatlı listede alış iskontosu
+                        // bu alıştan düşülür; kâr, listedeki satış fiyatına göre
+                        const h = hazirAlis(r.kod);
+                        if (!h) return null;
+                        const alis = hazirMod && alisY !== null ? Math.round(h * (1 - alisY / 100) * 100) / 100 : h;
                         const satis = ikiFiyat ? ikinciFiyat(r) : fiyat;
                         const kar = satis - alis;
                         return (
                           <span className={kar >= 0 ? "text-emerald-700" : "text-sicak-dim font-medium"}>
                             {` · alış: ${flParaYaz(alis, paraBirimi)}`}
+                            {alis !== h && ` (${flParaYaz(h, paraBirimi)} − %${(alisY as number).toLocaleString("tr-TR")})`}
                             {satis > 0 && ` · kâr: ${flParaYaz(kar, paraBirimi)} (%${((kar / alis) * 100).toLocaleString("tr-TR", { maximumFractionDigits: 1 })})`}
                           </span>
                         );
