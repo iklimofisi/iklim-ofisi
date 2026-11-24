@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 const DIL_BASLIGI = "x-site-dil";
 const DIL_YOLU = /^\/(en|de)(\/.*)?$/;
 // Yalnız Türkçe olan bölümler: /en/panel gibi adresler Türkçe karşılığına gider
-const DILSIZ = /^\/(panel|api|t)(\/|$)/;
+const DILSIZ = /^\/(panel|api|t|f)(\/|$)/;
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

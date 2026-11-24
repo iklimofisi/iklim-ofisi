@@ -61,6 +61,9 @@ müşteri, cari ve yatırımcı verisi var. Kullanıcı Türkçe konuşur; yanı
   cari/tedarikçi hareketi eklenmez, iptal edilmez.
 - Tedarikçi teklif PDF'leri: `lib/tcl-teklif-actions.ts` biçimi tanır (TCL, Viessmann, Bosch/Netisa
   — OCR dahil, Form MHI). Yeni biçim = yeni `lib/<firma>-teklif-ayikla.ts` + tanıma sırası.
+- Fiyat listesi müşteri linki: `iklimofisi.com/f/<anahtar>` (`FiyatListesiPaylasim`, kişi başı link,
+  iptal = iptalTarihi). PDF'i panel PDF'iyle aynı kod üretir (`lib/fiyat-listesi-belge.ts`), her
+  açılışta güncel fiyatla. Teklif linki: `/t/<anahtar>`.
 - Müşteriye giden belgelerde (teklif PDF'i, WhatsApp linki, tedarikçiye giden sipariş PDF'i)
   **iç bilgi yok**: maliyet, kâr, tedarikçi, müşteri (tedarikçiye) yazılmaz. Panel-içi bilgiler
   `print:hidden`.

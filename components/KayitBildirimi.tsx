@@ -42,6 +42,8 @@ const MESAJLAR: Record<string, string> = {
   "havalandirma-hesap-teklif": "Havalandırma hesabından teklif taslağı oluşturuldu. Fiyatları girip kaydedin.",
   "teklif-musteriye-baglandi": "Teklif müşteriye bağlandı. Artık siparişe dönüştürülebilir ve sözleşme hazırlanabilir.",
   "paylasim-iptal": "Teklif linki iptal edildi; eski link artık açılmaz.",
+  "fiyat-link-olusturuldu": "Müşteri linki oluşturuldu. Kopyalayıp ya da WhatsApp ile gönderebilirsiniz; fiyatları değiştirdiğinizde link kendiliğinden güncellenir.",
+  "fiyat-link-iptal": "Link iptal edildi; bu kişi listeyi artık açamaz.",
   "eposta-test-ok": "Deneme e-postası gönderildi. Gelen kutunuzu (ve Spam klasörünü) kontrol edin.",
 };
 

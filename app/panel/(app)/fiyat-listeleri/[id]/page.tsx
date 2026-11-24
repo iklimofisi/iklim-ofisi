@@ -14,7 +14,10 @@ import FiyatListesiSecim from "@/components/FiyatListesiSecim";
 import KaydetButonu from "@/components/KaydetButonu";
 import FiyatUrunArama, { type AramaSatiri } from "@/components/FiyatUrunArama";
 import { sayfaYetkisi } from "@/lib/oturum";
-import { maliyetGorur, yazabilir } from "@/lib/roller";
+import { maliyetGorur, yazabilir, saltOkunurMu } from "@/lib/roller";
+import { getSirketAyarlari } from "@/lib/sirket";
+import { FIYAT_LINK_TABANI } from "@/lib/fiyat-paylasim";
+import FiyatListesiLinkleri from "@/components/FiyatListesiLinkleri";
 
 export const dynamic = "force-dynamic";
 // "Şimdi güncelle" Kaya'nın PDF'ini indirip okur (birkaç saniye sürebilir)
@@ -54,6 +57,34 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
   // Satış personeli listeleri yalnız görür (arama + PDF); düzenleyici ve alış fiyatları gösterilmez
   const salt = !yazabilir(giren.rol, "fiyat");
   const alisGoster = maliyetGorur(giren.rol);
+
+  // MÜŞTERİ LİNKLERİ (iklimofisi.com/f/...): her açılışta listenin son kaydedilen hâli görünür.
+  // Tablo henüz yoksa (SQL çalışmadıysa) liste boş gelir, sayfa açılır.
+  const [paylasimlar, sirket] = await Promise.all([
+    prisma.fiyatListesiPaylasim
+      .findMany({ where: { listeId: liste.id, iptalTarihi: null }, orderBy: { createdAt: "desc" } })
+      .catch(() => []),
+    getSirketAyarlari(),
+  ]);
+  const saatli = (d: Date) =>
+    new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Istanbul" }).format(d);
+  const linkKutusu = (
+    <FiyatListesiLinkleri
+      listeId={liste.id}
+      baslik={liste.baslik}
+      firma={sirket.unvan}
+      izin={!saltOkunurMu(giren.rol)}
+      linkler={paylasimlar.map((p) => ({
+        id: p.id,
+        alici: p.alici,
+        link: FIYAT_LINK_TABANI + p.anahtar,
+        olusturma: saatli(p.createdAt),
+        olusturanAdi: p.olusturanAdi,
+        goruntulenme: p.goruntulenme,
+        sonGoruntulenme: p.sonGoruntulenme ? saatli(p.sonGoruntulenme) : null,
+      }))}
+    />
+  );
   const saltGorunum = (etiket: string, satirlar: AramaSatiri[], not = "") => (
     <div className="max-w-5xl">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -72,6 +103,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
       <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">{etiket}</p>
       <h1 className="font-display text-2xl font-semibold text-metin mb-1">{liste.baslik}</h1>
       <p className="text-xs text-metin/50 mb-6">Bu listeyi yalnız görüntüleyebilirsiniz: ürün aramak için aşağıdaki kutuyu, listenin tamamı için PDF&apos;i kullanın.</p>
+      {linkKutusu}
       <FiyatUrunArama satirlar={alisGoster ? satirlar : satirlar.map((s) => ({ ...s, alislar: [] }))} paraBirimi={liste.paraBirimi} not={not} />
     </div>
   );
@@ -117,6 +149,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
         </Link>
         <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">{baran ? "Fiyat Listesi · Baran Isı" : "Fiyat Listesi · Toptan (Netsa)"}</p>
         <h1 className="font-display text-2xl font-semibold text-metin mb-6">{liste.baslik}</h1>
+        {linkKutusu}
         <FiyatUrunArama satirlar={aramaSatirlari} paraBirimi={liste.paraBirimi} />
         <ToptanFiyatListesi
           liste={{
@@ -165,6 +198,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
         </Link>
         <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">Fiyat Listesi · Otomatik</p>
         <h1 className="font-display text-2xl font-semibold text-metin mb-6">{liste.baslik}</h1>
+        {linkKutusu}
         <FiyatUrunArama paraBirimi={liste.paraBirimi} satirlar={kayaSatirlari} />
         <KayaFiyatListesi
           liste={{
@@ -228,6 +262,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
       <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">Fiyat Listesi</p>
       <h1 className="font-display text-2xl font-semibold text-metin mb-1">{liste.baslik}</h1>
       <p className="text-xs text-metin/50 mb-6">PDF her zaman son kaydedilen hâli gösterir; değişiklik yaptıysanız önce kaydedin.</p>
+      {linkKutusu}
       <FiyatUrunArama
         satirlar={aramaSatirlari}
         paraBirimi={liste.paraBirimi}

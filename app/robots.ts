@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/panel", "/panel/", "/t/"],
+      disallow: ["/panel", "/panel/", "/t/", "/f/"],
     },
     sitemap: "https://iklimofisi.com/sitemap.xml",
   };

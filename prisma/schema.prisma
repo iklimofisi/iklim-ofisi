@@ -277,6 +277,26 @@ model FiyatListesi {
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
   kalemler         FiyatListesiKalem[]
+  paylasimlar      FiyatListesiPaylasim[]
+}
+
+// Müşteriye gönderilen fiyat listesi linki (iklimofisi.com/f/<anahtar>). Her alıcıya ayrı link.
+// Link açıldığında listenin O ANKİ hâli gösterilir: panelde kaydedilen fiyat anında yansır.
+// İptal edilen link silinmez (iptalTarihi dolar), artık açılmaz.
+model FiyatListesiPaylasim {
+  id              String       @id @default(cuid())
+  liste           FiyatListesi @relation(fields: [listeId], references: [id], onDelete: Cascade)
+  listeId         String
+  anahtar         String       @unique
+  alici           String       @default("")
+  olusturanAdi    String       @default("")
+  createdAt       DateTime     @default(now())
+  goruntulenme    Int          @default(0)
+  sonGoruntulenme DateTime?
+  iptalTarihi     DateTime?
+  iptalEdenAdi    String?
+
+  @@index([listeId])
 }
 
 model FiyatListesiKalem {
