@@ -44,6 +44,7 @@ const MESAJLAR: Record<string, string> = {
   "paylasim-iptal": "Teklif linki iptal edildi; eski link artık açılmaz.",
   "fiyat-link-olusturuldu": "Müşteri linki oluşturuldu. Kopyalayıp ya da WhatsApp ile gönderebilirsiniz; fiyatları değiştirdiğinizde link kendiliğinden güncellenir.",
   "fiyat-link-iptal": "Link iptal edildi; bu kişi listeyi artık açamaz.",
+  "fiyat-link-urunler": "Linkteki ürünler güncellendi; link adresi aynı kaldı.",
   "eposta-test-ok": "Deneme e-postası gönderildi. Gelen kutunuzu (ve Spam klasörünü) kontrol edin.",
 };
 
@@ -71,6 +72,7 @@ const HATALAR: Record<string, string> = {
   "musteri-secilmedi": "Teklif müşteriye bağlanmadı: listeden bir müşteri seçin.",
   "havalandirma-hesap-teklif-eksik": "Teklif OLUŞTURULMADI: müşteri ve teklif başlığı seçilmeli, hesapta en az bir santral ve mahal olmalı.",
   "isi-modeli-eksik": "Model KAYDEDİLMEDİ: marka, model ve üç kapasite değeri (A7/W35, A-7/W35, A-7/W55) zorunludur.",
+  "fiyat-link-urun-yok": "Link KAYDEDİLMEDİ: en az bir ürün seçili olmalı.",
   "teklif-eksik": "Teklif KAYDEDİLMEDİ: müşteri, başlık veya en az bir açıklamalı kalem eksik.",
   "teklif-kayit-hatasi": "Teklif KAYDEDİLEMEDİ. Nedeni İşlem Geçmişi'nde \"Teklif kaydı BAŞARISIZ\" satırında yazıyor.",
 };

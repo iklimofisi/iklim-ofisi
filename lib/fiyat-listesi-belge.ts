@@ -6,7 +6,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSirketAyarlari } from "@/lib/sirket";
 import { fiyatListesiPdfOlustur, type PdfGorsel } from "@/lib/fiyat-listesi-pdf";
-import { notEtiketsiz, secimAciklamasi } from "@/lib/fiyat-listesi";
+import { notEtiketsiz, secimAciklamasi, secimAnahtari } from "@/lib/fiyat-listesi";
 
 export const dosyaAdi = (t: string) =>
   (t
@@ -20,7 +20,13 @@ export const dosyaAdi = (t: string) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 80) || "Fiyat-Listesi") + ".pdf";
 
-export async function fiyatListesiPdfHazirla(id: string, haric: Set<string> = new Set()): Promise<{ pdf: Buffer; baslik: string } | null> {
+// haric: çıkarılacak kalem kimlikleri (panelde seçerek PDF); haricAnahtarlar: çıkarılacak ürünlerin
+// seçim anahtarları (müşteri linkinde gizlenen ürünler)
+export async function fiyatListesiPdfHazirla(
+  id: string,
+  haric: Set<string> = new Set(),
+  haricAnahtarlar: Set<string> = new Set()
+): Promise<{ pdf: Buffer; baslik: string } | null> {
   const liste = await prisma.fiyatListesi.findUnique({
     where: { id },
     include: { kalemler: { orderBy: { sira: "asc" }, include: { urun: { select: { gorselId: true } } } } },
@@ -28,7 +34,7 @@ export async function fiyatListesiPdfHazirla(id: string, haric: Set<string> = ne
   if (!liste) return null;
 
   const kalemler = liste.kalemler
-    .filter((k) => !haric.has(k.id))
+    .filter((k) => !haric.has(k.id) && !(haricAnahtarlar.size > 0 && haricAnahtarlar.has(secimAnahtari(k))))
     .map((k) => ({
       bolum: k.bolum,
       ad: k.ad,

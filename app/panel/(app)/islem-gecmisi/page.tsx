@@ -35,6 +35,7 @@ const ISLEM_ADI: Record<string, string> = {
   fiyatListesiSil: "Fiyat listesini sildi",
   fiyatListesiLinkOlustur: "Fiyat listesi müşteri linki oluşturdu",
   fiyatListesiLinkIptal: "Fiyat listesi müşteri linkini iptal etti",
+  fiyatListesiLinkUrunleri: "Fiyat listesi linkindeki ürünleri değiştirdi",
   kayaFiyatListesiGuncelle: "Kaya fiyat listesini elle güncelledi",
   kayaFiyatListesiGuncellendi: "Kaya fiyat listesi güncellendi (%5 eklendi)",
   fiyatListesiAyarKaydet: "Otomatik fiyat listesinin ayarlarını değiştirdi",

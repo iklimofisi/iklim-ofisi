@@ -220,3 +220,11 @@ export function fiyatBilgiCumlesi(l: {
   // Uygulanan iskonto oranı müşteriye yazılmaz; PDF'te yalnız iskontolu fiyatlar görünür.
   return `Fiyatlar ${pb} cinsindendir ve KDV ${l.kdvDahil ? "dahildir" : "hariçtir"}.`;
 }
+
+// Ürünün seçim anahtarı: "Ürün seçerek PDF" ve müşteri linkindeki gizli ürünler bununla tutulur.
+// Kalem kimliği (id) liste her kaydedildiğinde değiştiği için bölüm + ad + kod kullanılır.
+// (components/FiyatListesiSecim.tsx'teki anahtarla aynı)
+const secimSade = (m: string) =>
+  m.toLocaleLowerCase("tr-TR").replace(/ı/g, "i").replace(/ğ/g, "g").replace(/ü/g, "u").replace(/ş/g, "s").replace(/ö/g, "o").replace(/ç/g, "c");
+export const secimAnahtari = (r: { bolum: string; ad: string; kod: string | null }) =>
+  secimSade(`${r.bolum}|${r.ad}|${r.kod ?? ""}`).replace(/\s+/g, " ").trim();

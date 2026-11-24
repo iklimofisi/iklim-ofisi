@@ -11,7 +11,8 @@ export async function GET(req: NextRequest, { params }: { params: { anahtar: str
   const sonuc = await paylasilanFiyatListesi(params.anahtar);
   if (!sonuc) return new Response("Bu fiyat listesi linki geçersiz veya iptal edilmiş.", { status: 404 });
 
-  const belge = await fiyatListesiPdfHazirla(sonuc.liste.id);
+  // Bu linkte gizlenen ürünler PDF'e girmez
+  const belge = await fiyatListesiPdfHazirla(sonuc.liste.id, new Set(), sonuc.haricAnahtarlar);
   if (!belge) return new Response("Fiyat listesi bulunamadı.", { status: 404 });
   const indir = req.nextUrl.searchParams.get("indir") === "1";
 

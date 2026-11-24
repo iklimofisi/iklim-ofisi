@@ -91,7 +91,7 @@ export default async function FiyatListesiLinki({ params }: { params: { anahtar:
                 Fiyatlar değiştikçe bu link kendiliğinden yenilenir; her açtığınızda son fiyatları görürsünüz.
               </p>
               <p className="text-xs text-teal-800/70 mt-2">
-                Son güncelleme: {saatliTarih(liste.updatedAt)} · {liste._count.kalemler} ürün
+                Son güncelleme: {saatliTarih(liste.updatedAt)} · {sonuc.urunSayisi} ürün
                 {liste.gecerlilikTarihi && ` · Geçerlilik: ${tarihYaz(liste.gecerlilikTarihi)}`}
               </p>
             </div>

@@ -16,7 +16,8 @@ import FiyatUrunArama, { type AramaSatiri } from "@/components/FiyatUrunArama";
 import { sayfaYetkisi } from "@/lib/oturum";
 import { maliyetGorur, yazabilir, saltOkunurMu } from "@/lib/roller";
 import { getSirketAyarlari } from "@/lib/sirket";
-import { FIYAT_LINK_TABANI } from "@/lib/fiyat-paylasim";
+import { FIYAT_LINK_TABANI, haricOku } from "@/lib/fiyat-paylasim";
+import { secimAnahtari } from "@/lib/fiyat-listesi";
 import FiyatListesiLinkleri from "@/components/FiyatListesiLinkleri";
 
 export const dynamic = "force-dynamic";
@@ -74,6 +75,9 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
       baslik={liste.baslik}
       firma={sirket.unvan}
       izin={!saltOkunurMu(giren.rol)}
+      urunler={Array.from(
+        new Map(liste.kalemler.map((k) => [secimAnahtari(k), { anahtar: secimAnahtari(k), bolum: k.bolum, ad: k.ad, kod: k.kod }])).values()
+      )}
       linkler={paylasimlar.map((p) => ({
         id: p.id,
         alici: p.alici,
@@ -82,6 +86,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
         olusturanAdi: p.olusturanAdi,
         goruntulenme: p.goruntulenme,
         sonGoruntulenme: p.sonGoruntulenme ? saatli(p.sonGoruntulenme) : null,
+        haric: [...haricOku(p.haric)],
       }))}
     />
   );

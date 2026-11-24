@@ -295,6 +295,7 @@ model FiyatListesiPaylasim {
   sonGoruntulenme DateTime?
   iptalTarihi     DateTime?
   iptalEdenAdi    String?
+  haric           String? // bu linkte GÖSTERİLMEYEN ürünlerin seçim anahtarları (JSON dizi; boş = tüm ürünler)
 
   @@index([listeId])
 }
