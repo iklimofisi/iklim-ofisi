@@ -423,7 +423,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
           gorselId: u.gorselId,
         }))}
         kurlar={kurlar ? { tarih: kurlar.tarih, USD: kurlar.USD, EUR: kurlar.EUR } : null}
-        kodAlislari={kodAlislari}
+        kodAlislari={hazirAlisFiyatlari(hazir)}
       />
     </div>
   );
