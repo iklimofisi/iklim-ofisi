@@ -17,7 +17,7 @@ import { sayfaYetkisi } from "@/lib/oturum";
 import { maliyetGorur, yazabilir, saltOkunurMu } from "@/lib/roller";
 import { getSirketAyarlari } from "@/lib/sirket";
 import { FIYAT_LINK_TABANI, haricOku } from "@/lib/fiyat-paylasim";
-import { secimAnahtari } from "@/lib/fiyat-listesi";
+import { secimAnahtari, flParaYaz } from "@/lib/fiyat-listesi";
 import FiyatListesiLinkleri from "@/components/FiyatListesiLinkleri";
 
 export const dynamic = "force-dynamic";
@@ -247,6 +247,66 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
           ? [{ ad: "Alış", deger: kodAlislari[k.kod.trim()] }]
           : [],
   }));
+  // ALIŞ / SATIŞ TABLOSU (yalnız panel, maliyet görebilenlere): alış iskontosu girilmiş ya da
+  // hazır listesinde alış tanımlı listelerde (Niva, Montaj) her ürünün alışı, satışı ve kârı
+  const sonFiyat = (k: (typeof liste.kalemler)[number]) => (liste.fiyat2Baslik && k.fiyat2 !== null && k.fiyat2 > 0 ? k.fiyat2 : k.fiyat);
+  const alisSatirlari = liste.kalemler
+    .map((k) => {
+      const alis =
+        alisY !== null && k.fiyat > 0
+          ? Math.round(k.fiyat * (1 - alisY / 100) * 100) / 100
+          : kodAlislari && k.kod && kodAlislari[k.kod.trim()]
+            ? kodAlislari[k.kod.trim()]
+            : null;
+      return { k, alis, satis: sonFiyat(k) };
+    })
+    .filter((r) => r.alis !== null && r.alis > 0);
+  const alisTablosu =
+    alisGoster && alisSatirlari.length > 0 ? (
+      <details className="mb-6 bg-amber-50/40 border border-amber-200 rounded-lg print:hidden">
+        <summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-metin">
+          💰 Alış fiyatları ve kâr <span className="font-normal text-metin/60">· {alisSatirlari.length} ürün · yalnız panelde, PDF&apos;e ve müşteri linkine girmez</span>
+        </summary>
+        <div className="overflow-x-auto px-4 pb-4">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-left text-metin/50 border-b border-amber-200">
+                <th className="py-2 pr-3 font-medium">Ürün</th>
+                <th className="py-2 px-2 font-medium text-right whitespace-nowrap">Alış</th>
+                <th className="py-2 px-2 font-medium text-right whitespace-nowrap">{(liste.fiyat2Baslik || liste.fiyatBaslik || "Satış").trim()}</th>
+                <th className="py-2 pl-2 font-medium text-right whitespace-nowrap">Kâr</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-amber-100">
+              {alisSatirlari.map(({ k, alis, satis }, i) => {
+                const kar = satis > 0 && alis ? satis - alis : null;
+                return (
+                  <tr key={`${k.id}-${i}`}>
+                    <td className="py-1.5 pr-3 text-metin/80">
+                      {k.bolum && <span className="text-metin/40">{k.bolum} · </span>}
+                      {k.ad}
+                      {k.kod && <span className="text-metin/40 font-mono"> · {k.kod}</span>}
+                    </td>
+                    <td className="py-1.5 px-2 text-right font-mono whitespace-nowrap">{flParaYaz(alis as number, liste.paraBirimi)}</td>
+                    <td className="py-1.5 px-2 text-right font-mono whitespace-nowrap">{satis > 0 ? flParaYaz(satis, liste.paraBirimi) : "—"}</td>
+                    <td className={`py-1.5 pl-2 text-right font-mono whitespace-nowrap ${kar !== null && kar < 0 ? "text-red-700" : "text-emerald-700"}`}>
+                      {kar !== null ? `${flParaYaz(kar, liste.paraBirimi)} · %${((kar / (alis as number)) * 100).toFixed(1).replace(".", ",")}` : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <p className="text-[11px] text-metin/45 mt-2">
+            {alisY !== null
+              ? `Alış = liste fiyatı − %${alisY.toLocaleString("tr-TR")} alış iskontosu.`
+              : "Alış, hazır listedeki tedarikçi / taşeron fiyatıdır; satış fiyatını değiştirseniz de alış aynı kalır."}{" "}
+            Kâr, alışa göre yüzdedir.
+          </p>
+        </div>
+      </details>
+    ) : null;
+
   if (salt)
     return saltGorunum("Fiyat Listesi", aramaSatirlari, liste.iskontoYuzde > 0 ? `PDF'te %${liste.iskontoYuzde.toLocaleString("tr-TR")} iskonto uygulanır.` : "");
   return (
@@ -273,6 +333,7 @@ export default async function FiyatListesiSayfasi({ params, searchParams }: { pa
         paraBirimi={liste.paraBirimi}
         not={liste.iskontoYuzde > 0 ? `PDF'te %${liste.iskontoYuzde.toLocaleString("tr-TR")} iskonto uygulanır.` : ""}
       />
+      {alisTablosu}
       {hazir && hazir.bolumler.some((b) => b.kalemler.some((k) => k.genislik)) && (
         <form action={hazirListeTamamla} className="bg-soguk-light/40 border border-soguk/30 rounded-lg px-4 py-3 mb-6 flex flex-wrap items-center justify-between gap-3">
           <input type="hidden" name="kod" value={hazir.kod} />

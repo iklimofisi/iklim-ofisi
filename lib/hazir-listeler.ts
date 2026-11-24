@@ -207,6 +207,7 @@ const MONTAJ: HazirListe = {
   aciklama: "VRF ve klima sistemleri montaj birim fiyatları: dış ve iç ünite montajı, malzemeli bakır boru ve izolasyon, kablolama, branşman, soğutucu akışkan, kumanda ve devreye alma.",
   notlar: "Fiyatlara KDV dahil değildir.\nBakır boru tesisatı sarf malzeme ve azot gazı testi bedeli: bakır boru tutarının %10'u olarak ayrıca eklenir.",
   kaynakAciklama: "İklim Ofisi montaj birim fiyatları · USD · KDV hariç",
+  satisKarYuzde: 17, // satış = taşeron alış + %17 → alış yalnız panelde görünür (PDF ve müşteri linkinde yok)
   paraBirimi: "USD",
   kdvDahil: false,
   fiyatBaslik: "Birim Fiyat",
