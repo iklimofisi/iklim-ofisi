@@ -19,59 +19,61 @@ export const metadata: Metadata = {
 };
 
 // MENÜ GRUPLARI — sol menü açılır gruplar hâlinde gösterilir (bulunulan sayfanın grubu açık durur).
-// Sayfa adresleri değişmedi; yalnızca menüdeki yerleri gruplandı.
+// Sayfa adresleri değişmedi; yalnızca menüdeki yerleri gruplandı. Bir sayfanın alt sayfaları
+// (ör. Projeler → Takip Tablosu, Satınalma → Satınalma Siparişleri) menüde ayrı satır olmaz;
+// "ek" adreslerde de ana satır seçili görünür. Profil sayfası menünün en altındadır.
 const menuGruplari: MenuGrubu[] = [
   {
     baslik: null,
     ogeler: [
       { href: "/panel", label: "Özet" },
-      { href: "/panel/notlar", label: "📝 Notlar & Hatırlatmalar" },
+      { href: "/panel/notlar", label: "Notlar & Hatırlatmalar" },
     ],
   },
   {
-    baslik: "Satış & Müşteri",
+    baslik: "Satış",
     ogeler: [
       { href: "/panel/talepler", label: "Web Talepleri" },
       { href: "/panel/musteriler", label: "Müşteriler" },
-      { href: "/panel/ziyaretler", label: "Görüşmeler & Ziyaretler" },
-      { href: "/panel/projeler", label: "Projeler" },
-      { href: "/panel/proje-takip", label: "📊 Proje Takip (Excel)" },
+      { href: "/panel/ziyaretler", label: "Görüşmeler" },
+      { href: "/panel/projeler", label: "Projeler", ek: ["/panel/proje-takip"] },
       { href: "/panel/kesif", label: "Keşif" },
       { href: "/panel/teklifler", label: "Teklifler" },
-      { href: "/panel/fiyat-listeleri", label: "Fiyat Listeleri" },
     ],
   },
   {
-    baslik: "Mühendislik Hesapları",
+    baslik: "Ürün & Fiyat",
     ogeler: [
-      { href: "/panel/isi-hesabi", label: "Isı Pompası Hesabı" },
-      { href: "/panel/klima-hesabi", label: "Klima & VRF Hesabı" },
-      { href: "/panel/havalandirma-hesabi", label: "Havalandırma Hesabı" },
+      { href: "/panel/ayarlar/urunler", label: "Ürün Kataloğu" },
+      { href: "/panel/fiyat-listeleri", label: "Fiyat Listeleri" },
+      { href: "/panel/stok", label: "Stok" },
     ],
   },
   {
-    baslik: "Operasyon",
+    baslik: "Sipariş & Satınalma",
     ogeler: [
       { href: "/panel/siparisler", label: "Siparişler" },
       { href: "/panel/satinalma", label: "Satınalma" },
-      { href: "/panel/satinalma/siparisler", label: "Satınalma Siparişleri" },
-      { href: "/panel/stok", label: "Stok & Envanter" },
-      { href: "/panel/ayarlar/urunler", label: "Ürün Kataloğu" },
+    ],
+  },
+  {
+    baslik: "Hesaplamalar",
+    ogeler: [
+      { href: "/panel/isi-hesabi", label: "Isı Pompası" },
+      { href: "/panel/klima-hesabi", label: "Klima & VRF" },
+      { href: "/panel/havalandirma-hesabi", label: "Havalandırma" },
     ],
   },
   {
     baslik: "Finans",
     ogeler: [
       { href: "/panel/cari", label: "Cari Hesap" },
-      { href: "/panel/genel-cari", label: "Genel Finans & Çekler" },
-      { href: "/panel/rapor", label: "📈 Yönetim Raporu" },
+      { href: "/panel/genel-cari", label: "Finans & Çekler" },
+      { href: "/panel/rapor", label: "Yönetim Raporu" },
     ],
   },
 ];
-const yonetimTemel = [
-  { href: "/panel/ayarlar", label: "Ayarlar" },
-  { href: "/panel/profil", label: "Profilim & Şifre" },
-];
+const yonetimTemel = [{ href: "/panel/ayarlar", label: "Ayarlar" }];
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const kullanici = await suankiKullanici();
@@ -108,7 +110,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     "/panel/kesif": yeniKesifSayisi,
     "/panel/projeler": takiptekiProjeSayisi,
     "/panel/notlar": gunuGelenNot,
-    "/panel/satinalma/siparisler": onayBekleyenSatinalma,
+    "/panel/satinalma": onayBekleyenSatinalma,
   };
 
   // Menüde yalnız kullanıcının rolünün görebildiği sayfalar (lib/roller.ts); boş kalan grup gizlenir

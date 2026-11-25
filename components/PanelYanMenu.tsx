@@ -11,7 +11,8 @@ import { useEffect, useState } from "react";
 // toplamı görünür (ör. okunmamış web talepleri).
 // -----------------------------------------------------------------------------
 
-export type MenuOgesi = { href: string; label: string };
+// ek: bu satırı da seçili gösteren alt adresler (ör. Projeler → /panel/proje-takip)
+export type MenuOgesi = { href: string; label: string; ek?: string[] };
 export type MenuGrubu = { baslik: string | null; ogeler: MenuOgesi[] };
 
 const ANAHTAR = "panel-menu-gruplari";
@@ -19,6 +20,14 @@ const ANAHTAR = "panel-menu-gruplari";
 export function aktifMi(pathname: string, href: string) {
   if (href === "/panel") return pathname === "/panel";
   return pathname === href || pathname.startsWith(href + "/");
+}
+
+// Menü satırı seçili mi: kendi adresi ya da "ek" adreslerinden biri.
+// "/panel/ayarlar" satırı, menüde ayrı satırı olan alt sayfalarda (Ürün Kataloğu) seçili görünmez.
+export function ogeAktif(pathname: string, o: MenuOgesi, tum: MenuOgesi[] = []) {
+  const eslesir = aktifMi(pathname, o.href) || (o.ek ?? []).some((h) => aktifMi(pathname, h));
+  if (!eslesir) return false;
+  return !tum.some((b) => b.href !== o.href && b.href.startsWith(o.href + "/") && aktifMi(pathname, b.href));
 }
 
 export function useMenuDurumu(gruplar: MenuGrubu[]) {
@@ -45,7 +54,7 @@ export function useMenuDurumu(gruplar: MenuGrubu[]) {
   };
   const grupAcikMi = (g: MenuGrubu) => {
     if (!g.baslik) return true;
-    if (g.ogeler.some((o) => aktifMi(pathname, o.href))) return true;
+    if (g.ogeler.some((o) => ogeAktif(pathname, o, gruplar.flatMap((x) => x.ogeler)))) return true;
     return acik[g.baslik] ?? false;
   };
   return { pathname, grupAcikMi, degistir };
@@ -63,7 +72,8 @@ export default function PanelYanMenu({ gruplar, rozetler }: { gruplar: MenuGrubu
       {gruplar.map((g, gi) => {
         const acik = grupAcikMi(g);
         const toplam = g.ogeler.reduce((t, o) => t + (rozetler[o.href] ?? 0), 0);
-        const aktifGrup = g.ogeler.some((o) => aktifMi(pathname, o.href));
+        const tumOgeler = gruplar.flatMap((x) => x.ogeler);
+        const aktifGrup = g.ogeler.some((o) => ogeAktif(pathname, o, tumOgeler));
         return (
           <div key={g.baslik ?? `g${gi}`} className={g.baslik ? "pt-1" : ""}>
             {g.baslik && (
@@ -84,7 +94,7 @@ export default function PanelYanMenu({ gruplar, rozetler }: { gruplar: MenuGrubu
             {acik && (
               <div className={g.baslik ? "space-y-0.5 mb-1" : "space-y-0.5"}>
                 {g.ogeler.map((m) => {
-                  const aktif = aktifMi(pathname, m.href);
+                  const aktif = ogeAktif(pathname, m, tumOgeler);
                   return (
                     <Link
                       key={m.href}

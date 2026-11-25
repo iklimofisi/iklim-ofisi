@@ -7,6 +7,7 @@ import HizliAramaListesi from "@/components/HizliAramaListesi";
 import KaydetButonu from "@/components/KaydetButonu";
 import Link from "next/link";
 import { sayfaYetkisi } from "@/lib/oturum";
+import ProjeSekmeleri from "@/components/ProjeSekmeleri";
 
 export const dynamic = "force-dynamic";
 
@@ -43,8 +44,9 @@ export default async function ProjelerPage({
 
   return (
     <div>
-      <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Panel</p>
-      <h1 className="font-display text-2xl font-semibold text-metin mb-2">Proje Takibi</h1>
+      <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Satış</p>
+      <h1 className="font-display text-2xl font-semibold text-metin mb-3">Projeler</h1>
+      <ProjeSekmeleri aktif="liste" />
       <p className="text-sm text-metin/60 mb-8">
         İhale/proje bazlı fırsatları takip et — nereden geldiği, kimin aldığı, kaç teklif ve ziyaret yapıldığı burada. Bir teklif oluştururken bu projelerden birine bağlayabilirsin.
       </p>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { teklifToplamlari } from "@/lib/teklif-hesap";
 import KaydetButonu from "@/components/KaydetButonu";
 import { sayfaYetkisi } from "@/lib/oturum";
+import ProjeSekmeleri from "@/components/ProjeSekmeleri";
 
 export const dynamic = "force-dynamic";
 
@@ -46,8 +47,9 @@ export default async function ProjeTakipPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
-          <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">CRM / Satış Takip</p>
-          <h1 className="font-display text-2xl font-bold text-metin">📊 Proje Takip & Fırsat Izgarası</h1>
+          <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">Satış</p>
+          <h1 className="font-display text-2xl font-semibold text-metin mb-3">Projeler</h1>
+          <ProjeSekmeleri aktif="tablo" />
         </div>
 
         <div className="flex flex-wrap items-center gap-3">

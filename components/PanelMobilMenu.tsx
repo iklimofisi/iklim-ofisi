@@ -5,7 +5,7 @@ import Link from "next/link";
 import { LogoTam } from "@/components/Logo";
 import { cikisYap } from "@/lib/auth-actions";
 import KurGostergesi from "@/components/KurGostergesi";
-import { aktifMi, useMenuDurumu, type MenuGrubu } from "@/components/PanelYanMenu";
+import { ogeAktif, useMenuDurumu, type MenuGrubu } from "@/components/PanelYanMenu";
 
 export default function PanelMobilMenu({ gruplar, rozetler }: { gruplar: MenuGrubu[]; rozetler: Record<string, number> }) {
   const [acik, setAcik] = useState(false);
@@ -57,7 +57,7 @@ export default function PanelMobilMenu({ gruplar, rozetler }: { gruplar: MenuGru
                         href={m.href}
                         onClick={() => setAcik(false)}
                         className={`flex items-center justify-between p-3 rounded-lg text-sm font-semibold border border-hat/50 hover:bg-slate-50 ${
-                          aktifMi(pathname, m.href) ? "bg-soguk-light text-soguk-dim" : "text-metin"
+                          ogeAktif(pathname, m, gruplar.flatMap((x) => x.ogeler)) ? "bg-soguk-light text-soguk-dim" : "text-metin"
                         }`}
                       >
                         <span>{m.label}</span>
