@@ -31,6 +31,12 @@ const PANEL: [string, string, number, number, string, number][] = [
   ["Akasya", "akasya", 100, 50, "270 – 1870", 151],
 ];
 
+// Kaç dilim tablosu: aynı dilim gücündeki modeller gruplanır (600 mm, Δt 60)
+const DILIM_GRUPLARI: [number, string[]][] = Array.from(
+  PANEL.reduce((m, [ad, , , , , w]) => m.set(w, [...(m.get(w) ?? []), ad]), new Map<number, string[]>())
+).sort((a, b) => a[0] - b[0]);
+const ODA_ISI_KAYBI = [1000, 1500, 2000, 2500, 3000];
+
 // [ad, görsel, yükseklik aralığı mm]
 const HAVLUPAN: [string, string, string][] = [
   ["Stil", "stil", "690 – 1600"],
@@ -59,9 +65,9 @@ const RENKLER: [string, string][] = [
 
 // AYEN SAYFASI METİNLERİ (Türkçe / English / Deutsch)
 const tr = {
-  metaBaslik: "Ayen Alüminyum Radyatör ve Havlupan Modelleri | İklim Ofisi",
+  metaBaslik: "Ayen Radyatör: Alüminyum Modeller, Ölçüler, Dilim Watt",
   metaAciklama:
-    "Ayen alüminyum radyatör ve havlupan: 9 panel radyatör, 9 havlupan modeli, 30 renk. EN 442 ve TSE belgeli. İstanbul'da keşif, satış ve montaj için teklif alın.",
+    "Ayen alüminyum radyatör: 9 panel radyatör, 9 havlupan, 30 renk. Model ölçüleri, dilim başına watt ve oda için kaç dilim gerektiği tablosu. Satış, montaj, teklif.",
   anahtar: [
     "Ayen radyatör",
     "Ayen alüminyum radyatör",
@@ -70,7 +76,8 @@ const tr = {
     "alüminyum havlupan",
     "dekoratif radyatör",
     "renkli radyatör",
-    "alüminyum radyatör İstanbul",
+    "Ayen radyatör dilim watt",
+    "kaç dilim radyatör gerekir",
   ],
   ogBaslik: "Ayen Alüminyum Radyatör | İklim Ofisi",
   ogAciklama: "Panel radyatör ve havlupan modelleri, 30 renk seçeneği. Satış, keşif ve montaj.",
@@ -122,6 +129,10 @@ const tr = {
       "Ayen havlupan elektrikle çalışır mı?",
       "Havlupanlar kalorifer tesisatına bağlanır; istenirse elektrikli ısıtıcı kiti ile de kullanılabilir. Havlupanlarda üstten, ortadan ve alttan bağlantı seçenekleri vardır.",
     ],
+    [
+      "Ayen radyatör fiyatları neye göre değişir?",
+      "Fiyat; seçilen model, radyatör yüksekliği, dilim sayısı ve renk/desen seçimine göre değişir. Oda ölçülerini ve istediğiniz modeli bildirirseniz dilim hesabını yapıp radyatör ve montaj için net teklif hazırlıyoruz.",
+    ],
   ] as Sss[],
   ld: {
     anaSayfa: "Ana Sayfa",
@@ -156,6 +167,12 @@ const tr = {
   yukseklik: "Yükseklik",
   isilGuc: "Isıl güç (600'lük)",
   wDilim: "W / dilim",
+  dtBaslik: "Kaç dilim gerekir? Hızlı tablo",
+  dtMetin:
+    "Odanın ısı kaybına göre 600 mm yükseklikteki Ayen modelleri için yaklaşık dilim sayısı (Δt 60, 90/70/20 °C). Dilim sayısı = ısı kaybı ÷ dilim başına watt, yukarı yuvarlanır.",
+  dtOda: "Odanın ısı kaybı",
+  dtNot:
+    "Yoğuşmalı kazan veya ısı pompası gibi düşük su sıcaklığında çalışan sistemlerde dilim başına güç azalır, daha fazla dilim gerekir. Kesin sayı için oda oda ısı kaybı hesabı yapıyoruz.",
   hvEtiket: "HAVLUPANLAR",
   hvBaslik: "Alüminyum havlupan modelleri",
   hvMetin:
@@ -194,7 +211,7 @@ type Metin = typeof tr;
 const en: Metin = {
   metaBaslik: "Ayen Aluminium Radiator and Towel Radiator Models | İklim Ofisi",
   metaAciklama:
-    "Ayen aluminium radiators and towel radiators: 9 panel radiator and 9 towel radiator models, 30 colours. EN 442 and TSE certified. Request a quote for site survey, supply and installation in Istanbul.",
+    "Ayen aluminium radiators: 9 panel radiator and 9 towel radiator models, 30 colours. Dimensions, watts per section and a table of how many sections a room needs.",
   anahtar: [
     "Ayen radiator",
     "Ayen aluminium radiator",
@@ -203,7 +220,7 @@ const en: Metin = {
     "aluminium towel radiator",
     "decorative radiator",
     "coloured radiator",
-    "aluminium radiator Istanbul",
+    "radiator sections calculation",
   ],
   ogBaslik: "Ayen Aluminium Radiators | İklim Ofisi",
   ogAciklama: "Panel radiator and towel radiator models, 30 colour options. Supply, site survey and installation.",
@@ -254,6 +271,10 @@ const en: Metin = {
       "Do Ayen towel radiators work electrically?",
       "The towel radiators are connected to the central heating system; if desired, they can also be used with an electric heater kit. Top, middle and bottom connection options are available.",
     ],
+    [
+      "What does the price of Ayen radiators depend on?",
+      "The price depends on the model, radiator height, number of sections and choice of colour or finish. Share the room dimensions and the model you want, and we will calculate the sections and prepare a firm quote for supply and installation.",
+    ],
   ],
   ld: {
     anaSayfa: "Home",
@@ -288,6 +309,12 @@ const en: Metin = {
   yukseklik: "Height",
   isilGuc: "Heat output (600 mm)",
   wDilim: "W / section",
+  dtBaslik: "How many sections do you need? Quick table",
+  dtMetin:
+    "Approximate number of sections for 600 mm high Ayen models by room heat loss (Δt 60, 90/70/20 °C). Sections = heat loss ÷ watts per section, rounded up.",
+  dtOda: "Room heat loss",
+  dtNot:
+    "In systems with lower water temperatures, such as condensing boilers or heat pumps, the output per section drops and more sections are needed. We calculate the exact number room by room.",
   hvEtiket: "TOWEL RADIATORS",
   hvBaslik: "Aluminium towel radiator models",
   hvMetin:
@@ -324,7 +351,7 @@ const en: Metin = {
 const de: Metin = {
   metaBaslik: "Ayen Aluminiumheizkörper und Badheizkörper | İklim Ofisi",
   metaAciklama:
-    "Ayen Aluminiumheizkörper und Badheizkörper: 9 Paneelheizkörper- und 9 Badheizkörper-Modelle, 30 Farben. EN 442- und TSE-zertifiziert. Angebot für Besichtigung, Lieferung und Montage in Istanbul anfordern.",
+    "Ayen Aluminiumheizkörper: 9 Paneelheizkörper- und 9 Badheizkörper-Modelle, 30 Farben. Maße, Watt pro Glied und Tabelle, wie viele Glieder ein Raum braucht.",
   anahtar: [
     "Ayen Heizkörper",
     "Ayen Aluminiumheizkörper",
@@ -333,7 +360,7 @@ const de: Metin = {
     "Aluminium-Badheizkörper",
     "Designheizkörper",
     "farbige Heizkörper",
-    "Aluminiumheizkörper Istanbul",
+    "Gliederzahl Heizkörper berechnen",
   ],
   ogBaslik: "Ayen Aluminiumheizkörper | İklim Ofisi",
   ogAciklama: "Paneel- und Badheizkörper-Modelle, 30 Farben. Lieferung, Besichtigung und Montage.",
@@ -384,6 +411,10 @@ const de: Metin = {
       "Funktionieren Ayen-Badheizkörper auch elektrisch?",
       "Die Badheizkörper werden an die Zentralheizung angeschlossen; auf Wunsch können sie auch mit einem Elektroheizstab betrieben werden. Es gibt Anschlussmöglichkeiten oben, mittig und unten.",
     ],
+    [
+      "Wovon hängt der Preis von Ayen-Heizkörpern ab?",
+      "Der Preis hängt von Modell, Bauhöhe, Gliederzahl sowie Farb- bzw. Dekorwahl ab. Teilen Sie uns die Raummaße und das gewünschte Modell mit; wir berechnen die Gliederzahl und erstellen ein verbindliches Angebot für Lieferung und Montage.",
+    ],
   ],
   ld: {
     anaSayfa: "Startseite",
@@ -418,6 +449,12 @@ const de: Metin = {
   yukseklik: "Bauhöhe",
   isilGuc: "Wärmeleistung (600 mm)",
   wDilim: "W / Glied",
+  dtBaslik: "Wie viele Glieder werden benötigt? Kurztabelle",
+  dtMetin:
+    "Ungefähre Gliederzahl für 600 mm hohe Ayen-Modelle nach Heizlast des Raumes (Δt 60, 90/70/20 °C). Gliederzahl = Heizlast ÷ Watt pro Glied, aufgerundet.",
+  dtOda: "Heizlast des Raumes",
+  dtNot:
+    "Bei Anlagen mit niedrigeren Wassertemperaturen, etwa mit Brennwertkessel oder Wärmepumpe, sinkt die Leistung pro Glied und es werden mehr Glieder benötigt. Die genaue Zahl berechnen wir raumweise.",
   hvEtiket: "BADHEIZKÖRPER",
   hvBaslik: "Aluminium-Badheizkörper-Modelle",
   hvMetin:
@@ -613,6 +650,38 @@ export default function AyenPage() {
                   </div>
                 </article>
               ))}
+            </div>
+
+            {/* Kaç dilim gerekir: aynı dilim gücündeki modeller tek sütunda */}
+            <div id="dilim" className="scroll-mt-28 space-y-3">
+              <h3 className="text-xl font-bold text-slate-900">{t.dtBaslik}</h3>
+              <p className="text-sm text-slate-600 leading-relaxed max-w-3xl">{t.dtMetin}</p>
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-100 text-slate-700">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-semibold">{t.dtOda}</th>
+                      {DILIM_GRUPLARI.map(([w, adlar]) => (
+                        <th key={w} className="text-right px-3 py-2 font-semibold">
+                          {w} {t.wDilim}
+                          <span className="block text-[11px] font-normal text-slate-500">{adlar.join(", ")}</span>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ODA_ISI_KAYBI.map((q) => (
+                      <tr key={q} className="border-t border-slate-200">
+                        <td className="px-3 py-2 font-semibold text-slate-800">{q.toLocaleString(dil === "en" ? "en-US" : "tr-TR")} W</td>
+                        {DILIM_GRUPLARI.map(([w]) => (
+                          <td key={w} className="px-3 py-2 text-right text-slate-700">{Math.ceil(q / w)}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-[11px] text-slate-500 max-w-3xl">{t.dtNot}</p>
             </div>
           </div>
         </section>

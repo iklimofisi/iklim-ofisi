@@ -24,9 +24,9 @@ const NIVA_ANAHTAR = ["Linda", "Life", "Smart Kaset", "Lena", "Dikey", "Turbo"] 
 
 // HAVA PERDESİ SAYFASI METİNLERİ (Türkçe / English / Deutsch)
 const tr = {
-  metaBaslik: "Hava Perdesi Modelleri: Niva ve Olefini | İklim Ofisi",
+  metaBaslik: "Hava Perdesi Nedir, Ne İşe Yarar? Model Seçimi ve Fiyat",
   metaAciklama:
-    "Hava perdesi nedir, ne işe yarar? Niva ve Olefini hava perdeleri: ısıtıcılı ve ısıtıcısız modeller, 85–250 cm boy, 12 m'ye kadar montaj yüksekliği. Mağaza, restoran, otel, AVM ve endüstriyel kapılar için İstanbul'da satış, keşif ve montaj.",
+    "Hava perdesi, kapı açıkken ısıtılan veya soğutulan havanın dışarı kaçmasını önler. 3–12 m montaj yüksekliğine göre Niva ve Olefini modelleri; satış, montaj ve teklif.",
   anahtar: [
     "hava perdesi",
     "hava perdesi nedir",
@@ -36,7 +36,8 @@ const tr = {
     "Olefini hava perdesi",
     "endüstriyel hava perdesi",
     "kapı hava perdesi",
-    "hava perdesi İstanbul",
+    "rüzgar perdesi",
+    "hava perdesi fiyatları",
   ],
   ogBaslik: "Niva ve Olefini Hava Perdeleri | İklim Ofisi",
   ogAciklama: "Isıtıcılı ve ısıtıcısız hava perdeleri; satış, keşif ve montaj.",
@@ -64,6 +65,10 @@ const tr = {
   // Cevaplar yalnız bu sayfadaki Niva / Olefini bilgilerine dayanır
   sss: [
     [
+      "Hava perdesi nedir?",
+      "Hava perdesi, kapının üst kısmına monte edilen ve aşağıya doğru güçlü, düzgün bir hava akımı üfleyen fanlı bir cihazdır. Bu hava akımı kapı açıkken iç ve dış ortam arasında görünmez bir bariyer oluşturur. Günlük dilde rüzgar perdesi veya kapı perdesi olarak da anılır.",
+    ],
+    [
       "Hava perdesi ne işe yarar?",
       "Hava perdesi, kapının üstünden aşağıya doğru güçlü bir hava akımı üfleyerek kapı açıkken iç ve dış ortam arasında görünmez bir bariyer oluşturur. Böylece kışın ısıtılmış, yazın soğutulmuş hava içeride kalır; kapı önündeki cereyan azalır ve iş yerleri kapılarını açık tutabilir.",
     ],
@@ -87,6 +92,30 @@ const tr = {
       "Kapının üstünde yer yoksa ne yapılır?",
       "Asma tavanlı mekânlarda tavana gömme Smart Kaset modeli görünmez bir çözüm sunar. Kapı üstünde hiç yer yoksa Niva Dikey modeli kapının yanına dikey olarak monte edilir.",
     ],
+    [
+      "Hava perdesi elektrik faturasını artırır mı?",
+      "Isıtıcısız modeller yalnız fan motorunu çalıştırdığı için düşük güç çeker. Isıtıcılı modeller ısıtıcı devredeyken daha yüksek güç çeker. Cihazı kapı switch'i ile yalnız kapı açıkken çalıştırmak gereksiz tüketimi önler; kapıdan kaçan ısı azaldığı için klima ve kalorifer de daha az çalışır.",
+    ],
+    [
+      "Hava perdesi klima veya kaloriferin yerine geçer mi?",
+      "Hayır. Hava perdesi mekânı ısıtmaz ya da soğutmaz; mevcut iklimlendirmenin kapıdan kaçmasını azaltır. Isıtıcılı modeller kapı önünü ısıtır ama mekânın ısıtma sisteminin yerine geçmez.",
+    ],
+    [
+      "Hava perdesi kapının içine mi dışına mı takılır?",
+      "Genellikle iç tarafa, kapıya olabildiğince yakın ve kapının tam üstüne monte edilir. Hava çıkış yönü hafifçe dışarı doğru ayarlanarak bariyer güçlendirilir.",
+    ],
+    [
+      "Hava perdesi evde kullanılır mı?",
+      "Evet. Genel tip modeller konut ve bina girişlerinde de kullanılır; özellikle sık açılan giriş, bahçe veya teras kapılarında kapı önündeki cereyanı azaltır.",
+    ],
+    [
+      "Hava perdesi sinek ve tozu engeller mi?",
+      "Hava akımı uçan haşerelerin, tozun ve egzoz kokusunun içeri girmesini azaltmaya yardımcı olur; ancak tamamen engellemez. Asıl amacı ısı kaybını ve cereyanı azaltmaktır.",
+    ],
+    [
+      "Hava perdesi fiyatları neye göre değişir?",
+      "Fiyatı belirleyen başlıca etkenler cihazın boyu, seri (montaj yüksekliği), ısıtıcılı ya da ısıtıcısız olması ve kumanda seçenekleridir. Kapı genişliği ve montaj yüksekliğini bildirirseniz uygun modelle net fiyat teklifi hazırlıyoruz.",
+    ],
   ] as Sss[],
   ld: {
     anaSayfa: "Ana Sayfa",
@@ -99,8 +128,26 @@ const tr = {
   },
   sayfaYolu: "Sayfa yolu",
   rozet: "NİVA · OLEFİNİ",
-  h1: "Hava Perdeleri",
+  h1: "Hava Perdesi Nedir, Ne İşe Yarar?",
   altBaslik: "Kapı açıkken bile ısıtılan ya da soğutulan hava içeride kalsın.",
+  kisacaEtiket: "Kısaca:",
+  kisaca:
+    "Hava perdesi, kapının üstüne takılan ve aşağıya doğru güçlü bir hava akımı üfleyen fanlı bir cihazdır. Kapı açıkken içerideki ısıtılmış veya soğutulmuş havanın dışarı kaçmasını, dışarıdaki soğuk ya da sıcak havanın içeri dolmasını azaltır. Doğru model için üç şeye bakılır: kapı genişliği (cihaz boyu kapıya eşit ya da biraz uzun olmalı), montaj yüksekliği (seriyi belirler) ve girişin ısıtılması gerekip gerekmediği (ısıtıcılı / ısıtıcısız).",
+  kuEtiket: "KULLANIM ALANLARI",
+  kuBaslik: "Hava perdesi nerelerde kullanılır?",
+  kullanim: [
+    ["Ticari girişler", "Mağaza, market, eczane, banka, kafe ve restoranlar"],
+    ["Otel ve AVM girişleri", "Yoğun insan trafiği olan, kapısı sık açılan alanlar"],
+    ["Ofis ve konut girişleri", "Bina lobileri, ana girişler; bahçe ve teras kapıları"],
+    ["Endüstriyel kapılar", "Depo, atölye, fabrika ve hangar kapıları; yüksek kapılar için endüstriyel seriler"],
+  ] as [string, string][],
+  mtBaslik: "Montajda dikkat edilecekler",
+  montaj: [
+    "Cihaz kapıya olabildiğince yakın ve kapının tam üstüne monte edilir.",
+    "Hava çıkış yönü hafifçe dışarı doğru ayarlanarak bariyer güçlendirilir.",
+    "Sürekli rüzgâr alan cephelerde tek başına hava perdesi yetersiz kalabilir; rüzgârlık veya çift kapı ile birlikte düşünülmelidir.",
+    "Modele göre kapı switch'i bağlanarak cihazın yalnız kapı açıkken çalışması sağlanır; gereksiz tüketim önlenir.",
+  ],
   giris:
     "Mağaza, restoran, otel, AVM, depo ve fabrika girişleri için Niva ve Olefini hava perdeleri. Isıtıcılı ve ısıtıcısız modeller; 85 cm'den 250 cm'ye kadar boy, 12 m'ye kadar montaj yüksekliği. Kapınıza uygun modeli seçiyor, satışını ve montajını yapıyoruz.",
   hizli: ["Niva", "Olefini", "Nasıl seçilir?"],
@@ -126,9 +173,7 @@ const tr = {
     "Şık tasarımı ve dijital kontrol paneliyle Olefini hava perdeleri; mağaza, otel, restoran ve ofis girişlerinde dekorasyonla uyumlu bir çözüm sunar. Kapınızın ölçüsüne ve montaj yüksekliğine göre doğru modeli belirleyip teklif hazırlıyoruz.",
   olDugme: "Olefini için teklif isteyin →",
   scEtiket: "NASIL SEÇİLİR",
-  scBaslik: "Doğru hava perdesi için 4 ölçü",
-  scYazi: "Seçim ve montaj ipuçlarını daha ayrıntılı anlattığımız yazı:",
-  yaziAdi: "Hava Perdesi Nedir, Ne İşe Yarar, Nasıl Seçilir?",
+  scBaslik: "Hava perdesi nasıl seçilir? 4 ölçü",
   sssBaslik: "Hava perdesi hakkında merak edilenler",
   ctaEtiket: "SATIŞ · KEŞİF · MONTAJ",
   ctaBaslik: "Kapınıza uygun hava perdesini birlikte seçelim",
@@ -146,9 +191,9 @@ const tr = {
 type Metin = typeof tr;
 
 const en: Metin = {
-  metaBaslik: "Air Curtain Models: Niva and Olefini | İklim Ofisi",
+  metaBaslik: "What Is an Air Curtain and What Does It Do? Models and Prices",
   metaAciklama:
-    "What is an air curtain and what does it do? Niva and Olefini air curtains: models with and without heaters, 85–250 cm lengths, mounting heights up to 12 m. Supply, site survey and installation in Istanbul for shops, restaurants, hotels, shopping centres and industrial doors.",
+    "An air curtain stops heated or cooled air escaping while the door is open. Niva and Olefini models for 3–12 m mounting heights; supply, installation and quotes.",
   anahtar: [
     "air curtain",
     "what is an air curtain",
@@ -158,7 +203,7 @@ const en: Metin = {
     "Olefini air curtain",
     "industrial air curtain",
     "door air curtain",
-    "air curtain Istanbul",
+    "air curtain price",
   ],
   ogBaslik: "Niva and Olefini Air Curtains | İklim Ofisi",
   ogAciklama: "Air curtains with and without heaters; supply, site survey and installation.",
@@ -185,6 +230,10 @@ const en: Metin = {
   ],
   sss: [
     [
+      "What is an air curtain?",
+      "An air curtain is a fan unit mounted above a door that blows a strong, even stream of air downwards. While the door is open, this air stream creates an invisible barrier between indoors and outdoors.",
+    ],
+    [
       "What does an air curtain do?",
       "An air curtain blows a strong stream of air downwards from above the door, creating an invisible barrier between indoors and outdoors while the door is open. This keeps heated air inside in winter and cooled air inside in summer, reduces draughts at the door and lets businesses keep their doors open.",
     ],
@@ -208,6 +257,30 @@ const en: Metin = {
       "What if there is no space above the door?",
       "In spaces with suspended ceilings, the recessed Smart Kaset model offers an invisible solution. If there is no space above the door at all, the Niva vertical model is mounted vertically beside the door.",
     ],
+    [
+      "Does an air curtain increase the electricity bill?",
+      "Unheated models draw little power because they only run the fan motor. Heated models draw more power while the heater is on. Running the unit only while the door is open via a door switch prevents unnecessary consumption; and because less heat escapes through the door, the air conditioning and heating also run less.",
+    ],
+    [
+      "Can an air curtain replace air conditioning or central heating?",
+      "No. An air curtain does not heat or cool the space; it reduces the loss of the existing climate through the door. Heated models warm the doorway but do not replace the heating system of the space.",
+    ],
+    [
+      "Is an air curtain mounted inside or outside the door?",
+      "It is usually mounted on the inside, as close to the door as possible and directly above it. Angling the air outlet slightly outwards strengthens the barrier.",
+    ],
+    [
+      "Can an air curtain be used at home?",
+      "Yes. General-type models are also used at residential and building entrances; they reduce draughts at frequently opened entrance, garden or terrace doors in particular.",
+    ],
+    [
+      "Does an air curtain keep out flies and dust?",
+      "The air stream helps reduce the entry of flying insects, dust and exhaust odours, but does not block them completely. Its main purpose is to reduce heat loss and draughts.",
+    ],
+    [
+      "What does the price of an air curtain depend on?",
+      "The main factors are the unit length, the series (mounting height), whether it is heated or unheated, and the control options. If you tell us the door width and mounting height, we will prepare a firm price quote with the right model.",
+    ],
   ],
   ld: {
     anaSayfa: "Home",
@@ -220,8 +293,26 @@ const en: Metin = {
   },
   sayfaYolu: "Breadcrumb",
   rozet: "NIVA · OLEFINI",
-  h1: "Air Curtains",
+  h1: "What Is an Air Curtain and What Does It Do?",
   altBaslik: "Keep heated or cooled air inside, even when the door is open.",
+  kisacaEtiket: "In short:",
+  kisaca:
+    "An air curtain is a fan unit mounted above the door that blows a strong stream of air downwards. While the door is open, it reduces the escape of heated or cooled indoor air and the influx of cold or hot outdoor air. To choose the right model, look at three things: door width (the unit should be as long as the door or slightly longer), mounting height (determines the series) and whether the entrance also needs heating (heated / unheated).",
+  kuEtiket: "APPLICATIONS",
+  kuBaslik: "Where are air curtains used?",
+  kullanim: [
+    ["Commercial entrances", "Shops, supermarkets, pharmacies, banks, cafés and restaurants"],
+    ["Hotel and shopping centre entrances", "Areas with heavy foot traffic and frequently opened doors"],
+    ["Office and residential entrances", "Building lobbies and main entrances; garden and terrace doors"],
+    ["Industrial doors", "Warehouse, workshop, factory and hangar doors; industrial series for high doors"],
+  ],
+  mtBaslik: "What to consider during installation",
+  montaj: [
+    "The unit is mounted as close to the door as possible, directly above it.",
+    "Angling the air outlet slightly outwards strengthens the barrier.",
+    "On façades exposed to constant wind, an air curtain alone may not be enough; it should be combined with a windbreak or a double door.",
+    "Depending on the model, a door switch can be connected so that the unit runs only while the door is open; this prevents unnecessary consumption.",
+  ],
   giris:
     "Niva and Olefini air curtains for shop, restaurant, hotel, shopping centre, warehouse and factory entrances. Models with and without heaters; lengths from 85 cm to 250 cm and mounting heights up to 12 m. We select the right model for your door, then supply and install it.",
   hizli: ["Niva", "Olefini", "How to choose?"],
@@ -247,9 +338,7 @@ const en: Metin = {
     "With their stylish design and digital control panel, Olefini air curtains are a solution that blends with the décor of shop, hotel, restaurant and office entrances. We determine the right model based on your door size and mounting height and prepare a quote.",
   olDugme: "Request a quote for Olefini →",
   scEtiket: "HOW TO CHOOSE",
-  scBaslik: "4 criteria for the right air curtain",
-  scYazi: "Our article with more detailed selection and installation tips:",
-  yaziAdi: "What Is an Air Curtain, What Does It Do and How to Choose One?",
+  scBaslik: "How to choose an air curtain: 4 criteria",
   sssBaslik: "Common questions about air curtains",
   ctaEtiket: "SUPPLY · SITE SURVEY · INSTALLATION",
   ctaBaslik: "Let's choose the right air curtain for your door together",
@@ -265,9 +354,9 @@ const en: Metin = {
 };
 
 const de: Metin = {
-  metaBaslik: "Torluftschleier-Modelle: Niva und Olefini | İklim Ofisi",
+  metaBaslik: "Was ist ein Torluftschleier und wozu dient er? Modelle, Preise",
   metaAciklama:
-    "Was ist ein Torluftschleier und wozu dient er? Niva- und Olefini-Torluftschleier: Modelle mit und ohne Heizung, 85–250 cm Länge, Montagehöhe bis 12 m. Lieferung, Besichtigung und Montage in Istanbul für Geschäfte, Restaurants, Hotels, Einkaufszentren und Industrietore.",
+    "Ein Torluftschleier hält erwärmte oder gekühlte Luft bei offener Tür im Raum. Niva- und Olefini-Modelle für 3–12 m Montagehöhe; Lieferung, Montage und Angebot.",
   anahtar: [
     "Torluftschleier",
     "Luftschleier",
@@ -277,7 +366,7 @@ const de: Metin = {
     "Olefini Torluftschleier",
     "Industrie-Torluftschleier",
     "Türluftschleier",
-    "Torluftschleier Istanbul",
+    "Torluftschleier Preis",
   ],
   ogBaslik: "Niva und Olefini Torluftschleier | İklim Ofisi",
   ogAciklama: "Torluftschleier mit und ohne Heizung; Lieferung, Besichtigung und Montage.",
@@ -304,6 +393,10 @@ const de: Metin = {
   ],
   sss: [
     [
+      "Was ist ein Torluftschleier?",
+      "Ein Torluftschleier ist ein über der Tür montiertes Gerät, das einen kräftigen, gleichmäßigen Luftstrom nach unten bläst. Bei geöffneter Tür bildet dieser Luftstrom eine unsichtbare Barriere zwischen innen und außen.",
+    ],
+    [
       "Wozu dient ein Torluftschleier?",
       "Ein Torluftschleier bläst einen kräftigen Luftstrom von oberhalb der Tür nach unten und bildet so bei geöffneter Tür eine unsichtbare Barriere zwischen innen und außen. Dadurch bleibt im Winter die Wärme und im Sommer die gekühlte Luft im Raum, Zugluft an der Tür nimmt ab und Betriebe können ihre Türen offen lassen.",
     ],
@@ -327,6 +420,30 @@ const de: Metin = {
       "Was tun, wenn über der Tür kein Platz ist?",
       "In Räumen mit abgehängter Decke bietet das Deckeneinbaumodell Smart Kaset eine unsichtbare Lösung. Ist über der Tür gar kein Platz, wird das vertikale Niva-Modell senkrecht neben der Tür montiert.",
     ],
+    [
+      "Erhöht ein Torluftschleier die Stromrechnung?",
+      "Modelle ohne Heizung haben eine geringe Leistungsaufnahme, da sie nur den Ventilatormotor betreiben. Modelle mit Heizung nehmen bei eingeschalteter Heizung mehr Leistung auf. Wird das Gerät über einen Türkontakt nur bei geöffneter Tür betrieben, wird unnötiger Verbrauch vermieden; und weil weniger Wärme durch die Tür entweicht, laufen auch Klimaanlage und Heizung weniger.",
+    ],
+    [
+      "Ersetzt ein Torluftschleier Klimaanlage oder Heizung?",
+      "Nein. Ein Torluftschleier heizt oder kühlt den Raum nicht; er verringert den Verlust des vorhandenen Raumklimas durch die Tür. Modelle mit Heizung erwärmen den Türbereich, ersetzen aber nicht die Heizung des Raumes.",
+    ],
+    [
+      "Wird ein Torluftschleier innen oder außen montiert?",
+      "In der Regel innen, möglichst nah an der Tür und direkt über ihr. Wird der Luftaustritt leicht nach außen geneigt, verstärkt das die Barriere.",
+    ],
+    [
+      "Kann man einen Torluftschleier auch zu Hause einsetzen?",
+      "Ja. Standardmodelle werden auch an Wohnungs- und Gebäudeeingängen eingesetzt; besonders an häufig geöffneten Eingangs-, Garten- oder Terrassentüren verringern sie die Zugluft.",
+    ],
+    [
+      "Hält ein Torluftschleier Fliegen und Staub ab?",
+      "Der Luftstrom hilft, das Eindringen von Fluginsekten, Staub und Abgasgeruch zu verringern, hält sie aber nicht vollständig ab. Sein Hauptzweck ist die Verringerung von Wärmeverlust und Zugluft.",
+    ],
+    [
+      "Wovon hängt der Preis eines Torluftschleiers ab?",
+      "Die wichtigsten Faktoren sind Gerätelänge, Serie (Montagehöhe), Ausführung mit oder ohne Heizung und die Steuerungsoptionen. Wenn Sie uns Türbreite und Montagehöhe mitteilen, erstellen wir ein verbindliches Preisangebot mit dem passenden Modell.",
+    ],
   ],
   ld: {
     anaSayfa: "Startseite",
@@ -339,8 +456,26 @@ const de: Metin = {
   },
   sayfaYolu: "Brotkrümelnavigation",
   rozet: "NIVA · OLEFINI",
-  h1: "Torluftschleier",
+  h1: "Was ist ein Torluftschleier und wozu dient er?",
   altBaslik: "Erwärmte oder gekühlte Luft bleibt im Raum – auch bei geöffneter Tür.",
+  kisacaEtiket: "Kurz gesagt:",
+  kisaca:
+    "Ein Torluftschleier ist ein über der Tür montiertes Ventilatorgerät, das einen kräftigen Luftstrom nach unten bläst. Bei geöffneter Tür verringert er das Entweichen erwärmter oder gekühlter Raumluft und das Eindringen kalter oder warmer Außenluft. Für das richtige Modell kommt es auf drei Dinge an: Türbreite (das Gerät sollte so lang wie die Tür oder etwas länger sein), Montagehöhe (bestimmt die Serie) und ob auch der Eingang beheizt werden soll (mit / ohne Heizung).",
+  kuEtiket: "EINSATZBEREICHE",
+  kuBaslik: "Wo werden Torluftschleier eingesetzt?",
+  kullanim: [
+    ["Gewerbliche Eingänge", "Geschäfte, Märkte, Apotheken, Banken, Cafés und Restaurants"],
+    ["Hotel- und Einkaufszentrumseingänge", "Bereiche mit viel Personenverkehr und häufig geöffneten Türen"],
+    ["Büro- und Wohnhauseingänge", "Gebäudelobbys und Haupteingänge; Garten- und Terrassentüren"],
+    ["Industrietore", "Tore von Lagern, Werkstätten, Fabriken und Hangars; Industrieserien für hohe Tore"],
+  ],
+  mtBaslik: "Was bei der Montage zu beachten ist",
+  montaj: [
+    "Das Gerät wird möglichst nah an der Tür und direkt über ihr montiert.",
+    "Wird der Luftaustritt leicht nach außen geneigt, verstärkt das die Barriere.",
+    "An Fassaden mit ständigem Wind reicht ein Torluftschleier allein unter Umständen nicht aus; er sollte mit einem Windfang oder einer Doppeltür kombiniert werden.",
+    "Je nach Modell kann ein Türkontakt angeschlossen werden, damit das Gerät nur bei geöffneter Tür läuft; das verhindert unnötigen Verbrauch.",
+  ],
   giris:
     "Niva- und Olefini-Torluftschleier für Eingänge von Geschäften, Restaurants, Hotels, Einkaufszentren, Lagern und Fabriken. Modelle mit und ohne Heizung; Längen von 85 cm bis 250 cm und Montagehöhen bis 12 m. Wir wählen das passende Modell für Ihre Tür aus, liefern und montieren es.",
   hizli: ["Niva", "Olefini", "Auswahl"],
@@ -366,9 +501,7 @@ const de: Metin = {
     "Mit elegantem Design und digitalem Bedienfeld fügen sich Olefini-Torluftschleier harmonisch in die Einrichtung von Geschäfts-, Hotel-, Restaurant- und Büroeingängen ein. Wir bestimmen das passende Modell nach Türmaß und Montagehöhe und erstellen ein Angebot.",
   olDugme: "Angebot für Olefini anfordern →",
   scEtiket: "AUSWAHL",
-  scBaslik: "4 Kriterien für den richtigen Torluftschleier",
-  scYazi: "Unser Artikel mit ausführlicheren Tipps zu Auswahl und Montage:",
-  yaziAdi: "Was ist ein Torluftschleier, wozu dient er und wie wählt man ihn aus?",
+  scBaslik: "Torluftschleier auswählen: 4 Kriterien",
   sssBaslik: "Häufige Fragen zu Torluftschleiern",
   ctaEtiket: "LIEFERUNG · BESICHTIGUNG · MONTAGE",
   ctaBaslik: "Lassen Sie uns gemeinsam den passenden Torluftschleier für Ihre Tür wählen",
@@ -502,8 +635,31 @@ export default function HavaPerdesiPage() {
                 {t.nhMetin}
               </p>
             </div>
+            <aside className="max-w-4xl bg-teal-50 border-l-4 border-teal-600 rounded-r-xl p-5">
+              <p className="text-sm text-slate-800 leading-relaxed">
+                <strong>{t.kisacaEtiket}</strong> {t.kisaca}
+              </p>
+            </aside>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {t.neden.map(([baslik, metin]) => (
+                <div key={baslik} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                  <h3 className="text-sm font-bold text-slate-900">{baslik}</h3>
+                  <p className="text-xs text-slate-600 leading-relaxed mt-1">{metin}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 2b. KULLANIM ALANLARI */}
+        <section className="pb-14 md:pb-16">
+          <div className="max-w-7xl mx-auto px-6 space-y-6">
+            <div className="max-w-3xl space-y-2">
+              <p className="text-xs font-bold tracking-widest text-teal-700 uppercase">{t.kuEtiket}</p>
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">{t.kuBaslik}</h2>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {t.kullanim.map(([baslik, metin]) => (
                 <div key={baslik} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
                   <h3 className="text-sm font-bold text-slate-900">{baslik}</h3>
                   <p className="text-xs text-slate-600 leading-relaxed mt-1">{metin}</p>
@@ -589,12 +745,14 @@ export default function HavaPerdesiPage() {
                 </div>
               ))}
             </div>
-            <p className="text-xs text-slate-500">
-              {t.scYazi}{" "}
-              <Link href={y("/blog/hava-perdesi-nedir-nasil-secilir")} className="text-teal-700 underline underline-offset-2">
-                {t.yaziAdi}
-              </Link>
-            </p>
+            <div className="max-w-4xl space-y-3">
+              <h3 className="text-lg font-bold text-slate-900">{t.mtBaslik}</h3>
+              <ul className="space-y-2 text-sm text-slate-600 leading-relaxed list-disc pl-5">
+                {t.montaj.map((m) => (
+                  <li key={m}>{m}</li>
+                ))}
+              </ul>
+            </div>
           </div>
         </section>
 
@@ -602,7 +760,6 @@ export default function HavaPerdesiPage() {
         <SikSorulanSorular
           baslik={t.sssBaslik}
           sss={t.sss}
-          ilgili={[{ href: "/blog/hava-perdesi-nedir-nasil-secilir", ad: t.yaziAdi }]}
           dil={dil}
         />
 

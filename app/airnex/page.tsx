@@ -11,9 +11,9 @@ export const dynamic = "force-dynamic";
 
 // AIRNEX SAYFASI METİNLERİ (Türkçe / English / Deutsch)
 const tr = {
-  metaBaslik: "AIRNEX Elektrostatik Hücreli Aspiratör — Mutfak Havalandırma",
+  metaBaslik: "AIRNEX Mutfak Aspiratörü — Elektrostatik Filtreli | İklim Ofisi",
   metaAciklama:
-    "AIRNEX elektrostatik hücreli aspiratör: restoran, otel ve endüstriyel mutfak egzozlarında yağ aerosolleri, duman ve ince partiküllerin kontrolü için modüler filtrasyon sistemi. Projelendirme ve anahtar teslim kurulum.",
+    "AIRNEX, İklim Ofisi'nin elektrostatik hücreli mutfak aspiratörü markasıdır. Restoran, otel ve endüstriyel mutfak egzozunda yağ, duman ve ince partikülü tutar.",
   ogBaslik: "AIRNEX Elektrostatik Hücreli Aspiratör | İklim Ofisi",
   ogAciklama:
     "Endüstriyel mutfaklar için elektrostatik filtrasyonlu egzoz çözümü. Daha temiz egzoz havası, verimli filtrasyon, kolay servis.",
@@ -107,9 +107,9 @@ const tr = {
 type Metin = typeof tr;
 
 const en: Metin = {
-  metaBaslik: "AIRNEX Electrostatic Cell Exhaust Unit — Kitchen Ventilation",
+  metaBaslik: "AIRNEX Kitchen Exhaust Unit — Electrostatic Filter | İklim Ofisi",
   metaAciklama:
-    "AIRNEX electrostatic cell exhaust unit: a modular filtration system to control grease aerosols, smoke and fine particles in restaurant, hotel and commercial kitchen exhaust. Design and turnkey installation.",
+    "AIRNEX is İklim Ofisi's electrostatic cell kitchen exhaust brand. It captures grease, smoke and fine particles in restaurant, hotel and commercial kitchen exhaust.",
   ogBaslik: "AIRNEX Electrostatic Cell Exhaust Unit | İklim Ofisi",
   ogAciklama: "Exhaust solution with electrostatic filtration for commercial kitchens. Cleaner exhaust air, efficient filtration, easy servicing.",
   ogAlt: "AIRNEX electrostatic cell exhaust unit",
@@ -200,9 +200,9 @@ const en: Metin = {
 };
 
 const de: Metin = {
-  metaBaslik: "AIRNEX Abluftgerät mit Elektrofilterzelle — Küchenlüftung",
+  metaBaslik: "AIRNEX Küchenabluftgerät mit Elektrofilter | İklim Ofisi",
   metaAciklama:
-    "AIRNEX Abluftgerät mit Elektrofilterzelle: modulares Filtersystem zur Kontrolle von Fettaerosolen, Rauch und Feinstaub in der Abluft von Restaurant-, Hotel- und Gewerbeküchen. Planung und schlüsselfertige Installation.",
+    "AIRNEX ist die Marke von İklim Ofisi für Küchenabluftgeräte mit Elektrofilterzelle. Sie hält Fett, Rauch und Feinstaub in Restaurant- und Gewerbeküchen zurück.",
   ogBaslik: "AIRNEX Abluftgerät mit Elektrofilterzelle | İklim Ofisi",
   ogAciklama: "Abluftlösung mit elektrostatischer Filtration für Gewerbeküchen. Sauberere Abluft, effiziente Filtration, einfache Wartung.",
   ogAlt: "AIRNEX Abluftgerät mit Elektrofilterzelle",
@@ -298,7 +298,8 @@ export function generateMetadata(): Metadata {
   const dil = dilAl();
   const t = METIN[dil];
   return {
-    title: t.metaBaslik,
+    // Marka adı başlıkta: Google'da başka "Airnex" ürünlerinden ayırt edilsin (site adı eklenmeden)
+    title: { absolute: t.metaBaslik },
     description: t.metaAciklama,
     alternates: dilAlternatifleri(dil, "/airnex"),
     openGraph: {

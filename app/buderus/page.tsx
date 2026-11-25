@@ -14,6 +14,8 @@ const KATALOG = "/kataloglar/buderus-logamax-plus-gb272-katalog.pdf";
 
 // Değerler Buderus Logamax plus GB272 kataloğundaki "Teknik veriler" tablosundan alınmıştır.
 const MODELLER = ["49", "69", "100", "125", "150"] as const;
+// Kaskad tablosundaki kazan sayıları (GB272 en fazla 16 kazan kaskad)
+const KASKAD_SAYILARI = [1, 2, 3, 4, 6, 8, 12, 16];
 
 // Teknik tablo: [birim, değerler] (satır adları dile göre METIN.teknik içinde, aynı sırada)
 const TEKNIK_DEGER: [string, string[]][][] = [
@@ -45,9 +47,9 @@ const TEKNIK_DEGER: [string, string[]][][] = [
 
 // BUDERUS SAYFASI METİNLERİ (Türkçe / English / Deutsch)
 const tr = {
-  metaBaslik: "Buderus Kazan — Logamax plus GB272 Yoğuşmalı ve Kaskad Kazan (49–150 kW)",
+  metaBaslik: "Buderus GB272 Kazan 49–150 kW | Yoğuşmalı ve Kaskad Kazan",
   metaAciklama:
-    "Buderus kazan: Logamax plus GB272 duvar tipi yoğuşmalı kazan, 49, 69, 100, 125 ve 150 kW. 16 kazana kadar kaskad kazan sistemi ile 2.400 kW. Teknik veriler, PDF katalog; İstanbul'da projelendirme, montaj ve devreye alma.",
+    "Buderus Logamax plus GB272 yoğuşmalı kazan: 49 (≈50), 69, 100, 125 ve 150 kW. 16 kazana kadar kaskad ile 2.400 kW. Kaskad kapasite tablosu, teknik veriler, katalog.",
   anahtar: [
     "Buderus kazan",
     "Buderus GB272",
@@ -57,7 +59,8 @@ const tr = {
     "yoğuşmalı kazan",
     "duvar tipi yoğuşmalı kazan",
     "merkezi ısıtma kazanı",
-    "Buderus kazan İstanbul",
+    "Buderus 150 kW kazan",
+    "Buderus 50 kW kazan",
   ],
   ogBaslik: "Buderus Kazan — Logamax plus GB272 | İklim Ofisi",
   ogAciklama: "49–150 kW duvar tipi yoğuşmalı kazan; kaskad ile 2.400 kW'a kadar merkezi ısıtma çözümleri.",
@@ -134,6 +137,10 @@ const tr = {
       "Evet. Kazan duvara monte edilebildiği gibi yer montaj kiti ile doğrudan zemine de kurulabilir. Kaskad sistemlerde kazanlar yan yana bitişik dizilebilir.",
     ],
     [
+      "300 kW için kaç Buderus kazan gerekir?",
+      "300 kW ihtiyacı olan bir bina, örneğin 2 × 150 kW veya 3 × 100 kW GB272 kaskad ile karşılanabilir. Daha çok sayıda küçük kazan düşük yükte daha hassas çalışma ve daha iyi yedeklilik sağlar; daha az sayıda büyük kazan ilk yatırımı ve bağlantı sayısını azaltır. Doğru dengeyi binanın ısı kaybı hesabına göre birlikte belirliyoruz.",
+    ],
+    [
       "Binam için kaç kW kazan gerekir?",
       "Kazan kapasitesi binanın ısı kaybı hesabına ve sıcak su ihtiyacına göre belirlenir. Keşifte binayı inceleyip ısı kaybını hesaplıyor, tek kazan mı yoksa kaskad mı olacağına ve kazan sayısına birlikte karar veriyoruz. Kabaca bir fikir için kapasite hesaplama aracımızı kullanabilirsiniz.",
     ],
@@ -163,6 +170,13 @@ const tr = {
   kBaslik: "Buderus kaskad kazan sistemleri",
   kMetin:
     "Kaskad, birden fazla kazanın tek kumanda altında birlikte çalışmasıdır. GB272 ile 16 kazana kadar kaskad bağlantıyla toplam 2.400 kW. Kazanlar yan yana bitişik dizilebilir; ihtiyaca göre devreye girip çıkarak her yükte verimli çalışır. Güneş enerjisi veya ısı pompası gibi yenilenebilir kaynaklarla birlikte daha da verimli çalışır.",
+  ktEtiket: "KASKAD KAPASİTE TABLOSU",
+  ktBaslik: "Kaç kazanla kaç kW? Buderus GB272 kaskad tablosu",
+  ktMetin:
+    "Kazan sayısı ve modele göre toplam nominal kapasite. Örneğin 300 kW için 2 × 150 kW veya 3 × 100 kW, 600 kW için 4 × 150 kW kaskad kurulabilir.",
+  ktSayi: "Kazan sayısı",
+  ktNot:
+    "Değerler model adındaki nominal kapasitelerin toplamıdır; gerçek kazan kapasitesi su sıcaklığına göre değişir (80/60 °C ve 50/30 °C değerleri teknik tabloda). Kazan sayısı ve modeli binanın ısı kaybı hesabına göre seçilir.",
   koEtiket: "KONTROL",
   koBaslik: "Akıllı kontrol, bina otomasyonuna uyum",
   koMaddeler: [
@@ -194,9 +208,9 @@ const tr = {
 type Metin = typeof tr;
 
 const en: Metin = {
-  metaBaslik: "Buderus Boilers — Logamax plus GB272 Condensing and Cascade Boilers (49–150 kW)",
+  metaBaslik: "Buderus GB272 Boiler 49–150 kW | Condensing and Cascade Boilers",
   metaAciklama:
-    "Buderus boilers: Logamax plus GB272 wall-mounted condensing boiler, 49, 69, 100, 125 and 150 kW. Up to 2,400 kW with cascade systems of up to 16 boilers. Technical data, PDF catalogue; design, installation and commissioning in Istanbul.",
+    "Buderus Logamax plus GB272 condensing boiler: 49 (≈50), 69, 100, 125 and 150 kW. Up to 2,400 kW in cascades of 16 boilers. Cascade capacity table, technical data, catalogue.",
   anahtar: [
     "Buderus boiler",
     "Buderus GB272",
@@ -206,7 +220,7 @@ const en: Metin = {
     "condensing boiler",
     "wall-mounted condensing boiler",
     "central heating boiler",
-    "Buderus boiler Istanbul",
+    "Buderus 150 kW boiler",
   ],
   ogBaslik: "Buderus Boilers — Logamax plus GB272 | İklim Ofisi",
   ogAciklama: "49–150 kW wall-mounted condensing boiler; central heating solutions up to 2,400 kW in cascade.",
@@ -282,6 +296,10 @@ const en: Metin = {
       "Yes. The boiler can be wall-mounted or installed directly on the floor with a floor mounting kit. In cascade systems, the boilers can be placed side by side.",
     ],
     [
+      "How many Buderus boilers are needed for 300 kW?",
+      "A building needing 300 kW can be supplied, for example, by a GB272 cascade of 2 × 150 kW or 3 × 100 kW. Several smaller boilers allow finer operation at low load and better redundancy; fewer large boilers reduce the initial investment and the number of connections. We decide the right balance together based on the building's heat loss calculation.",
+    ],
+    [
       "What boiler output does my building need?",
       "The boiler output is determined by the building's heat loss calculation and domestic hot water demand. During the site survey we inspect the building and calculate the heat loss, then decide together whether a single boiler or a cascade is needed, and how many boilers. For a rough idea, you can use our capacity calculator.",
     ],
@@ -311,6 +329,13 @@ const en: Metin = {
   kBaslik: "Buderus cascade boiler systems",
   kMetin:
     "A cascade is the joint operation of several boilers under a single controller. With the GB272, up to 16 boilers can be connected in cascade for a total of 2,400 kW. The boilers can be placed side by side and switch on and off as needed, working efficiently at every load. Combined with renewable sources such as solar energy or heat pumps, it works even more efficiently.",
+  ktEtiket: "CASCADE CAPACITY TABLE",
+  ktBaslik: "How many boilers for how many kW? Buderus GB272 cascade table",
+  ktMetin:
+    "Total nominal capacity by number of boilers and model. For example, 300 kW can be covered by 2 × 150 kW or 3 × 100 kW, and 600 kW by 4 × 150 kW in cascade.",
+  ktSayi: "Number of boilers",
+  ktNot:
+    "Values are the sum of the nominal capacities in the model names; the actual boiler output depends on the water temperature (80/60 °C and 50/30 °C values are in the technical table). The number of boilers and the model are selected according to the building's heat loss calculation.",
   koEtiket: "CONTROL",
   koBaslik: "Smart control, compatible with building automation",
   koMaddeler: [
@@ -340,9 +365,9 @@ const en: Metin = {
 };
 
 const de: Metin = {
-  metaBaslik: "Buderus Kessel — Logamax plus GB272 Brennwert- und Kaskadenkessel (49–150 kW)",
+  metaBaslik: "Buderus GB272 Kessel 49–150 kW | Brennwert- und Kaskadenkessel",
   metaAciklama:
-    "Buderus Kessel: Logamax plus GB272 wandhängender Brennwertkessel mit 49, 69, 100, 125 und 150 kW. Bis 2.400 kW mit Kaskaden aus bis zu 16 Kesseln. Technische Daten, PDF-Katalog; Planung, Montage und Inbetriebnahme in Istanbul.",
+    "Buderus Logamax plus GB272 Brennwertkessel: 49 (≈50), 69, 100, 125 und 150 kW. Bis 2.400 kW in Kaskaden aus 16 Kesseln. Kaskaden-Leistungstabelle, technische Daten, Katalog.",
   anahtar: [
     "Buderus Kessel",
     "Buderus GB272",
@@ -352,7 +377,7 @@ const de: Metin = {
     "Brennwertkessel",
     "wandhängender Brennwertkessel",
     "Zentralheizungskessel",
-    "Buderus Kessel Istanbul",
+    "Buderus 150 kW Kessel",
   ],
   ogBaslik: "Buderus Kessel — Logamax plus GB272 | İklim Ofisi",
   ogAciklama: "Wandhängender Brennwertkessel mit 49–150 kW; Zentralheizungslösungen bis 2.400 kW in Kaskade.",
@@ -428,6 +453,10 @@ const de: Metin = {
       "Ja. Der Kessel kann an der Wand montiert oder mit einem Bodenmontageset direkt auf dem Boden aufgestellt werden. In Kaskadenanlagen lassen sich die Kessel direkt nebeneinander anordnen.",
     ],
     [
+      "Wie viele Buderus-Kessel braucht man für 300 kW?",
+      "Ein Gebäude mit 300 kW Bedarf kann beispielsweise mit einer GB272-Kaskade aus 2 × 150 kW oder 3 × 100 kW versorgt werden. Mehrere kleinere Kessel ermöglichen einen feineren Betrieb bei geringer Last und eine bessere Redundanz; wenige große Kessel senken Anfangsinvestition und Anschlusszahl. Das richtige Gleichgewicht legen wir gemeinsam anhand der Heizlastberechnung fest.",
+    ],
+    [
       "Welche Kesselleistung braucht mein Gebäude?",
       "Die Kesselleistung richtet sich nach der Heizlastberechnung des Gebäudes und dem Warmwasserbedarf. Bei der Besichtigung prüfen wir das Gebäude, berechnen die Heizlast und entscheiden gemeinsam, ob ein Einzelkessel oder eine Kaskade sinnvoll ist und wie viele Kessel nötig sind. Für eine grobe Einschätzung können Sie unseren Leistungsrechner nutzen.",
     ],
@@ -457,6 +486,13 @@ const de: Metin = {
   kBaslik: "Buderus Kaskadenkesselanlagen",
   kMetin:
     "Eine Kaskade ist der gemeinsame Betrieb mehrerer Kessel über eine Regelung. Mit dem GB272 lassen sich bis zu 16 Kessel in Kaskade mit insgesamt 2.400 kW verbinden. Die Kessel können direkt nebeneinander stehen und schalten sich je nach Bedarf zu und ab, sodass sie bei jeder Last effizient arbeiten. Zusammen mit erneuerbaren Quellen wie Solarthermie oder Wärmepumpe arbeitet die Anlage noch effizienter.",
+  ktEtiket: "KASKADEN-LEISTUNGSTABELLE",
+  ktBaslik: "Wie viele Kessel für wie viel kW? Buderus GB272 Kaskadentabelle",
+  ktMetin:
+    "Gesamte Nennleistung nach Kesselzahl und Modell. Für 300 kW eignen sich zum Beispiel 2 × 150 kW oder 3 × 100 kW, für 600 kW 4 × 150 kW in Kaskade.",
+  ktSayi: "Anzahl Kessel",
+  ktNot:
+    "Die Werte sind die Summe der Nennleistungen aus den Modellbezeichnungen; die tatsächliche Kesselleistung hängt von der Wassertemperatur ab (Werte für 80/60 °C und 50/30 °C in der technischen Tabelle). Kesselzahl und Modell werden nach der Heizlastberechnung des Gebäudes gewählt.",
   koEtiket: "REGELUNG",
   koBaslik: "Intelligente Regelung, kompatibel mit der Gebäudeautomation",
   koMaddeler: [
@@ -494,7 +530,8 @@ export function generateMetadata(): Metadata {
   const dil = dilAl();
   const t = METIN[dil];
   return {
-    title: t.metaBaslik,
+    // Google'da kısalmadan görünsün diye site adı eklenmeden
+    title: { absolute: t.metaBaslik },
     description: t.metaAciklama,
     keywords: t.anahtar,
     alternates: dilAlternatifleri(dil, "/buderus"),
@@ -705,6 +742,42 @@ export default function BuderusPage() {
                 ))}
               </ul>
             </div>
+          </div>
+        </section>
+
+        {/* 4b. KASKAD KAPASİTE TABLOSU */}
+        <section id="kaskad" className="scroll-mt-28 pb-14 md:pb-16">
+          <div className="max-w-7xl mx-auto px-6 space-y-4">
+            <div className="max-w-3xl space-y-2">
+              <p className="text-xs font-bold tracking-widest text-teal-700 uppercase">{t.ktEtiket}</p>
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">{t.ktBaslik}</h2>
+              <p className="text-sm text-slate-600 leading-relaxed">{t.ktMetin}</p>
+            </div>
+            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-100 text-slate-700">
+                  <tr>
+                    <th className="text-left px-3 py-2 font-semibold">{t.ktSayi}</th>
+                    {MODELLER.map((m) => (
+                      <th key={m} className="text-right px-3 py-2 font-semibold">GB272 · {m} kW</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {KASKAD_SAYILARI.map((n) => (
+                    <tr key={n} className="border-t border-slate-200">
+                      <td className="px-3 py-2 font-semibold text-slate-800">{n} ×</td>
+                      {MODELLER.map((m) => (
+                        <td key={m} className="px-3 py-2 text-right text-slate-700">
+                          {(n * Number(m)).toLocaleString(dil === "en" ? "en-US" : "tr-TR")} kW
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[11px] text-slate-500 max-w-4xl">{t.ktNot}</p>
           </div>
         </section>
 
