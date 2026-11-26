@@ -170,6 +170,12 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         )}
         {children}
       </main>
+      {/* SAĞ BOŞLUK (geniş ekran): döviz kurları hep açık; sol menüdeki gösterge de durur */}
+      <aside className="hidden min-[1440px]:block w-60 shrink-0 py-10 pr-6 print:hidden" aria-label="Döviz kurları">
+        <div className="sticky top-6">
+          <KurGostergesi sabit />
+        </div>
+      </aside>
     </div>
   );
 }
