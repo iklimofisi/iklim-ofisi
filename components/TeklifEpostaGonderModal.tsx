@@ -97,6 +97,17 @@ export default function TeklifEpostaGonderModal({
                 />
               </div>
 
+              <label className="flex items-start gap-2 bg-teal-50 border border-teal-200 rounded-lg p-3 cursor-pointer">
+                <input type="checkbox" name="onayLinki" value="1" defaultChecked className="mt-0.5 accent-teal-700" />
+                <span>
+                  <span className="block font-bold text-slate-800">E-postaya &quot;Teklifi İncele ve Onayla&quot; düğmesi ekle</span>
+                  <span className="text-[11px] text-slate-500">
+                    WhatsApp&apos;taki müşteri linkinin aynısı (yoksa oluşturulur). Müşteri adını yazıp onaylayınca teklif &quot;Onaylandı&quot; olur ve sana
+                    e-posta gelir.
+                  </span>
+                </span>
+              </label>
+
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"

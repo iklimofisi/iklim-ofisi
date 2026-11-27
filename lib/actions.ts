@@ -30,6 +30,7 @@ import { MUSTERISIZ_ID, musterisizMi, musterisizGoster } from "@/lib/musterisiz"
 import { musterisizKaydiHazirla } from "@/lib/musterisiz-sunucu";
 import { siparisDondurmaVerisi } from "@/lib/siparis-tutari";
 import { siparisKapaliMi, KAPALI_SIPARIS_DURUMLARI } from "@/lib/siparis-durum";
+import { PAYLASIM_TABANI } from "@/lib/teklif-paylasim";
 import { getTcmbKurlari, tcmbKuru, kurKaynagiOku } from "@/lib/kur";
 import { kurOku } from "@/lib/kur-oku";
 import { donemKilitliMi, KILIT_MESAJI } from "@/lib/finans";
@@ -2803,6 +2804,7 @@ export async function teklifMusteriyeEpostaGonder(formData: FormData) {
   const aliciEmail = String(formData.get("aliciEmail") ?? "").trim();
   const epostaKonu = String(formData.get("epostaKonu") ?? "").trim();
   const ekNot = String(formData.get("ekNot") ?? "").trim();
+  const onayLinkiEkle = formData.get("onayLinki") === "1";
 
   if (!teklifId || !aliciEmail) return;
 
@@ -2841,6 +2843,30 @@ export async function teklifMusteriyeEpostaGonder(formData: FormData) {
   // 1. OTOMATİK PDF DOSYASI OLUŞTURULUR
   const pdfBuffer = await teklifPdfOlustur(teklif, sirket);
 
+  // ONAY LİNKİ: WhatsApp'takiyle aynı gizli link (yoksa oluşturulur). Müşteri linkte teklifi görür,
+  // "Beklemede" olan teklifi adını yazıp onaylar; onay teklife, görüşmelere ve hazırlayana e-postayla düşer.
+  let onayLinki: string | null = null;
+  if (onayLinkiEkle) {
+    const mevcutPaylasim = await prisma.teklifPaylasim.findUnique({ where: { teklifId }, select: { anahtar: true } });
+    const anahtar =
+      mevcutPaylasim?.anahtar ??
+      (await prisma.teklifPaylasim
+        .create({ data: { teklifId, anahtar: randomBytes(18).toString("base64url"), olusturanAdi: giren.ad ?? "" }, select: { anahtar: true } })
+        .catch(async () => prisma.teklifPaylasim.findUnique({ where: { teklifId }, select: { anahtar: true } })))?.anahtar;
+    if (anahtar) onayLinki = PAYLASIM_TABANI + anahtar;
+  }
+  const onayBekliyor = teklif.durum === "BEKLEMEDE";
+  const onayHtml = onayLinki
+    ? `
+      <div style="text-align:center; margin: 24px 0;">
+        <a href="${onayLinki}" style="display:inline-block; background:#0f766e; color:#ffffff; text-decoration:none; font-weight:bold; padding:12px 28px; border-radius:6px;">${onayBekliyor ? "Teklifi İncele ve Onayla" : "Teklifi Görüntüle"}</a>
+        <p style="font-size:12px; color:#64748b; margin:10px 0 0;">${
+          onayBekliyor ? "Teklifi uygun bulursanız bu bağlantıdaki sayfadan adınızı yazarak tek adımda onaylayabilirsiniz." : "Teklifin güncel hâlini bu bağlantıdan görüntüleyebilirsiniz."
+        }</p>
+        <p style="font-size:11px; color:#94a3b8; margin:6px 0 0; word-break:break-all;">${onayLinki}</p>
+      </div>`
+    : "";
+
   const icerikHtml = `
     <div style="font-family: Arial, sans-serif; max-width: 680px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
       <h2 style="color: #0f766e;">${htmlGuvenli(sirket.unvan)}</h2>
@@ -2848,6 +2874,7 @@ export async function teklifMusteriyeEpostaGonder(formData: FormData) {
       <p>TKL-${String(teklif.teklifNo).padStart(4, "0")} numaralı fiyat teklifimiz ve teknik detayları ekteki PDF dosyasında bilgilerinize sunulmuştur.</p>
       ${ekNot ? `<p style="background:#f1f5f9; padding:10px; border-left:3px solid #0f766e;"><b>Hazırlayan Notu:</b> ${htmlGuvenli(ekNot).replace(/\n/g, "<br />")}</p>` : ''}
       <h3 style="color: #0f766e;">Genel Toplam: ${formatPara(toplam.tutar)} ${toplam.ek}</h3>
+      ${onayHtml}
       <p style="color: #64748b; font-size: 12px;">📎 Detaylı teklif dokümanı bu e-postaya <b>PDF dosyası</b> olarak eklenmiştir.</p>
       <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
       <p style="font-size: 12px; color: #64748b;"><b>Teklifi Hazırlayan:</b> ${htmlGuvenli(giren.ad)} (${htmlGuvenli(giren.email)})</p>
