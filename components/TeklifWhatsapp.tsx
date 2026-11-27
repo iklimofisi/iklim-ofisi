@@ -42,8 +42,12 @@ export default function TeklifWhatsapp({
       <form action={teklifPaylasimOlustur} className="space-y-3">
         <input type="hidden" name="teklifId" value={teklifId} />
         <p className="text-sm text-metin/70">
-          Müşteriye özel, tahmin edilemez bir link oluşturulur. Müşteri linke tıklayınca teklifin özetini görür ve PDF&apos;ini
-          açar / indirir. Linki istediğiniz an iptal edebilirsiniz.
+          Müşteriye özel, tahmin edilemez bir link oluşturulur. Müşteri linke tıklayınca teklifin özetini görür, PDF&apos;ini
+          açar / indirir ve <b>uygun bulursa adını yazıp teklifi aynı sayfadan onaylar</b>. Onay gelince teklif &quot;Onaylandı&quot; olur,
+          görüşmelere düşer ve size e-posta gelir. Linki istediğiniz an iptal edebilirsiniz.
+        </p>
+        <p className="text-xs text-metin/50">
+          Aynı onay linki, üstteki &quot;Müşteriye Mail Gönder&quot; ile giden e-postaya &quot;Teklifi İncele ve Onayla&quot; düğmesi olarak da eklenir.
         </p>
         <KaydetButonu
           basari={null}

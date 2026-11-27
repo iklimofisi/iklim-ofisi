@@ -714,7 +714,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
 
       {/* --- YALNIZCA PANELDE (yazdırmada görünmez) --- */}
       <section id="whatsapp" className="mt-8 bg-yuzey border border-hat rounded-lg p-5 scroll-mt-6 print:hidden">
-        <h2 className="font-display font-medium text-metin mb-3">💬 WhatsApp ile Müşteriye Gönder</h2>
+        <h2 className="font-display font-medium text-metin mb-3">💬 WhatsApp ile Müşteriye Gönder · Müşteri Onayı</h2>
         <TeklifWhatsapp
           key={paylasim?.anahtar ?? "yok"}
           teklifId={teklif.id}
