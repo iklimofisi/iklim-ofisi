@@ -6,6 +6,7 @@ import { siparisNetTutari } from "@/lib/siparis-tutari";
 import SatisPaneli, { DONEMLER, type Donem } from "@/components/SatisPaneli";
 import { sayfaYetkisi } from "@/lib/oturum";
 import { gorebilir } from "@/lib/roller";
+import YonetimPaneli from "@/components/YonetimPaneli";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,8 @@ export default async function PanelOzet({
     satinalma: gorebilir(giren.rol, "satinalma"),
     finans: gorebilir(giren.rol, "finans"),
   };
+  // Yönetim paneli (ciro, kâr, tahsilat, iş hattı, dikkat gerekenler): Admin ve Yönetici (izleme)
+  const yonetimGor = giren.rol === "ADMIN" || giren.rol === "YATIRIMCI";
   const yetkiYok = searchParams?.yetki === "yok";
   const donemGirdi = searchParams?.donem;
   const donemKodu = Array.isArray(donemGirdi) ? donemGirdi[0] : donemGirdi;
@@ -166,6 +169,9 @@ export default async function PanelOzet({
         </div>
       )}
 
+      {yonetimGor && <YonetimPaneli />}
+
+      {!yonetimGor && (
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {kartlar.map((k) => {
           const ic = (
@@ -185,6 +191,7 @@ export default async function PanelOzet({
           );
         })}
       </div>
+      )}
 
       {gor.crm && <SatisPaneli donem={donem} />}
 
