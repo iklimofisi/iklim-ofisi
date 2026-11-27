@@ -32,6 +32,12 @@ export default async function SiparisTalebi({ params }: { params: { id: string }
   const kdvli = teklif.kdvDahil ? toplam : toplam * (1 + teklif.kdvOrani / 100);
   const dovizMi = teklif.paraBirimi !== "TRY";
   const kurlar = dovizMi ? await getTcmbKurlari() : null;
+  // Müşteri teklifin bu revizyonunu linkten onayladıysa sözleşme PDF'i gerekmez
+  const linktenOnay =
+    !!teklif.musteriOnayTarihi && !!teklif.musteriOnayAdi && (teklif.musteriOnayRevizyon == null || teklif.musteriOnayRevizyon === teklif.revizyonNo);
+  const eskiOnay = !!teklif.musteriOnayTarihi && !linktenOnay;
+  const saatli = (d: Date) =>
+    d.toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Istanbul" });
 
   return (
     <div className="max-w-2xl">
@@ -91,20 +97,41 @@ export default async function SiparisTalebi({ params }: { params: { id: string }
           )}
         </div>
 
+        {linktenOnay && teklif.musteriOnayTarihi && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-md px-4 py-3 text-sm text-emerald-900">
+            <p className="font-semibold">✓ Müşteri bu teklifi linkten onayladı — sözleşme gerekmez.</p>
+            <p className="text-xs mt-1">
+              Onaylayan: <b>{teklif.musteriOnayAdi}</b> · {saatli(teklif.musteriOnayTarihi)}
+              {teklif.musteriOnayRevizyon ? ` · Rev. ${teklif.musteriOnayRevizyon}` : ""}
+              {teklif.musteriOnayTutar ? ` · ${teklif.musteriOnayTutar}` : ""}
+            </p>
+            <p className="text-xs mt-1 text-emerald-800">
+              Dosya seçmezsen teklif PDF&apos;i, en altına bu onay kaydı (onaylayan, tarih, tutar, IP) yazılarak sipariş belgesi olarak eklenir.
+            </p>
+          </div>
+        )}
+        {eskiOnay && (
+          <div className="bg-amber-50 border border-amber-200 rounded-md px-4 py-3 text-xs text-amber-900">
+            Müşteri Rev. {teklif.musteriOnayRevizyon} sürümünü linkten onaylamıştı, teklif sonra değişti (şu an Rev. {teklif.revizyonNo}). Sözleşme PDF&apos;i
+            ekleyin ya da teklifi &quot;Beklemede&quot;ye alıp linkten yeniden onaylatın.
+          </div>
+        )}
+
         <div>
           <label className="block text-xs font-medium text-metin/60 mb-1">
-            Sözleşme / Anlaşma PDF'i
+            Sözleşme / Anlaşma PDF&apos;i{linktenOnay ? " (isteğe bağlı)" : ""}
           </label>
           <input
             name="sozlesmeDosyasi"
             type="file"
             accept="application/pdf"
-            required
+            required={!linktenOnay}
             className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white"
           />
           <p className="text-xs text-metin/40 mt-1">
-            Müşteriyle imzalanan/anlaşılan sözleşmenin PDF'i. Sipariş kaydına eklenip
-            istediğin zaman görüntülenebilecek.
+            {linktenOnay
+              ? "Ayrıca imzalı bir sözleşme varsa ekleyebilirsin; o zaman onaylı teklif PDF'i yerine bu dosya saklanır."
+              : "Müşteriyle imzalanan / anlaşılan sözleşmenin PDF'i. Sözleşme hazırlamadıysan teklifi müşteriye link (WhatsApp / e-posta) ile gönderip onaylatırsan bu alan gerekmez."}
           </p>
         </div>
 

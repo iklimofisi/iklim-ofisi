@@ -1074,6 +1074,11 @@ async function kapaliSiparisiSil(tx: SiparisDb, siparisId: string) {
   if (r.count !== 1) throw new SiparisEngeli("Sipariş silinemedi; sayfayı yenileyip tekrar deneyin.");
 }
 
+// Müşterinin linkten verdiği onay, teklifin şu anki revizyonu için mi? (Onaydan sonra teklif değiştiyse geçersiz)
+function musteriOnayiGecerli(t: { musteriOnayTarihi: Date | null; musteriOnayAdi: string | null; musteriOnayRevizyon: number | null; revizyonNo: number }) {
+  return !!t.musteriOnayTarihi && !!t.musteriOnayAdi && (t.musteriOnayRevizyon == null || t.musteriOnayRevizyon === t.revizyonNo);
+}
+
 export async function siparisTalebiOlustur(formData: FormData): Promise<IslemSonucu & { git?: string }> {
   const kullanici = await yetki("siparisTalebiOlustur", formData);
   const teklifId = String(formData.get("teklifId") ?? "");
@@ -1084,7 +1089,20 @@ export async function siparisTalebiOlustur(formData: FormData): Promise<IslemSon
   const dosya = formData.get("sozlesmeDosyasi") as File | null;
   if (!teklifId) return { hata: "Teklif bulunamadı." };
 
-  const teklif = await prisma.teklif.findUnique({ where: { id: teklifId }, include: { kalemler: true, siparis: { select: { id: true, durum: true } } } });
+  const teklif = await prisma.teklif.findUnique({
+    where: { id: teklifId },
+    include: {
+      // PDF (müşteri onaylı teklif belgesi) için teklif sayfasıyla aynı veriler
+      kalemler: { include: { marka: true }, orderBy: [{ sira: "asc" }, { id: "asc" }] },
+      musteri: true,
+      yetkili: true,
+      proje: true,
+      olusturanKullanici: true,
+      revizyonlar: { select: { tarih: true } },
+      sablonlar: { orderBy: { sira: "asc" } },
+      siparis: { select: { id: true, durum: true } },
+    },
+  });
   if (!teklif) return { hata: "Teklif bulunamadı." };
   // Aynı tekliften ikinci sipariş açılmaz (çift tıklama dahil). İptal / red edilmiş eski sipariş ise yenisiyle değiştirilir.
   const eskiKapali = teklif.siparis && siparisKapaliMi(teklif.siparis.durum) ? teklif.siparis.id : null;
@@ -1111,10 +1129,31 @@ export async function siparisTalebiOlustur(formData: FormData): Promise<IslemSon
   }
   if (dosya && dosya.size > 9 * 1024 * 1024) return { hata: "Sözleşme dosyası 9 MB'tan büyük olamaz." };
 
-  const evrak =
-    dosya && dosya.size > 0
-      ? { sozlesmeDosya: Buffer.from(await dosya.arrayBuffer()), sozlesmeDosyaAdi: dosya.name, sozlesmeDosyaTipi: dosya.type || "application/pdf" }
-      : {};
+  // Sözleşme yerine müşteri onayı: müşteri teklifin bu revizyonunu linkten onayladıysa dosya gerekmez;
+  // onay kaydı eklenmiş teklif PDF'i sipariş belgesi olarak saklanır.
+  const dosyaVar = !!dosya && dosya.size > 0;
+  const linktenOnay = musteriOnayiGecerli(teklif);
+  if (!dosyaVar && !linktenOnay) {
+    return {
+      hata: teklif.musteriOnayTarihi
+        ? `Müşteri Rev. ${teklif.musteriOnayRevizyon ?? "?"} sürümünü onaylamıştı; teklif sonra değişti (şu an Rev. ${teklif.revizyonNo}). Sözleşme PDF'i ekleyin ya da teklifi "Beklemede"ye alıp müşteriye linkten yeniden onaylatın.`
+        : "Sözleşme / anlaşma PDF'ini ekleyin ya da teklifi müşteriye link (WhatsApp / e-posta) ile gönderip onaylatın.",
+    };
+  }
+  let evrak: { sozlesmeDosya?: Buffer; sozlesmeDosyaAdi?: string; sozlesmeDosyaTipi?: string } = {};
+  if (dosyaVar) {
+    evrak = { sozlesmeDosya: Buffer.from(await dosya!.arrayBuffer()), sozlesmeDosyaAdi: dosya!.name, sozlesmeDosyaTipi: dosya!.type || "application/pdf" };
+  } else if (linktenOnay && teklif.musteriOnayTarihi) {
+    const pdf = await teklifPdfOlustur(musterisizGoster(teklif), await getSirketAyarlari(), {
+      ad: teklif.musteriOnayAdi ?? "",
+      tarih: teklif.musteriOnayTarihi,
+      not: teklif.musteriOnayNotu,
+      revizyon: teklif.musteriOnayRevizyon,
+      tutar: teklif.musteriOnayTutar,
+      ip: teklif.musteriOnayIp,
+    });
+    evrak = { sozlesmeDosya: pdf, sozlesmeDosyaAdi: `Teklif-TKL-${String(teklif.teklifNo).padStart(4, "0")}-musteri-onayli.pdf`, sozlesmeDosyaTipi: "application/pdf" };
+  }
 
   if (eskiKapali) {
     const engel = await kapaliSiparisEngeli(prisma, eskiKapali);

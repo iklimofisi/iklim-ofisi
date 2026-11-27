@@ -69,7 +69,11 @@ function paraYaz(n: number, sembol: string) {
   return `${n.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${sembol}`;
 }
 
-export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer> {
+// Müşterinin teklif linkinden (e-posta / WhatsApp) verdiği onay: verilirse belgenin sonuna onay kaydı yazılır
+// (sipariş talebinde sözleşme yerine eklenen "müşteri onaylı teklif" belgesi).
+export type TeklifPdfOnayi = { ad: string; tarih: Date; not?: string | null; revizyon?: number | null; tutar?: string | null; ip?: string | null };
+
+export async function teklifPdfOlustur(teklif: any, sirket: any, onay?: TeklifPdfOnayi | null): Promise<Buffer> {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   yaziTipiniYukle(doc);
   const pb = teklif.paraBirimi === "EUR" ? "€" : teklif.paraBirimi === "USD" ? "$" : teklif.paraBirimi === "TRY" ? "TL" : metin(teklif.paraBirimi);
@@ -460,7 +464,38 @@ export async function teklifPdfOlustur(teklif: any, sirket: any): Promise<Buffer
   cizgi(x2, imzaY, SAG, imzaY);
   yazi(7, false, METIN_40);
   doc.text("İmza / Kaşe", SOL, imzaY + 4);
-  doc.text("İmza / Kaşe", x2, imzaY + 4);
+  doc.text(onay ? "Elektronik onay (aşağıda)" : "İmza / Kaşe", x2, imzaY + 4);
+  if (onay) {
+    yazi(8.5, true, SOGUK_DIM);
+    doc.text(metin(`Onaylandı: ${onay.ad}`), x2, imzaY - 2);
+  }
+
+  // 8. ELEKTRONİK MÜŞTERİ ONAYI
+  if (onay) {
+    const saatli = new Intl.DateTimeFormat("tr-TR", {
+      day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Istanbul",
+    }).format(onay.tarih);
+    const satirlar: string[] = [
+      `Bu teklif, müşteriye gönderilen kişiye özel teklif bağlantısı (e-posta / WhatsApp) üzerinden müşteri tarafından onaylanmıştır.`,
+      `Onaylayan: ${onay.ad}   ·   Onay tarihi: ${saatli}`,
+      [onay.revizyon ? `Onaylanan revizyon: Rev. ${onay.revizyon}` : "", onay.tutar ? `Onaylanan tutar: ${onay.tutar}` : "", onay.ip ? `IP: ${onay.ip}` : ""]
+        .filter(Boolean)
+        .join("   ·   "),
+      onay.not ? `Müşteri notu: ${onay.not}` : "",
+    ].filter(Boolean);
+    yazi(8, false, METIN);
+    const parcalar: string[] = satirlar.flatMap((s) => doc.splitTextToSize(metin(s), GENISLIK - 8) as string[]);
+    const kutuH = 9 + parcalar.length * 3.9 + 2;
+    y = imzaY + 10;
+    yerAc(kutuH + 2);
+    doc.setFillColor(...BOLUM_ZEMIN);
+    doc.setDrawColor(...SOGUK_DIM);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(SOL, y, GENISLIK, kutuH, 1.5, 1.5, "FD");
+    etiket("Müşteri onayı (elektronik)", SOL + 4, y + 5);
+    yazi(8, false, METIN);
+    doc.text(parcalar, SOL + 4, y + 10);
+  }
 
   const arrayBuffer = doc.output("arraybuffer");
   return Buffer.from(arrayBuffer);
