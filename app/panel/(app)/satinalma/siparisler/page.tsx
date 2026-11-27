@@ -65,6 +65,7 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
             id: true,
             paraBirimi: true,
             kalemlerJson: true,
+            sevkAdresi: true,
             teklif: {
               select: {
                 baslik: true,
@@ -205,9 +206,22 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
           ) : null}
           <SatinalmaSiparisKalemleri baslangic={baslangicKalemleri ?? siparisKalemleri} />
 
-          <div>
-            <label className="block text-xs font-medium text-metin/60 mb-1">Not (ödeme / teslim şartları)</label>
-            <textarea name="notlar" rows={2} maxLength={2000} className={kutu} />
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-metin/60 mb-1">Sevk (teslim) adresi — tedarikçiye giden belgede yazar</label>
+              <textarea
+                name="sevkAdresi"
+                rows={2}
+                maxLength={1000}
+                defaultValue={kaynakSiparis?.sevkAdresi ?? ""}
+                placeholder="Boş bırakılırsa bağlı satış siparişinin sevk adresi yazılır"
+                className={kutu}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-metin/60 mb-1">Not (ödeme / teslim şartları)</label>
+              <textarea name="notlar" rows={2} maxLength={2000} className={kutu} />
+            </div>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-metin/50">

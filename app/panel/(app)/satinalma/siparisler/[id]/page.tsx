@@ -13,6 +13,7 @@ import {
   malKabulIptal,
   alisFaturasiEkle,
   satinalmaSiparisiKurGuncelle,
+  satinalmaSiparisiSevkAdresiKaydet,
 } from "@/lib/satinalma-siparis-actions";
 import KurAlani from "@/components/KurAlani";
 import AlisFaturasiTutar from "@/components/AlisFaturasiTutar";
@@ -22,7 +23,7 @@ import KayitIslemButonu from "@/components/KayitIslemButonu";
 import SatinalmaGonder from "@/components/SatinalmaGonder";
 import { getSirketAyarlari } from "@/lib/sirket";
 import { TEDARIKCI_LINK_TABANI } from "@/lib/satinalma-siparis-belge";
-import { getTcmbKurlari } from "@/lib/kur";
+import { getTcmbKurlari, KUR_KAYNAGI_ETIKET } from "@/lib/kur";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export default async function SatinalmaSiparisDetay({ params }: { params: { id: 
         tedarikci: { select: { id: true, ad: true, telefon: true, vergiNo: true, adres: true, email: true } },
         satinalmaTeklifi: { select: { id: true, baslik: true } },
         proje: { select: { id: true, ad: true } },
-        siparis: { select: { id: true, durum: true, teklif: { select: { teklifNo: true, baslik: true } }, musteri: { select: { ad: true } } } },
+        siparis: { select: { id: true, durum: true, sevkAdresi: true, teklif: { select: { teklifNo: true, baslik: true } }, musteri: { select: { ad: true } } } },
         kalemler: {
           orderBy: [{ sira: "asc" }, { id: "asc" }],
           include: {
@@ -182,7 +183,9 @@ export default async function SatinalmaSiparisDetay({ params }: { params: { id: 
           <p className="font-mono text-xl text-metin">{paraFormat(s.tutarNet, pb)}</p>
           {pb !== "TRY" && (
             <p className="text-xs text-metin/50 mt-1">
-              Kur {String(s.kur).replace(".", ",")} · ≈ {paraFormat(tl, "TRY")}
+              Kur {String(s.kur).replace(".", ",")}
+              {s.kurKaynagi ? ` (${KUR_KAYNAGI_ETIKET[s.kurKaynagi] ?? s.kurKaynagi}${s.kurTarihi ? `, ${s.kurTarihi}` : ""})` : ""} · ≈{" "}
+              <span className="font-semibold text-metin">{paraFormat(tl, "TRY")}</span>
             </p>
           )}
         </div>
@@ -254,6 +257,34 @@ export default async function SatinalmaSiparisDetay({ params }: { params: { id: 
           </SonucluForm>
         </section>
       )}
+
+      {/* SEVK (TESLİM) ADRESİ: tedarikçiye giden PDF'te yazar */}
+      <section className="bg-yuzey border border-hat rounded-lg p-5 mb-8 print:hidden">
+        <h2 className="font-display font-medium text-metin mb-1">Sevk (teslim) adresi</h2>
+        <p className="text-xs text-metin/50 mb-3">
+          Tedarikçiye giden sipariş belgesinde yazar.
+          {!s.sevkAdresi && s.siparis?.sevkAdresi ? " Boş olduğu için şu an bağlı satış siparişinin sevk adresi yazılıyor." : ""}
+          {!s.sevkAdresi && !s.siparis?.sevkAdresi ? " Şu an belgede sevk adresi yok." : ""}
+        </p>
+        {s.durum !== "IPTAL" && s.durum !== "REDDEDILDI" ? (
+          <SonucluForm action={satinalmaSiparisiSevkAdresiKaydet} className="flex flex-wrap items-end gap-3">
+            <input type="hidden" name="satinalmaSiparisiId" value={s.id} />
+            <textarea
+              name="sevkAdresi"
+              rows={2}
+              maxLength={1000}
+              defaultValue={s.sevkAdresi ?? s.siparis?.sevkAdresi ?? ""}
+              placeholder="Malın teslim edileceği adres, yetkili ve telefon"
+              className={`${kutu} flex-1 min-w-[16rem]`}
+            />
+            <button type="submit" className="focus-ring bg-soguk text-white text-sm px-4 py-2 rounded-md font-medium hover:bg-soguk-dim">
+              Adresi kaydet
+            </button>
+          </SonucluForm>
+        ) : (
+          <p className="text-sm text-metin whitespace-pre-line">{s.sevkAdresi || s.siparis?.sevkAdresi || "—"}</p>
+        )}
+      </section>
 
       {s.notlar && <p className="text-sm text-metin/70 whitespace-pre-line bg-yuzey border border-hat rounded-lg p-4 mb-8">{s.notlar}</p>}
 

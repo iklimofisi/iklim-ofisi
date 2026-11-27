@@ -840,6 +840,9 @@ model SatinalmaSiparisi {
   baslik               String
   paraBirimi           String                   @default("TRY")
   kur                  Float                    @default(1)   // 1 birim = ? TL (sipariş açılırken)
+  kurKaynagi           String?                  // TCMB_DOVIZ · TCMB_EFEKTIF · ELLE
+  kurTarihi            String?                  // TCMB kurunda bülten tarihi
+  sevkAdresi           String?                  // Malın teslim edileceği adres (tedarikçiye giden belgede yazar)
   tutarNet             Float                    @default(0)   // KDV hariç, iskontolu toplam (sipariş para biriminde)
   durum                String                   @default("ONAY_BEKLIYOR") // ONAY_BEKLIYOR · ONAYLANDI · KISMEN_TESLIM · TESLIM_ALINDI · REDDEDILDI · IPTAL
   beklenenTeslimTarihi DateTime?

@@ -146,7 +146,7 @@ export const ISLEM_BOLUMU: Record<string, Bolum> = {
   satinalmaTeklifiEkle: "satinalma", satinalmaTeklifiGuncelle: "satinalma", satinalmaTeklifiSil: "satinalma",
   satinalmaTeklifiniDonustur: "satinalma", maliyetDosyaYukle: "satinalma",
   satinalmaSiparisiOlustur: "satinalma", satinalmaSiparisiOnayla: "satinalma", satinalmaSiparisiReddet: "satinalma",
-  satinalmaSiparisiIptal: "satinalma", satinalmaSiparisiBagla: "satinalma", satinalmaSiparisiKurGuncelle: "satinalma", satinalmaOnayEsigiKaydet: "satinalma",
+  satinalmaSiparisiIptal: "satinalma", satinalmaSiparisiBagla: "satinalma", satinalmaSiparisiKurGuncelle: "satinalma", satinalmaSiparisiSevkAdresiKaydet: "satinalma", satinalmaOnayEsigiKaydet: "satinalma",
   satinalmaSiparisiEpostaGonder: "satinalma", satinalmaSiparisiWhatsappLinki: "satinalma", satinalmaSiparisiWhatsappKaydet: "satinalma",
   malKabulEkle: "satinalma", malKabulIptal: "satinalma",
   tedarikciEkle: "tedarikci", tedarikciGuncelle: "tedarikci",

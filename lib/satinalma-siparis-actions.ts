@@ -14,6 +14,7 @@ import { islemKaydet } from "@/lib/islem-kaydi";
 import { paraBirimiDogrula } from "@/lib/para";
 import { tutarOku } from "@/lib/toplam-dagit";
 import { kurOku } from "@/lib/kur-oku";
+import { getTcmbKurlari, kurKaynagiOku } from "@/lib/kur";
 import { birimNormal } from "@/lib/birimler";
 import { donemKilitliMi, KILIT_MESAJI } from "@/lib/finans";
 import { epostaGonder } from "@/lib/eposta";
@@ -79,6 +80,8 @@ export async function satinalmaSiparisiOlustur(fd: FormData): Promise<SasSonuc> 
   const satinalmaTeklifiId = metin(fd, "satinalmaTeklifiId", 100) || null;
   const beklenen = metin(fd, "beklenenTeslimTarihi", 10);
   const notlar = metin(fd, "notlar", 2000) || null;
+  let sevkAdresi = metin(fd, "sevkAdresi", 1000) || null;
+  const kurKaynagi = paraBirimi === "TRY" ? null : kurKaynagiOku(fd.get("kurKaynagi"));
 
   if (!tedarikciId) return { hata: "Tedarikçi seçin." };
   if (!baslik) return { hata: "Sipariş başlığını yazın." };
@@ -123,10 +126,13 @@ export async function satinalmaSiparisiOlustur(fd: FormData): Promise<SasSonuc> 
   const tedarikci = await prisma.tedarikci.findUnique({ where: { id: tedarikciId }, select: { id: true } });
   if (!tedarikci) return { hata: "Tedarikçi bulunamadı." };
   if (siparisId) {
-    const s = await prisma.siparis.findUnique({ where: { id: siparisId }, select: { durum: true } });
+    const s = await prisma.siparis.findUnique({ where: { id: siparisId }, select: { durum: true, sevkAdresi: true } });
     if (!s) return { hata: "Bağlanacak satış siparişi bulunamadı." };
     if (s.durum === "IPTAL" || s.durum === "REDDEDILDI") return { hata: "İptal / reddedilmiş satış siparişine satınalma bağlanamaz." };
+    // Sevk adresi yazılmadıysa satış siparişindeki sevk adresi kullanılır
+    if (!sevkAdresi && s.sevkAdresi) sevkAdresi = s.sevkAdresi.slice(0, 1000);
   }
+  const kurTarihi = kurKaynagi && kurKaynagi !== "ELLE" ? (await getTcmbKurlari())?.tarih ?? null : null;
   if (projeId && !(await prisma.proje.findUnique({ where: { id: projeId }, select: { id: true } }))) return { hata: "Proje bulunamadı." };
   if (satinalmaTeklifiId) {
     const st = await prisma.satinalmaTeklifi.findUnique({ where: { id: satinalmaTeklifiId }, select: { tedarikciId: true } });
@@ -154,6 +160,9 @@ export async function satinalmaSiparisiOlustur(fd: FormData): Promise<SasSonuc> 
       baslik,
       paraBirimi,
       kur,
+      kurKaynagi,
+      kurTarihi,
+      sevkAdresi,
       tutarNet,
       durum: otomatik ? "ONAYLANDI" : "ONAY_BEKLIYOR",
       beklenenTeslimTarihi: beklenenTarih,
@@ -241,11 +250,25 @@ export async function satinalmaSiparisiKurGuncelle(fd: FormData): Promise<SasSon
   if (s.durum === "IPTAL" || s.durum === "REDDEDILDI") return { hata: "İptal / reddedilmiş siparişin kuru değiştirilmez." };
   if (giren.rol !== "ADMIN" && s.durum !== "ONAY_BEKLIYOR") return { hata: "Onaylanmış siparişin kurunu yalnız admin değiştirebilir." };
   if (!kur) return { hata: kurYazi ? `Kur anlaşılamadı: "${kurYazi}" (örn. 50,75).` : `1 ${s.paraBirimi} kaç TL? Kuru yazın.` };
-  if (kur === s.kur) return { tamam: "Kur zaten bu." };
-  const r = await prisma.satinalmaSiparisi.updateMany({ where: { id, durum: s.durum }, data: { kur } });
+  const kurKaynagi = kurKaynagiOku(fd.get("kurKaynagi"));
+  const kurTarihi = kurKaynagi !== "ELLE" ? (await getTcmbKurlari())?.tarih ?? null : null;
+  const r = await prisma.satinalmaSiparisi.updateMany({ where: { id, durum: s.durum }, data: { kur, kurKaynagi, kurTarihi } });
   if (r.count !== 1) return { hata: "Sipariş bu arada değişti; sayfayı yenileyip tekrar deneyin." };
   yenile(id, s.siparisId);
   return { tamam: `Kur ${kur.toLocaleString("tr-TR", { maximumFractionDigits: 6 })} olarak kaydedildi.` };
+}
+
+// --- SEVK (TESLİM) ADRESİ: tedarikçiye giden belgede yazar ---------------------------------
+export async function satinalmaSiparisiSevkAdresiKaydet(fd: FormData): Promise<SasSonuc> {
+  await yetki("satinalmaSiparisiSevkAdresiKaydet", fd);
+  const id = metin(fd, "satinalmaSiparisiId", 100);
+  const sevkAdresi = metin(fd, "sevkAdresi", 1000) || null;
+  const s = id ? await prisma.satinalmaSiparisi.findUnique({ where: { id }, select: { durum: true, siparisId: true } }) : null;
+  if (!s) return { hata: "Satınalma siparişi bulunamadı." };
+  if (s.durum === "IPTAL" || s.durum === "REDDEDILDI") return { hata: "İptal / reddedilmiş siparişin adresi değiştirilmez." };
+  await prisma.satinalmaSiparisi.update({ where: { id }, data: { sevkAdresi } });
+  yenile(id, s.siparisId);
+  return { tamam: sevkAdresi ? "Sevk adresi kaydedildi; tedarikçiye giden belgede yazar." : "Sevk adresi kaldırıldı." };
 }
 
 // --- SATIŞ SİPARİŞİNE BAĞLAMA ---------------------------------------------------------

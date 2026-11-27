@@ -7,8 +7,9 @@ import { sasNo, kalemNet } from "@/lib/satinalma-siparis";
 // -----------------------------------------------------------------------------
 // TEDARİKÇİYE GİDEN SATINALMA SİPARİŞİ PDF'İ
 // logo + şirket bilgileri | SATINALMA SİPARİŞİ + no
-// tedarikçi bilgileri | sipariş tarihi, beklenen teslim
-// kalem tablosu (kod, açıklama, miktar, birim fiyat, iskonto, tutar), KDV hariç toplam
+// tedarikçi bilgileri | sipariş tarihi, beklenen teslim, para birimi, kur
+// sevk (teslim) adresi
+// kalem tablosu (kod, açıklama, miktar, birim fiyat, iskonto, tutar), KDV hariç toplam (dövizde altında TL karşılığı)
 // notlar (ödeme / teslim şartları), siparişi veren + tedarikçi onayı (imza / kaşe)
 // İç bilgiler (müşteri, satış siparişi, satış fiyatı, proje) BELGEYE YAZILMAZ.
 // -----------------------------------------------------------------------------
@@ -43,6 +44,10 @@ export type SasPdfVerisi = {
   no: number;
   baslik: string;
   paraBirimi: string;
+  kur: number;
+  kurKaynagi: string | null;
+  kurTarihi: string | null;
+  sevkAdresi: string | null;
   olusturmaTarihi: Date;
   beklenenTeslimTarihi: Date | null;
   notlar: string | null;
@@ -61,6 +66,10 @@ export function satinalmaSiparisPdf(s: SasPdfVerisi, sirket: SasPdfSirket): Buff
 
   const pb = s.paraBirimi === "EUR" ? "€" : s.paraBirimi === "USD" ? "$" : "TL";
   const para = (n: number) => `${n.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${pb}`;
+  const tlYaz = (n: number) => `${n.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL`;
+  const dovizli = s.paraBirimi !== "TRY" && s.kur > 0 && s.kur !== 1;
+  const kurYazi = s.kur.toLocaleString("tr-TR", { minimumFractionDigits: 4, maximumFractionDigits: 6 });
+  const kaynakAdi = s.kurKaynagi === "TCMB_DOVIZ" ? "TCMB döviz satış" : s.kurKaynagi === "TCMB_EFEKTIF" ? "TCMB efektif satış" : "";
   const yazi = (boyut: number, kalin: boolean, renk: Renk) => {
     doc.setFont(YAZI_TIPI, kalin ? "bold" : "normal");
     doc.setFontSize(boyut);
@@ -146,7 +155,21 @@ export function satinalmaSiparisPdf(s: SasPdfVerisi, sirket: SasPdfSirket): Buff
   bilgi("Sipariş tarihi", trTarih.format(s.olusturmaTarihi));
   if (s.beklenenTeslimTarihi) bilgi("İstenen teslim tarihi", trTarih.format(s.beklenenTeslimTarihi));
   bilgi("Para birimi", s.paraBirimi);
+  if (dovizli) bilgi(`Kur (1 ${s.paraBirimi})`, `${kurYazi} TL`);
   y = Math.max(ty, oy) + 5;
+
+  // Sevk (teslim) adresi
+  if (s.sevkAdresi) {
+    const a: string[] = doc.splitTextToSize(metin(s.sevkAdresi), GENISLIK - 8);
+    doc.setFillColor(...ZEMIN);
+    doc.setDrawColor(...HAT);
+    doc.setLineWidth(0.25);
+    doc.roundedRect(SOL, y - 1, GENISLIK, 7.5 + a.length * 3.9, 1.2, 1.2, "FD");
+    etiket("Sevk (teslim) adresi", SOL + 3, y + 3);
+    yazi(8.5, true, METIN);
+    doc.text(a, SOL + 3, y + 7.3);
+    y += 7.5 + a.length * 3.9 + 5;
+  }
 
   // Konu
   if (s.baslik) {
@@ -209,11 +232,23 @@ export function satinalmaSiparisPdf(s: SasPdfVerisi, sirket: SasPdfSirket): Buff
     y = UST + 4;
   }
   y += 2;
+  const toplamYuv = Math.round(toplam * 100) / 100;
   yazi(9, false, METIN_60);
   doc.text("Toplam (KDV hariç)", SAG - 45, y, { align: "right" });
   yazi(11, true, METIN);
-  doc.text(para(Math.round(toplam * 100) / 100), SAG - 1.5, y, { align: "right" });
-  y += 5;
+  doc.text(para(toplamYuv), SAG - 1.5, y, { align: "right" });
+  y += 5.5;
+  if (dovizli) {
+    yazi(9, false, METIN_60);
+    doc.text("TL karşılığı (KDV hariç)", SAG - 45, y, { align: "right" });
+    yazi(10.5, true, SOGUK_DIM);
+    doc.text(tlYaz(Math.round(toplamYuv * s.kur * 100) / 100), SAG - 1.5, y, { align: "right" });
+    y += 4.2;
+    yazi(7.5, false, METIN_50);
+    const kaynakNotu = [kaynakAdi, s.kurTarihi ? `${s.kurTarihi} bülteni` : ""].filter(Boolean).join(", ");
+    doc.text(`1 ${s.paraBirimi} = ${kurYazi} TL${kaynakNotu ? ` (${kaynakNotu})` : ""}`, SAG - 1.5, y, { align: "right" });
+    y += 4.5;
+  }
   yazi(7.5, false, METIN_50);
   doc.text("Fiyatlara KDV dahil değildir. Faturada bu sipariş numarasının belirtilmesini rica ederiz.", SAG - 1.5, y, { align: "right" });
   y += 9;

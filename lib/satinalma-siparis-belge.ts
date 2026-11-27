@@ -17,6 +17,11 @@ const ALANLAR = {
   baslik: true,
   durum: true,
   paraBirimi: true,
+  kur: true,
+  kurKaynagi: true,
+  kurTarihi: true,
+  sevkAdresi: true,
+  siparis: { select: { sevkAdresi: true } },
   olusturmaTarihi: true,
   beklenenTeslimTarihi: true,
   notlar: true,
@@ -36,5 +41,7 @@ export async function sasBelgesi(kimlik: { id: string } | { anahtar: string }) {
   });
   if (!s) return null;
   const sirket = await getSirketAyarlari();
-  return { durum: s.durum, no: s.no, dosyaAdi: `Satinalma-Siparisi-${sasNo(s.no)}.pdf`, pdf: satinalmaSiparisPdf(s, sirket) };
+  // Sevk adresi: siparişte yazılan; yoksa bağlı satış siparişinin sevk adresi
+  const veri = { ...s, sevkAdresi: s.sevkAdresi || s.siparis?.sevkAdresi || null };
+  return { durum: s.durum, no: s.no, dosyaAdi: `Satinalma-Siparisi-${sasNo(s.no)}.pdf`, pdf: satinalmaSiparisPdf(veri, sirket) };
 }
