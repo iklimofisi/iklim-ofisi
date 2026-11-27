@@ -18,6 +18,7 @@ import SiparisSureciGostergesi from "@/components/SiparisSureciGostergesi";
 import SilButon from "@/components/SilButon";
 import KayitIslemButonu from "@/components/KayitIslemButonu";
 import { siparisNetTutari } from "@/lib/siparis-tutari";
+import { siparisAlimKapsami } from "@/lib/satinalma-kapsam";
 import { SAS_DURUM_ETIKET, sasNo, sasTl, maliyeteSayilirMi } from "@/lib/satinalma-siparis";
 import YazdirButon from "@/components/YazdirButon";
 import KaydetButonu from "@/components/KaydetButonu";
@@ -82,6 +83,8 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
         ? `${KUR_KAYNAGI_ETIKET[kaynak]} · ${kurlar?.tarih ?? "son"} bülteni. Değiştirirsen kur "elle" olarak kaydedilir.`
         : "TCMB kuruna şu an ulaşılamadı; kuru yazın.";
   const faturaKuruOnerisi = faturaKurGerekli ? tcmbKuru(kurlar, pb, "TCMB_DOVIZ") : null;
+  // Satılandan fazla satınalma (aynı malın iki kez sipariş edilmesi) uyarısı
+  const alimKapsami = maliyetGor && siparis.satinalmaSiparisleri.length ? await siparisAlimKapsami(siparis.id) : null;
 
   return (
     <div>
@@ -271,6 +274,21 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
           <p className="text-sm text-metin/50">Bu siparişe bağlı satınalma siparişi yok; gerçek maliyet henüz hesaplanamıyor.</p>
         ) : (
           <>
+            {alimKapsami && alimKapsami.fazlalar.length > 0 && (
+              <div className="text-xs bg-sicak-light border border-sicak/30 text-sicak-dim rounded-md px-3 py-2 mb-3">
+                <p className="font-semibold mb-1">⚠ Bu iş için satılandan fazla satınalma var (maliyet ve kâr bu yüzden şişik görünüyor):</p>
+                <ul className="list-disc pl-4">
+                  {alimKapsami.fazlalar.map((f) => (
+                    <li key={f.aciklama}>
+                      {f.aciklama}: satılan {f.satilan} {f.birim}, sipariş edilen {f.siparisEdilen} {f.birim}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1">
+                  Yanlışlıkla açılan satınalmayı açıp önce mal kabulünü, sonra siparişi iptal edin (yalnız admin). İptal edilen satınalma maliyete sayılmaz.
+                </p>
+              </div>
+            )}
             <ul className="text-sm divide-y divide-hat mb-3">
               {siparis.satinalmaSiparisleri.map((x) => (
                 <li key={x.id} className={`flex flex-wrap items-center justify-between gap-2 py-1.5 ${maliyeteSayilirMi(x.durum) ? "" : "text-metin/40 line-through"}`}>

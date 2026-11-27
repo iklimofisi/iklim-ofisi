@@ -8,6 +8,8 @@ import { SAS_DURUM_ETIKET, SAS_DURUM_RENK, sasNo, sasTl, teslimAlinan, maliyeteS
 import SonucluForm from "@/components/SonucluForm";
 import SatinalmaSiparisKalemleri, { type BaslangicKalemi } from "@/components/SatinalmaSiparisKalemleri";
 import KurAlani from "@/components/KurAlani";
+import { siparisAlimKapsami, kalemAnahtari } from "@/lib/satinalma-kapsam";
+import type { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -17,11 +19,17 @@ export const dynamic = "force-dynamic";
 // ?siparis=<satış siparişi>    → form o satış siparişine bağlı açılır
 // ?durum=acik|onay|teslim|iptal → liste süzgeci
 // -----------------------------------------------------------------------------
-const SUZGECLER: { anahtar: string; etiket: string; durumlar?: string[] }[] = [
-  { anahtar: "acik", etiket: "Açık", durumlar: ["ONAY_BEKLIYOR", "ONAYLANDI", "KISMEN_TESLIM"] },
-  { anahtar: "onay", etiket: "Onay bekleyen", durumlar: ["ONAY_BEKLIYOR"] },
-  { anahtar: "teslim", etiket: "Teslim alınan", durumlar: ["TESLIM_ALINDI"] },
-  { anahtar: "iptal", etiket: "İptal / red", durumlar: ["IPTAL", "REDDEDILDI"] },
+// Açık: işi bitmemiş olanlar (onay / teslim bekleyen ya da teslim alınmış ama alış faturası işlenmemiş)
+const SUZGECLER: { anahtar: string; etiket: string; where?: Prisma.SatinalmaSiparisiWhereInput }[] = [
+  {
+    anahtar: "acik",
+    etiket: "Açık",
+    where: { OR: [{ durum: { in: ["ONAY_BEKLIYOR", "ONAYLANDI", "KISMEN_TESLIM"] } }, { durum: "TESLIM_ALINDI", faturalar: { none: { iptalTarihi: null } } }] },
+  },
+  { anahtar: "onay", etiket: "Onay bekleyen", where: { durum: "ONAY_BEKLIYOR" } },
+  { anahtar: "fatura", etiket: "Fatura bekleyen", where: { durum: { in: ["KISMEN_TESLIM", "TESLIM_ALINDI"] }, faturalar: { none: { iptalTarihi: null } } } },
+  { anahtar: "teslim", etiket: "Teslim alınan", where: { durum: "TESLIM_ALINDI" } },
+  { anahtar: "iptal", etiket: "İptal / red", where: { durum: { in: ["IPTAL", "REDDEDILDI"] } } },
   { anahtar: "tum", etiket: "Tümü" },
 ];
 
@@ -35,7 +43,7 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
 
   const [siparisler, tedarikciler, satisSiparisleri, projeler, ayar, kurlar, kaynakTeklif, kaynakSiparis] = await Promise.all([
     prisma.satinalmaSiparisi.findMany({
-      where: suzgec.durumlar ? { durum: { in: suzgec.durumlar } } : {},
+      where: suzgec.where ?? {},
       include: {
         tedarikci: { select: { ad: true } },
         siparis: { select: { id: true, teklif: { select: { teklifNo: true, baslik: true } }, musteri: { select: { ad: true } } } },
@@ -95,6 +103,9 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
   // Satış siparişinden açılırken: siparişin (dondurulmuş) kalemleri adet ve birimiyle gelir; alış fiyatı
   // satış fiyatından farklı olduğu için fiyatlar boş gelir (her kalemin alış fiyatı yazılmadan sipariş açılmaz).
   // İşçilik / montaj gibi tedarikçiden alınmayan satırlar formda silinir.
+  // Bu iş için daha önce açılmış satınalmalar: zaten sipariş edilen adetler düşülür (aynı malın iki kez alınmaması için)
+  const kapsam = kaynakSiparis && !kaynakTeklif ? await siparisAlimKapsami(kaynakSiparis.id) : null;
+  const kalanAdet = new Map<string, number>((kapsam?.satirlar ?? []).map((x): [string, number] => [kalemAnahtari(x.aciklama), x.satilan - x.siparisEdilen]));
   const siparisKalemleri = (() => {
     if (!kaynakSiparis || kaynakTeklif) return undefined;
     let liste: { bolum?: string | null; aciklama: string; adet: number; birim?: string | null }[] = kaynakSiparis.teklif.kalemler;
@@ -109,7 +120,11 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
     return liste
       .filter((k) => k && typeof k.aciklama === "string" && k.aciklama.trim() && Number(k.adet) > 0)
       .slice(0, 500)
-      .map((k) => ({ aciklama: k.aciklama, adet: Number(k.adet), birim: k.birim ?? "Adet", birimFiyat: 0, bolum: k.bolum ?? null }));
+      .map((k) => {
+        const kalan = kalanAdet.get(kalemAnahtari(k.aciklama));
+        return { aciklama: k.aciklama, adet: kalan == null ? Number(k.adet) : Math.min(Number(k.adet), kalan), birim: k.birim ?? "Adet", birimFiyat: 0, bolum: k.bolum ?? null };
+      })
+      .filter((k) => k.adet > 0);
   })();
   const baslangicPb = kaynakTeklif?.paraBirimi ?? kaynakSiparis?.paraBirimi ?? kaynakSiparis?.teklif.paraBirimi ?? "TRY";
 
@@ -198,10 +213,30 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
             </div>
           </div>
 
+          {kapsam && kapsam.oncekiler.length > 0 && (
+            <div className="text-xs bg-amber-50 border border-amber-200 text-amber-900 rounded-md px-3 py-2 space-y-1">
+              <p className="font-semibold">Bu iş için daha önce açılmış satınalma siparişleri var:</p>
+              <ul className="list-disc pl-4">
+                {kapsam.oncekiler.map((o) => (
+                  <li key={o.id}>
+                    <Link href={`/panel/satinalma/siparisler/${o.id}`} className="underline font-mono">
+                      {sasNo(o.no)}
+                    </Link>{" "}
+                    · {o.tedarikci.ad} · {paraFormat(o.tutarNet, o.paraBirimi)} · {SAS_DURUM_ETIKET[o.durum] ?? o.durum}
+                  </li>
+                ))}
+              </ul>
+              <p>Zaten sipariş edilen adetler aşağıdaki kalemlerden düşüldü; tamamı sipariş edilen kalemler getirilmedi.</p>
+            </div>
+          )}
           {siparisKalemleri?.length ? (
             <p className="text-xs text-metin/60 bg-soguk-light border border-soguk/20 rounded-md px-3 py-2">
-              Satış siparişinin {siparisKalemleri.length} kalemi adet ve birimiyle getirildi. Her kalemin <strong>alış fiyatını</strong> yazın; tedarikçiden
-              alınmayan satırları (işçilik, montaj vb.) silin.
+              Satış siparişinin {siparisKalemleri.length} kalemi (henüz sipariş edilmemiş adetleriyle) getirildi. Her kalemin <strong>alış fiyatını</strong> yazın;
+              tedarikçiden alınmayan satırları (işçilik, montaj vb.) silin.
+            </p>
+          ) : kapsam && kapsam.oncekiler.length > 0 ? (
+            <p className="text-xs text-sicak-dim bg-sicak-light border border-sicak/30 rounded-md px-3 py-2">
+              Satış siparişinin tüm kalemleri için zaten satınalma açılmış. Ek alım gerekiyorsa kalemi elle yazın.
             </p>
           ) : null}
           <SatinalmaSiparisKalemleri baslangic={baslangicKalemleri ?? siparisKalemleri} />
@@ -229,9 +264,15 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
                 ? `Onay eşiği: ${paraFormat(esik, "TRY")} (KDV hariç). Üstündeki siparişler admin onayı bekler.`
                 : "Onay eşiği tanımlı değil: admin'in açtıkları dışındaki siparişler admin onayı bekler."}
             </p>
-            <button type="submit" className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors disabled:opacity-60">
-              Siparişi aç
-            </button>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1.5 text-xs text-metin/60" title="Satılandan fazla adet ya da satış siparişinden farklı para birimi uyarısını bilerek geçmek için">
+                <input type="checkbox" name="uyariOnay" value="1" className="accent-soguk" />
+                Uyarıları gördüm, yine de aç
+              </label>
+              <button type="submit" className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors disabled:opacity-60">
+                Siparişi aç
+              </button>
+            </div>
           </div>
         </SonucluForm>
       </details>
@@ -299,6 +340,9 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
                   <td className="px-4 py-3 text-right font-mono text-xs whitespace-nowrap">{fatura > 0 ? paraFormat(fatura, "TRY") : "—"}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-block text-[11px] px-2 py-0.5 rounded-full border whitespace-nowrap ${SAS_DURUM_RENK[s.durum] ?? ""}`}>{SAS_DURUM_ETIKET[s.durum] ?? s.durum}</span>
+                    {(s.durum === "TESLIM_ALINDI" || s.durum === "KISMEN_TESLIM") && s.faturalar.length === 0 && (
+                      <span className="block text-[10px] text-sicak-dim mt-0.5">alış faturası bekleniyor</span>
+                    )}
                   </td>
                 </tr>
               );
@@ -306,7 +350,12 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
             {siparisler.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-5 py-8 text-center text-metin/50">
-                  Bu süzgeçte satınalma siparişi yok.
+                  Bu süzgeçte satınalma siparişi yok.{" "}
+                  {suzgec.anahtar !== "tum" && (
+                    <Link href="/panel/satinalma/siparisler?durum=tum" className="text-soguk-dim hover:underline">
+                      Tümünü göster
+                    </Link>
+                  )}
                 </td>
               </tr>
             )}

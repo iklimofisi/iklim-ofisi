@@ -15,6 +15,7 @@ import { paraBirimiDogrula } from "@/lib/para";
 import { tutarOku } from "@/lib/toplam-dagit";
 import { kurOku } from "@/lib/kur-oku";
 import { getTcmbKurlari, kurKaynagiOku } from "@/lib/kur";
+import { siparisAlimKapsami, kalemAnahtari } from "@/lib/satinalma-kapsam";
 import { birimNormal } from "@/lib/birimler";
 import { donemKilitliMi, KILIT_MESAJI } from "@/lib/finans";
 import { epostaGonder } from "@/lib/eposta";
@@ -126,9 +127,37 @@ export async function satinalmaSiparisiOlustur(fd: FormData): Promise<SasSonuc> 
   const tedarikci = await prisma.tedarikci.findUnique({ where: { id: tedarikciId }, select: { id: true } });
   if (!tedarikci) return { hata: "Tedarikçi bulunamadı." };
   if (siparisId) {
-    const s = await prisma.siparis.findUnique({ where: { id: siparisId }, select: { durum: true, sevkAdresi: true } });
+    const s = await prisma.siparis.findUnique({ where: { id: siparisId }, select: { durum: true, sevkAdresi: true, paraBirimi: true, teklif: { select: { paraBirimi: true } } } });
     if (!s) return { hata: "Bağlanacak satış siparişi bulunamadı." };
     if (s.durum === "IPTAL" || s.durum === "REDDEDILDI") return { hata: "İptal / reddedilmiş satış siparişine satınalma bağlanamaz." };
+    // UYARILAR (kullanıcı "uyarıları gördüm" kutusunu işaretlemeden sipariş açılmaz):
+    // 1) Aynı iş için satılandan fazla adet (çoğunlukla aynı satınalmanın yanlışlıkla ikinci kez açılması)
+    // 2) Satış siparişinden farklı para birimi (yanlış para birimi seçimi)
+    if (fd.get("uyariOnay") !== "1") {
+      const uyarilar: string[] = [];
+      const kapsam = await siparisAlimKapsami(siparisId);
+      if (kapsam) {
+        const yeniAdet = new Map<string, number>();
+        for (const k of kalemler) yeniAdet.set(kalemAnahtari(k.aciklama), (yeniAdet.get(kalemAnahtari(k.aciklama)) ?? 0) + k.adet);
+        const asan = kapsam.satirlar.filter((x) => {
+          const y = yeniAdet.get(kalemAnahtari(x.aciklama));
+          return y != null && x.siparisEdilen + y > x.satilan + 1e-9;
+        });
+        if (asan.length) {
+          const onceki = kapsam.oncekiler.map((o) => sasNo(o.no)).join(", ");
+          uyarilar.push(
+            `Bu iş için satılandan fazla alınıyor: ${asan
+              .slice(0, 4)
+              .map((x) => `"${x.aciklama.slice(0, 45)}" satış ${x.satilan}, önceki satınalmalarda ${x.siparisEdilen}, bu siparişte ${yeniAdet.get(kalemAnahtari(x.aciklama))}`)
+              .join(" · ")}${onceki ? ` (bu işin açık satınalmaları: ${onceki})` : ""}.`
+          );
+        }
+      }
+      const satisPb = s.paraBirimi ?? s.teklif.paraBirimi;
+      if (satisPb && satisPb !== paraBirimi) uyarilar.push(`Satış siparişi ${satisPb}, bu satınalma ${paraBirimi}; para birimi doğru mu?`);
+      if (uyarilar.length)
+        return { hata: `${uyarilar.join(" ")} Yanlışlıksa düzeltin; bilerek yapıyorsanız formun altındaki "Uyarıları gördüm, yine de aç" kutusunu işaretleyip tekrar gönderin.` };
+    }
     // Sevk adresi yazılmadıysa satış siparişindeki sevk adresi kullanılır
     if (!sevkAdresi && s.sevkAdresi) sevkAdresi = s.sevkAdresi.slice(0, 1000);
   }
