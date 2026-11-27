@@ -21,6 +21,8 @@ import { SAS_DURUM_ETIKET, sasNo, sasTl, maliyeteSayilirMi } from "@/lib/satinal
 import YazdirButon from "@/components/YazdirButon";
 import KaydetButonu from "@/components/KaydetButonu";
 import { miktarYaz } from "@/lib/birimler";
+import SonucluForm from "@/components/SonucluForm";
+import { getTcmbKurlari, tcmbKuru, kurKaynagiOku, KUR_KAYNAGI_ETIKET } from "@/lib/kur";
 
 export const dynamic = "force-dynamic";
 
@@ -54,12 +56,28 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
   const pb = siparis.paraBirimi ?? siparis.teklif.paraBirimi;
   const teklifDegisti = siparis.teklifRevizyonNo != null && siparis.teklif.revizyonNo > siparis.teklifRevizyonNo;
   // Gerçek maliyet: bu siparişe bağlı (iptal / red olmayan) satınalma siparişlerinin TL karşılığı, KDV hariç
-  const satisTl = pb === "TRY" ? toplam : toplam * siparis.kur;
+  const satisTl = pb === "TRY" ? toplam : toplam * (siparis.faturaKur ?? siparis.kur);
   const maliyetTl = siparis.satinalmaSiparisleri.filter((x) => maliyeteSayilirMi(x.durum)).reduce((a, x) => a + sasTl(x), 0);
   const brutKar = satisTl - maliyetTl;
   const isAdmin = giren?.rol === "ADMIN";
   const maliyetGor = maliyetGorur(giren?.rol); // satış personeli maliyet / kâr görmez
   const aktifMi = siparis.durum !== "ONAY_BEKLIYOR" && siparis.durum !== "REDDEDILDI";
+
+  // Dövizli sipariş: onay / fatura için önerilen kur (TCMB ya da talepte yazılan elle kur)
+  const dovizli = pb !== "TRY";
+  const kaynak = kurKaynagiOku(siparis.kurKaynagi);
+  const faturaKurGerekli = dovizli && siparis.durum !== "IPTAL" && siparis.faturaKur == null;
+  const kurlar = dovizli && (siparis.durum === "ONAY_BEKLIYOR" || faturaKurGerekli) ? await getTcmbKurlari() : null;
+  const kdvliDoviz = siparis.teklif.kdvDahil ? toplam : toplam * (1 + siparis.teklif.kdvOrani / 100);
+  const onayKuruOnerisi = !dovizli ? null : kaynak === "ELLE" ? siparis.kur : tcmbKuru(kurlar, pb, kaynak);
+  const onayKurNotu = !dovizli
+    ? undefined
+    : kaynak === "ELLE"
+      ? "Talepte elle yazılan kur."
+      : onayKuruOnerisi
+        ? `${KUR_KAYNAGI_ETIKET[kaynak]} · ${kurlar?.tarih ?? "son"} bülteni. Değiştirirsen kur "elle" olarak kaydedilir.`
+        : "TCMB kuruna şu an ulaşılamadı; kuru yazın.";
+  const faturaKuruOnerisi = faturaKurGerekli ? tcmbKuru(kurlar, pb, "TCMB_DOVIZ") : null;
 
   return (
     <div>
@@ -154,7 +172,13 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
             Onaylanana kadar cari hesaba işlenmez ve sevkiyat başlatılamaz.
           </p>
           {isAdmin ? (
-            <SiparisOnayReddet siparisId={siparis.id} />
+            <SiparisOnayReddet
+              siparisId={siparis.id}
+              pb={pb}
+              dovizKdvli={Math.round(kdvliDoviz * 100) / 100}
+              onerilenKur={onayKuruOnerisi}
+              kurNotu={onayKurNotu}
+            />
           ) : (
             <p className="text-sm text-metin/50">Bu talebi sadece bir Admin onaylayabilir.</p>
           )}
@@ -192,10 +216,23 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
           <p className="text-xs text-metin/50 mb-1">Sipariş Tutarı</p>
           <p className="font-mono text-xl text-metin">{paraFormat(toplam, pb)}</p>
           {pb !== "TRY" && (
-            <p className="text-xs text-metin/50 mt-1">
-              Kur: 1 {pb} = {siparis.kur} TL · TL karşılığı ≈{" "}
-              {paraFormat(toplam * siparis.kur, "TRY")}
-            </p>
+            <div className="text-xs text-metin/50 mt-1 space-y-0.5">
+              {!siparis.onayTarihi && siparis.kurKaynagi !== "ELLE" && siparis.kur === 1 ? (
+                <p>Kur: onay günü {KUR_KAYNAGI_ETIKET[kaynak]} kuru kullanılacak.</p>
+              ) : (
+              <p>
+                {siparis.onayTarihi ? "Onay kuru" : "Ön kur (kesin kur onayda)"}: 1 {pb} = {siparis.kur.toLocaleString("tr-TR", { maximumFractionDigits: 6 })} TL
+                {siparis.kurKaynagi ? ` · ${KUR_KAYNAGI_ETIKET[siparis.kurKaynagi] ?? siparis.kurKaynagi}` : ""}
+                {siparis.kurTarihi ? ` (${siparis.kurTarihi} bülteni)` : ""}
+              </p>
+              )}
+              {(siparis.onayTarihi || siparis.kurKaynagi === "ELLE" || siparis.kur !== 1) && (
+                <p>TL karşılığı (KDV hariç) ≈ {paraFormat(toplam * (siparis.faturaKur ?? siparis.kur), "TRY")}</p>
+              )}
+              {siparis.faturaKur != null && (
+                <p>Fatura kuru: 1 {pb} = {siparis.faturaKur.toLocaleString("tr-TR", { maximumFractionDigits: 6 })} TL</p>
+              )}
+            </div>
           )}
         </div>
         <div className="bg-yuzey border border-hat rounded-lg p-5">
@@ -260,6 +297,7 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
 
       {aktifMi && (
         <>
+          {siparis.durum !== "IPTAL" && (
           <div className="bg-yuzey border border-hat rounded-lg p-5 mb-8">
             <div className="flex items-center justify-between mb-1">
               <h2 className="font-display font-medium text-metin">Fatura Bilgisi</h2>
@@ -268,9 +306,11 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
               )}
             </div>
             <p className="text-sm text-metin/60 mb-4">
-              Fatura no ve tarihini girip kaydettiğinde sipariş otomatik "Faturalandı" durumuna geçer.
+              Fatura no ve tarihini girip kaydettiğinde sipariş otomatik &quot;Faturalandı&quot; durumuna geçer.
+              {faturaKurGerekli &&
+                ` Faturayı onay kurundan (${siparis.kur.toLocaleString("tr-TR", { maximumFractionDigits: 6 })}) farklı bir kurla kestiysen fatura kurunu yaz; fark cari hesaba "kur farkı" olarak bir kez işlenir. Boş bırakırsan kur farkı işlenmez.`}
             </p>
-            <form action={siparisFaturaGuncelle} className="flex flex-wrap items-end gap-3 print:hidden">
+            <SonucluForm action={siparisFaturaGuncelle} className="flex flex-wrap items-end gap-3 print:hidden">
               <input type="hidden" name="siparisId" value={siparis.id} />
               <div>
                 <label className="block text-xs font-medium text-metin/60 mb-1">Fatura No</label>
@@ -291,13 +331,27 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
                   className="focus-ring border border-hat rounded-md px-3 py-2 text-sm"
                 />
               </div>
-              <KaydetButonu
-                className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors"
+              {faturaKurGerekli && (
+                <div>
+                  <label className="block text-xs font-medium text-metin/60 mb-1">Fatura kuru (1 {pb} = ? TL, ops.)</label>
+                  <input
+                    name="faturaKur"
+                    inputMode="decimal"
+                    placeholder={faturaKuruOnerisi ? String(faturaKuruOnerisi).replace(".", ",") : "örn. 50,75"}
+                    className="focus-ring w-40 border border-hat rounded-md px-3 py-2 text-sm font-mono"
+                  />
+                  {faturaKuruOnerisi && <p className="text-[11px] text-metin/40 mt-1">Bugün TCMB döviz satış: {String(faturaKuruOnerisi).replace(".", ",")}</p>}
+                </div>
+              )}
+              <button
+                type="submit"
+                className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors disabled:opacity-60"
               >
                 Kaydet
-              </KaydetButonu>
-            </form>
+              </button>
+            </SonucluForm>
           </div>
+          )}
 
           <div className="bg-yuzey border border-hat rounded-lg p-5 mb-8">
             <div className="flex items-center justify-between mb-1">

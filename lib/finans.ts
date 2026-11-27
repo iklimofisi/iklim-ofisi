@@ -72,9 +72,10 @@ export type AylikOzet = {
   borcBakiyesi: number; // ay sonu itibarıyla toplam tedarikçi bakiyesi (TL)
 };
 
-const toplamTl = (s: { paraBirimi: string | null; kur: number; tutarNet: number | null; teklif: { paraBirimi: string; kalemler: { adet: number; birimFiyat: number; iskontoYuzde: number }[] } }) => {
+// Dövizli siparişin TL karşılığı: faturada kur yazıldıysa fatura kuru, yoksa onay kuru
+const toplamTl = (s: { paraBirimi: string | null; kur: number; faturaKur?: number | null; tutarNet: number | null; teklif: { paraBirimi: string; kalemler: { adet: number; birimFiyat: number; iskontoYuzde: number }[] } }) => {
   const net = siparisNetTutari(s);
-  return (s.paraBirimi ?? s.teklif.paraBirimi) === "TRY" ? net : net * s.kur;
+  return (s.paraBirimi ?? s.teklif.paraBirimi) === "TRY" ? net : net * (s.faturaKur ?? s.kur);
 };
 
 export async function aylikOzet(donem: string): Promise<AylikOzet> {
@@ -91,6 +92,7 @@ export async function aylikOzet(donem: string): Promise<AylikOzet> {
       select: {
         paraBirimi: true,
         kur: true,
+        faturaKur: true,
         tutarNet: true,
         teklif: { select: { paraBirimi: true, kalemler: { select: { adet: true, birimFiyat: true, iskontoYuzde: true } } } },
         satinalmaSiparisleri: { select: { durum: true, tutarNet: true, kur: true, paraBirimi: true } },

@@ -59,7 +59,22 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
       ? prisma.satinalmaTeklifi.findUnique({ where: { id: searchParams.teklif }, include: { kalemler: true, tedarikci: { select: { ad: true } } } })
       : null,
     searchParams?.siparis
-      ? prisma.siparis.findUnique({ where: { id: searchParams.siparis }, select: { id: true, teklif: { select: { baslik: true, projeId: true } } } })
+      ? prisma.siparis.findUnique({
+          where: { id: searchParams.siparis },
+          select: {
+            id: true,
+            paraBirimi: true,
+            kalemlerJson: true,
+            teklif: {
+              select: {
+                baslik: true,
+                projeId: true,
+                paraBirimi: true,
+                kalemler: { orderBy: [{ sira: "asc" }, { id: "asc" }], select: { bolum: true, aciklama: true, adet: true, birim: true } },
+              },
+            },
+          },
+        })
       : null,
   ]);
 
@@ -76,7 +91,26 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
         bolum: k.bolum,
       }))
     : undefined;
-  const baslangicPb = kaynakTeklif?.paraBirimi ?? "TRY";
+  // Satış siparişinden açılırken: siparişin (dondurulmuş) kalemleri adet ve birimiyle gelir; alış fiyatı
+  // satış fiyatından farklı olduğu için fiyatlar boş gelir (her kalemin alış fiyatı yazılmadan sipariş açılmaz).
+  // İşçilik / montaj gibi tedarikçiden alınmayan satırlar formda silinir.
+  const siparisKalemleri = (() => {
+    if (!kaynakSiparis || kaynakTeklif) return undefined;
+    let liste: { bolum?: string | null; aciklama: string; adet: number; birim?: string | null }[] = kaynakSiparis.teklif.kalemler;
+    if (kaynakSiparis.kalemlerJson) {
+      try {
+        const j = JSON.parse(kaynakSiparis.kalemlerJson);
+        if (Array.isArray(j) && j.length) liste = j;
+      } catch {
+        /* bozuk kayıt: teklifin kalemleri kullanılır */
+      }
+    }
+    return liste
+      .filter((k) => k && typeof k.aciklama === "string" && k.aciklama.trim() && Number(k.adet) > 0)
+      .slice(0, 500)
+      .map((k) => ({ aciklama: k.aciklama, adet: Number(k.adet), birim: k.birim ?? "Adet", birimFiyat: 0, bolum: k.bolum ?? null }));
+  })();
+  const baslangicPb = kaynakTeklif?.paraBirimi ?? kaynakSiparis?.paraBirimi ?? kaynakSiparis?.teklif.paraBirimi ?? "TRY";
 
   const kutu = "focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white";
 
@@ -133,7 +167,7 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
                   <option value="EUR">EUR</option>
                 </select>
               </div>
-              <KurAlani baslangicPb={baslangicPb} kurlar={kurlar ? { USD: kurlar.USD, EUR: kurlar.EUR } : null} />
+              <KurAlani baslangicPb={baslangicPb} kurlar={kurlar ? { USD: kurlar.doviz?.USD ?? kurlar.USD, EUR: kurlar.doviz?.EUR ?? kurlar.EUR } : null} />
             </div>
             <div className="lg:col-span-2">
               <label className="block text-xs font-medium text-metin/60 mb-1">Satış siparişi (maliyetin yazılacağı iş · isteğe bağlı)</label>
@@ -163,7 +197,13 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
             </div>
           </div>
 
-          <SatinalmaSiparisKalemleri baslangic={baslangicKalemleri} />
+          {siparisKalemleri?.length ? (
+            <p className="text-xs text-metin/60 bg-soguk-light border border-soguk/20 rounded-md px-3 py-2">
+              Satış siparişinin {siparisKalemleri.length} kalemi adet ve birimiyle getirildi. Her kalemin <strong>alış fiyatını</strong> yazın; tedarikçiden
+              alınmayan satırları (işçilik, montaj vb.) silin.
+            </p>
+          ) : null}
+          <SatinalmaSiparisKalemleri baslangic={baslangicKalemleri ?? siparisKalemleri} />
 
           <div>
             <label className="block text-xs font-medium text-metin/60 mb-1">Not (ödeme / teslim şartları)</label>

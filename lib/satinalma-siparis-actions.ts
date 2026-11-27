@@ -13,6 +13,7 @@ import { islemBolumu } from "@/lib/roller";
 import { islemKaydet } from "@/lib/islem-kaydi";
 import { paraBirimiDogrula } from "@/lib/para";
 import { tutarOku } from "@/lib/toplam-dagit";
+import { kurOku } from "@/lib/kur-oku";
 import { birimNormal } from "@/lib/birimler";
 import { donemKilitliMi, KILIT_MESAJI } from "@/lib/finans";
 import { epostaGonder } from "@/lib/eposta";
@@ -70,7 +71,8 @@ export async function satinalmaSiparisiOlustur(fd: FormData): Promise<SasSonuc> 
   const tedarikciId = metin(fd, "tedarikciId", 100);
   const baslik = metin(fd, "baslik", 200);
   const paraBirimi = paraBirimiDogrula(fd.get("paraBirimi"));
-  const kurHam = tutarOku(metin(fd, "kur", 30));
+  const kurYazi = metin(fd, "kur", 30);
+  const kurHam = kurOku(kurYazi);
   const kur = paraBirimi === "TRY" ? 1 : kurHam ?? 0;
   const siparisId = metin(fd, "siparisId", 100) || null;
   const projeId = metin(fd, "projeId", 100) || null;
@@ -80,7 +82,8 @@ export async function satinalmaSiparisiOlustur(fd: FormData): Promise<SasSonuc> 
 
   if (!tedarikciId) return { hata: "Tedarikçi seçin." };
   if (!baslik) return { hata: "Sipariş başlığını yazın." };
-  if (paraBirimi !== "TRY" && !(kur > 0)) return { hata: `1 ${paraBirimi} kaç TL? Kuru yazın.` };
+  if (paraBirimi !== "TRY" && !(kur > 0))
+    return { hata: kurYazi ? `Kur anlaşılamadı: "${kurYazi}". 1 ${paraBirimi} kaç TL olduğunu yazın (örn. 50,75).` : `1 ${paraBirimi} kaç TL? Kuru yazın.` };
   const beklenenTarih = beklenen ? tarihOku(beklenen) : null;
   if (beklenen && !beklenenTarih) return { hata: "Beklenen teslim tarihi anlaşılamadı." };
 
@@ -176,7 +179,9 @@ export async function satinalmaSiparisiOnayla(id: string): Promise<SasSonuc> {
   const s = await prisma.satinalmaSiparisi.findUnique({ where: { id }, select: { durum: true, siparisId: true } });
   if (!s) return { hata: "Sipariş bulunamadı." };
   if (s.durum !== "ONAY_BEKLIYOR") return { hata: "Bu sipariş onay beklemiyor." };
-  await prisma.satinalmaSiparisi.update({ where: { id }, data: { durum: "ONAYLANDI", onaylayanAdi: giren.ad, onayTarihi: new Date() } });
+  // Aynı anda iki onay / red gelirse yalnız biri geçer
+  const r = await prisma.satinalmaSiparisi.updateMany({ where: { id, durum: "ONAY_BEKLIYOR" }, data: { durum: "ONAYLANDI", onaylayanAdi: giren.ad, onayTarihi: new Date() } });
+  if (r.count !== 1) return { hata: "Bu sipariş az önce işlendi; sayfayı yenileyin." };
   yenile(id, s.siparisId);
   return { tamam: "Sipariş onaylandı." };
 }
@@ -189,7 +194,8 @@ export async function satinalmaSiparisiReddet(id: string, neden: string): Promis
   const s = await prisma.satinalmaSiparisi.findUnique({ where: { id }, select: { durum: true, siparisId: true } });
   if (!s) return { hata: "Sipariş bulunamadı." };
   if (s.durum !== "ONAY_BEKLIYOR") return { hata: "Bu sipariş onay beklemiyor." };
-  await prisma.satinalmaSiparisi.update({ where: { id }, data: { durum: "REDDEDILDI", redNedeni: nedenTemiz, onaylayanAdi: giren.ad, onayTarihi: new Date() } });
+  const r = await prisma.satinalmaSiparisi.updateMany({ where: { id, durum: "ONAY_BEKLIYOR" }, data: { durum: "REDDEDILDI", redNedeni: nedenTemiz, onaylayanAdi: giren.ad, onayTarihi: new Date() } });
+  if (r.count !== 1) return { hata: "Bu sipariş az önce işlendi; sayfayı yenileyin." };
   yenile(id, s.siparisId);
   return { tamam: "Sipariş reddedildi." };
 }
@@ -372,7 +378,13 @@ export async function alisFaturasiEkle(fd: FormData): Promise<SasSonuc> {
   const giren = await yetki("alisFaturasiEkle", fd);
   const id = metin(fd, "satinalmaSiparisiId", 100);
   const faturaNo = metin(fd, "faturaNo", 100);
-  const tutar = tutarOku(metin(fd, "tutar", 30));
+  const tutarYazi = metin(fd, "tutar", 30);
+  let tutar = tutarYazi ? tutarOku(tutarYazi) : null;
+  // Dövizli fatura: döviz tutarı (KDV dahil) × kur = TL tutar (TL tutar yazıldıysa döviz alanları boş bırakılır)
+  const dovizYazi = metin(fd, "dovizTutar", 30);
+  const dovizTutar = dovizYazi ? tutarOku(dovizYazi) : null;
+  const faturaKurYazi = metin(fd, "faturaKur", 30);
+  const faturaKur = faturaKurYazi ? kurOku(faturaKurYazi) : null;
   const tarihHam = metin(fd, "tarih", 10);
   const vadeHam = metin(fd, "vadeTarihi", 10);
   const tarih = tarihHam ? tarihOku(tarihHam) : new Date();
@@ -380,15 +392,21 @@ export async function alisFaturasiEkle(fd: FormData): Promise<SasSonuc> {
   const dosya = fd.get("evrak") as File | null;
 
   if (!faturaNo) return { hata: "Fatura numarasını yazın." };
-  if (!tutar || tutar <= 0) return { hata: "Fatura tutarını (TL, KDV dahil) yazın." };
+  if (dovizYazi) {
+    if (!dovizTutar || dovizTutar <= 0) return { hata: "Faturanın döviz tutarı anlaşılamadı." };
+    if (!faturaKur) return { hata: faturaKurYazi ? `Kur anlaşılamadı: "${faturaKurYazi}" (örn. 50,75).` : "Döviz tutarı yazıldı; faturadaki kuru da yazın." };
+    tutar = yuvarla2(dovizTutar * faturaKur);
+  }
+  if (!tutar || tutar <= 0) return { hata: "Fatura tutarını (TL, KDV dahil) ya da döviz tutarı ve kuru yazın." };
   if (!tarih) return { hata: "Fatura tarihi anlaşılamadı." };
   if (vadeHam && !vade) return { hata: "Vade tarihi anlaşılamadı." };
   if (dosya && dosya.size > 8 * 1024 * 1024) return { hata: "Fatura dosyası 8 MB'tan büyük olamaz." };
   if (await donemKilitliMi(tarih)) return { hata: KILIT_MESAJI(tarih) };
 
-  const s = id ? await prisma.satinalmaSiparisi.findUnique({ where: { id }, select: { no: true, baslik: true, tedarikciId: true, durum: true, siparisId: true } }) : null;
+  const s = id ? await prisma.satinalmaSiparisi.findUnique({ where: { id }, select: { no: true, baslik: true, tedarikciId: true, durum: true, siparisId: true, paraBirimi: true } }) : null;
   if (!s) return { hata: "Sipariş bulunamadı." };
   if (s.durum === "IPTAL" || s.durum === "REDDEDILDI" || s.durum === "ONAY_BEKLIYOR") return { hata: "Fatura yalnız onaylı siparişe bağlanır." };
+  if (dovizYazi && s.paraBirimi === "TRY") return { hata: "Bu sipariş TL; faturayı TL tutarıyla girin." };
   const ayni = await prisma.tedarikciHareket.findFirst({
     where: { tedarikciId: s.tedarikciId, faturaNo: { equals: faturaNo, mode: "insensitive" }, iptalTarihi: null },
     select: { id: true },
@@ -406,6 +424,7 @@ export async function alisFaturasiEkle(fd: FormData): Promise<SasSonuc> {
       aciklama: `Alış faturası ${faturaNo} · ${sasNo(s.no)} ${s.baslik}`.slice(0, 300),
       faturaNo,
       satinalmaSiparisiId: id,
+      ...(dovizYazi && dovizTutar && faturaKur ? { paraBirimi: s.paraBirimi, dovizTutar: yuvarla2(dovizTutar), kur: faturaKur } : {}),
       ...evrak,
     },
   });

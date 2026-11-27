@@ -55,6 +55,10 @@ müşteri, cari ve yatırımcı verisi var. Kullanıcı Türkçe konuşur; yanı
   - Satış personeli maliyet / alış / kâr görmez (`maliyetGorur`); satınalma ve muhasebe
     proje / görüşme (crm) görmez. Onay/iptal/silme admin kontrolleri ayrıca action içinde.
 - Sipariş tutarı onayda dondurulur (`lib/siparis-tutari.ts`); ciro/rapor bu tutardan hesaplanır.
+- Dövizli sipariş → TL: talepte kur kaynağı (`Siparis.kurKaynagi`: TCMB_DOVIZ · TCMB_EFEKTIF · ELLE), onayda
+  admin kuru görür/değiştirir, cari borç o kurla TL yazılır (`CariHareket.siparisId`, döviz tutarı + kur saklanır).
+  Faturada farklı kur yazılırsa (`Siparis.faturaKur`) fark bir kez "kur farkı" cari kaydı olur. Sipariş iptalinde
+  `siparisId`'li cari kayıtlar da iptal edilir. Kur okuma: `lib/kur-oku.ts` (tek nokta ondalık), TCMB: `lib/kur.ts`.
 - Satınalma zinciri: tedarikçi teklifi → satınalma siparişi (SAS-0001, onay eşiği) → mal kabul
   (stok hareketi) → alış faturası (tedarikçi cari) → satış siparişinde maliyet/brüt kâr.
 - Finans: `lib/finans.ts` (aylık özet, alacak yaşlandırma, dönem kilidi). Kapalı aya tarihli

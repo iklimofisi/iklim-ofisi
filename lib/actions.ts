@@ -29,6 +29,8 @@ import { listeNotlari } from "@/lib/toptan-fiyat";
 import { MUSTERISIZ_ID, musterisizMi, musterisizGoster } from "@/lib/musterisiz";
 import { musterisizKaydiHazirla } from "@/lib/musterisiz-sunucu";
 import { siparisDondurmaVerisi } from "@/lib/siparis-tutari";
+import { getTcmbKurlari, tcmbKuru, kurKaynagiOku } from "@/lib/kur";
+import { kurOku } from "@/lib/kur-oku";
 import { donemKilitliMi, KILIT_MESAJI } from "@/lib/finans";
 import { finansYetkilisiMi, gecerliRol, islemBolumu } from "@/lib/roller";
 
@@ -1017,145 +1019,235 @@ export async function kullaniciSifreSifirla(formData: FormData) {
 }
 
 // --- Siparişler ---
+// AKIŞ: teklif → sipariş talebi (Onay Bekliyor) → admin onayı (cari borç) → sevkiyat / teslim → fatura.
+// Dövizli teklifte TL'ye çevirme: talepte kur kaynağı seçilir (TCMB döviz satış · TCMB efektif satış · elle kur);
+// onayda admin kuru görür / değiştirir ve cari borç o kurla TL yazılır (döviz tutarı ve kur da saklanır).
+// Faturada farklı kur kullanılırsa aradaki fark cari hesaba "kur farkı" olarak işlenir.
+// Siparişten doğan cari kayıtlar siparisId taşır; sipariş iptal edilince onlar da iptal edilir.
 
-export async function siparisTalebiOlustur(formData: FormData) {
+const yuvarla2 = (n: number) => Math.round(n * 100) / 100;
+const kurYaz = (n: number) => n.toLocaleString("tr-TR", { maximumFractionDigits: 6 });
+
+export async function siparisTalebiOlustur(formData: FormData): Promise<IslemSonucu & { git?: string }> {
   const kullanici = await yetki("siparisTalebiOlustur", formData);
   const teklifId = String(formData.get("teklifId") ?? "");
-  const kur = parseSayi(formData.get("kur")) || 1;
-  const ekNot = String(formData.get("ekNot") ?? "").trim();
-  const sevkAdresi = String(formData.get("sevkAdresi") ?? "").trim();
+  const kurKaynagi = kurKaynagiOku(formData.get("kurKaynagi"));
+  const elleKur = kurOku(formData.get("kur"));
+  const ekNot = String(formData.get("ekNot") ?? "").trim().slice(0, 5000);
+  const sevkAdresi = String(formData.get("sevkAdresi") ?? "").trim().slice(0, 1000);
   const dosya = formData.get("sozlesmeDosyasi") as File | null;
-  if (!teklifId) return;
+  if (!teklifId) return { hata: "Teklif bulunamadı." };
 
-  const teklif = await prisma.teklif.findUnique({ where: { id: teklifId }, include: { kalemler: true } });
-  if (!teklif) return;
+  const teklif = await prisma.teklif.findUnique({ where: { id: teklifId }, include: { kalemler: true, siparis: { select: { id: true } } } });
+  if (!teklif) return { hata: "Teklif bulunamadı." };
+  // Aynı tekliften ikinci sipariş açılmaz (çift tıklama dahil)
+  if (teklif.siparis) return { tamam: "Bu teklifin siparişi zaten var.", git: `/panel/siparisler/${teklif.siparis.id}` };
   // Müşterisiz teklif siparişe çevrilemez (sipariş ve cari hareket müşteriye yazılır)
-  if (musterisizMi(teklif.musteriId)) redirect(`/panel/teklifler/${teklifId}?mesaj=musterisiz-siparis`);
+  if (musterisizMi(teklif.musteriId)) return { hata: "Müşterisiz teklif siparişe çevrilemez; önce teklifi bir müşteriye bağlayın." };
 
-  let sozlesmeDosya: Buffer | undefined;
-  let sozlesmeDosyaAdi: string | undefined;
-  let sozlesmeDosyaTipi: string | undefined;
-  if (dosya && dosya.size > 0) {
-    sozlesmeDosya = Buffer.from(await dosya.arrayBuffer());
-    sozlesmeDosyaAdi = dosya.name;
-    sozlesmeDosyaTipi = dosya.type || "application/pdf";
+  const dovizli = teklif.paraBirimi !== "TRY";
+  let kur = 1;
+  let kurTarihi: string | null = null;
+  if (dovizli) {
+    if (kurKaynagi === "ELLE") {
+      if (!elleKur) return { hata: `1 ${teklif.paraBirimi} kaç TL? Elle kur seçildi; kuru yazın (örn. 50,75).` };
+      kur = elleKur;
+    } else {
+      // TCMB: kesin kur onay günü alınır; burada bugünkü kur ön bilgi olarak yazılır
+      const k = await getTcmbKurlari();
+      const t = tcmbKuru(k, teklif.paraBirimi, kurKaynagi);
+      if (t) {
+        kur = t;
+        kurTarihi = k?.tarih ?? null;
+      }
+    }
   }
+  if (dosya && dosya.size > 9 * 1024 * 1024) return { hata: "Sözleşme dosyası 9 MB'tan büyük olamaz." };
 
-  const siparis = await prisma.siparis.create({
-    data: {
-      teklifId,
-      musteriId: teklif.musteriId,
-      kur: teklif.paraBirimi === "TRY" ? 1 : kur,
-      ekNot,
-      sevkAdresi: sevkAdresi || null,
-      sozlesmeDosya,
-      sozlesmeDosyaAdi,
-      sozlesmeDosyaTipi,
-      olusturanKullaniciId: kullanici?.id || null,
-      olusturanAdi: kullanici?.ad ?? "",
-      ...siparisDondurmaVerisi(teklif),
-    },
-  });
-  revalidatePath("/panel/siparisler");
-  revalidatePath(`/panel/teklifler/${teklifId}`);
-  redirect(`/panel/siparisler/${siparis.id}`);
+  const evrak =
+    dosya && dosya.size > 0
+      ? { sozlesmeDosya: Buffer.from(await dosya.arrayBuffer()), sozlesmeDosyaAdi: dosya.name, sozlesmeDosyaTipi: dosya.type || "application/pdf" }
+      : {};
+
+  try {
+    const siparis = await prisma.siparis.create({
+      data: {
+        teklifId,
+        musteriId: teklif.musteriId,
+        kur,
+        kurKaynagi: dovizli ? kurKaynagi : null,
+        kurTarihi,
+        ekNot,
+        sevkAdresi: sevkAdresi || null,
+        ...evrak,
+        olusturanKullaniciId: kullanici?.id || null,
+        olusturanAdi: kullanici?.ad ?? "",
+        ...siparisDondurmaVerisi(teklif),
+      },
+      select: { id: true },
+    });
+    revalidatePath("/panel/siparisler");
+    revalidatePath(`/panel/teklifler/${teklifId}`);
+    return { tamam: "Sipariş talebi onaya gönderildi.", git: `/panel/siparisler/${siparis.id}` };
+  } catch (e) {
+    // teklifId tekil: aynı anda iki talep gönderildiyse ikincisi var olana yönlenir
+    const var_ = await prisma.siparis.findUnique({ where: { teklifId }, select: { id: true } });
+    if (var_) return { tamam: "Bu teklifin siparişi zaten var.", git: `/panel/siparisler/${var_.id}` };
+    throw e;
+  }
 }
 
-export async function siparisOnayla(siparisId: string) {
-  const giren = await yetki("siparisOnayla", { siparisId });
-  if (!giren || giren.rol !== "ADMIN") return;
+// ONAY: cari borç bu anda yazılır. Dövizli siparişte kur formdan gelir (admin görür / değiştirir);
+// boşsa kur kaynağına göre bugünkü TCMB kuru, o da yoksa talepteki elle kur kullanılır.
+export async function siparisOnayla(formData: FormData): Promise<IslemSonucu> {
+  const siparisId = String(formData.get("siparisId") ?? "");
+  const giren = await yetki("siparisOnayla", formData);
+  if (!giren || giren.rol !== "ADMIN") return { hata: "Siparişi yalnız admin onaylayabilir." };
 
-  const siparis = await prisma.siparis.findUnique({
-    where: { id: siparisId },
-    include: { teklif: { include: { kalemler: true } } },
-  });
-  if (!siparis || siparis.durum !== "ONAY_BEKLIYOR") return;
-  if (await donemKilitliMi(new Date())) throw new Error(KILIT_MESAJI(new Date()));
+  const siparis = siparisId
+    ? await prisma.siparis.findUnique({ where: { id: siparisId }, include: { teklif: { include: { kalemler: true } } } })
+    : null;
+  if (!siparis) return { hata: "Sipariş bulunamadı." };
+  if (siparis.durum !== "ONAY_BEKLIYOR") return { hata: "Bu sipariş onay beklemiyor." };
+  const bugun = new Date();
+  if (await donemKilitliMi(bugun)) return { hata: KILIT_MESAJI(bugun) };
+
+  const pb = siparis.teklif.paraBirimi;
+  const dovizli = pb !== "TRY";
+  const kaynak = kurKaynagiOku(siparis.kurKaynagi);
+  let kur = 1;
+  let kurTarihi: string | null = siparis.kurTarihi;
+  let kurKaynagi: string | null = dovizli ? kaynak : null;
+  if (dovizli) {
+    const formKurHam = String(formData.get("kur") ?? "").trim();
+    const formKur = kurOku(formKurHam);
+    if (formKurHam && !formKur) return { hata: `Kur anlaşılamadı: "${formKurHam.slice(0, 20)}". 1 ${pb} kaç TL olduğunu yazın (örn. 50,75).` };
+    if (formKur) {
+      kur = formKur;
+      // TCMB kuru elle değiştirildiyse kaynak "elle" olur
+      const k = kaynak === "ELLE" ? null : await getTcmbKurlari();
+      const t = tcmbKuru(k, pb, kaynak);
+      if (kaynak !== "ELLE" && t && Math.abs(t - formKur) < 1e-9) kurTarihi = k?.tarih ?? null;
+      else if (kaynak !== "ELLE") {
+        kurKaynagi = "ELLE";
+        kurTarihi = null;
+      }
+    } else if (kaynak === "ELLE" && siparis.kur > 0 && siparis.kur !== 1) {
+      kur = siparis.kur;
+    } else {
+      const k = await getTcmbKurlari();
+      const t = tcmbKuru(k, pb, kaynak);
+      if (!t) return { hata: `TCMB kuruna şu an ulaşılamadı. 1 ${pb} kaç TL olacağını kur kutusuna yazıp tekrar onaylayın.` };
+      kur = t;
+      kurTarihi = k?.tarih ?? null;
+    }
+  }
 
   // Onay anında teklifin kalemleri ve tutarı siparişe dondurulur; cari borç da bu tutardan yazılır
   const dondurma = siparisDondurmaVerisi(siparis.teklif);
-  const toplam = dondurma.tutarNet;
-  const kdvli = siparis.teklif.kdvDahil ? toplam : toplam * (1 + siparis.teklif.kdvOrani / 100);
-  const tlTutar = siparis.teklif.paraBirimi === "TRY" ? kdvli : kdvli * siparis.kur;
+  const kdvli = yuvarla2(siparis.teklif.kdvDahil ? dondurma.tutarNet : dondurma.tutarNet * (1 + siparis.teklif.kdvOrani / 100));
+  const tlTutar = yuvarla2(dovizli ? kdvli * kur : kdvli);
 
-  await prisma.$transaction([
-    prisma.siparis.update({
-      where: { id: siparisId },
-      data: { durum: "HAZIRLANIYOR", onaylayanAdi: giren.ad, onayTarihi: new Date(), ...dondurma },
-    }),
-    prisma.cariHareket.create({
-      data: {
-        musteriId: siparis.musteriId,
-        aciklama: `Sipariş Onayı: ${siparis.teklif.baslik || siparis.teklifId}`,
-        tur: "BORC",
-        tutar: tlTutar,
-        // Dövizli siparişte orijinal tutar ve kur saklanır (tutar TL'dir)
-        ...(siparis.teklif.paraBirimi !== "TRY"
-          ? { paraBirimi: siparis.teklif.paraBirimi, dovizTutar: Math.round(kdvli * 100) / 100, kur: siparis.kur }
-          : {}),
-      },
-    }),
-  ]);
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Aynı anda iki onay gelirse yalnız biri geçer (cari borç iki kez yazılmaz)
+      const r = await tx.siparis.updateMany({
+        where: { id: siparisId, durum: "ONAY_BEKLIYOR" },
+        data: { durum: "HAZIRLANIYOR", onaylayanAdi: giren.ad, onayTarihi: bugun, kur, kurKaynagi, kurTarihi, ...dondurma },
+      });
+      if (r.count !== 1) throw new Error("ONAY_YARISI");
+      await tx.cariHareket.create({
+        data: {
+          musteriId: siparis.musteriId,
+          siparisId,
+          tarih: bugun,
+          aciklama: `Sipariş Onayı: ${siparis.teklif.baslik || siparis.teklifId}`.slice(0, 300),
+          tur: "BORC",
+          tutar: tlTutar,
+          // Dövizli siparişte orijinal tutar ve kur saklanır (tutar TL'dir)
+          ...(dovizli ? { paraBirimi: pb, dovizTutar: kdvli, kur } : {}),
+        },
+      });
+    });
+  } catch (e) {
+    if (e instanceof Error && e.message === "ONAY_YARISI") return { hata: "Bu sipariş az önce başka biri tarafından işlendi; sayfayı yenileyin." };
+    throw e;
+  }
 
-  revalidatePath("/panel/siparisler");
-  revalidatePath("/panel/cari");
-}
-
-export async function siparisReddet(formData: FormData) {
-  const giren = await yetki("siparisReddet", formData);
-  if (!giren || giren.rol !== "ADMIN") return;
-
-  const siparisId = String(formData.get("siparisId") ?? "");
-  const redSebebi = String(formData.get("redSebebi") ?? "").trim();
-  if (!siparisId) return;
-
-  await prisma.siparis.update({
-    where: { id: siparisId },
-    data: { durum: "REDDEDILDI", redSebebi },
-  });
   revalidatePath("/panel/siparisler");
   revalidatePath(`/panel/siparisler/${siparisId}`);
+  revalidatePath("/panel/cari");
+  revalidatePath(`/panel/musteriler/${siparis.musteriId}`);
+  revalidatePath("/panel");
+  return {
+    tamam: dovizli
+      ? `Sipariş onaylandı. Cari borç: ${kdvli.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ${pb} × ${kurYaz(kur)} = ${tlTutar.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL`
+      : "Sipariş onaylandı; tutar cari hesaba borç yazıldı.",
+  };
 }
 
-export async function siparisDurumGuncelle(
-  siparisId: string,
-  durum: "HAZIRLANIYOR" | "IPTAL"
-) {
-  const giren = await yetki("siparisDurumGuncelle", { siparisId, durum });
-  // İptal etmek ve iptal edilmiş siparişi geri almak yalnız admin'in işi
-  if (giren.rol !== "ADMIN") {
-    if (durum === "IPTAL") return;
-    const mevcut = await prisma.siparis.findUnique({ where: { id: siparisId }, select: { durum: true } });
-    if (mevcut?.durum === "IPTAL") return;
-  }
-  await prisma.siparis.update({
-    where: { id: siparisId },
-    data: durum === "IPTAL" ? { durum, iptalTarihi: new Date(), iptalEdenAdi: giren.ad } : { durum },
+export async function siparisReddet(formData: FormData): Promise<IslemSonucu> {
+  const giren = await yetki("siparisReddet", formData);
+  if (!giren || giren.rol !== "ADMIN") return { hata: "Siparişi yalnız admin reddedebilir." };
+
+  const siparisId = String(formData.get("siparisId") ?? "");
+  const redSebebi = String(formData.get("redSebebi") ?? "").trim().slice(0, 500);
+  if (!siparisId) return { hata: "Sipariş bulunamadı." };
+  if (!redSebebi) return { hata: "Red sebebini yazın." };
+
+  // Yalnız onay bekleyen talep reddedilir (onaylı siparişin cari borcu varken "reddedildi" olmasın)
+  const r = await prisma.siparis.updateMany({ where: { id: siparisId, durum: "ONAY_BEKLIYOR" }, data: { durum: "REDDEDILDI", redSebebi } });
+  if (r.count !== 1) return { hata: "Bu sipariş onay beklemiyor; onaylı sipariş reddedilmez, gerekirse iptal edilir." };
+  revalidatePath("/panel/siparisler");
+  revalidatePath(`/panel/siparisler/${siparisId}`);
+  return { tamam: "Sipariş talebi reddedildi." };
+}
+
+// Sevk / teslim sürecindeki siparişi "Hazırlanıyor"a geri alır. İptal bu yoldan yapılmaz (siparisIptal).
+const GERI_ALINABILIR = ["KISMEN_SEVK_EDILDI", "SEVK_EDILDI", "KISMEN_TESLIM_EDILDI", "TESLIM_EDILDI"] as const;
+export async function siparisDurumGuncelle(siparisId: string, durum: "HAZIRLANIYOR" | "IPTAL") {
+  await yetki("siparisDurumGuncelle", { siparisId, durum });
+  if (durum !== "HAZIRLANIYOR") return;
+  await prisma.siparis.updateMany({
+    where: { id: siparisId, durum: { in: [...GERI_ALINABILIR] } },
+    data: { durum: "HAZIRLANIYOR" },
   });
   revalidatePath("/panel/siparisler");
   revalidatePath(`/panel/siparisler/${siparisId}`);
 }
 
 // SİPARİŞ İPTALİ: sipariş silinmez; durumu "İptal" olur, kim / ne zaman / neden kaydedilir.
-// Sevkiyat, teslim ve cari kayıtlarına dokunulmaz (onaylı siparişin cari borcu ayrıca iptal edilir).
+// Siparişten doğan cari kayıtlar (onay borcu, kur farkı) da iptal edilir; sevkiyat / teslim kayıtlarına dokunulmaz.
 export async function siparisIptal(siparisId: string, neden: string): Promise<IslemSonucu> {
   const giren = await yetki("siparisIptal", { siparisId, neden });
   if (giren.rol !== "ADMIN") return { hata: "Siparişi yalnız admin iptal edebilir." };
   const nedenTemiz = String(neden ?? "").trim().slice(0, 500);
   if (!nedenTemiz) return { hata: "İptal nedenini yazın." };
-  const s = siparisId ? await prisma.siparis.findUnique({ where: { id: siparisId }, select: { durum: true, onayTarihi: true } }) : null;
+  const s = siparisId ? await prisma.siparis.findUnique({ where: { id: siparisId }, select: { durum: true, onayTarihi: true, musteriId: true } }) : null;
   if (!s) return { hata: "Sipariş bulunamadı." };
   if (s.durum === "IPTAL") return { tamam: "Sipariş zaten iptal edilmiş." };
-  await prisma.siparis.update({
-    where: { id: siparisId },
-    data: { durum: "IPTAL", iptalTarihi: new Date(), iptalEdenAdi: giren.ad, iptalNedeni: nedenTemiz },
-  });
+
+  const cariKayitlar = await prisma.cariHareket.findMany({ where: { siparisId, iptalTarihi: null }, select: { id: true, tarih: true } });
+  for (const c of cariKayitlar) {
+    if (await donemKilitliMi(c.tarih)) return { hata: `Siparişin cari kaydı kapalı bir aya ait (${c.tarih.toLocaleDateString("tr-TR")}); iptal için önce dönem kilidini açın.` };
+  }
+  const simdi = new Date();
+  await prisma.$transaction([
+    prisma.siparis.update({ where: { id: siparisId }, data: { durum: "IPTAL", iptalTarihi: simdi, iptalEdenAdi: giren.ad, iptalNedeni: nedenTemiz } }),
+    prisma.cariHareket.updateMany({
+      where: { siparisId, iptalTarihi: null },
+      data: { iptalTarihi: simdi, iptalEdenAdi: giren.ad, iptalNedeni: `Sipariş iptali: ${nedenTemiz}`.slice(0, 500) },
+    }),
+  ]);
   revalidatePath("/panel/siparisler");
   revalidatePath(`/panel/siparisler/${siparisId}`);
+  revalidatePath("/panel/cari");
+  revalidatePath(`/panel/musteriler/${s.musteriId}`);
   revalidatePath("/panel");
+  if (cariKayitlar.length) return { tamam: `Sipariş iptal edildi; siparişin ${cariKayitlar.length} cari kaydı da iptal edilip bakiyeden düşüldü.` };
   return {
     tamam: s.onayTarihi
-      ? "Sipariş iptal edildi. Onaylıydı: müşterinin cari hesabındaki sipariş borcunu da Cari Hesap'tan iptal edin."
+      ? "Sipariş iptal edildi. Bu eski siparişin cari borcu otomatik bağlı değil: müşterinin cari hesabından ayrıca iptal edin."
       : "Sipariş iptal edildi.",
   };
 }
@@ -1165,23 +1257,80 @@ export async function siparisSil(siparisId: string) {
   await yetki("siparisSil", { siparisId });
 }
 
-export async function siparisFaturaGuncelle(formData: FormData) {
-  await yetki("siparisFaturaGuncelle", formData);
+// FATURA: fatura no / tarihi yazılır. Dövizli siparişte faturadaki kur onay kurundan farklıysa
+// aradaki fark (KDV dahil döviz tutarı × kur farkı) cari hesaba "kur farkı" olarak bir kez işlenir.
+export async function siparisFaturaGuncelle(formData: FormData): Promise<IslemSonucu> {
+  const giren = await yetki("siparisFaturaGuncelle", formData);
   const siparisId = String(formData.get("siparisId") ?? "");
-  const faturaNo = String(formData.get("faturaNo") ?? "").trim();
+  const faturaNo = String(formData.get("faturaNo") ?? "").trim().slice(0, 100);
   const faturaTarihiStr = String(formData.get("faturaTarihi") ?? "");
-  if (!siparisId || !faturaNo) return;
+  const faturaKurYazi = String(formData.get("faturaKur") ?? "").trim();
+  const faturaKurHam = kurOku(faturaKurYazi);
+  if (faturaKurYazi && !faturaKurHam) return { hata: `Fatura kuru anlaşılamadı: "${faturaKurYazi.slice(0, 20)}" (örn. 50,75).` };
+  if (!siparisId) return { hata: "Sipariş bulunamadı." };
+  if (!faturaNo) return { hata: "Fatura numarasını yazın." };
+  const faturaTarihi = /^\d{4}-\d{2}-\d{2}$/.test(faturaTarihiStr) ? new Date(`${faturaTarihiStr}T12:00:00`) : new Date();
 
-  await prisma.siparis.update({
+  const s = await prisma.siparis.findUnique({
     where: { id: siparisId },
-    data: {
-      faturaNo,
-      faturaTarihi: faturaTarihiStr ? new Date(faturaTarihiStr) : new Date(),
-      durum: "FATURALANDI",
-    },
+    select: { durum: true, kur: true, faturaKur: true, paraBirimi: true, musteriId: true, teklif: { select: { paraBirimi: true, baslik: true } } },
   });
+  if (!s) return { hata: "Sipariş bulunamadı." };
+  if (s.durum === "ONAY_BEKLIYOR" || s.durum === "REDDEDILDI" || s.durum === "IPTAL") return { hata: "Fatura yalnız onaylı (iptal edilmemiş) siparişe yazılır." };
+
+  const pb = s.paraBirimi ?? s.teklif.paraBirimi;
+  let kurFarki: { tutar: number; tur: "BORC" | "ALACAK"; aciklama: string; dovizTutar: number } | null = null;
+  let faturaKur: number | null = s.faturaKur;
+  if (pb !== "TRY" && faturaKurHam && faturaKurHam > 0 && s.faturaKur == null) {
+    faturaKur = faturaKurHam;
+    if (Math.abs(faturaKurHam - s.kur) > 1e-9) {
+      // Onay borcunun döviz tutarı (KDV dahil): siparişin onay cari kaydından
+      const onay = await prisma.cariHareket.findFirst({
+        where: { siparisId, iptalTarihi: null, aciklama: { startsWith: "Sipariş Onayı" } },
+        select: { dovizTutar: true },
+      });
+      if (!onay?.dovizTutar) return { hata: "Siparişin onay cari kaydı bulunamadı; kur farkı hesaplanamıyor. Faturayı kur yazmadan kaydedin, farkı cari hesaptan elle işleyin." };
+      const fark = yuvarla2(onay.dovizTutar * (faturaKurHam - s.kur));
+      if (Math.abs(fark) >= 0.01) {
+        kurFarki = {
+          tutar: Math.abs(fark),
+          tur: fark > 0 ? "BORC" : "ALACAK",
+          dovizTutar: onay.dovizTutar,
+          aciklama: `Kur farkı · Fatura ${faturaNo} (1 ${pb}: onay ${kurYaz(s.kur)} → fatura ${kurYaz(faturaKurHam)} TL)`.slice(0, 300),
+        };
+      }
+    }
+  }
+  if (kurFarki && (await donemKilitliMi(faturaTarihi))) return { hata: KILIT_MESAJI(faturaTarihi) };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.siparis.update({ where: { id: siparisId }, data: { faturaNo, faturaTarihi, durum: "FATURALANDI", faturaKur } });
+    if (kurFarki) {
+      await tx.cariHareket.create({
+        data: {
+          musteriId: s.musteriId,
+          siparisId,
+          tarih: faturaTarihi,
+          aciklama: kurFarki.aciklama,
+          tur: kurFarki.tur,
+          tutar: kurFarki.tutar,
+          paraBirimi: pb,
+          dovizTutar: kurFarki.dovizTutar,
+          kur: faturaKur ?? undefined,
+        },
+      });
+    }
+  });
+  void giren;
   revalidatePath(`/panel/siparisler/${siparisId}`);
   revalidatePath("/panel/siparisler");
+  revalidatePath("/panel/cari");
+  revalidatePath(`/panel/musteriler/${s.musteriId}`);
+  return {
+    tamam: kurFarki
+      ? `Fatura kaydedildi; kur farkı ${kurFarki.tutar.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL ${kurFarki.tur === "BORC" ? "borç" : "alacak"} olarak cari hesaba işlendi.`
+      : "Fatura kaydedildi.",
+  };
 }
 
 export async function sevkiyatEkle(formData: FormData) {
@@ -2491,35 +2640,14 @@ export async function profilGuncelle(formData: FormData) {
   redirect("/panel/profil?basarili=true");
 }
 
-// SİPARİŞE DÖNÜŞTÜR BUTONU İÇİN EKSİK OLAN FONKSİYON EKLENDİ
+// Eski "siparişe dönüştür" kısayolu: kur sormadan sipariş açıyordu (dövizli teklifte kur 1 kalıyordu).
+// Artık her sipariş, kur ve sözleşme soran sipariş talebi sayfasından açılır.
 export async function siparisOlustur(teklifId: string) {
-  const kullanici = await yetki("siparisOlustur", { teklifId });
+  await yetki("siparisOlustur", { teklifId });
   if (!teklifId) return;
-
-  const teklif = await prisma.teklif.findUnique({ where: { id: teklifId }, include: { kalemler: true } });
-  if (!teklif) return;
-  if (musterisizMi(teklif.musteriId)) redirect(`/panel/teklifler/${teklifId}?mesaj=musterisiz-siparis`);
-
-  // Zaten oluşturulmuş bir siparişi varsa ona yönlendir
-  const mevcutSiparis = await prisma.siparis.findUnique({ where: { teklifId } });
-  if (mevcutSiparis) {
-    redirect(`/panel/siparisler/${mevcutSiparis.id}`);
-  }
-
-  const siparis = await prisma.siparis.create({
-    data: {
-      teklifId,
-      musteriId: teklif.musteriId,
-      kur: 1,
-      olusturanKullaniciId: kullanici?.id || null,
-      olusturanAdi: kullanici?.ad ?? "",
-      ...siparisDondurmaVerisi(teklif),
-    },
-  });
-
-  revalidatePath("/panel/siparisler");
-  revalidatePath(`/panel/teklifler/${teklifId}`);
-  redirect(`/panel/siparisler/${siparis.id}`);
+  const mevcutSiparis = await prisma.siparis.findUnique({ where: { teklifId }, select: { id: true } });
+  if (mevcutSiparis) redirect(`/panel/siparisler/${mevcutSiparis.id}`);
+  redirect(`/panel/teklifler/${teklifId}/siparis-talebi`);
 }
 
 // MÜŞTERİ SİLME FONKSİYONU

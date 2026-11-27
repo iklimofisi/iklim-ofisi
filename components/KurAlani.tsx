@@ -38,7 +38,7 @@ export default function KurAlani({ baslangicPb = "TRY", kurlar }: { baslangicPb?
         }}
         className="focus-ring w-32 border border-hat rounded-md px-3 py-2 text-sm font-mono"
       />
-      {oneri(pb) ? <p className="text-[11px] text-metin/50 mt-1">TCMB: {yaz(oneri(pb))}</p> : null}
+      {oneri(pb) ? <p className="text-[11px] text-metin/50 mt-1">TCMB döviz satış: {yaz(oneri(pb))}</p> : null}
     </div>
   );
 }

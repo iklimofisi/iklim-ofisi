@@ -1,42 +1,76 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { siparisOnayla, siparisReddet } from "@/lib/actions";
-import { useBitinceBildir } from "@/lib/bildirim";
-import { onayIste } from "@/lib/onay";
-import KaydetButonu from "@/components/KaydetButonu";
+import SonucluForm from "@/components/SonucluForm";
+import { kurOku } from "@/lib/kur-oku";
 
-export default function SiparisOnayReddet({ siparisId }: { siparisId: string }) {
-  const [pending, startTransition] = useTransition();
+// -----------------------------------------------------------------------------
+// SİPARİŞ ONAY / RED (yalnız admin). Onayda sipariş tutarı müşterinin cari hesabına borç yazılır.
+// Dövizli siparişte kur kutusu gelir: talepte seçilen kaynağa göre önerilen kur (TCMB ya da elle)
+// dolu gelir, istenirse değiştirilir; altta cariye yazılacak TL tutarı görünür.
+// -----------------------------------------------------------------------------
+const para = (n: number) => n.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+export default function SiparisOnayReddet({
+  siparisId,
+  pb = "TRY",
+  dovizKdvli = 0,
+  onerilenKur,
+  kurNotu,
+}: {
+  siparisId: string;
+  pb?: string;
+  dovizKdvli?: number; // KDV dahil sipariş tutarı (teklif para biriminde)
+  onerilenKur?: number | null;
+  kurNotu?: string;
+}) {
+  const dovizli = pb !== "TRY";
+  const [kur, setKur] = useState(onerilenKur ? String(onerilenKur).replace(".", ",") : "");
   const [redFormuAcik, setRedFormuAcik] = useState(false);
-  useBitinceBildir(pending, "Sipariş onaylandı.");
+  const kurSayi = kurOku(kur) ?? 0;
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-3">
-        <button
-          type="button"
-          disabled={pending}
-          onClick={async () => {
-            if (await onayIste("Onaylandığında sipariş tutarı müşterinin cari hesabına borç olarak işlenecek.", { baslik: "Sipariş onaylansın mı?", onayMetni: "Onayla" })) {
-              startTransition(() => siparisOnayla(siparisId));
-            }
-          }}
-          className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors disabled:opacity-50"
-        >
-          {pending ? "İşleniyor…" : "Onayla"}
-        </button>
-        <button
-          type="button"
-          onClick={() => setRedFormuAcik((v) => !v)}
-          className="focus-ring border border-hat px-5 py-2 rounded-md text-sm font-medium text-metin/70 hover:border-sicak hover:text-sicak-dim transition-colors"
-        >
-          Reddet
-        </button>
-      </div>
+      <SonucluForm action={siparisOnayla} className="space-y-3">
+        <input type="hidden" name="siparisId" value={siparisId} />
+        {dovizli && (
+          <div className="bg-yuzey border border-hat rounded-md p-3">
+            <label className="block text-xs font-medium text-metin/60 mb-1">Onay kuru (1 {pb} = ? TL)</label>
+            <input
+              name="kur"
+              inputMode="decimal"
+              required
+              value={kur}
+              onChange={(e) => setKur(e.target.value)}
+              className="focus-ring w-40 border border-hat rounded-md px-3 py-2 text-sm font-mono"
+            />
+            {kurNotu && <p className="text-[11px] text-metin/50 mt-1">{kurNotu}</p>}
+            <p className="text-xs text-metin/70 mt-2">
+              Cariye yazılacak borç: {para(dovizKdvli)} {pb} × {kur || "?"} ={" "}
+              <strong className="font-mono">{kurSayi > 0 ? `${para(dovizKdvli * kurSayi)} TL` : "—"}</strong> (KDV dahil)
+            </p>
+          </div>
+        )}
+        <div className="flex gap-3">
+          <button
+            type="submit"
+            className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors disabled:opacity-50"
+          >
+            Onayla ve cariye işle
+          </button>
+          <button
+            type="button"
+            onClick={() => setRedFormuAcik((v) => !v)}
+            className="focus-ring border border-hat px-5 py-2 rounded-md text-sm font-medium text-metin/70 hover:border-sicak hover:text-sicak-dim transition-colors"
+          >
+            Reddet
+          </button>
+        </div>
+      </SonucluForm>
 
       {redFormuAcik && (
-        <form action={siparisReddet} className="flex flex-wrap gap-3 items-start">
+        <SonucluForm action={siparisReddet} className="flex flex-wrap gap-3 items-start">
           <input type="hidden" name="siparisId" value={siparisId} />
           <input
             name="redSebebi"
@@ -44,12 +78,13 @@ export default function SiparisOnayReddet({ siparisId }: { siparisId: string }) 
             placeholder="Red sebebi (örn. bütçe uygun değil)"
             className="focus-ring flex-1 min-w-[220px] border border-hat rounded-md px-3 py-2 text-sm"
           />
-          <KaydetButonu basari="Sipariş reddedildi."
-            className="focus-ring bg-sicak text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-sicak-dim transition-colors"
+          <button
+            type="submit"
+            className="focus-ring bg-sicak text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-sicak-dim transition-colors disabled:opacity-50"
           >
             Reddi Onayla
-          </KaydetButonu>
-        </form>
+          </button>
+        </SonucluForm>
       )}
     </div>
   );

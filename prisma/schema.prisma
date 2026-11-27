@@ -354,6 +354,10 @@ model CariHareket {
   paraBirimi    String?
   dovizTutar    Float?
   kur           Float?
+  // Satış siparişinden doğan kayıt (onay borcu, kur farkı): sipariş iptal edilince bu kayıtlar da iptal edilir
+  siparisId     String?
+
+  @@index([siparisId])
 }
 
 model TeklifSablon {
@@ -395,6 +399,11 @@ model Siparis {
   paraBirimi        String?
   teklifRevizyonNo  Int?
   kalemlerJson      String?         // [{bolum, aciklama, adet, birim, birimFiyat, iskontoYuzde}]
+  // Dövizli siparişte TL'ye çevirme: kur kaynağı (TCMB_DOVIZ · TCMB_EFEKTIF · ELLE), onayda kullanılan TCMB bülten tarihi,
+  // faturada kullanılan kur (onay kurundan farklıysa fark cari hesaba "kur farkı" olarak işlenir)
+  kurKaynagi        String?
+  kurTarihi         String?
+  faturaKur         Float?
   // Sipariş silinmez: iptal edilince kim, ne zaman, neden kaydedilir
   iptalTarihi       DateTime?
   iptalEdenAdi      String?
@@ -464,6 +473,10 @@ model TedarikciHareket {
   faturaNo            String?
   satinalmaSiparisiId String?
   satinalmaSiparisi   SatinalmaSiparisi? @relation(fields: [satinalmaSiparisiId], references: [id])
+  // Dövizli alış faturası (tutar her zaman TL'dir): orijinal döviz tutarı ve kullanılan kur
+  paraBirimi          String?
+  dovizTutar          Float?
+  kur                 Float?
 }
 
 model SatinalmaTeklifi {

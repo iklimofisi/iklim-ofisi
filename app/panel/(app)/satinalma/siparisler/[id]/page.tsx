@@ -19,6 +19,7 @@ import KayitIslemButonu from "@/components/KayitIslemButonu";
 import SatinalmaGonder from "@/components/SatinalmaGonder";
 import { getSirketAyarlari } from "@/lib/sirket";
 import { TEDARIKCI_LINK_TABANI } from "@/lib/satinalma-siparis-belge";
+import { getTcmbKurlari, tcmbKuru } from "@/lib/kur";
 
 export const dynamic = "force-dynamic";
 
@@ -44,12 +45,13 @@ export default async function SatinalmaSiparisDetay({ params }: { params: { id: 
           },
         },
         malKabuller: { orderBy: { tarih: "desc" }, include: { kalemler: { include: { kalem: { select: { aciklama: true, birim: true } } } } } },
-        faturalar: { orderBy: { tarih: "desc" }, select: { id: true, tarih: true, faturaNo: true, tutar: true, vadeTarihi: true, iptalTarihi: true, iptalNedeni: true, evrakDosyaAdi: true } },
+        faturalar: { orderBy: { tarih: "desc" }, select: { id: true, tarih: true, faturaNo: true, tutar: true, vadeTarihi: true, iptalTarihi: true, iptalNedeni: true, evrakDosyaAdi: true, paraBirimi: true, dovizTutar: true, kur: true } },
       },
     }),
     suankiKullanici(),
   ]);
   if (!s) notFound();
+  const faturaKurOnerisi = s.paraBirimi !== "TRY" ? tcmbKuru(await getTcmbKurlari(), s.paraBirimi, "TCMB_DOVIZ") : null;
 
   const yonetici = giren?.rol === "ADMIN";
   const pb = s.paraBirimi;
@@ -376,8 +378,29 @@ export default async function SatinalmaSiparisDetay({ params }: { params: { id: 
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-metin/60 mb-1">Tutar (TL, KDV dahil)</label>
-                  <input name="tutar" required inputMode="decimal" className={`${kutu} font-mono text-right`} />
+                  <input name="tutar" required={s.paraBirimi === "TRY"} inputMode="decimal" className={`${kutu} font-mono text-right`} />
                 </div>
+                {s.paraBirimi !== "TRY" && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium text-metin/60 mb-1">ya da döviz tutarı ({s.paraBirimi}, KDV dahil)</label>
+                      <input name="dovizTutar" inputMode="decimal" className={`${kutu} font-mono text-right`} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-metin/60 mb-1">Faturadaki kur (1 {s.paraBirimi} = ? TL)</label>
+                      <input
+                        name="faturaKur"
+                        inputMode="decimal"
+                        placeholder={faturaKurOnerisi ? String(faturaKurOnerisi).replace(".", ",") : "örn. 50,75"}
+                        className={`${kutu} font-mono text-right`}
+                      />
+                    </div>
+                    <p className="col-span-2 text-[11px] text-metin/50">
+                      Fatura dövizse döviz tutarını ve faturadaki kuru yazın; TL tutarı otomatik hesaplanır (TL kutusunu boş bırakın).
+                      {faturaKurOnerisi ? ` Bugün TCMB döviz satış: ${String(faturaKurOnerisi).replace(".", ",")}.` : ""}
+                    </p>
+                  </>
+                )}
                 <div>
                   <label className="block text-xs font-medium text-metin/60 mb-1">Fatura tarihi</label>
                   <input type="date" name="tarih" defaultValue={bugunIso()} className={kutu} />
@@ -410,7 +433,14 @@ export default async function SatinalmaSiparisDetay({ params }: { params: { id: 
                     )}
                     {f.iptalTarihi && <span className="block text-xs no-underline">İptal: {f.iptalNedeni}</span>}
                   </p>
-                  <span className="font-mono whitespace-nowrap">{paraFormat(f.tutar, "TRY")}</span>
+                  <span className="font-mono whitespace-nowrap">
+                    {paraFormat(f.tutar, "TRY")}
+                    {f.dovizTutar != null && f.paraBirimi && f.kur != null && (
+                      <span className="block text-[11px] text-metin/50 text-right">
+                        {paraFormat(f.dovizTutar, f.paraBirimi)} × {f.kur.toLocaleString("tr-TR", { maximumFractionDigits: 6 })}
+                      </span>
+                    )}
+                  </span>
                 </div>
               ))}
               <p className="text-xs text-metin/50 pt-1">Faturayı düzeltmek / iptal etmek için tedarikçi cari hesabını kullanın (yalnız admin).</p>

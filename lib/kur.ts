@@ -9,7 +9,15 @@
 
 import { unstable_cache } from "next/cache";
 
-export type TcmbKurlari = { tarih: string; USD: number; EUR: number; GBP?: number };
+export type TcmbKurlari = {
+  tarih: string;
+  // Efektif satış (nakit döviz; panelde gösterilen)
+  USD: number;
+  EUR: number;
+  GBP?: number;
+  // Döviz satış (ForexSelling): faturada ve cari kur dönüşümünde genellikle bu kullanılır
+  doviz?: { USD?: number; EUR?: number; GBP?: number };
+};
 
 const KAYNAK = "https://www.tcmb.gov.tr/kurlar/today.xml";
 
@@ -20,13 +28,14 @@ function etiket(blok: string, ad: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-// XML'den bir dövizin efektif satış kurunu (1 birim için TL) çıkarır
-export function kurAyikla(xml: string, kod: string): number | null {
+// XML'den bir dövizin efektif satış kurunu (1 birim için TL) çıkarır.
+// tur "doviz": döviz satış (ForexSelling) kuru.
+export function kurAyikla(xml: string, kod: string, tur: "efektif" | "doviz" = "efektif"): number | null {
   const blok = xml.match(new RegExp(`<Currency[^>]*Kod="${kod}"[^>]*>([\\s\\S]*?)</Currency>`))?.[1];
   if (!blok) return null;
   const birim = etiket(blok, "Unit") ?? 1;
   // Efektif satış yoksa döviz satışa düş
-  const satis = etiket(blok, "BanknoteSelling") ?? etiket(blok, "ForexSelling");
+  const satis = tur === "doviz" ? etiket(blok, "ForexSelling") : etiket(blok, "BanknoteSelling") ?? etiket(blok, "ForexSelling");
   return satis ? satis / birim : null;
 }
 
@@ -36,7 +45,12 @@ export function tcmbXmlCoz(xml: string): TcmbKurlari | null {
   const tarih = xml.match(/<Tarih_Date[^>]*Tarih="([^"]+)"/)?.[1] ?? "";
   if (!usd || !eur) return null;
   const gbp = kurAyikla(xml, "GBP");
-  return { tarih, USD: usd, EUR: eur, ...(gbp ? { GBP: gbp } : {}) };
+  const doviz: NonNullable<TcmbKurlari["doviz"]> = {};
+  for (const kod of ["USD", "EUR", "GBP"] as const) {
+    const d = kurAyikla(xml, kod, "doviz");
+    if (d) doviz[kod] = d;
+  }
+  return { tarih, USD: usd, EUR: eur, ...(gbp ? { GBP: gbp } : {}), doviz };
 }
 
 // TCMB sitesi zaman zaman yavaş cevap verir: 10 sn beklenir, olmazsa bir kez daha denenir.
@@ -57,12 +71,34 @@ const onbellekli = unstable_cache(
       return await tcmbdenOku();
     }
   },
-  ["tcmb-kurlari"],
+  ["tcmb-kurlari-v2"], // v2: döviz satış kurları da var
   { revalidate: 3600 }
 );
 
 // TCMB'ye ulaşılamadıysa 5 dakika boyunca yeniden denenmez (sayfalar beklemesin)
 let sonHata = 0;
+
+// Cari / fatura kur dönüşümü için kur kaynağı
+export const KUR_KAYNAKLARI = ["TCMB_DOVIZ", "TCMB_EFEKTIF", "ELLE"] as const;
+export type KurKaynagi = (typeof KUR_KAYNAKLARI)[number];
+export const KUR_KAYNAGI_ETIKET: Record<string, string> = {
+  TCMB_DOVIZ: "TCMB döviz satış",
+  TCMB_EFEKTIF: "TCMB efektif satış",
+  ELLE: "Elle girilen kur",
+};
+export const kurKaynagiOku = (v: unknown): KurKaynagi =>
+  (KUR_KAYNAKLARI as readonly string[]).includes(String(v)) ? (String(v) as KurKaynagi) : "TCMB_DOVIZ";
+
+// Kaynağa göre TCMB kuru (1 birim = ? TL). Bulunamazsa null.
+export function tcmbKuru(k: TcmbKurlari | null, pb: string, kaynak: KurKaynagi): number | null {
+  if (!k || kaynak === "ELLE") return null;
+  if (kaynak === "TCMB_DOVIZ") {
+    const d = k.doviz?.[pb as "USD" | "EUR" | "GBP"];
+    if (d) return d;
+  }
+  const e = pb === "USD" ? k.USD : pb === "EUR" ? k.EUR : pb === "GBP" ? k.GBP : undefined;
+  return e ?? null;
+}
 
 export async function getTcmbKurlari(): Promise<TcmbKurlari | null> {
   if (Date.now() - sonHata < 5 * 60 * 1000) return null;
