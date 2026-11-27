@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { TcmbKurlari } from "@/lib/kur";
 
-// Panelin her sayfasında: TCMB efektif satış kurları.
+// Panelin her sayfasında: TCMB döviz satış ve efektif satış kurları (sipariş / fatura kur seçimindeki iki TCMB kuru).
 // Bilgisayarda üzerine gelince açılır (tıklamaya gerek yok); telefonda dokununca açılır.
 // sabit: geniş ekranda sağ boşlukta hep açık duran kart (panel düzeni, app/panel/(app)/layout.tsx).
 const sayi = (n: number, basamak = 4) => n.toLocaleString("tr-TR", { minimumFractionDigits: basamak, maximumFractionDigits: basamak });
@@ -45,17 +45,17 @@ export default function KurGostergesi({ yon = "sag", sabit = false }: { yon?: "s
     return () => document.removeEventListener("pointerdown", dis);
   }, [acik]);
 
-  const satirlar: [string, string, number | undefined][] = kurlar
+  const satirlar: [string, string, number | undefined, number | undefined][] = kurlar
     ? [
-        ["🇺🇸", "USD", kurlar.USD],
-        ["🇪🇺", "EUR", kurlar.EUR],
-        ["🇬🇧", "GBP", kurlar.GBP],
+        ["🇺🇸", "USD", kurlar.doviz?.USD, kurlar.USD],
+        ["🇪🇺", "EUR", kurlar.doviz?.EUR, kurlar.EUR],
+        ["🇬🇧", "GBP", kurlar.doviz?.GBP, kurlar.GBP],
       ]
     : [];
 
   const icerik = (
     <>
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-soguk-dim mb-0.5">TCMB Efektif Satış</p>
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-soguk-dim mb-0.5">TCMB Satış Kurları</p>
       {kurlar === undefined && <p className="text-sm text-metin/50 py-2">Kurlar yükleniyor…</p>}
       {kurlar === null && (
         <p className="text-sm text-metin/60 py-2">TCMB kurlarına şu an ulaşılamadı. Birazdan sayfayı yenileyip tekrar deneyin.</p>
@@ -64,23 +64,36 @@ export default function KurGostergesi({ yon = "sag", sabit = false }: { yon?: "s
         <>
           <p className="text-[11px] text-metin/50 mb-3">{kurlar.tarih ? `${kurlar.tarih} tarihli bülten` : "Son bülten"}</p>
           <table className="w-full text-sm">
+            <thead>
+              <tr className="text-[10px] text-metin/50">
+                <th className="pb-1 text-left font-medium"></th>
+                <th className="pb-1 text-right font-medium">Döviz</th>
+                <th className="pb-1 text-right font-medium">Efektif</th>
+              </tr>
+            </thead>
             <tbody>
               {satirlar
-                .filter(([, , d]) => d)
-                .map(([bayrak, kod, deger]) => (
-                  <tr key={kod} className="border-t border-hat first:border-0">
-                    <td className="py-1.5">
+                .filter(([, , d, e]) => d || e)
+                .map(([bayrak, kod, doviz, efektif]) => (
+                  <tr key={kod} className="border-t border-hat">
+                    <td className="py-1.5 whitespace-nowrap">
                       {bayrak} <span className="font-semibold text-metin">{kod}</span>
                     </td>
-                    <td className="py-1.5 text-right font-mono text-metin">{sayi(deger!)} ₺</td>
+                    <td className="py-1.5 text-right font-mono text-metin">{doviz ? sayi(doviz) : "—"}</td>
+                    <td className="py-1.5 text-right font-mono text-metin/70">{efektif ? sayi(efektif) : "—"}</td>
                   </tr>
                 ))}
               <tr className="border-t border-hat">
                 <td className="py-1.5 text-metin/60 text-xs">EUR / USD</td>
-                <td className="py-1.5 text-right font-mono text-metin/70 text-xs">{sayi(kurlar.EUR / kurlar.USD)}</td>
+                <td colSpan={2} className="py-1.5 text-right font-mono text-metin/70 text-xs">
+                  {sayi((kurlar.doviz?.EUR ?? kurlar.EUR) / (kurlar.doviz?.USD ?? kurlar.USD))}
+                </td>
               </tr>
             </tbody>
           </table>
+          <p className="text-[10px] text-metin/50 mt-2 leading-snug">
+            Döviz satış: fatura ve cari kur çevriminde varsayılan. Efektif satış: nakit döviz.
+          </p>
           <p className="text-[10px] text-metin/40 mt-3 leading-snug">
             TCMB kurları iş günleri 15.30 civarında güncellenir; hafta sonu ve tatillerde son bülten geçerlidir.
           </p>
@@ -116,7 +129,7 @@ export default function KurGostergesi({ yon = "sag", sabit = false }: { yon?: "s
       >
         <span>{yon === "alt" ? "💱" : "💱 Döviz Kurları"}</span>
         {kurlar ? (
-          <span className="font-mono text-[11px] text-soguk-dim">$ {sayi(kurlar.USD, 2)}</span>
+          <span className="font-mono text-[11px] text-soguk-dim">$ {sayi(kurlar.doviz?.USD ?? kurlar.USD, 2)}</span>
         ) : (
           <span className="text-metin/30">{kurlar === undefined ? "…" : "—"}</span>
         )}

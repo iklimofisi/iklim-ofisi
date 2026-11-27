@@ -158,16 +158,16 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
                 ))}
               </select>
             </div>
-            <div className="flex gap-3 items-end">
-              <div>
-                <label className="block text-xs font-medium text-metin/60 mb-1">Para birimi</label>
-                <select name="paraBirimi" defaultValue={baslangicPb} className={kutu}>
-                  <option value="TRY">TRY</option>
-                  <option value="USD">USD</option>
-                  <option value="EUR">EUR</option>
-                </select>
-              </div>
-              <KurAlani baslangicPb={baslangicPb} kurlar={kurlar ? { USD: kurlar.doviz?.USD ?? kurlar.USD, EUR: kurlar.doviz?.EUR ?? kurlar.EUR } : null} />
+            <div>
+              <label className="block text-xs font-medium text-metin/60 mb-1">Para birimi</label>
+              <select name="paraBirimi" defaultValue={baslangicPb} className={kutu}>
+                <option value="TRY">TRY</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </div>
+            <div className="sm:col-span-2 lg:col-span-4">
+              <KurAlani baslangicPb={baslangicPb} kurlar={kurlar} />
             </div>
             <div className="lg:col-span-2">
               <label className="block text-xs font-medium text-metin/60 mb-1">Satış siparişi (maliyetin yazılacağı iş · isteğe bağlı)</label>

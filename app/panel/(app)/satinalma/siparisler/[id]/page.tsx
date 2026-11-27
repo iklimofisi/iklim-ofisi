@@ -12,14 +12,17 @@ import {
   malKabulEkle,
   malKabulIptal,
   alisFaturasiEkle,
+  satinalmaSiparisiKurGuncelle,
 } from "@/lib/satinalma-siparis-actions";
+import KurAlani from "@/components/KurAlani";
+import AlisFaturasiTutar from "@/components/AlisFaturasiTutar";
 import { SAS_DURUM_ETIKET, SAS_DURUM_RENK, sasNo, sasTl, kalemNet, teslimAlinan, malKabulAcikMi } from "@/lib/satinalma-siparis";
 import SonucluForm from "@/components/SonucluForm";
 import KayitIslemButonu from "@/components/KayitIslemButonu";
 import SatinalmaGonder from "@/components/SatinalmaGonder";
 import { getSirketAyarlari } from "@/lib/sirket";
 import { TEDARIKCI_LINK_TABANI } from "@/lib/satinalma-siparis-belge";
-import { getTcmbKurlari, tcmbKuru } from "@/lib/kur";
+import { getTcmbKurlari } from "@/lib/kur";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +54,7 @@ export default async function SatinalmaSiparisDetay({ params }: { params: { id: 
     suankiKullanici(),
   ]);
   if (!s) notFound();
-  const faturaKurOnerisi = s.paraBirimi !== "TRY" ? tcmbKuru(await getTcmbKurlari(), s.paraBirimi, "TCMB_DOVIZ") : null;
+  const kurlar = s.paraBirimi !== "TRY" ? await getTcmbKurlari() : null;
 
   const yonetici = giren?.rol === "ADMIN";
   const pb = s.paraBirimi;
@@ -233,6 +236,25 @@ export default async function SatinalmaSiparisDetay({ params }: { params: { id: 
         </div>
       </div>
 
+      {/* TL KARŞILIĞI: dövizli siparişin kuru (TCMB döviz / efektif ya da elle) */}
+      {pb !== "TRY" && s.durum !== "IPTAL" && s.durum !== "REDDEDILDI" && (yonetici || s.durum === "ONAY_BEKLIYOR") && (
+        <section className="bg-yuzey border border-hat rounded-lg p-5 mb-8 print:hidden">
+          <h2 className="font-display font-medium text-metin mb-1">TL karşılığı (kur)</h2>
+          <p className="text-xs text-metin/50 mb-3">
+            Siparişin TL karşılığı (maliyet, kâr, onay eşiği) ve bundan sonraki mal kabullerin stok maliyeti bu kurla hesaplanır. Şu an kayıtlı kur:{" "}
+            <span className="font-mono">{s.kur.toLocaleString("tr-TR", { maximumFractionDigits: 6 })}</span> ≈ {paraFormat(tl, "TRY")}. Tedarikçi cari
+            hesabına yazılan tutar ise alış faturasındaki kurla belirlenir.
+          </p>
+          <SonucluForm action={satinalmaSiparisiKurGuncelle} className="flex flex-wrap items-end gap-3">
+            <input type="hidden" name="satinalmaSiparisiId" value={s.id} />
+            <KurAlani sabitPb={pb} kurlar={kurlar} baslangicKur={s.kur} tutar={s.tutarNet} />
+            <button type="submit" className="focus-ring bg-soguk text-white text-sm px-4 py-2 rounded-md font-medium hover:bg-soguk-dim">
+              Kuru kaydet
+            </button>
+          </SonucluForm>
+        </section>
+      )}
+
       {s.notlar && <p className="text-sm text-metin/70 whitespace-pre-line bg-yuzey border border-hat rounded-lg p-4 mb-8">{s.notlar}</p>}
 
       {/* KALEMLER */}
@@ -376,30 +398,13 @@ export default async function SatinalmaSiparisDetay({ params }: { params: { id: 
                   <label className="block text-xs font-medium text-metin/60 mb-1">Fatura no</label>
                   <input name="faturaNo" required maxLength={100} className={kutu} />
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-metin/60 mb-1">Tutar (TL, KDV dahil)</label>
-                  <input name="tutar" required={s.paraBirimi === "TRY"} inputMode="decimal" className={`${kutu} font-mono text-right`} />
-                </div>
-                {s.paraBirimi !== "TRY" && (
-                  <>
-                    <div>
-                      <label className="block text-xs font-medium text-metin/60 mb-1">ya da döviz tutarı ({s.paraBirimi}, KDV dahil)</label>
-                      <input name="dovizTutar" inputMode="decimal" className={`${kutu} font-mono text-right`} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-metin/60 mb-1">Faturadaki kur (1 {s.paraBirimi} = ? TL)</label>
-                      <input
-                        name="faturaKur"
-                        inputMode="decimal"
-                        placeholder={faturaKurOnerisi ? String(faturaKurOnerisi).replace(".", ",") : "örn. 50,75"}
-                        className={`${kutu} font-mono text-right`}
-                      />
-                    </div>
-                    <p className="col-span-2 text-[11px] text-metin/50">
-                      Fatura dövizse döviz tutarını ve faturadaki kuru yazın; TL tutarı otomatik hesaplanır (TL kutusunu boş bırakın).
-                      {faturaKurOnerisi ? ` Bugün TCMB döviz satış: ${String(faturaKurOnerisi).replace(".", ",")}.` : ""}
-                    </p>
-                  </>
+                {s.paraBirimi === "TRY" ? (
+                  <div>
+                    <label className="block text-xs font-medium text-metin/60 mb-1">Tutar (TL, KDV dahil)</label>
+                    <input name="tutar" required inputMode="decimal" className={`${kutu} font-mono text-right`} />
+                  </div>
+                ) : (
+                  <AlisFaturasiTutar pb={s.paraBirimi} kurlar={kurlar} kutu={kutu} />
                 )}
                 <div>
                   <label className="block text-xs font-medium text-metin/60 mb-1">Fatura tarihi</label>

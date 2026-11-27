@@ -227,6 +227,27 @@ export async function satinalmaSiparisiIptal(id: string, neden: string): Promise
   };
 }
 
+// --- KUR (TL KARŞILIĞI) -----------------------------------------------------------------
+// Dövizli siparişin kuru değiştirilir (TCMB döviz / efektif ya da elle). Admin her zaman; diğerleri yalnız onay beklerken
+// (onay eşiği TL'ye göre çalıştığı için onaylı siparişin kurunu admin değiştirir). Geçmiş mal kabullerin stok maliyeti değişmez.
+export async function satinalmaSiparisiKurGuncelle(fd: FormData): Promise<SasSonuc> {
+  const giren = await yetki("satinalmaSiparisiKurGuncelle", fd);
+  const id = metin(fd, "satinalmaSiparisiId", 100);
+  const kurYazi = metin(fd, "kur", 30);
+  const kur = kurOku(kurYazi);
+  const s = id ? await prisma.satinalmaSiparisi.findUnique({ where: { id }, select: { durum: true, paraBirimi: true, kur: true, siparisId: true } }) : null;
+  if (!s) return { hata: "Satınalma siparişi bulunamadı." };
+  if (s.paraBirimi === "TRY") return { hata: "Bu sipariş TL; kur gerekmez." };
+  if (s.durum === "IPTAL" || s.durum === "REDDEDILDI") return { hata: "İptal / reddedilmiş siparişin kuru değiştirilmez." };
+  if (giren.rol !== "ADMIN" && s.durum !== "ONAY_BEKLIYOR") return { hata: "Onaylanmış siparişin kurunu yalnız admin değiştirebilir." };
+  if (!kur) return { hata: kurYazi ? `Kur anlaşılamadı: "${kurYazi}" (örn. 50,75).` : `1 ${s.paraBirimi} kaç TL? Kuru yazın.` };
+  if (kur === s.kur) return { tamam: "Kur zaten bu." };
+  const r = await prisma.satinalmaSiparisi.updateMany({ where: { id, durum: s.durum }, data: { kur } });
+  if (r.count !== 1) return { hata: "Sipariş bu arada değişti; sayfayı yenileyip tekrar deneyin." };
+  yenile(id, s.siparisId);
+  return { tamam: `Kur ${kur.toLocaleString("tr-TR", { maximumFractionDigits: 6 })} olarak kaydedildi.` };
+}
+
 // --- SATIŞ SİPARİŞİNE BAĞLAMA ---------------------------------------------------------
 export async function satinalmaSiparisiBagla(fd: FormData): Promise<SasSonuc> {
   await yetki("satinalmaSiparisiBagla", fd);
