@@ -25,6 +25,7 @@ import KaydetButonu from "@/components/KaydetButonu";
 import { miktarYaz } from "@/lib/birimler";
 import { sayfaYetkisi } from "@/lib/oturum";
 import { maliyetGorur, gorebilir } from "@/lib/roller";
+import { siparisKapaliMi } from "@/lib/siparis-durum";
 
 export const dynamic = "force-dynamic";
 
@@ -135,6 +136,9 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
   // Müşterisiz teklif: belgede müşteri yerine muhatap görünür; sipariş / sözleşme için önce müşteriye bağlanır
   const musterisiz = musterisizMi(teklifHam.musteriId);
   const teklif = musterisizGoster(teklifHam);
+  // İptal / red edilmiş sipariş teklifi bağlamaz: yeniden siparişe dönüştürülebilir
+  const kapaliSiparis = teklif.siparis && siparisKapaliMi(teklif.siparis.durum) ? teklif.siparis : null;
+  const surenSiparis = teklif.siparis && !kapaliSiparis ? teklif.siparis : null;
   const bagliMusteriler = musterisiz
     ? await prisma.musteri.findMany({ where: GERCEK_MUSTERI, orderBy: { ad: "asc" }, select: { id: true, ad: true } })
     : [];
@@ -180,7 +184,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
           ← Tekliflere dön
         </Link>
         <div className="flex flex-wrap items-center justify-end gap-3">
-          <TeklifDurumSecici teklifId={teklif.id} mevcutDurum={teklif.durum} />
+          <TeklifDurumSecici teklifId={teklif.id} mevcutDurum={teklif.durum} kilitli={!!surenSiparis} />
           <a
             href="#whatsapp"
             className="focus-ring text-sm font-medium text-[#178a45] border border-[#1fa855]/50 px-4 py-2 rounded-md hover:bg-[#1fa855]/10 transition-colors"
@@ -331,7 +335,7 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
             📄 {sozlesme ? "Sözleşmeyi Gör / Düzenle" : "Sözleşme Hazırla"}
           </Link>
         )}
-        {!musterisiz && teklif.durum === "ONAYLANDI" && !teklif.siparis && (
+        {!musterisiz && teklif.durum === "ONAYLANDI" && !surenSiparis && (
           <Link
             href={`/panel/teklifler/${teklif.id}/siparis-talebi`}
             className="focus-ring text-sm bg-metin text-zemin px-4 py-2 rounded-md font-medium hover:bg-soguk-dim transition-colors"
@@ -339,12 +343,21 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
             Siparişe Dönüştür
           </Link>
         )}
-        {teklif.siparis && (
+        {surenSiparis && (
           <Link
-            href={`/panel/siparisler/${teklif.siparis.id}`}
+            href={`/panel/siparisler/${surenSiparis.id}`}
             className="focus-ring text-sm text-soguk-dim font-medium hover:underline"
           >
-            {teklif.siparis.durum === "ONAY_BEKLIYOR" ? "Sipariş talebini görüntüle (onay bekliyor)" : "Siparişi görüntüle"} →
+            {surenSiparis.durum === "ONAY_BEKLIYOR" ? "Sipariş talebini görüntüle (onay bekliyor)" : "Siparişi görüntüle"} →
+          </Link>
+        )}
+        {kapaliSiparis && (
+          <Link
+            href={`/panel/siparisler/${kapaliSiparis.id}`}
+            className="focus-ring text-sm text-metin/50 hover:underline"
+            title="Bu sipariş teklifi bağlamaz; teklif düzenlenip yeniden siparişe dönüştürülebilir"
+          >
+            {kapaliSiparis.durum === "IPTAL" ? "İptal edilen sipariş" : "Reddedilen sipariş talebi"} →
           </Link>
         )}
         </div>

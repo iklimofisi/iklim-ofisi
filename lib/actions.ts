@@ -29,6 +29,7 @@ import { listeNotlari } from "@/lib/toptan-fiyat";
 import { MUSTERISIZ_ID, musterisizMi, musterisizGoster } from "@/lib/musterisiz";
 import { musterisizKaydiHazirla } from "@/lib/musterisiz-sunucu";
 import { siparisDondurmaVerisi } from "@/lib/siparis-tutari";
+import { siparisKapaliMi, KAPALI_SIPARIS_DURUMLARI } from "@/lib/siparis-durum";
 import { getTcmbKurlari, tcmbKuru, kurKaynagiOku } from "@/lib/kur";
 import { kurOku } from "@/lib/kur-oku";
 import { donemKilitliMi, KILIT_MESAJI } from "@/lib/finans";
@@ -484,8 +485,15 @@ export async function teklifMusteriyeBagla(formData: FormData) {
   redirect(`/panel/teklifler/${teklifId}?mesaj=teklif-musteriye-baglandi`);
 }
 
+// Siparişi süren (iptal / red olmayan) teklifin durumu "Onaylandı"dan başka bir şeye çekilmez
+async function teklifSiparisteMi(teklifId: string) {
+  const s = await prisma.siparis.findUnique({ where: { teklifId }, select: { durum: true } });
+  return !!s && !siparisKapaliMi(s.durum);
+}
+
 export async function teklifDurumGuncelle(teklifId: string, durum: "BEKLEMEDE" | "ONAYLANDI" | "REDDEDILDI") {
   await yetki("teklifDurumGuncelle", { teklifId, durum });
+  if (durum !== "ONAYLANDI" && (await teklifSiparisteMi(teklifId))) return;
   await prisma.teklif.update({ where: { id: teklifId }, data: { durum } });
   revalidatePath("/panel/teklifler");
   revalidatePath(`/panel/teklifler/${teklifId}`);
@@ -497,6 +505,7 @@ export async function teklifReddet(teklifId: string, bilgi: { neden: string; rak
   await yetki("teklifReddet", { teklifId, ...bilgi });
   const neden = gecerliRedNedeni(bilgi?.neden);
   if (!teklifId || !neden) return;
+  if (await teklifSiparisteMi(teklifId)) return;
   await prisma.teklif.update({
     where: { id: teklifId },
     data: {
@@ -1028,6 +1037,42 @@ export async function kullaniciSifreSifirla(formData: FormData) {
 const yuvarla2 = (n: number) => Math.round(n * 100) / 100;
 const kurYaz = (n: number) => n.toLocaleString("tr-TR", { maximumFractionDigits: 6 });
 
+// KAPALI SİPARİŞ (iptal / red): teklifi bağlamaz. Admin kalıcı silebilir; teklif yeniden siparişe
+// dönüştürülünce de eski kapalı sipariş kaldırılır. Her iki durumda silinen kaydın tam kopyası İşlem Geçmişi'ne yazılır.
+// Silinmez: sevkiyat / teslim kaydı olan, iptal edilmemiş cari kaydı olan ya da süren satınalma siparişi bağlı olan.
+// İptal edilmiş cari kayıtlar silinmez (cari geçmişinde iptal olarak kalır).
+class SiparisEngeli extends Error {}
+type SiparisDb = Pick<typeof prisma, "siparis" | "cariHareket" | "satinalmaSiparisi">;
+
+async function kapaliSiparisEngeli(db: SiparisDb, siparisId: string): Promise<string | null> {
+  const s = await db.siparis.findUnique({
+    where: { id: siparisId },
+    select: { durum: true, _count: { select: { sevkiyatlar: true, teslimler: true } } },
+  });
+  if (!s) return "Sipariş bulunamadı.";
+  if (!siparisKapaliMi(s.durum)) return "Yalnız iptal edilmiş ya da reddedilmiş sipariş silinebilir.";
+  const kayit = s._count.sevkiyatlar + s._count.teslimler;
+  if (kayit > 0)
+    return `Siparişte ${kayit} sevkiyat / teslim kaydı var; bu kayıtlar silinmesin diye sipariş silinmez. Teklifi yeniden kullanmak için teklif sayfasından "Kopyala" ile yeni teklif açın.`;
+  const [cari, sas] = await Promise.all([
+    db.cariHareket.count({ where: { siparisId, iptalTarihi: null } }),
+    db.satinalmaSiparisi.count({ where: { siparisId, durum: { notIn: [...KAPALI_SIPARIS_DURUMLARI] } } }),
+  ]);
+  if (cari > 0) return `Siparişin iptal edilmemiş ${cari} cari kaydı var; önce müşterinin cari hesabından iptal edin.`;
+  if (sas > 0) return `Siparişe bağlı süren ${sas} satınalma siparişi var; önce onları iptal edin ya da bu siparişten ayırın.`;
+  return null;
+}
+
+// Kontrol ve silme aynı işlem (transaction) içinde: arada başka bir kayıt bağlanırsa silinmez.
+// İptal / red edilmiş satınalma siparişlerinin yalnız bağı kaldırılır, kendileri silinmez.
+async function kapaliSiparisiSil(tx: SiparisDb, siparisId: string) {
+  const engel = await kapaliSiparisEngeli(tx, siparisId);
+  if (engel) throw new SiparisEngeli(engel);
+  await tx.satinalmaSiparisi.updateMany({ where: { siparisId }, data: { siparisId: null } });
+  const r = await tx.siparis.deleteMany({ where: { id: siparisId, durum: { in: [...KAPALI_SIPARIS_DURUMLARI] } } });
+  if (r.count !== 1) throw new SiparisEngeli("Sipariş silinemedi; sayfayı yenileyip tekrar deneyin.");
+}
+
 export async function siparisTalebiOlustur(formData: FormData): Promise<IslemSonucu & { git?: string }> {
   const kullanici = await yetki("siparisTalebiOlustur", formData);
   const teklifId = String(formData.get("teklifId") ?? "");
@@ -1038,10 +1083,11 @@ export async function siparisTalebiOlustur(formData: FormData): Promise<IslemSon
   const dosya = formData.get("sozlesmeDosyasi") as File | null;
   if (!teklifId) return { hata: "Teklif bulunamadı." };
 
-  const teklif = await prisma.teklif.findUnique({ where: { id: teklifId }, include: { kalemler: true, siparis: { select: { id: true } } } });
+  const teklif = await prisma.teklif.findUnique({ where: { id: teklifId }, include: { kalemler: true, siparis: { select: { id: true, durum: true } } } });
   if (!teklif) return { hata: "Teklif bulunamadı." };
-  // Aynı tekliften ikinci sipariş açılmaz (çift tıklama dahil)
-  if (teklif.siparis) return { tamam: "Bu teklifin siparişi zaten var.", git: `/panel/siparisler/${teklif.siparis.id}` };
+  // Aynı tekliften ikinci sipariş açılmaz (çift tıklama dahil). İptal / red edilmiş eski sipariş ise yenisiyle değiştirilir.
+  const eskiKapali = teklif.siparis && siparisKapaliMi(teklif.siparis.durum) ? teklif.siparis.id : null;
+  if (teklif.siparis && !eskiKapali) return { tamam: "Bu teklifin siparişi zaten var.", git: `/panel/siparisler/${teklif.siparis.id}` };
   // Müşterisiz teklif siparişe çevrilemez (sipariş ve cari hareket müşteriye yazılır)
   if (musterisizMi(teklif.musteriId)) return { hata: "Müşterisiz teklif siparişe çevrilemez; önce teklifi bir müşteriye bağlayın." };
 
@@ -1069,8 +1115,17 @@ export async function siparisTalebiOlustur(formData: FormData): Promise<IslemSon
       ? { sozlesmeDosya: Buffer.from(await dosya.arrayBuffer()), sozlesmeDosyaAdi: dosya.name, sozlesmeDosyaTipi: dosya.type || "application/pdf" }
       : {};
 
+  if (eskiKapali) {
+    const engel = await kapaliSiparisEngeli(prisma, eskiKapali);
+    if (engel) return { hata: `Teklifin iptal / red edilmiş eski siparişi kaldırılamadı: ${engel}` };
+    // Eski siparişin tam kopyası İşlem Geçmişi'ne ("Sipariş sildi")
+    await islemKaydet(kullanici, "siparisSil", { siparisId: eskiKapali, neden: "Teklif yeniden siparişe dönüştürüldü" });
+  }
+
   try {
-    const siparis = await prisma.siparis.create({
+    const siparis = await prisma.$transaction(async (tx) => {
+      if (eskiKapali) await kapaliSiparisiSil(tx, eskiKapali);
+      return tx.siparis.create({
       data: {
         teklifId,
         musteriId: teklif.musteriId,
@@ -1085,14 +1140,18 @@ export async function siparisTalebiOlustur(formData: FormData): Promise<IslemSon
         ...siparisDondurmaVerisi(teklif),
       },
       select: { id: true },
+      });
     });
     revalidatePath("/panel/siparisler");
     revalidatePath(`/panel/teklifler/${teklifId}`);
+    revalidatePath("/panel/teklifler");
+    if (eskiKapali) revalidatePath(`/panel/siparisler/${eskiKapali}`);
     return { tamam: "Sipariş talebi onaya gönderildi.", git: `/panel/siparisler/${siparis.id}` };
   } catch (e) {
+    if (e instanceof SiparisEngeli) return { hata: `Teklifin iptal / red edilmiş eski siparişi kaldırılamadı: ${e.message}` };
     // teklifId tekil: aynı anda iki talep gönderildiyse ikincisi var olana yönlenir
-    const var_ = await prisma.siparis.findUnique({ where: { teklifId }, select: { id: true } });
-    if (var_) return { tamam: "Bu teklifin siparişi zaten var.", git: `/panel/siparisler/${var_.id}` };
+    const var_ = await prisma.siparis.findUnique({ where: { teklifId }, select: { id: true, durum: true } });
+    if (var_ && !siparisKapaliMi(var_.durum)) return { tamam: "Bu teklifin siparişi zaten var.", git: `/panel/siparisler/${var_.id}` };
     throw e;
   }
 }
@@ -1244,17 +1303,39 @@ export async function siparisIptal(siparisId: string, neden: string): Promise<Is
   revalidatePath("/panel/cari");
   revalidatePath(`/panel/musteriler/${s.musteriId}`);
   revalidatePath("/panel");
-  if (cariKayitlar.length) return { tamam: `Sipariş iptal edildi; siparişin ${cariKayitlar.length} cari kaydı da iptal edilip bakiyeden düşüldü.` };
+  revalidatePath("/panel/teklifler");
+  // Bağlı süren satınalma siparişleri kendiliğinden iptal edilmez (tedarikçiye gitmiş olabilir): hatırlatılır
+  const sasSayisi = await prisma.satinalmaSiparisi.count({ where: { siparisId, durum: { notIn: [...KAPALI_SIPARIS_DURUMLARI] } } });
+  const sasNotu = sasSayisi > 0 ? ` Siparişe bağlı ${sasSayisi} satınalma siparişi sürüyor; tedarikçiyle görüşüp Satınalma sayfasından iptal edin.` : "";
+  if (cariKayitlar.length) return { tamam: `Sipariş iptal edildi; siparişin ${cariKayitlar.length} cari kaydı da iptal edilip bakiyeden düşüldü.${sasNotu}` };
   return {
-    tamam: s.onayTarihi
-      ? "Sipariş iptal edildi. Bu eski siparişin cari borcu otomatik bağlı değil: müşterinin cari hesabından ayrıca iptal edin."
-      : "Sipariş iptal edildi.",
+    tamam:
+      (s.onayTarihi
+        ? "Sipariş iptal edildi. Bu eski siparişin cari borcu otomatik bağlı değil: müşterinin cari hesabından ayrıca iptal edin."
+        : "Sipariş iptal edildi.") + sasNotu,
   };
 }
 
-// Eski kalıcı silme: artık hiçbir ekranda düğmesi yok; sipariş silinmez (iptal edilir)
-export async function siparisSil(siparisId: string) {
-  await yetki("siparisSil", { siparisId });
+// KALICI SİLME (yalnız admin): yalnız iptal / red edilmiş sipariş (deneme kayıtları). Tam kopyası İşlem Geçmişi'nde
+// "Sipariş sildi" olarak saklanır; iptal edilmiş cari kayıtları silinmez. Sonra teklif yeniden siparişe dönüştürülebilir.
+export async function siparisSil(siparisId: string): Promise<IslemSonucu> {
+  const giren = await yetki("siparisSil", { siparisId });
+  if (giren.rol !== "ADMIN") return { hata: "Siparişi yalnız admin silebilir." };
+  const s = siparisId ? await prisma.siparis.findUnique({ where: { id: siparisId }, select: { teklifId: true } }) : null;
+  if (!s) return { hata: "Sipariş bulunamadı." };
+  try {
+    await prisma.$transaction(async (tx) => kapaliSiparisiSil(tx, siparisId));
+  } catch (e) {
+    if (e instanceof SiparisEngeli) return { hata: e.message };
+    throw e;
+  }
+  revalidatePath("/panel/siparisler");
+  revalidatePath(`/panel/siparisler/${siparisId}`);
+  revalidatePath("/panel/teklifler");
+  revalidatePath(`/panel/teklifler/${s.teklifId}`);
+  revalidatePath("/panel/satinalma/siparisler");
+  revalidatePath("/panel");
+  return { tamam: "Sipariş silindi (kopyası İşlem Geçmişi'nde). Teklif yeniden siparişe dönüştürülebilir." };
 }
 
 // FATURA: fatura no / tarihi yazılır. Dövizli siparişte faturadaki kur onay kurundan farklıysa
@@ -1346,6 +1427,9 @@ export async function sevkiyatEkle(formData: FormData) {
     include: { teklif: { include: { kalemler: true } }, sevkiyatlar: true },
   });
   if (!siparis) return;
+  // Onaylanmamış, iptal ya da red edilmiş siparişe sevkiyat girilmez; kalem bu siparişin teklifinden olmalı
+  if (siparis.durum === "ONAY_BEKLIYOR" || siparisKapaliMi(siparis.durum)) return;
+  if (!siparis.teklif.kalemler.some((k) => k.id === teklifKalemId)) return;
 
   const guncellenebilirDurumlar = ["HAZIRLANIYOR", "FATURALANDI", "KISMEN_SEVK_EDILDI", "SEVK_EDILDI"];
   const toplamAdet = siparis.teklif.kalemler.reduce((a, k) => a + k.adet, 0);
@@ -1387,6 +1471,9 @@ export async function teslimKaydiEkle(formData: FormData) {
     include: { teklif: { include: { kalemler: true } }, teslimler: true },
   });
   if (!siparis) return;
+  // Onaylanmamış, iptal ya da red edilmiş siparişe teslim girilmez (iptal sipariş "teslim edildi"ye dönmesin)
+  if (siparis.durum === "ONAY_BEKLIYOR" || siparisKapaliMi(siparis.durum)) return;
+  if (!siparis.teklif.kalemler.some((k) => k.id === teklifKalemId)) return;
 
   let evrak: Buffer | undefined;
   let evrakAdi: string | undefined;

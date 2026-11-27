@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 import { teklifToplamlari, ilkHazirlanmaTarihi, tarihYaz } from "@/lib/teklif-hesap";
 import { RED_NEDENLERI, redNedeniAdi, DURUM_FILTRELERI } from "@/lib/teklif-durum";
 import { sayfaYetkisi } from "@/lib/oturum";
+import { siparisKapaliMi } from "@/lib/siparis-durum";
 
 function paraFormat(n: number, paraBirimi: string = "TRY") {
   return n.toLocaleString("tr-TR", { style: "currency", currency: paraBirimi });
@@ -483,7 +484,14 @@ export default async function TekliflerSayfasi({
                         <span>{t.kalemler.length} kalem</span>
                         <span className="sm:hidden">👤 {hazirlayanPersonel}</span>
                         {t.revizyonNo > 1 && <span className={`${etiket} text-amber-800 bg-amber-50 border-amber-200`}>Rev. {t.revizyonNo}</span>}
-                        {t.siparis && <span className={`${etiket} text-emerald-800 bg-emerald-50 border-emerald-200`}>Siparişe dönüştü</span>}
+                        {t.siparis &&
+                          (siparisKapaliMi(t.siparis.durum) ? (
+                            <span className={`${etiket} text-metin/50 bg-zemin border-hat font-medium`}>
+                              {t.siparis.durum === "IPTAL" ? "Sipariş iptal" : "Sipariş reddedildi"}
+                            </span>
+                          ) : (
+                            <span className={`${etiket} text-emerald-800 bg-emerald-50 border-emerald-200`}>Siparişe dönüştü</span>
+                          ))}
                         {t.durum === "ONAYLANDI" && t.musteriOnayTarihi && (
                           <span className={`${etiket} text-emerald-800 bg-emerald-50 border-emerald-200`}>✓ Müşteri linkten onayladı</span>
                         )}
@@ -506,7 +514,7 @@ export default async function TekliflerSayfasi({
                       <p className="font-mono text-metin font-bold text-sm leading-tight">{paraFormat(toplam, t.paraBirimi)}</p>
                       <p className="text-[10px] text-metin/40">KDV hariç</p>
                     </div>
-                    <TeklifDurumSecici teklifId={t.id} mevcutDurum={t.durum} renkli />
+                    <TeklifDurumSecici teklifId={t.id} mevcutDurum={t.durum} renkli kilitli={!!t.siparis && !siparisKapaliMi(t.siparis.durum)} />
                     <div className="flex items-center gap-0.5">
                       <TeklifOnizleButon teklifId={t.id} baslik={`${teklifNoFormat(t.teklifNo)} ${t.baslik || ""}`.trim()} ikonSinifi={ikonDugme} />
                       <a href={`/panel/teklifler/${t.id}?yazdir=1`} target="_blank" rel="noopener" className={ikonDugme} title="Yazdır" aria-label="Yazdır">

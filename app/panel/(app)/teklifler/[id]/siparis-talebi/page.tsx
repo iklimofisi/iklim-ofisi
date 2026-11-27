@@ -7,6 +7,7 @@ import KurKaynagiSecimi from "@/components/KurKaynagiSecimi";
 import { getTcmbKurlari, tcmbKuru } from "@/lib/kur";
 import { musterisizMi } from "@/lib/musterisiz";
 import { sayfaYetkisi } from "@/lib/oturum";
+import { siparisKapaliMi } from "@/lib/siparis-durum";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,9 @@ export default async function SiparisTalebi({ params }: { params: { id: string }
   });
 
   if (!teklif) notFound();
-  if (teklif.siparis) redirect(`/panel/siparisler/${teklif.siparis.id}`);
+  // Süren sipariş varsa ona gidilir; iptal / red edilmiş eski sipariş yeni talep gönderilince kaldırılır
+  const eskiKapali = teklif.siparis && siparisKapaliMi(teklif.siparis.durum) ? teklif.siparis : null;
+  if (teklif.siparis && !eskiKapali) redirect(`/panel/siparisler/${teklif.siparis.id}`);
   // Müşterisiz teklif önce müşteriye bağlanmalı (sipariş ve cari müşteriye yazılır)
   if (musterisizMi(teklif.musteriId)) redirect(`/panel/teklifler/${teklif.id}?mesaj=musterisiz-siparis`);
 
@@ -47,6 +50,13 @@ export default async function SiparisTalebi({ params }: { params: { id: string }
         Bir Admin onaylamadan sipariş aktif olmaz, cari hesaba borç
         yazılmaz ve sevkiyat başlatılamaz.
       </p>
+
+      {eskiKapali && (
+        <p className="text-sm mb-6 bg-amber-50 border border-amber-200 text-amber-900 rounded-md px-4 py-3">
+          Bu teklifin {eskiKapali.durum === "IPTAL" ? "iptal edilmiş" : "reddedilmiş"} eski bir siparişi var. Yeni talep gönderilince
+          eski kayıt kaldırılır (tam kopyası İşlem Geçmişi&apos;nde saklanır; iptal edilmiş cari kayıtları silinmez).
+        </p>
+      )}
 
       <SonucluForm action={siparisTalebiOlustur} className="bg-yuzey border border-hat rounded-lg p-5 space-y-5">
         <input type="hidden" name="teklifId" value={teklif.id} />

@@ -27,10 +27,12 @@ export default function TeklifDurumSecici({
   teklifId,
   mevcutDurum,
   renkli = false,
+  kilitli = false,
 }: {
   teklifId: string;
   mevcutDurum: string;
   renkli?: boolean;
+  kilitli?: boolean; // siparişi süren teklif: durum değiştirilmez (önce sipariş iptal edilir)
 }) {
   const [pending, startTransition] = useTransition();
   const [deger, setDeger] = useState(mevcutDurum);
@@ -51,7 +53,8 @@ export default function TeklifDurumSecici({
     <>
       <select
         value={deger}
-        disabled={pending}
+        disabled={pending || kilitli}
+        title={kilitli ? "Siparişi süren teklifin durumu değiştirilemez; önce sipariş iptal edilmeli" : undefined}
         aria-label="Teklif durumu"
         onChange={(e) => {
           const yeni = e.target.value as Durum;

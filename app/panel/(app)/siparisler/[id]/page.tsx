@@ -6,6 +6,7 @@ import {
   sevkiyatEkle,
   sevkiyatSil,
   siparisIptal,
+  siparisSil,
   teslimKaydiEkle,
   teslimKaydiSil,
 } from "@/lib/actions";
@@ -62,6 +63,9 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
   const isAdmin = giren?.rol === "ADMIN";
   const maliyetGor = maliyetGorur(giren?.rol); // satış personeli maliyet / kâr görmez
   const aktifMi = siparis.durum !== "ONAY_BEKLIYOR" && siparis.durum !== "REDDEDILDI";
+  // "Hazırlanıyor'a al" yalnız sevk / teslim aşamasındaki siparişte çalışır
+  const geriAlinabilir = ["KISMEN_SEVK_EDILDI", "SEVK_EDILDI", "KISMEN_TESLIM_EDILDI", "TESLIM_EDILDI"].includes(siparis.durum);
+  const kapali = siparis.durum === "IPTAL" || siparis.durum === "REDDEDILDI";
 
   // Dövizli sipariş: onay / fatura için önerilen kur (TCMB ya da talepte yazılan elle kur)
   const dovizli = pb !== "TRY";
@@ -101,9 +105,20 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
           </p>
         </div>
         <div className="flex items-center gap-3 shrink-0 print:hidden">
-          {aktifMi && (siparis.durum !== "IPTAL" || isAdmin) && <SiparisDurumSecici siparisId={siparis.id} mevcutDurum={siparis.durum} />}
+          {geriAlinabilir && <SiparisDurumSecici siparisId={siparis.id} mevcutDurum={siparis.durum} />}
           <YazdirButon />
-          {isAdmin && siparis.durum !== "IPTAL" && (
+          {isAdmin && kapali && (
+            <KayitIslemButonu
+              id={siparis.id}
+              action={siparisSil}
+              etiket="Siparişi sil"
+              onayBasligi="Silme onayı"
+              onayMesaji="İptal / red edilmiş sipariş kalıcı silinir; tam kopyası İşlem Geçmişi'nde saklanır. İptal edilmiş cari kayıtları silinmez. Sonra teklif yeniden siparişe dönüştürülebilir."
+              tehlikeli
+              sonraGit={`/panel/teklifler/${siparis.teklifId}`}
+            />
+          )}
+          {isAdmin && !kapali && (
             <KayitIslemButonu
               id={siparis.id}
               action={siparisIptal}
@@ -381,7 +396,7 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
                         {kalan > 0 ? ` · ${kalan} kaldı` : " · tamamlandı"}
                       </p>
                     </div>
-                    {kalan > 0 && (
+                    {kalan > 0 && !kapali && (
                       <form action={sevkiyatEkle} className="flex flex-wrap gap-2 print:hidden">
                         <input type="hidden" name="siparisId" value={siparis.id} />
                         <input type="hidden" name="teklifKalemId" value={k.id} />
@@ -460,7 +475,7 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
                         {teslimEdilen < k.adet ? "" : " · tamamlandı"}
                       </p>
                     </div>
-                    {teslimEdilebilir > 0 ? (
+                    {kapali ? null : teslimEdilebilir > 0 ? (
                       <form action={teslimKaydiEkle} className="flex flex-wrap items-end gap-2 print:hidden">
                         <input type="hidden" name="siparisId" value={siparis.id} />
                         <input type="hidden" name="teklifKalemId" value={k.id} />
