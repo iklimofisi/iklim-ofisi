@@ -6,7 +6,9 @@ import KayitIslemButonu from "@/components/KayitIslemButonu";
 import { suankiKullanici, sayfaYetkisi } from "@/lib/oturum";
 import { finansYetkilisiMi } from "@/lib/roller";
 import OdemeAlModal from "@/components/OdemeAlModal";
-import KaydetButonu from "@/components/KaydetButonu";
+import SonucluForm from "@/components/SonucluForm";
+import HareketTutarAlani from "@/components/HareketTutarAlani";
+import { getTcmbKurlari } from "@/lib/kur";
 import Link from "next/link";
 import { sasNo } from "@/lib/satinalma-siparis";
 
@@ -32,7 +34,7 @@ export default async function CariSayfasi({
   const onBesGunSonra = new Date();
   onBesGunSonra.setDate(bugun.getDate() + 15);
 
-  const [musteriler, hareketler, tedarikciHareketleri, tedarikciToplam, musteriToplam, yaklasanCekler, giren] = await Promise.all([
+  const [musteriler, hareketler, tedarikciHareketleri, tedarikciToplam, musteriToplam, yaklasanCekler, giren, kurlar] = await Promise.all([
     prisma.musteri.findMany({ where: GERCEK_MUSTERI, orderBy: { ad: "asc" } }),
     // Gösterilmeyen taraf için sorgu hiçbir kayıt döndürmez (id hiçbir zaman boş değildir)
     prisma.cariHareket.findMany({
@@ -76,7 +78,10 @@ export default async function CariSayfasi({
       orderBy: { vadeTarihi: "asc" },
     }),
     suankiKullanici(),
+    getTcmbKurlari(),
   ]);
+  const kutu = "focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white";
+  const bugunIso = new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
 
   // İptal edilen hareketler listede (üstü çizili) görünür ama bakiyeye girmez
   const bakiye = hareketler.reduce((a, c) => (c.iptalTarihi ? a : a + (c.tur === "BORC" ? c.tutar : -c.tutar)), 0);
@@ -184,12 +189,22 @@ export default async function CariSayfasi({
         </div>
       </div>
 
-      {/* YENİ CARİ HAREKET FORMU (ÇEK VADE VE EVRAK YÜKLEME EKLENDİ) */}
-      <form action={cariHareketEkle} className="bg-yuzey border border-hat rounded-lg p-5 mb-8 space-y-4">
+      {/* ELLE CARİ HAREKET: tahsilat, çek, sipariş dışı borç (TL ya da döviz) */}
+      <SonucluForm action={cariHareketEkle} temizle className="bg-yuzey border border-hat rounded-lg p-5 mb-8 space-y-4">
+        <div>
+          <h2 className="font-display font-medium text-metin">Elle hareket ekle</h2>
+          <p className="text-xs text-metin/50 mt-0.5">
+            Sipariş onayının borcu ve kur farkı otomatik yazılır; burada tahsilatları ve sipariş dışı borçları (montaj, servis, eski bakiye vb.) girin.
+            Aynı satışın borcunu ikinci kez girmeyin.
+          </p>
+        </div>
         <div className="grid sm:grid-cols-4 gap-3">
-          <div className="min-w-[180px]">
+          <div>
             <label className="block text-xs font-medium text-metin/60 mb-1">Müşteri *</label>
-            <select name="musteriId" required className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
+            <select name="musteriId" required defaultValue={seciliMusteri !== "hepsi" ? seciliMusteri : ""} className={kutu}>
+              <option value="" disabled>
+                Seçin…
+              </option>
               {musteriler.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.ad}
@@ -197,48 +212,47 @@ export default async function CariSayfasi({
               ))}
             </select>
           </div>
-
           <div>
-            <label className="block text-xs font-medium text-metin/60 mb-1">İşlem Türü *</label>
-            <select name="tur" required className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
-              <option value="BORC">Borç (Satış / Fatura Kesildi)</option>
-              <option value="ALACAK">Alacak (Tahsilat / Çek Alındı)</option>
+            <label className="block text-xs font-medium text-metin/60 mb-1">İşlem türü *</label>
+            <select name="tur" required className={kutu}>
+              <option value="ALACAK">Tahsilat (ödeme / çek alındı)</option>
+              <option value="BORC">Borç (sipariş dışı fatura vb.)</option>
             </select>
           </div>
-
           <div>
-            <label className="block text-xs font-medium text-metin/60 mb-1">Ödeme Yöntemi</label>
-            <select name="odemeYontemi" className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
+            <label className="block text-xs font-medium text-metin/60 mb-1">Ödeme yöntemi</label>
+            <select name="odemeYontemi" className={kutu}>
               <option value="EFT/Havale">EFT / Havale</option>
               <option value="Çek">Çek</option>
               <option value="Senet">Senet</option>
               <option value="Nakit">Nakit</option>
               <option value="Kredi Kartı">Kredi Kartı</option>
+              <option value="">— (borç kaydı)</option>
             </select>
           </div>
-
           <div>
-            <label className="block text-xs font-medium text-metin/60 mb-1">Tutar (TL) *</label>
-            <input name="tutar" type="text" inputMode="decimal" required className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm font-mono" placeholder="0,00" />
+            <label className="block text-xs font-medium text-metin/60 mb-1">İşlem tarihi</label>
+            <input name="tarih" type="date" defaultValue={bugunIso} max={bugunIso} className={kutu} />
           </div>
+          <HareketTutarAlani kurlar={kurlar} kutu={kutu} />
         </div>
 
-        {/* ÇEK VADE - BANKA VE EVRAK DOSYASI (PDF/GÖRSEL) YÜKLEME ALANLARI */}
+        {/* ÇEK / SENET VE EVRAK */}
         <div className="grid sm:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-md border border-hat">
           <div>
-            <label className="block text-xs font-semibold text-rose-800 mb-1">Çek / Senet Vade Tarihi</label>
+            <label className="block text-xs font-semibold text-rose-800 mb-1">Çek / senet vade tarihi</label>
             <input name="vadeTarihi" type="date" className="focus-ring w-full border border-hat rounded-md px-2 py-1.5 text-xs bg-white" />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-metin/70 mb-1">Banka Adı</label>
+            <label className="block text-xs font-semibold text-metin/70 mb-1">Banka adı</label>
             <input name="banka" placeholder="Örn: Garanti BBVA" className="focus-ring w-full border border-hat rounded-md px-2 py-1.5 text-xs bg-white" />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-metin/70 mb-1">Çek No / Seri No</label>
+            <label className="block text-xs font-semibold text-metin/70 mb-1">Çek no / seri no</label>
             <input name="cekNo" placeholder="Örn: 987456" className="focus-ring w-full border border-hat rounded-md px-2 py-1.5 text-xs bg-white" />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-blue-800 mb-1">📷 Fatura / Dekont / Çek Görseli</label>
+            <label className="block text-xs font-semibold text-blue-800 mb-1">📷 Fatura / dekont / çek görseli</label>
             <input name="evrak" type="file" accept=".pdf,.jpg,.jpeg,.png" className="focus-ring w-full text-xs border border-hat rounded-md p-1 bg-white" />
           </div>
         </div>
@@ -246,13 +260,13 @@ export default async function CariSayfasi({
         <div className="flex gap-3 items-end">
           <div className="flex-1">
             <label className="block text-xs font-medium text-metin/60 mb-1">Açıklama *</label>
-            <input name="aciklama" required className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm" placeholder="Fatura No, çek detayları vb." />
+            <input name="aciklama" required maxLength={300} className={kutu} placeholder="Fatura no, çek detayları vb." />
           </div>
-          <KaydetButonu basari="Eklendi." className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors shrink-0">
+          <button type="submit" className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors shrink-0">
             Ekle
-          </KaydetButonu>
+          </button>
         </div>
-      </form>
+      </SonucluForm>
 
       {/* CARİ HAREKETLER TABLOSU */}
       <div className="bg-yuzey border border-hat rounded-lg overflow-hidden">

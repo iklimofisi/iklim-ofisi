@@ -36,6 +36,9 @@ export default async function SiparisTalebi({ params }: { params: { id: string }
   const linktenOnay =
     !!teklif.musteriOnayTarihi && !!teklif.musteriOnayAdi && (teklif.musteriOnayRevizyon == null || teklif.musteriOnayRevizyon === teklif.revizyonNo);
   const eskiOnay = !!teklif.musteriOnayTarihi && !linktenOnay;
+  // Teklif sayfasında sistemde hazırlanmış sözleşme varsa dosya zorunlu değildir
+  const sistemSozlesmesi = !!(await prisma.sozlesme.findUnique({ where: { teklifId: teklif.id }, select: { id: true } }).catch(() => null));
+  const dosyaZorunlu = !linktenOnay && !sistemSozlesmesi;
   const saatli = (d: Date) =>
     d.toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Istanbul" });
 
@@ -110,6 +113,17 @@ export default async function SiparisTalebi({ params }: { params: { id: string }
             </p>
           </div>
         )}
+        {!linktenOnay && sistemSozlesmesi && (
+          <div className="bg-soguk-light border border-soguk/30 rounded-md px-4 py-3 text-sm text-soguk-dim">
+            <p className="font-semibold">Bu teklif için sistemde sözleşme hazırlanmış.</p>
+            <p className="text-xs mt-1">
+              İmzalı hâlini yükleyebilirsin; yüklemezsen sipariş sayfasında hazırlanan sözleşmenin bağlantısı görünür.{" "}
+              <a href={`/panel/teklifler/${teklif.id}/sozlesme/yazdir`} target="_blank" rel="noopener" className="underline">
+                Sözleşmeyi aç
+              </a>
+            </p>
+          </div>
+        )}
         {eskiOnay && (
           <div className="bg-amber-50 border border-amber-200 rounded-md px-4 py-3 text-xs text-amber-900">
             Müşteri Rev. {teklif.musteriOnayRevizyon} sürümünü linkten onaylamıştı, teklif sonra değişti (şu an Rev. {teklif.revizyonNo}). Sözleşme PDF&apos;i
@@ -119,19 +133,21 @@ export default async function SiparisTalebi({ params }: { params: { id: string }
 
         <div>
           <label className="block text-xs font-medium text-metin/60 mb-1">
-            Sözleşme / Anlaşma PDF&apos;i{linktenOnay ? " (isteğe bağlı)" : ""}
+            Sözleşme / Anlaşma PDF&apos;i{!dosyaZorunlu ? " (isteğe bağlı)" : ""}
           </label>
           <input
             name="sozlesmeDosyasi"
             type="file"
             accept="application/pdf"
-            required={!linktenOnay}
+            required={dosyaZorunlu}
             className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white"
           />
           <p className="text-xs text-metin/40 mt-1">
             {linktenOnay
               ? "Ayrıca imzalı bir sözleşme varsa ekleyebilirsin; o zaman onaylı teklif PDF'i yerine bu dosya saklanır."
-              : "Müşteriyle imzalanan / anlaşılan sözleşmenin PDF'i. Sözleşme hazırlamadıysan teklifi müşteriye link (WhatsApp / e-posta) ile gönderip onaylatırsan bu alan gerekmez."}
+              : sistemSozlesmesi
+                ? "İmzalı sözleşme PDF'ini yükleyebilirsin (isteğe bağlı)."
+                : "Müşteriyle imzalanan / anlaşılan sözleşmenin PDF'i. Teklif sayfasından sözleşme hazırlarsan ya da teklifi müşteriye link (WhatsApp / e-posta) ile onaylatırsan bu alan gerekmez."}
           </p>
         </div>
 

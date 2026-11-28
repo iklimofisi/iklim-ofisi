@@ -4,15 +4,16 @@ import { paraFormat } from "@/lib/para";
 import KayitIslemButonu from "@/components/KayitIslemButonu";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
 import UrunExcelYukle from "@/components/UrunExcelYukle";
-import Link from "next/link";
 import KaydetButonu from "@/components/KaydetButonu";
 import UrunFotografi from "@/components/UrunFotografi";
 import { sayfaYetkisi } from "@/lib/oturum";
+import SayfaSekmeleri from "@/components/SayfaSekmeleri";
+import { urunSekmeleri } from "@/lib/urun-sekmeleri";
 
 export const dynamic = "force-dynamic";
 
 export default async function UrunlerSayfasi() {
-  await sayfaYetkisi("urun");
+  const giren = await sayfaYetkisi("urun");
   const [urunler, markalar] = await Promise.all([
     prisma.urun.findMany({ include: { marka: true }, orderBy: { ad: "asc" } }),
     prisma.marka.findMany({ orderBy: { ad: "asc" } }),
@@ -20,11 +21,9 @@ export default async function UrunlerSayfasi() {
 
   return (
     <div>
-      <Link href="/panel/ayarlar" className="focus-ring text-sm text-metin/60 hover:text-metin mb-6 inline-block">
-        ← Ayarlara dön
-      </Link>
-      <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Panel</p>
-      <h1 className="font-display text-2xl font-semibold text-metin mb-2">Ürün Kataloğu</h1>
+      <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Ürün &amp; Fiyat</p>
+      <h1 className="font-display text-2xl font-semibold text-metin mb-4">Ürünler</h1>
+      <SayfaSekmeleri etiket="Ürün sayfaları" aktif="katalog" sekmeler={urunSekmeleri(giren.rol)} />
       <p className="text-sm text-metin/60 mb-8">
         Buraya eklediğin ürünler (örn. VRF liste fiyatların), teklif
         hazırlarken bir kalem için arama kutusuna yazıp seçebiliyorsun —

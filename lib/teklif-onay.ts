@@ -89,6 +89,16 @@ export async function teklifLinktenOnayla(formData: FormData) {
      <p style="font-size:12px;color:#64748b">Teklif panelde otomatik olarak "Onaylandı" yapıldı.</p>`
   );
 
+  // Projeye bağlı teklif onaylandı: proje durumu ileri alınır (Takipte / Teklif Verildi → Kazanıldı)
+  if (teklif.projeId) {
+    await prisma.proje
+      .updateMany({ where: { id: teklif.projeId, ihaleDurumu: { in: ["TAKIPTE", "TEKLIF_VERILDI"] } }, data: { ihaleDurumu: "KAZANILDI" } })
+      .catch(() => null);
+    revalidatePath(`/panel/projeler/${teklif.projeId}`);
+    revalidatePath("/panel/projeler");
+    revalidatePath("/panel/proje-takip");
+  }
+
   revalidatePath("/panel/teklifler");
   revalidatePath(`/panel/teklifler/${teklif.id}`);
   revalidatePath(`/panel/musteriler/${teklif.musteriId}`);

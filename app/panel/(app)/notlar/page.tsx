@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { girisZorunlu, sayfaYetkisi } from "@/lib/oturum";
+import { gorebilir } from "@/lib/roller";
+import { ziyaretHatirlatmaTamamlandi } from "@/lib/actions";
+import KaydetButonu from "@/components/KaydetButonu";
 import NotFormu from "@/components/NotFormu";
 import NotKarti, { type NotKartVerisi } from "@/components/NotKarti";
 import { trSimdi, alicilariOku } from "@/lib/notlar";
@@ -8,6 +11,7 @@ import { trSimdi, alicilariOku } from "@/lib/notlar";
 // -----------------------------------------------------------------------------
 // NOTLAR & HATIRLATMALAR
 // Herkese açık notları bütün kullanıcılar, gizli notları yalnız yazan görür.
+// Müşteri / proje görüşmelerinin günü gelen hatırlatmaları da burada (tek hatırlatma listesi).
 // -----------------------------------------------------------------------------
 export const dynamic = "force-dynamic";
 
@@ -30,6 +34,17 @@ export default async function NotlarSayfasi({ searchParams }: { searchParams: { 
   const yarin = trSimdi(new Date(Date.now() + 86400000)).gun;
 
   const kullanicilar = await prisma.kullanici.findMany({ select: { id: true, ad: true, email: true }, orderBy: { ad: "asc" } });
+  // Görüşme hatırlatmaları (bugün ve geciken + 7 gün içinde gelecek): satış (CRM) görebilenlere
+  const crmGor = gorebilir(ben.rol, "crm");
+  const yediGunSonra = new Date(Date.now() + 7 * 86400000);
+  const gorusmeHatirlatmalari = crmGor
+    ? await prisma.ziyaret.findMany({
+        where: { hatirlatmaTamam: false, hatirlatmaTarihi: { not: null, lte: yediGunSonra } },
+        include: { musteri: { select: { id: true, ad: true } }, proje: { select: { id: true, ad: true } }, teklif: { select: { id: true, teklifNo: true } } },
+        orderBy: { hatirlatmaTarihi: "asc" },
+        take: 100,
+      })
+    : [];
 
   let kayitlar: Awaited<ReturnType<typeof prisma.panelNotu.findMany>> = [];
   let tabloYok = false;
@@ -100,9 +115,65 @@ export default async function NotlarSayfasi({ searchParams }: { searchParams: { 
       </div>
 
       {tabloYok && (
-        <div className="bg-sicak-light text-sicak-dim border border-sicak/40 rounded-md p-4 text-sm">
-          Notlar tablosu veritabanında henüz yok. Neon SQL Editor&apos;da <code>prisma/manuel/2026-10-19_notlar_hatirlatmalar.sql</code> dosyasını çalıştırın.
-        </div>
+        <div className="bg-sicak-light text-sicak-dim border border-sicak/40 rounded-md p-4 text-sm">Notlar şu an yüklenemedi; sayfayı yenileyin.</div>
+      )}
+
+      {gorusmeHatirlatmalari.length > 0 && (
+        <section className="bg-yuzey border border-hat rounded-lg p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-display font-medium text-metin">📞 Görüşme hatırlatmaları ({gorusmeHatirlatmalari.length})</h2>
+            <Link href="/panel/ziyaretler" className="text-xs text-soguk-dim hover:underline">
+              Görüşmeler →
+            </Link>
+          </div>
+          <ul className="divide-y divide-hat">
+            {gorusmeHatirlatmalari.map((z) => {
+              const gun = trSimdi(z.hatirlatmaTarihi!).gun;
+              const durum = gun < bugun ? "gecikti" : gun === bugun ? "bugün" : "yaklaşan";
+              return (
+                <li key={z.id} className="py-2 flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm text-metin">{z.hatirlatmaNotu || z.not}</p>
+                    <p className="text-[11px] text-metin/50">
+                      <span className={durum === "gecikti" ? "text-red-700 font-semibold" : durum === "bugün" ? "text-sicak-dim font-semibold" : ""}>
+                        {gun.split("-").reverse().join(".")} · {durum}
+                      </span>
+                      {z.musteri && (
+                        <>
+                          {" · "}
+                          <Link href={`/panel/musteriler/${z.musteri.id}`} className="text-soguk-dim hover:underline">
+                            {z.musteri.ad}
+                          </Link>
+                        </>
+                      )}
+                      {z.proje && (
+                        <>
+                          {" · "}
+                          <Link href={`/panel/projeler/${z.proje.id}`} className="text-soguk-dim hover:underline">
+                            {z.proje.ad}
+                          </Link>
+                        </>
+                      )}
+                      {z.teklif && (
+                        <>
+                          {" · "}
+                          <Link href={`/panel/teklifler/${z.teklif.id}`} className="text-soguk-dim hover:underline font-mono">
+                            TKL-{String(z.teklif.teklifNo).padStart(4, "0")}
+                          </Link>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <form action={ziyaretHatirlatmaTamamlandi.bind(null, z.id)}>
+                    <KaydetButonu basari="Hatırlatma tamamlandı." className="focus-ring shrink-0 text-xs bg-soguk text-white px-3 py-1.5 rounded-md font-medium hover:bg-soguk-dim">
+                      Tamamlandı
+                    </KaydetButonu>
+                  </form>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       )}
 
       {acil.length > 0 && (

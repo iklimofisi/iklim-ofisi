@@ -42,6 +42,8 @@ model Musteri {
   faturaAdresi  String?
   sevkAdresi    String?
   createdAt     DateTime @default(now())
+  // Firma sorumlusu (personel): bu müşterinin siparişlerinin cirosu, siparişi kim açarsa açsın bu kişiye yazılır
+  sorumluKullaniciId String?
 
   teklifler      Teklif[]
   cariHareketler CariHareket[]
@@ -52,6 +54,8 @@ model Musteri {
   isiHesaplari   IsiHesap[]       // Isı pompası hesapları
   klimaHesaplari KlimaHesap[]     // Klima / VRF hesapları
   havalandirmaHesaplari HavalandirmaHesap[] // Havalandırma hesapları
+
+  @@index([sorumluKullaniciId])
 }
 
 // YENİ: Müşteriye bağlı ek yetkililer (ana yetkili Musteri.yetkiliAdi alanında durmaya devam eder)

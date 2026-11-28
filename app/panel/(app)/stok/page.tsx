@@ -3,6 +3,8 @@ import { urunStokVeMaliyetGuncelle } from "@/lib/actions";
 import StokGirisFormu from "@/components/StokGirisFormu";
 import Link from "next/link";
 import { sayfaYetkisi } from "@/lib/oturum";
+import SayfaSekmeleri from "@/components/SayfaSekmeleri";
+import { urunSekmeleri } from "@/lib/urun-sekmeleri";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +14,7 @@ function paraFormat(n: number, pb: string = "TRY") {
 }
 
 export default async function StokYonetimiPage() {
-  await sayfaYetkisi("stok");
+  const giren = await sayfaYetkisi("stok");
   const [urunler, markalar] = await Promise.all([
     prisma.urun.findMany({
       include: { marka: true },
@@ -41,10 +43,17 @@ export default async function StokYonetimiPage() {
 
   return (
     <div className="space-y-6">
+      <div>
+        <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Ürün &amp; Fiyat</p>
+        <h1 className="font-display text-2xl font-semibold text-metin mb-4">Ürünler</h1>
+        <SayfaSekmeleri etiket="Ürün sayfaları" aktif="stok" sekmeler={urunSekmeleri(giren.rol)} />
+        <p className="text-sm text-metin/60 -mt-2">
+          Stok &amp; maliyet, Ürün kataloğundaki ürün kartının stok ve alış maliyeti görünümüdür (aynı kayıt). Mal kabuller stoğu otomatik artırır.
+        </p>
+      </div>
       <div className="flex justify-between items-center">
         <div>
-          <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">Kurumsal ERP / Envanter</p>
-          <h1 className="font-display text-2xl font-bold text-metin">Ağırlıklı Ortalama Stok & Maliyet Paneli</h1>
+          <h2 className="font-display text-lg font-semibold text-metin">Ağırlıklı ortalama stok &amp; maliyet</h2>
         </div>
         <Link href="/panel/ayarlar/urunler" className="text-xs bg-soguk-light text-soguk-dim px-3 py-2 rounded font-semibold hover:underline">
           + Ürün Kataloğunu Düzenle →
@@ -92,7 +101,7 @@ export default async function StokYonetimiPage() {
                 <th className="py-3 px-2 text-right w-24">Ek Gider</th>
                 <th className="py-3 px-2 text-right w-28">Net Birim Maliyet</th>
                 <th className="py-3 px-2 text-right w-28">Katalog Fiyatı</th>
-                <th className="py-3 px-2 text-right w-32">Min. Satış (%20 Kar)</th>
+                <th className="py-3 px-2 text-right w-32">Min. satış (hedef marj)</th>
                 <th className="py-3 px-3 text-center w-16">Kaydet</th>
               </tr>
             </thead>

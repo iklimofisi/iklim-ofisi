@@ -83,6 +83,7 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
         ? `${KUR_KAYNAGI_ETIKET[kaynak]} · ${kurlar?.tarih ?? "son"} bülteni. Değiştirirsen kur "elle" olarak kaydedilir.`
         : "TCMB kuruna şu an ulaşılamadı; kuru yazın.";
   const faturaKuruOnerisi = faturaKurGerekli ? tcmbKuru(kurlar, pb, "TCMB_DOVIZ") : null;
+  const sistemSozlesmesi = !!(await prisma.sozlesme.findUnique({ where: { teklifId: siparis.teklifId }, select: { id: true } }).catch(() => null));
   // Satılandan fazla satınalma (aynı malın iki kez sipariş edilmesi) uyarısı
   const alimKapsami = maliyetGor && siparis.satinalmaSiparisleri.length ? await siparisAlimKapsami(siparis.id) : null;
 
@@ -221,9 +222,18 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
           >
             📄 {siparis.sozlesmeDosyaAdi} — görüntüle/indir
           </a>
-        ) : (
-          <p className="text-sm text-metin/50">Yüklenmiş bir sözleşme PDF'i yok.</p>
+        ) : null}
+        {sistemSozlesmesi && (
+          <a
+            href={`/panel/teklifler/${siparis.teklifId}/sozlesme/yazdir`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="focus-ring flex items-center gap-2 text-sm text-soguk-dim hover:underline mt-1"
+          >
+            📝 Sistemde hazırlanan sözleşme — görüntüle / yazdır
+          </a>
         )}
+        {!siparis.sozlesmeDosyaAdi && !sistemSozlesmesi && <p className="text-sm text-metin/50">Yüklenmiş ya da sistemde hazırlanmış sözleşme yok.</p>}
         {siparis.ekNot && (
           <p className="text-sm text-metin/60 whitespace-pre-line mt-3 pt-3 border-t border-hat">{siparis.ekNot}</p>
         )}

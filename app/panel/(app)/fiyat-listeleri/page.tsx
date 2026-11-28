@@ -10,6 +10,8 @@ import KaydetButonu from "@/components/KaydetButonu";
 import { FIYAT_SUTUN_KALIPLARI, ikiFiyatli, iskontoKapsamGecerli } from "@/lib/fiyat-listesi";
 import SilButon from "@/components/SilButon";
 import { sayfaYetkisi } from "@/lib/oturum";
+import SayfaSekmeleri from "@/components/SayfaSekmeleri";
+import { urunSekmeleri } from "@/lib/urun-sekmeleri";
 import { yazabilir } from "@/lib/roller";
 
 export const dynamic = "force-dynamic";
@@ -52,8 +54,10 @@ export default async function FiyatListeleriSayfasi() {
 
   return (
     <div>
-      <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Panel</p>
-      <h1 className="font-display text-2xl font-semibold text-metin mb-2">Fiyat Listeleri</h1>
+      <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Ürün &amp; Fiyat</p>
+      <h1 className="font-display text-2xl font-semibold text-metin mb-4">Ürünler</h1>
+      <SayfaSekmeleri etiket="Ürün sayfaları" aktif="fiyat" sekmeler={urunSekmeleri(giren.rol)} />
+      <h2 className="font-display text-lg font-semibold text-metin mb-2">Fiyat listeleri</h2>
       <p className="text-sm text-metin/60 mb-8">
         Ürün fotoğraflı, müşteriye gönderilebilir fiyat listeleri. Ürünleri katalogdan seçebilir ya da elle ekleyebilirsiniz;
         liste PDF olarak indirilir. Ürün fotoğraflarını{" "}

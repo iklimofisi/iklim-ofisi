@@ -7,6 +7,8 @@ import { aylikOzet, alacakYaslandirma, aySiniri, donemAnahtari, donemAdi, gecerl
 import { donemKapat, donemAc } from "@/lib/finans-actions";
 import KayitIslemButonu from "@/components/KayitIslemButonu";
 import YazdirButon from "@/components/YazdirButon";
+import SayfaSekmeleri from "@/components/SayfaSekmeleri";
+import { raporSekmeleri } from "@/lib/rapor-sekmeleri";
 
 export const dynamic = "force-dynamic";
 
@@ -72,10 +74,14 @@ export default async function RaporSayfasi({ searchParams }: { searchParams?: { 
 
   return (
     <div>
+      <div className="print:hidden">
+        <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Finans</p>
+        <h1 className="font-display text-2xl font-semibold text-metin mb-4">Raporlar</h1>
+        <SayfaSekmeleri etiket="Rapor sayfaları" aktif="aylik" sekmeler={raporSekmeleri(giren?.rol)} />
+      </div>
       <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
-          <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Finans</p>
-          <h1 className="font-display text-2xl font-semibold text-metin">Yönetim Raporu · {donemAdi(ay)}</h1>
+          <h2 className="font-display text-xl font-semibold text-metin">Aylık rapor · {donemAdi(ay)}</h2>
           <p className="text-sm text-metin/60 mt-1">
             {kapali
               ? `Kapalı dönem · ${kapanis!.kapatanAdi} · ${kapanis!.kapanisTarihi.toLocaleDateString("tr-TR")} (rakamlar kapanış anındaki değerlerdir)`

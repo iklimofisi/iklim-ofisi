@@ -132,9 +132,6 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
 
   return (
     <div>
-      <Link href="/panel/satinalma" className="focus-ring text-sm text-metin/60 hover:text-metin mb-6 inline-block">
-        ← Satınalma
-      </Link>
       <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Satınalma</p>
       <h1 className="font-display text-2xl font-semibold text-metin mb-2">Satınalma Siparişleri</h1>
       <p className="text-sm text-metin/60 mb-6 max-w-3xl">

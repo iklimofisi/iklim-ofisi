@@ -63,6 +63,8 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
   });
 
   if (!musteri) notFound();
+  const kullanicilar = await prisma.kullanici.findMany({ select: { id: true, ad: true }, orderBy: { ad: "asc" } });
+  const sorumlu = kullanicilar.find((k) => k.id === musteri.sorumluKullaniciId);
 
   // İptal edilen hareketler listede üstü çizili görünür ama bakiyeye girmez
   const bakiye = musteri.cariHareketler.reduce(
@@ -80,6 +82,9 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
         <div>
           <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Müşteri</p>
           <h1 className="font-display text-2xl font-semibold text-metin">{musteri.ad}</h1>
+          <p className="text-xs text-metin/60 mt-1">
+            Firma sorumlusu: {sorumlu ? <b className="text-metin">{sorumlu.ad}</b> : <span className="text-sicak-dim">atanmamış (Admin, Müşteri Bilgilerini Düzenle’den seçer)</span>}
+          </p>
           {crmGor && (
           <a
             href="#gorusmeler"
@@ -149,6 +154,21 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
               <input name="sevkAdresi" defaultValue={musteri.sevkAdresi ?? ""} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm" />
             </div>
           </div>
+          {giren.rol === "ADMIN" && (
+          <div className="flex flex-wrap gap-3">
+            <div className="flex-1 min-w-[220px]">
+              <label className="block text-xs font-medium text-metin/60 mb-1">Firma sorumlusu (personel) — bu firmanın cirosu bu kişiye yazılır</label>
+              <select name="sorumluKullaniciId" defaultValue={musteri.sorumluKullaniciId ?? ""} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
+                <option value="">— Atanmamış —</option>
+                {kullanicilar.map((k) => (
+                  <option key={k.id} value={k.id}>
+                    {k.ad}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          )}
           <KaydetButonu className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors">
             Kaydet
           </KaydetButonu>

@@ -27,7 +27,11 @@ export function aktifMi(pathname: string, href: string) {
 export function ogeAktif(pathname: string, o: MenuOgesi, tum: MenuOgesi[] = []) {
   const eslesir = aktifMi(pathname, o.href) || (o.ek ?? []).some((h) => aktifMi(pathname, h));
   if (!eslesir) return false;
-  return !tum.some((b) => b.href !== o.href && b.href.startsWith(o.href + "/") && aktifMi(pathname, b.href));
+  // Daha özel bir satır (kendi adresi ya da "ek" adresi bu satırın alt adresi) eşleşiyorsa o seçili olur
+  // (ör. /panel/siparisler/raporlar → "Siparişler" değil "Raporlar")
+  return !tum.some(
+    (b) => b.href !== o.href && [b.href, ...(b.ek ?? [])].some((h) => h.startsWith(o.href + "/") && aktifMi(pathname, h))
+  );
 }
 
 export function useMenuDurumu(gruplar: MenuGrubu[]) {

@@ -56,33 +56,33 @@ export default async function AyarlarSayfasi() {
   return (
     <div>
       <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Panel</p>
-      <h1 className="font-display text-2xl font-semibold text-metin mb-2">Ayarlar</h1>
-      <p className="text-sm text-metin/60 mb-2">
-        Aşağıdaki <a href="#teklif-notlari" className="text-soguk-dim hover:underline">teklif notları</a>, teklif
-        hazırlarken grup grup seçilir ve teklif çıktısının altında görünür.
-      </p>
-      <p className="text-sm text-metin/60 mb-2">
-        <Link href="/panel/ayarlar/markalar" className="text-soguk-dim hover:underline">
+      <h1 className="font-display text-2xl font-semibold text-metin mb-4">Ayarlar</h1>
+      {/* Bölümler: tek sayfada, üstteki bağlantılarla atlanır */}
+      <nav aria-label="Ayar bölümleri" className="flex flex-wrap gap-1 border-b border-hat mb-6 sticky top-0 bg-zemin z-10 print:hidden">
+        {[
+          ["#sirket", "Şirket bilgileri"],
+          ["#eposta", "E-posta"],
+          ["#teklif-notlari", "Teklif notları"],
+        ].map(([h, ad]) => (
+          <a key={h} href={h} className="focus-ring -mb-px px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-metin/60 hover:text-soguk-dim hover:border-soguk">
+            {ad}
+          </a>
+        ))}
+        <Link href="/panel/ayarlar/markalar" className="focus-ring -mb-px px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-metin/60 hover:text-soguk-dim">
           Markalar →
-        </Link>{" "}
-        sayfasından teklif kalemlerinde seçilebilecek ürün markalarını ve
-        logolarını yönetebilirsin.
-      </p>
-      <p className="text-sm text-metin/60 mb-8">
-        <Link href="/panel/ayarlar/urunler" className="text-soguk-dim hover:underline">
-          Ürün Kataloğu →
-        </Link>{" "}
-        sayfasından liste fiyatlarını (örn. VRF ürünleri) sisteme yükle,
-        teklif hazırlarken kalemleri tek tıkla oradan seç.
-      </p>
+        </Link>
+        <Link href="/panel/ayarlar/urunler" className="focus-ring -mb-px px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-metin/60 hover:text-soguk-dim">
+          Ürün kataloğu →
+        </Link>
+      </nav>
 
-      {/* YENİ: ŞİRKET BİLGİLERİ VE ADRES AYARLARI KUTUSU */}
-      <div className="bg-yuzey border border-hat rounded-lg p-5 mb-8">
+      {/* ŞİRKET BİLGİLERİ (tek yer; teklif, sözleşme ve sipariş belgelerinde görünür) */}
+      <div id="sirket" className="bg-yuzey border border-hat rounded-lg p-5 mb-8 scroll-mt-14">
         <h2 className="font-display font-medium text-metin mb-1">
           🏢 Şirket Bilgileri & Adres Ayarları
         </h2>
         <p className="text-xs text-metin/60 mb-4">
-          Buradaki bilgiler hem **Teklif Çıktılarında (PDF)** hem de **Kurumsal İletişim Sayfasında** otomatik görünür.
+          Buradaki bilgiler teklif, sözleşme ve satınalma belgelerinde (PDF) ve sitenin iletişim sayfasında otomatik görünür.
         </p>
 
         <form action={sirketAyarlariGuncelle} className="space-y-3">
@@ -191,7 +191,7 @@ export default async function AyarlarSayfasi() {
 
       {/* TEKLİF NOTLARI — GRUPLU */}
       {/* E-POSTA DURUMU: web talebi / keşif / teklif e-postaları gidiyor mu? */}
-      <div id="eposta" className="bg-yuzey border border-hat rounded-lg p-5 mb-8 scroll-mt-6">
+      <div id="eposta" className="bg-yuzey border border-hat rounded-lg p-5 mb-8 scroll-mt-14">
         <h2 className="font-display font-medium text-metin mb-1">✉️ E-posta Durumu</h2>
         <p className="text-xs text-metin/60 mb-4">
           Web sitesinden gelen talepler ve keşif bildirimleri aşağıdaki adrese e-posta olarak gönderilir. Talepler e-posta
@@ -252,7 +252,7 @@ export default async function AyarlarSayfasi() {
         )}
       </div>
 
-      <div id="teklif-notlari" className="scroll-mt-6">
+      <div id="teklif-notlari" className="scroll-mt-14">
         <h2 className="font-display text-lg font-semibold text-metin mb-1">Teklif Notları</h2>
         <p className="text-xs text-metin/60 mb-4">
           <b>Not adı</b> yalnızca panelde görünür; kendi kodlarınızı yazabilirsiniz (örn. &quot;Ödeme Koşulları (Ç-9)&quot;).{" "}

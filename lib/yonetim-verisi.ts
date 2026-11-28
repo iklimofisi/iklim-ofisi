@@ -4,11 +4,12 @@
 // Tüm tutarlar KDV HARİÇ ve TL'dir. Dövizli siparişler kendi kuruyla (faturada farklı kur
 // kullanıldıysa fatura kuruyla), satınalmalar kendi kuruyla çevrilir. Kuru olmayan eski dövizli
 // kayıtlar ve açık teklifler bugünkü TCMB döviz satış kuruyla yaklaşık çevrilir (≈).
-// Ciro: admin onayı almış (iptal / red olmayan) siparişler, onay tarihine göre.
+// Ciro: admin onayı almış (iptal / red olmayan) siparişler, onay tarihine göre (lib/ciro.ts).
+// Personel cirosu: müşterinin firma sorumlusuna yazılır (siparişi kim açarsa açsın).
 // Brüt kâr: satış − siparişe bağlı (iptal / red olmayan) satınalmalar; montaj / işçilik dahil değildir.
 // -----------------------------------------------------------------------------
 import { prisma } from "@/lib/prisma";
-import { siparisNetTutari } from "@/lib/siparis-tutari";
+import { siparisSatisTl, ciroTarihi, CIRO_DURUM_HARIC, SORUMLUSUZ } from "@/lib/ciro";
 import { sasTl, maliyeteSayilirMi } from "@/lib/satinalma-siparis";
 import { teklifToplamlari } from "@/lib/teklif-hesap";
 import { getTcmbKurlari, tcmbKuru } from "@/lib/kur";
@@ -61,6 +62,7 @@ export async function yonetimVerisi() {
 
   const [
     kurlar,
+    kullanicilar,
     siparisler,
     acikSiparisler,
     bekleyenTeklifler,
@@ -77,23 +79,28 @@ export async function yonetimVerisi() {
     yaklasanOdeme,
   ] = await Promise.all([
     getTcmbKurlari(),
+    prisma.kullanici.findMany({ select: { id: true, ad: true } }),
     prisma.siparis.findMany({
-      where: { onayTarihi: { gte: onIkiAyOnce }, durum: { notIn: ["IPTAL", "REDDEDILDI", "ONAY_BEKLIYOR"] } },
+      where: {
+        durum: { notIn: [...CIRO_DURUM_HARIC] },
+        OR: [{ onayTarihi: { gte: onIkiAyOnce } }, { onayTarihi: null, olusturmaTarihi: { gte: onIkiAyOnce } }],
+      },
       select: {
         id: true,
         durum: true,
         onayTarihi: true,
+        olusturmaTarihi: true,
         tutarNet: true,
         paraBirimi: true,
         kur: true,
         faturaKur: true,
         kalemlerJson: true,
         olusturanAdi: true,
-        musteri: { select: { id: true, ad: true } },
+        musteri: { select: { id: true, ad: true, sorumluKullaniciId: true } },
         teklif: { select: { teklifNo: true, baslik: true, paraBirimi: true, olusturanAdi: true, kalemler: { select: { aciklama: true, adet: true, birimFiyat: true, iskontoYuzde: true } } } },
         satinalmaSiparisleri: { select: { durum: true, tutarNet: true, kur: true, paraBirimi: true, kalemler: { select: { aciklama: true, adet: true } } } },
       },
-      orderBy: { onayTarihi: "desc" },
+      orderBy: [{ onayTarihi: { sort: "desc", nulls: "last" } }, { olusturmaTarihi: "desc" }],
     }),
     prisma.siparis.groupBy({ by: ["durum"], _count: { _all: true }, where: { durum: { notIn: ["IPTAL", "REDDEDILDI"] } } }),
     prisma.teklif.findMany({
@@ -115,21 +122,11 @@ export async function yonetimVerisi() {
     prisma.tedarikciHareket.aggregate({ _sum: { tutar: true }, _count: { _all: true }, where: { iptalTarihi: null, tur: "ODEME", vadeTarihi: { gte: simdi, lte: onbesGunSonra } } }),
   ]);
 
+  const kullaniciAdi = new Map(kullanicilar.map((k) => [k.id, k.ad]));
+
   // --- Sipariş bazında satış / maliyet (TL, KDV hariç) ---
   const satirlar = siparisler.map((s) => {
-    const pb = s.paraBirimi ?? s.teklif.paraBirimi;
-    const net = siparisNetTutari({ tutarNet: s.tutarNet, teklif: { kalemler: s.teklif.kalemler } });
-    const kayitliKur = s.faturaKur ?? s.kur;
-    let yaklasik = false;
-    let kur = 1;
-    if (pb !== "TRY") {
-      if (kayitliKur && kayitliKur !== 1) kur = kayitliKur;
-      else {
-        kur = tcmbKuru(kurlar, pb, "TCMB_DOVIZ") ?? 0;
-        yaklasik = true;
-      }
-    }
-    const satis = net * kur;
+    const { tl: satis, pb, net, yaklasik } = siparisSatisTl(s, kurlar);
     const aktifSas = s.satinalmaSiparisleri.filter((x) => maliyeteSayilirMi(x.durum));
     const maliyet = aktifSas.reduce((a, x) => a + sasTl(x), 0);
     // Satılandan fazla alım (aynı malın iki kez sipariş edilmesi)
@@ -141,11 +138,11 @@ export async function yonetimVerisi() {
     return {
       id: s.id,
       durum: s.durum,
-      ay: s.onayTarihi ? ayKodu(s.onayTarihi) : "",
+      ay: ayKodu(ciroTarihi(s)),
       teklifNo: s.teklif.teklifNo,
       baslik: s.teklif.baslik,
       musteriAd: s.musteri.ad,
-      personel: s.teklif.olusturanAdi || s.olusturanAdi || "—",
+      personel: (s.musteri.sorumluKullaniciId && kullaniciAdi.get(s.musteri.sorumluKullaniciId)) || SORUMLUSUZ,
       pb,
       netDoviz: net,
       satis,

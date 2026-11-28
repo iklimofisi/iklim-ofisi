@@ -29,30 +29,23 @@ export default async function GenelCariPage() {
   // Borç Çeklerimiz (Tedarikçiye Verilen)
   const borcCekleri = tedarikciHareketleri.filter((h) => h.vadeTarihi && h.tur === "ODEME");
 
-  // Toplam Hesaplamaları
-  const toplamMusteriAlacagi = musteriHareketleri.reduce((a, h) => a + (h.tur === "BORC" ? h.tutar : -h.tutar), 0);
-  const toplamTedarikciBorcu = tedarikciHareketleri.reduce((a, h) => a + (h.tur === "BORC" ? h.tutar : -h.tutar), 0);
 
   return (
     <div className="space-y-6">
       <div>
-        <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">Konsolide Finans</p>
-        <h1 className="font-display text-2xl font-bold text-metin">Genel Finans, Satış / Satınalma & Çek Takip Ekranı</h1>
-        <p className="text-xs text-metin/60 mt-1">Tüm müşteri satışları, tedarikçi satınalmaları ve çek vadeleri tek bir ekranda.</p>
+        <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-1">Finans</p>
+        <h1 className="font-display text-2xl font-bold text-metin">Çek & Senet Takibi</h1>
+        <p className="text-xs text-metin/60 mt-1">
+          Müşteriden alınan ve tedarikçiye verilen vadeli çek / senetler. Alacak ve borç bakiyeleri{" "}
+          <Link href="/panel/cari" className="text-soguk-dim hover:underline">
+            Cari Hesap
+          </Link>{" "}
+          sayfasındadır.
+        </p>
       </div>
 
       {/* FINANS ÖZET KARTLARI */}
-      <div className="grid sm:grid-cols-4 gap-4">
-        <div className="bg-yuzey border border-hat p-4 rounded-lg">
-          <p className="text-xs font-semibold text-emerald-800 uppercase mb-1">Müşterilerden Toplam Alacak</p>
-          <p className="text-xl font-bold text-emerald-700 font-mono">{paraFormat(toplamMusteriAlacagi)}</p>
-        </div>
-
-        <div className="bg-yuzey border border-hat p-4 rounded-lg">
-          <p className="text-xs font-semibold text-rose-800 uppercase mb-1">Tedarikçilere Toplam Borç</p>
-          <p className="text-xl font-bold text-rose-700 font-mono">{paraFormat(toplamTedarikciBorcu)}</p>
-        </div>
-
+      <div className="grid sm:grid-cols-2 gap-4">
         <div className="bg-yuzey border border-hat p-4 rounded-lg">
           <p className="text-xs font-semibold text-blue-800 uppercase mb-1">Bekleyen Alacak Çekleri</p>
           <p className="text-xl font-bold text-blue-700 font-mono">

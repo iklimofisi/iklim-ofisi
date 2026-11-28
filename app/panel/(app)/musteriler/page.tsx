@@ -10,11 +10,16 @@ import { sayfaYetkisi } from "@/lib/oturum";
 export const dynamic = "force-dynamic";
 
 export default async function MusterilerPage() {
-  await sayfaYetkisi("musteri");
-  const musteriler = await prisma.musteri.findMany({ where: GERCEK_MUSTERI,
-    orderBy: { ad: "asc" },
-    include: { yetkililer: { select: { ad: true, telefon: true, email: true } } },
-  });
+  const giren = await sayfaYetkisi("musteri");
+  const [musteriler, kullanicilar] = await Promise.all([
+    prisma.musteri.findMany({
+      where: GERCEK_MUSTERI,
+      orderBy: { ad: "asc" },
+      include: { yetkililer: { select: { ad: true, telefon: true, email: true } } },
+    }),
+    prisma.kullanici.findMany({ select: { id: true, ad: true }, orderBy: { ad: "asc" } }),
+  ]);
+  const kullaniciAdi = new Map(kullanicilar.map((k) => [k.id, k.ad]));
 
   return (
     <div>
@@ -129,6 +134,20 @@ export default async function MusterilerPage() {
           </div>
         </div>
 
+        {giren.rol === "ADMIN" && (
+        <div className="mb-3 max-w-sm">
+          <label className="block text-xs font-medium text-metin/60 mb-1">Firma sorumlusu (cirosu bu kişiye yazılır)</label>
+          <select name="sorumluKullaniciId" defaultValue={giren.id} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
+            <option value="">— Atanmamış —</option>
+            {kullanicilar.map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.ad}
+              </option>
+            ))}
+          </select>
+        </div>
+        )}
+
         <KaydetButonu basari="Müşteri eklendi.">Müşteri Ekle</KaydetButonu>
       </form>
       </details>
@@ -145,7 +164,7 @@ export default async function MusterilerPage() {
             <span>Müşteri Yetkilisi</span>
             <span>Telefon</span>
             <span>E-posta</span>
-            <span>Vergi No</span>
+            <span>Sorumlu</span>
             <span className="w-36" />
           </div>
         }
@@ -160,6 +179,7 @@ export default async function MusterilerPage() {
             m.email,
             m.muhasebeEmail,
             m.vergiNo,
+            m.sorumluKullaniciId ? kullaniciAdi.get(m.sorumluKullaniciId) : "",
             ...m.yetkililer.flatMap((y) => [y.ad, y.telefon, y.email]),
           ]
             .filter(Boolean)
@@ -184,7 +204,9 @@ export default async function MusterilerPage() {
               </div>
               <span className="text-metin/70 truncate">{m.telefon || m.yetkiliTelefon || "—"}</span>
               <span className="text-metin/70 truncate">{m.email || m.yetkiliEmail || "—"}</span>
-              <span className="text-metin/50 truncate">{m.vergiNo || "—"}</span>
+              <span className={`truncate text-xs ${m.sorumluKullaniciId ? "text-metin/70" : "text-sicak-dim"}`} title="Firma sorumlusu">
+                {(m.sorumluKullaniciId && kullaniciAdi.get(m.sorumluKullaniciId)) || "atanmamış"}
+              </span>
               <div className="flex items-center justify-end gap-4 w-36 whitespace-nowrap">
                 <Link href={`/panel/musteriler/${m.id}`} className="text-xs font-medium text-soguk-dim hover:underline">
                   Görüntüle →

@@ -4,8 +4,9 @@ import KayitIslemButonu from "@/components/KayitIslemButonu";
 import { suankiKullanici, sayfaYetkisi } from "@/lib/oturum";
 import { finansYetkilisiMi } from "@/lib/roller";
 import TedarikciFiltre from "@/components/TedarikciFiltre";
-import Link from "next/link";
-import KaydetButonu from "@/components/KaydetButonu";
+import SonucluForm from "@/components/SonucluForm";
+import HareketTutarAlani from "@/components/HareketTutarAlani";
+import { getTcmbKurlari } from "@/lib/kur";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ export default async function TedarikciCariSayfasi({
   const onBesGunSonra = new Date();
   onBesGunSonra.setDate(bugun.getDate() + 15);
 
-  const [tedarikciler, hareketler, yaklasanOdemeler, giren] = await Promise.all([
+  const [tedarikciler, hareketler, yaklasanOdemeler, giren, kurlar] = await Promise.all([
     prisma.tedarikci.findMany({ orderBy: { ad: "asc" } }),
     prisma.tedarikciHareket.findMany({
       where: secili === "hepsi" ? {} : { tedarikciId: secili },
@@ -42,7 +43,10 @@ export default async function TedarikciCariSayfasi({
       orderBy: { vadeTarihi: "asc" },
     }),
     suankiKullanici(),
+    getTcmbKurlari(),
   ]);
+  const kutu = "focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white";
+  const bugunIso = new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
 
   // İptal edilen hareketler listede (üstü çizili) görünür ama bakiyeye girmez
   const bakiye = hareketler.reduce((a, h) => (h.iptalTarihi ? a : a + (h.tur === "BORC" ? h.tutar : -h.tutar)), 0);
@@ -50,10 +54,7 @@ export default async function TedarikciCariSayfasi({
 
   return (
     <div>
-      <Link href="/panel/satinalma" className="focus-ring text-sm text-metin/60 hover:text-metin mb-6 inline-block">
-        ← Satınalmaya dön
-      </Link>
-      <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Panel</p>
+      <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Satınalma</p>
       <h1 className="font-display text-2xl font-semibold text-metin mb-2">Tedarikçi Cari Hesabı & Fatura/Çek Takibi</h1>
       <p className="text-sm text-metin/60 mb-6">
         "Borç" bizim tedarikçiye borçlandığımız tutar (aldığımız mal/hizmet için kesilen fatura),
@@ -95,49 +96,63 @@ export default async function TedarikciCariSayfasi({
         </div>
       </div>
 
-      {/* YENİ CARİ HAREKET FORMU (ÇEK VADE VE FATURA/DEKONT YÜKLEME EKLENDİ) */}
-      <form action={tedarikciHareketEkle} className="bg-yuzey border border-hat rounded-lg p-5 mb-8 space-y-4">
+      {/* ELLE TEDARİKÇİ HAREKETİ: ödeme, çek, satınalma siparişi dışı fatura (TL ya da döviz) */}
+      <SonucluForm action={tedarikciHareketEkle} temizle className="bg-yuzey border border-hat rounded-lg p-5 mb-8 space-y-4">
+        <div>
+          <h2 className="font-display font-medium text-metin">Elle hareket ekle</h2>
+          <p className="text-xs text-metin/50 mt-0.5">
+            Satınalma siparişinden girilen alış faturaları buraya otomatik düşer; burada ödemeleri ve sipariş dışı faturaları (kira, nakliye, hizmet vb.)
+            girin. Aynı fatura numarası bir tedarikçiye iki kez işlenmez.
+          </p>
+        </div>
         <div className="grid sm:grid-cols-4 gap-3">
-          <div className="min-w-[180px]">
+          <div>
             <label className="block text-xs font-medium text-metin/60 mb-1">Tedarikçi *</label>
-            <select name="tedarikciId" required className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
+            <select name="tedarikciId" required defaultValue={secili !== "hepsi" ? secili : ""} className={kutu}>
+              <option value="" disabled>
+                Seçin…
+              </option>
               {tedarikciler.map((t) => (
-                <option key={t.id} value={t.id}>{t.ad}</option>
+                <option key={t.id} value={t.id}>
+                  {t.ad}
+                </option>
               ))}
             </select>
           </div>
-
           <div>
-            <label className="block text-xs font-medium text-metin/60 mb-1">İşlem Türü *</label>
-            <select name="tur" required className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white">
-              <option value="BORC">Borç (bize kesilen fatura / mal alındı)</option>
+            <label className="block text-xs font-medium text-metin/60 mb-1">İşlem türü *</label>
+            <select name="tur" required className={kutu}>
               <option value="ODEME">Ödeme (biz ödedik / çek verdik)</option>
+              <option value="BORC">Borç (sipariş dışı fatura)</option>
             </select>
           </div>
-
           <div>
-            <label className="block text-xs font-medium text-metin/60 mb-1">Tutar (TL) *</label>
-            <input name="tutar" type="text" inputMode="decimal" required className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm font-mono" placeholder="0,00" />
+            <label className="block text-xs font-medium text-metin/60 mb-1">Fatura no (borçta)</label>
+            <input name="faturaNo" maxLength={100} className={kutu} />
           </div>
-
           <div>
-            <label className="block text-xs font-semibold text-blue-800 mb-1">📷 Gelen Fatura / Dekont / Çek Görseli</label>
+            <label className="block text-xs font-medium text-metin/60 mb-1">İşlem tarihi</label>
+            <input name="tarih" type="date" defaultValue={bugunIso} max={bugunIso} className={kutu} />
+          </div>
+          <HareketTutarAlani kurlar={kurlar} kutu={kutu} />
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-semibold text-blue-800 mb-1">📷 Gelen fatura / dekont / çek görseli</label>
             <input name="evrak" type="file" accept=".pdf,.jpg,.jpeg,.png" className="focus-ring w-full text-xs border border-hat rounded-md p-1 bg-white" />
           </div>
         </div>
 
-        {/* ÇEK VADE - BANKA BİLGİLERİ ALANI */}
+        {/* ÇEK VADE - BANKA BİLGİLERİ */}
         <div className="grid sm:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-md border border-hat">
           <div>
-            <label className="block text-xs font-semibold text-rose-800 mb-1">Çek Ödeme Vade Tarihi</label>
+            <label className="block text-xs font-semibold text-rose-800 mb-1">Çek ödeme vade tarihi</label>
             <input name="vadeTarihi" type="date" className="focus-ring w-full border border-hat rounded-md px-2 py-1.5 text-xs bg-white" />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-metin/70 mb-1">Banka Adı</label>
+            <label className="block text-xs font-semibold text-metin/70 mb-1">Banka adı</label>
             <input name="banka" placeholder="Örn: Garanti BBVA" className="focus-ring w-full border border-hat rounded-md px-2 py-1.5 text-xs bg-white" />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-metin/70 mb-1">Verilen Çek No / Seri No</label>
+            <label className="block text-xs font-semibold text-metin/70 mb-1">Verilen çek no / seri no</label>
             <input name="cekNo" placeholder="Örn: 456789" className="focus-ring w-full border border-hat rounded-md px-2 py-1.5 text-xs bg-white" />
           </div>
         </div>
@@ -145,13 +160,13 @@ export default async function TedarikciCariSayfasi({
         <div className="flex gap-3 items-end">
           <div className="flex-1">
             <label className="block text-xs font-medium text-metin/60 mb-1">Açıklama *</label>
-            <input name="aciklama" required className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm" placeholder="Fatura No, çek detayları vb." />
+            <input name="aciklama" required maxLength={300} className={kutu} placeholder="Ödeme / fatura açıklaması" />
           </div>
-          <KaydetButonu basari="Eklendi." className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors shrink-0">
+          <button type="submit" className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors shrink-0">
             Ekle
-          </KaydetButonu>
+          </button>
         </div>
-      </form>
+      </SonucluForm>
 
       {/* TEDARİKÇİ CARİ HAREKETLERİ TABLOSU */}
       <div className="bg-yuzey border border-hat rounded-lg overflow-hidden">
@@ -215,6 +230,12 @@ export default async function TedarikciCariSayfasi({
                 <td className={`px-4 py-3 text-right font-mono font-bold ${h.tur === "BORC" ? "text-sicak-dim" : "text-soguk-dim"} ${h.iptalTarihi ? "line-through" : ""}`}>
                   {h.tur === "BORC" ? "+" : "-"}
                   {paraFormat(h.tutar)}
+                  {h.paraBirimi && h.dovizTutar != null && (
+                    <span className="block text-[10px] font-normal text-metin/50">
+                      {h.dovizTutar.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {h.paraBirimi}
+                      {h.kur ? ` · kur ${String(h.kur).replace(".", ",")}` : ""}
+                    </span>
+                  )}
                 </td>
 
                 <td className="px-4 py-3 text-right">

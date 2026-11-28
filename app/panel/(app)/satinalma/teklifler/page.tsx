@@ -66,9 +66,7 @@ export default async function SatinalmaTekliflerPage() {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <Link href="/panel/satinalma" className="focus-ring text-xs text-metin/60 hover:text-metin mb-2 inline-block">
-            ← Satınalmaya dön
-          </Link>
+          <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Satınalma</p>
           <h1 className="font-display text-2xl font-bold text-metin">Gelen Tedarikçi Teklifleri & İhale Kıyaslama</h1>
           <p className="text-xs text-metin/60 mt-1">Bir proje için aldığınız tüm tedarikçi fiyatlarını yan yana kıyaslayabilir, maliyet dosyalarını açabilirsiniz.</p>
         </div>

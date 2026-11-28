@@ -531,7 +531,7 @@ export default async function YonetimPaneli() {
       <div className="grid sm:grid-cols-2 gap-4">
         {[
           { baslik: `${v.buYil} en çok ciro yapan müşteriler`, liste: v.enIyiMusteriler, renkler: [R.soguk, R.sogukAcik, R.mavi, R.mor, R.gri] },
-          { baslik: `${v.buYil} personel (teklifi hazırlayan)`, liste: v.personel, renkler: [R.sicak, R.sari, R.yesil, R.mavi, R.gri] },
+          { baslik: `${v.buYil} personel cirosu (firma sorumlusu)`, liste: v.personel, renkler: [R.sicak, R.sari, R.yesil, R.mavi, R.gri] },
         ].map((b) => {
           const enCok = Math.max(1, ...b.liste.map((x) => x.ciro));
           return (

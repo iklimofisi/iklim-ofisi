@@ -59,8 +59,20 @@ function parseSayi(val: unknown): number {
 
 // --- Müşteriler ---
 
+// Firma sorumlusu: ciro raporları personeli bu alana göre hesaplar (siparişi kim açarsa açsın).
+// Sorumluyu yalnız Admin seçer / değiştirir; diğer kullanıcıların eklediği müşteride sorumlu ekleyen kişidir.
+// "" seçilirse sorumlu kaldırılır.
+async function sorumluOku(formData: FormData, varsayilan: string | null, rol?: string | null): Promise<string | null> {
+  if (rol !== "ADMIN" || !formData.has("sorumluKullaniciId")) return varsayilan;
+  const id = String(formData.get("sorumluKullaniciId") ?? "").trim();
+  if (!id) return null;
+  const k = await prisma.kullanici.findUnique({ where: { id }, select: { id: true } });
+  return k ? k.id : varsayilan;
+}
+
 export async function musteriEkle(formData: FormData) {
-  await yetki("musteriEkle", formData);
+  const ekleyen = await yetki("musteriEkle", formData);
+  const sorumluKullaniciId = await sorumluOku(formData, ekleyen?.id ?? null, ekleyen?.rol);
   const ad = String(formData.get("ad") ?? "").trim();
   const yetkiliAdi = String(formData.get("yetkiliAdi") ?? "").trim();
   const yetkiliTelefon = String(formData.get("yetkiliTelefon") ?? "").trim();
@@ -85,6 +97,7 @@ export async function musteriEkle(formData: FormData) {
       vergiNo: vergiNo || null,
       faturaAdresi: faturaAdresi || null,
       sevkAdresi: sevkAdresi || null,
+      sorumluKullaniciId,
     },
   });
   revalidatePath("/panel/musteriler");
@@ -92,8 +105,10 @@ export async function musteriEkle(formData: FormData) {
 }
 
 export async function musteriGuncelle(formData: FormData) {
-  await yetki("musteriGuncelle", formData);
+  const guncelleyen = await yetki("musteriGuncelle", formData);
   const musteriId = String(formData.get("musteriId") ?? "");
+  const mevcutSorumlu = musteriId ? (await prisma.musteri.findUnique({ where: { id: musteriId }, select: { sorumluKullaniciId: true } }))?.sorumluKullaniciId ?? null : null;
+  const sorumluKullaniciId = await sorumluOku(formData, mevcutSorumlu, guncelleyen?.rol);
   const ad = String(formData.get("ad") ?? "").trim();
   const yetkiliAdi = String(formData.get("yetkiliAdi") ?? "").trim();
   const yetkiliTelefon = String(formData.get("yetkiliTelefon") ?? "").trim();
@@ -119,10 +134,12 @@ export async function musteriGuncelle(formData: FormData) {
       vergiNo: vergiNo || null,
       faturaAdresi: faturaAdresi || null,
       sevkAdresi: sevkAdresi || null,
+      sorumluKullaniciId,
     },
   });
   revalidatePath(`/panel/musteriler/${musteriId}`);
   revalidatePath("/panel/musteriler");
+  revalidatePath("/panel");
 }
 
 // --- Müşteri Yetkilileri (birden fazla) ---
@@ -237,6 +254,21 @@ function kalemVerisi(k: ReturnType<typeof kalemleriOku>[number], sira: number) {
   };
 }
 
+// PROJE DURUMU teklifle birlikte ilerler (yalnız ileri; elle verilen Kaybedildi / İptal'e dokunulmaz):
+// projeye teklif bağlanınca Takipte → Teklif Verildi; teklif onaylanınca / sipariş onaylanınca → Kazanıldı.
+async function projeDurumunuIlerlet(projeId: string | null | undefined, hedef: "TEKLIF_VERILDI" | "KAZANILDI") {
+  if (!projeId) return;
+  const once = hedef === "TEKLIF_VERILDI" ? (["TAKIPTE"] as const) : (["TAKIPTE", "TEKLIF_VERILDI"] as const);
+  const r = await prisma.proje
+    .updateMany({ where: { id: projeId, ihaleDurumu: { in: [...once] } }, data: { ihaleDurumu: hedef } })
+    .catch(() => ({ count: 0 }));
+  if (r.count) {
+    revalidatePath(`/panel/projeler/${projeId}`);
+    revalidatePath("/panel/projeler");
+    revalidatePath("/panel/proje-takip");
+  }
+}
+
 // TEKLİF EKLEME (İLK TARİH KAYDEDİLİR) — Kopyalama ekranı da bu fonksiyonu kullanır
 export async function teklifEkle(formData: FormData) {
   const kullanici = await yetki("teklifEkle", formData);
@@ -321,6 +353,7 @@ export async function teklifEkle(formData: FormData) {
     });
     redirect(`${formSayfasi}?mesaj=teklif-kayit-hatasi`);
   }
+  await projeDurumunuIlerlet(projeId, "TEKLIF_VERILDI");
   revalidatePath("/panel/teklifler");
   revalidatePath("/panel");
   if (kopyaKaynak) revalidatePath(`/panel/teklifler/${kopyaKaynak.id}`);
@@ -456,6 +489,7 @@ export async function teklifGuncelle(formData: FormData) {
   revalidatePath("/panel/proje-takip");
   revalidatePath(`/panel/musteriler/${musteriId}`);
   if (mevcut.musteriId !== musteriId) revalidatePath(`/panel/musteriler/${mevcut.musteriId}`);
+  if (projeId && projeId !== mevcut.projeId) await projeDurumunuIlerlet(projeId, mevcut.durum === "ONAYLANDI" ? "KAZANILDI" : "TEKLIF_VERILDI");
   redirect(`/panel/teklifler/${teklifId}?mesaj=teklif-guncellendi`);
 }
 
@@ -495,7 +529,8 @@ async function teklifSiparisteMi(teklifId: string) {
 export async function teklifDurumGuncelle(teklifId: string, durum: "BEKLEMEDE" | "ONAYLANDI" | "REDDEDILDI") {
   await yetki("teklifDurumGuncelle", { teklifId, durum });
   if (durum !== "ONAYLANDI" && (await teklifSiparisteMi(teklifId))) return;
-  await prisma.teklif.update({ where: { id: teklifId }, data: { durum } });
+  const t = await prisma.teklif.update({ where: { id: teklifId }, data: { durum }, select: { projeId: true } });
+  if (durum === "ONAYLANDI") await projeDurumunuIlerlet(t.projeId, "KAZANILDI");
   revalidatePath("/panel/teklifler");
   revalidatePath(`/panel/teklifler/${teklifId}`);
   revalidatePath("/panel");
@@ -583,52 +618,93 @@ export async function teklifSil(teklifId: string) {
 
 // --- Cari Hesap (Müşteri) ---
 
-export async function cariHareketEkle(formData: FormData) {
+// ELLE CARİ HAREKET (müşteri): tahsilat, çek, sipariş dışı borç vb. Siparişin onay borcu ve kur farkı
+// otomatik yazılır; burada yalnız bunların dışındaki hareketler girilir (Logo vb. bağlanana kadar elle).
+// Tutar TL ya da döviz (döviz tutarı × kur = TL; döviz tutarı ve kur da saklanır). Tarih seçilebilir (kapalı ay hariç).
+export async function cariHareketEkle(formData: FormData): Promise<IslemSonucu> {
   await yetki("cariHareketEkle", formData);
   const musteriId = String(formData.get("musteriId") ?? "");
-  const aciklama = String(formData.get("aciklama") ?? "").trim();
-  const tur = String(formData.get("tur") ?? "BORC") as "BORC" | "ALACAK";
-  const tutar = parseSayi(formData.get("tutar"));
-  const odemeYontemi = String(formData.get("odemeYontemi") ?? "").trim();
-  const odemeDetay = String(formData.get("odemeDetay") ?? "").trim();
+  const aciklama = String(formData.get("aciklama") ?? "").trim().slice(0, 300);
+  const tur = String(formData.get("tur") ?? "BORC") === "ALACAK" ? "ALACAK" : "BORC";
+  const tutarVeri = await hareketTutariOku(formData);
+  if ("hata" in tutarVeri) return { hata: tutarVeri.hata };
+  const tarih = hareketTarihiOku(formData);
+  if (!tarih) return { hata: "İşlem tarihi anlaşılamadı." };
+  const odemeYontemi = String(formData.get("odemeYontemi") ?? "").trim().slice(0, 50);
+  const odemeDetay = String(formData.get("odemeDetay") ?? "").trim().slice(0, 300);
   const vadeTarihiStr = String(formData.get("vadeTarihi") ?? "");
-  const cekNo = String(formData.get("cekNo") ?? "").trim();
-  const banka = String(formData.get("banka") ?? "").trim();
+  const cekNo = String(formData.get("cekNo") ?? "").trim().slice(0, 100);
+  const banka = String(formData.get("banka") ?? "").trim().slice(0, 100);
   const dosya = formData.get("evrak") as File | null;
 
-  if (!musteriId || !aciklama || tutar <= 0) return;
-  if (await donemKilitliMi(new Date())) throw new Error(KILIT_MESAJI(new Date()));
+  if (!musteriId) return { hata: "Müşteri seçin." };
+  if (!aciklama) return { hata: "Açıklama yazın." };
+  if (await donemKilitliMi(tarih)) return { hata: KILIT_MESAJI(tarih) };
+  if (dosya && dosya.size > 8 * 1024 * 1024) return { hata: "Evrak 8 MB'tan büyük olamaz." };
+  const musteri = await prisma.musteri.findUnique({ where: { id: musteriId }, select: { id: true } });
+  if (!musteri) return { hata: "Müşteri bulunamadı." };
 
-  let evrakDosya: Buffer | undefined;
-  let evrakDosyaAdi: string | undefined;
-  let evrakDosyaTipi: string | undefined;
-
-  if (dosya && dosya.size > 0) {
-    evrakDosya = Buffer.from(await dosya.arrayBuffer());
-    evrakDosyaAdi = dosya.name;
-    evrakDosyaTipi = dosya.type || "application/pdf";
-  }
+  const evrak =
+    dosya && dosya.size > 0
+      ? { evrakDosya: Buffer.from(await dosya.arrayBuffer()), evrakDosyaAdi: dosya.name, evrakDosyaTipi: dosya.type || "application/pdf" }
+      : {};
 
   await prisma.cariHareket.create({
     data: {
       musteriId,
       aciklama,
       tur,
-      tutar,
+      tarih,
+      tutar: tutarVeri.tutar,
+      paraBirimi: tutarVeri.paraBirimi,
+      dovizTutar: tutarVeri.dovizTutar,
+      kur: tutarVeri.kur,
       odemeYontemi: odemeYontemi || null,
       odemeDetay: odemeDetay || null,
       vadeTarihi: vadeTarihiStr ? new Date(vadeTarihiStr) : null,
       cekNo: cekNo || null,
       banka: banka || null,
-      evrakDosya,
-      evrakDosyaAdi,
-      evrakDosyaTipi,
+      ...evrak,
     },
   });
 
   revalidatePath("/panel/cari");
+  revalidatePath("/panel/genel-cari");
   revalidatePath(`/panel/musteriler/${musteriId}`);
   revalidatePath("/panel");
+  return { tamam: tur === "ALACAK" ? "Tahsilat kaydedildi." : "Borç kaydedildi." };
+}
+
+// Elle hareketin tutarı: TL ya da döviz (paraBirimi + dovizTutar + kur → TL). Binlik ayraçlı yazımlar doğru okunur.
+async function hareketTutariOku(fd: FormData): Promise<
+  { tutar: number; paraBirimi: string | null; dovizTutar: number | null; kur: number | null } | { hata: string }
+> {
+  const pb = String(fd.get("paraBirimi") ?? "TRY");
+  if (pb === "EUR" || pb === "USD" || pb === "GBP") {
+    const dovizYazi = String(fd.get("dovizTutar") ?? "").trim();
+    const doviz = tutarOku(dovizYazi);
+    const kurYazi = String(fd.get("kur") ?? "").trim();
+    const kur = kurOku(kurYazi);
+    if (!doviz || doviz <= 0) return { hata: `${pb} tutarını yazın (örn. 12.500,00).` };
+    if (!kur) return { hata: kurYazi ? `Kur anlaşılamadı: "${kurYazi}" (örn. 50,75).` : `1 ${pb} kaç TL? Kuru yazın.` };
+    return { tutar: yuvarla2(doviz * kur), paraBirimi: pb, dovizTutar: yuvarla2(doviz), kur };
+  }
+  const yazi = String(fd.get("tutar") ?? "").trim();
+  const tutar = tutarOku(yazi);
+  if (!tutar || tutar <= 0) return { hata: yazi ? `Tutar anlaşılamadı: "${yazi}" (örn. 12.500,00).` : "Tutarı yazın." };
+  return { tutar: yuvarla2(tutar), paraBirimi: null, dovizTutar: null, kur: null };
+}
+
+// İşlem tarihi (boşsa bugün); ileri tarih kabul edilmez (vade için vade alanı kullanılır)
+function hareketTarihiOku(fd: FormData): Date | null {
+  const t = String(fd.get("tarih") ?? "").trim();
+  if (!t) return new Date();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(t)) return null;
+  const bugun = new Date().toISOString().slice(0, 10);
+  if (t === bugun) return new Date();
+  const d = new Date(`${t}T12:00:00+03:00`);
+  if (Number.isNaN(d.getTime()) || d.getTime() > Date.now() + 24 * 3600 * 1000) return null;
+  return d;
 }
 
 // FİNANSAL HAREKET İPTALİ: tahsilat / borç kaydı silinmez. İptal edilen hareket bakiyeye ve
@@ -657,47 +733,65 @@ export async function cariHareketSil(hareketId: string) {
 
 // --- Satınalma: Tedarikçi Cari ---
 
-export async function tedarikciHareketEkle(formData: FormData) {
+// ELLE TEDARİKÇİ HAREKETİ: ödeme, çek, satınalma siparişi dışı alış faturası vb. Satınalma siparişinden girilen
+// alış faturaları otomatik yazılır; burada yalnız bunların dışındakiler girilir. TL ya da döviz; tarih seçilebilir.
+export async function tedarikciHareketEkle(formData: FormData): Promise<IslemSonucu> {
   await yetki("tedarikciHareketEkle", formData);
   const tedarikciId = String(formData.get("tedarikciId") ?? "");
-  const aciklama = String(formData.get("aciklama") ?? "").trim();
-  const tur = String(formData.get("tur") ?? "BORC") as "BORC" | "ODEME";
-  const tutar = parseSayi(formData.get("tutar"));
+  const aciklama = String(formData.get("aciklama") ?? "").trim().slice(0, 300);
+  const tur = String(formData.get("tur") ?? "BORC") === "ODEME" ? "ODEME" : "BORC";
+  const tutarVeri = await hareketTutariOku(formData);
+  if ("hata" in tutarVeri) return { hata: tutarVeri.hata };
+  const tarih = hareketTarihiOku(formData);
+  if (!tarih) return { hata: "İşlem tarihi anlaşılamadı." };
   const vadeTarihiStr = String(formData.get("vadeTarihi") ?? "");
-  const cekNo = String(formData.get("cekNo") ?? "").trim();
-  const banka = String(formData.get("banka") ?? "").trim();
+  const cekNo = String(formData.get("cekNo") ?? "").trim().slice(0, 100);
+  const banka = String(formData.get("banka") ?? "").trim().slice(0, 100);
+  const faturaNo = String(formData.get("faturaNo") ?? "").trim().slice(0, 100);
   const dosya = formData.get("evrak") as File | null;
 
-  if (!tedarikciId || !aciklama || tutar <= 0) return;
-  if (await donemKilitliMi(new Date())) throw new Error(KILIT_MESAJI(new Date()));
-
-  let evrakDosya: Buffer | undefined;
-  let evrakDosyaAdi: string | undefined;
-  let evrakDosyaTipi: string | undefined;
-
-  if (dosya && dosya.size > 0) {
-    evrakDosya = Buffer.from(await dosya.arrayBuffer());
-    evrakDosyaAdi = dosya.name;
-    evrakDosyaTipi = dosya.type || "application/pdf";
+  if (!tedarikciId) return { hata: "Tedarikçi seçin." };
+  if (!aciklama) return { hata: "Açıklama yazın." };
+  if (await donemKilitliMi(tarih)) return { hata: KILIT_MESAJI(tarih) };
+  if (dosya && dosya.size > 8 * 1024 * 1024) return { hata: "Evrak 8 MB'tan büyük olamaz." };
+  const ted = await prisma.tedarikci.findUnique({ where: { id: tedarikciId }, select: { id: true } });
+  if (!ted) return { hata: "Tedarikçi bulunamadı." };
+  if (faturaNo && tur === "BORC") {
+    const ayni = await prisma.tedarikciHareket.findFirst({
+      where: { tedarikciId, faturaNo: { equals: faturaNo, mode: "insensitive" }, iptalTarihi: null },
+      select: { id: true },
+    });
+    if (ayni) return { hata: `${faturaNo} numaralı fatura bu tedarikçiye zaten işlenmiş (satınalma siparişinden ya da elle).` };
   }
+
+  const evrak =
+    dosya && dosya.size > 0
+      ? { evrakDosya: Buffer.from(await dosya.arrayBuffer()), evrakDosyaAdi: dosya.name, evrakDosyaTipi: dosya.type || "application/pdf" }
+      : {};
 
   await prisma.tedarikciHareket.create({
     data: {
       tedarikciId,
       aciklama,
       tur,
-      tutar,
+      tarih,
+      tutar: tutarVeri.tutar,
+      paraBirimi: tutarVeri.paraBirimi,
+      dovizTutar: tutarVeri.dovizTutar,
+      kur: tutarVeri.kur,
+      faturaNo: faturaNo || null,
       vadeTarihi: vadeTarihiStr ? new Date(vadeTarihiStr) : null,
       cekNo: cekNo || null,
       banka: banka || null,
-      evrakDosya,
-      evrakDosyaAdi,
-      evrakDosyaTipi,
+      ...evrak,
     },
   });
 
   revalidatePath("/panel/satinalma/cari");
+  revalidatePath("/panel/cari");
+  revalidatePath("/panel/genel-cari");
   revalidatePath("/panel");
+  return { tamam: tur === "ODEME" ? "Ödeme kaydedildi." : "Borç (fatura) kaydedildi." };
 }
 
 // FİNANSAL HAREKET İPTALİ (tedarikçi): silinmez, iptal edilir (bakiyeden düşer). Yalnız admin.
@@ -1133,11 +1227,13 @@ export async function siparisTalebiOlustur(formData: FormData): Promise<IslemSon
   // onay kaydı eklenmiş teklif PDF'i sipariş belgesi olarak saklanır.
   const dosyaVar = !!dosya && dosya.size > 0;
   const linktenOnay = musteriOnayiGecerli(teklif);
-  if (!dosyaVar && !linktenOnay) {
+  // Teklif sayfasında sistemde hazırlanmış sözleşme varsa o da yeterlidir (sipariş sayfasında bağlantısı görünür)
+  const sistemSozlesmesi = !dosyaVar && !linktenOnay ? !!(await prisma.sozlesme.findUnique({ where: { teklifId }, select: { id: true } }).catch(() => null)) : false;
+  if (!dosyaVar && !linktenOnay && !sistemSozlesmesi) {
     return {
       hata: teklif.musteriOnayTarihi
-        ? `Müşteri Rev. ${teklif.musteriOnayRevizyon ?? "?"} sürümünü onaylamıştı; teklif sonra değişti (şu an Rev. ${teklif.revizyonNo}). Sözleşme PDF'i ekleyin ya da teklifi "Beklemede"ye alıp müşteriye linkten yeniden onaylatın.`
-        : "Sözleşme / anlaşma PDF'ini ekleyin ya da teklifi müşteriye link (WhatsApp / e-posta) ile gönderip onaylatın.",
+        ? `Müşteri Rev. ${teklif.musteriOnayRevizyon ?? "?"} sürümünü onaylamıştı; teklif sonra değişti (şu an Rev. ${teklif.revizyonNo}). Sözleşme PDF'i ekleyin, teklif sayfasından sözleşme hazırlayın ya da teklifi "Beklemede"ye alıp müşteriye linkten yeniden onaylatın.`
+        : "Sözleşme / anlaşma PDF'ini ekleyin, teklif sayfasından sözleşme hazırlayın ya da teklifi müşteriye link (WhatsApp / e-posta) ile gönderip onaylatın.",
     };
   }
   let evrak: { sozlesmeDosya?: Buffer; sozlesmeDosyaAdi?: string; sozlesmeDosyaTipi?: string } = {};
@@ -1273,6 +1369,7 @@ export async function siparisOnayla(formData: FormData): Promise<IslemSonucu> {
     throw e;
   }
 
+  await projeDurumunuIlerlet(siparis.teklif.projeId, "KAZANILDI");
   revalidatePath("/panel/siparisler");
   revalidatePath(`/panel/siparisler/${siparisId}`);
   revalidatePath("/panel/cari");
@@ -1424,8 +1521,23 @@ export async function siparisFaturaGuncelle(formData: FormData): Promise<IslemSo
   }
   if (kurFarki && (await donemKilitliMi(faturaTarihi))) return { hata: KILIT_MESAJI(faturaTarihi) };
 
+  // Müşteri borcu muhasebede fatura tarihinde doğar: onayda yazılan borç kaydı fatura tarihine taşınır ve
+  // açıklamasına fatura no eklenir (iki ay da açıksa; kapalı ayda kayıt yerinde kalır).
+  const onayKaydi = await prisma.cariHareket.findFirst({
+    where: { siparisId, iptalTarihi: null, aciklama: { startsWith: "Sipariş Onayı" } },
+    select: { id: true, tarih: true, aciklama: true },
+  });
+  const onayTasinir = !!onayKaydi && !(await donemKilitliMi(onayKaydi.tarih)) && !(await donemKilitliMi(faturaTarihi));
+
   await prisma.$transaction(async (tx) => {
     await tx.siparis.update({ where: { id: siparisId }, data: { faturaNo, faturaTarihi, durum: "FATURALANDI", faturaKur } });
+    if (onayKaydi && onayTasinir) {
+      const ek = ` · Fatura ${faturaNo}`;
+      await tx.cariHareket.update({
+        where: { id: onayKaydi.id },
+        data: { tarih: faturaTarihi, aciklama: (onayKaydi.aciklama.includes(ek) ? onayKaydi.aciklama : onayKaydi.aciklama.replace(/ · Fatura .*$/, "") + ek).slice(0, 300) },
+      });
+    }
     if (kurFarki) {
       await tx.cariHareket.create({
         data: {
@@ -1450,7 +1562,9 @@ export async function siparisFaturaGuncelle(formData: FormData): Promise<IslemSo
   return {
     tamam: kurFarki
       ? `Fatura kaydedildi; kur farkı ${kurFarki.tutar.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL ${kurFarki.tur === "BORC" ? "borç" : "alacak"} olarak cari hesaba işlendi.`
-      : "Fatura kaydedildi.",
+      : onayKaydi && !onayTasinir
+        ? "Fatura kaydedildi. Onay borcu kapalı bir aya ait olduğu için cari kaydın tarihi değiştirilmedi."
+        : "Fatura kaydedildi; müşterinin cari borcu fatura tarihine alındı.",
   };
 }
 
@@ -1898,6 +2012,7 @@ export async function webTalebiDonustur(formData: FormData) {
           yetkiliAdi: yetkiliAdi || null,
           yetkiliTelefon: yetkiliTelefon || null,
           yetkiliEmail: yetkiliEmail || null,
+          sorumluKullaniciId: kullanici?.id ?? null, // talebi dönüştüren firma sorumlusu olur
         },
       });
       mId = m.id;
@@ -2715,6 +2830,7 @@ export async function ziyaretHatirlatmaTamamlandi(id: string) {
   if (ziyaret.musteriId) revalidatePath(`/panel/musteriler/${ziyaret.musteriId}`);
   if (ziyaret.projeId) revalidatePath(`/panel/projeler/${ziyaret.projeId}`);
   if (ziyaret.teklifId) revalidatePath(`/panel/teklifler/${ziyaret.teklifId}`);
+  revalidatePath("/panel/notlar");
   revalidatePath("/panel/ziyaretler");
   revalidatePath("/panel");
 }
@@ -3046,7 +3162,8 @@ export async function projeTakipNotuGuncelle(formData: FormData) {
 // TEKLİF EKRANINDAN HIZLI MÜŞTERİ EKLEME
 // TEKLİF VEYA PROJE EKRANINDAN ESNEK HIZLI MÜŞTERİ EKLEME
 export async function hizliMusteriEkle(formData: FormData) {
-  await yetki("hizliMusteriEkle", formData);
+  const ekleyen = await yetki("hizliMusteriEkle", formData);
+  const sorumluKullaniciId = await sorumluOku(formData, ekleyen?.id ?? null, ekleyen?.rol);
   // Yalnızca panel içi adreslere geri dönülür
   const yonlendirGirdi = String(formData.get("yonlendirPath") ?? "").trim();
   const yonlendirPath = /^\/panel\/[\w\-/]*$/.test(yonlendirGirdi) ? yonlendirGirdi : "/panel/teklifler/yeni";
@@ -3075,6 +3192,7 @@ export async function hizliMusteriEkle(formData: FormData) {
       vergiNo: vergiNo || null,
       faturaAdresi: faturaAdresi || null,
       sevkAdresi: sevkAdresi || null,
+      sorumluKullaniciId,
     },
   });
 

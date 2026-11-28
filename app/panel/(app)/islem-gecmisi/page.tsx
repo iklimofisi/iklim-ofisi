@@ -290,9 +290,7 @@ export default async function IslemGecmisiSayfasi({
 
       {tabloYok && (
         <div className="bg-sicak-light text-sicak-dim rounded-md px-4 py-3 mb-6 text-sm">
-          İşlem geçmişi tablosu veritabanında henüz yok. Neon SQL Editor&apos;de
-          <b> prisma/manuel/2026-09-27_islem_kaydi_ve_whatsapp.sql</b> dosyasını çalıştırın; sonrasında yapılan işlemler
-          burada görünmeye başlar.
+          İşlem geçmişi şu an yüklenemedi; sayfayı yenileyin.
         </div>
       )}
 

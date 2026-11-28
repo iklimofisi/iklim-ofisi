@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { cariHareketEkle } from "@/lib/actions";
 import { bildirimGoster } from "@/lib/bildirim";
 
@@ -18,8 +19,11 @@ export default function OdemeAlModal({
   musteriler: { id: string; ad: string }[];
   seciliMusteriId?: string;
 }) {
+  const router = useRouter();
   const [acik, setAcik] = useState(false);
   const [yontem, setYontem] = useState<(typeof yontemler)[number]["deger"]>("HAVALE");
+  const [bekliyor, setBekliyor] = useState(false);
+  const bugun = new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
 
   const secilenYontem = yontemler.find((y) => y.deger === yontem)!;
 
@@ -41,10 +45,22 @@ export default function OdemeAlModal({
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
-                const formData = new FormData(e.currentTarget);
-                await cariHareketEkle(formData);
-                setAcik(false);
-                bildirimGoster("Ödeme kaydedildi.");
+                if (bekliyor) return;
+                setBekliyor(true);
+                try {
+                  const r = await cariHareketEkle(new FormData(e.currentTarget));
+                  if (r?.hata) {
+                    bildirimGoster(r.hata, { hata: true });
+                    return;
+                  }
+                  setAcik(false);
+                  bildirimGoster(r?.tamam ?? "Ödeme kaydedildi.");
+                  router.refresh();
+                } catch {
+                  bildirimGoster("Ödeme kaydedilemedi; sayfayı yenileyip tekrar deneyin.", { hata: true });
+                } finally {
+                  setBekliyor(false);
+                }
               }}
               className="space-y-4"
             >
@@ -65,13 +81,19 @@ export default function OdemeAlModal({
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-metin/60 mb-1">Tutar</label>
+                <label className="block text-xs font-medium text-metin/60 mb-1">Tutar (TL)</label>
                 <input
                   name="tutar"
-                  type="number"
+                  inputMode="decimal"
                   required
-                  className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm"
+                  placeholder="örn. 12.500,00"
+                  className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm font-mono"
                 />
+                <p className="text-[11px] text-metin/50 mt-1">Döviz tahsilat için sayfadaki “Elle hareket ekle” formunu kullanın.</p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-metin/60 mb-1">Tahsilat tarihi</label>
+                <input name="tarih" type="date" defaultValue={bugun} max={bugun} className="focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-metin/60 mb-1">Ödeme Yöntemi</label>
@@ -116,9 +138,10 @@ export default function OdemeAlModal({
                 </button>
                 <button
                   type="submit"
-                  className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors"
+                  disabled={bekliyor}
+                  className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors disabled:opacity-60"
                 >
-                  Kaydet
+                  {bekliyor ? "Kaydediliyor…" : "Kaydet"}
                 </button>
               </div>
             </form>

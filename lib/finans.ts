@@ -5,7 +5,8 @@
 // Ay sınırları Türkiye saatine göredir (UTC+3).
 // -----------------------------------------------------------------------------
 import { prisma } from "@/lib/prisma";
-import { siparisNetTutari } from "@/lib/siparis-tutari";
+import { siparisSatisTl } from "@/lib/ciro";
+import { getTcmbKurlari } from "@/lib/kur";
 import { sasTl, maliyeteSayilirMi } from "@/lib/satinalma-siparis";
 
 const TR_FARK = 3 * 3600 * 1000;
@@ -72,17 +73,13 @@ export type AylikOzet = {
   borcBakiyesi: number; // ay sonu itibarıyla toplam tedarikçi bakiyesi (TL)
 };
 
-// Dövizli siparişin TL karşılığı: faturada kur yazıldıysa fatura kuru, yoksa onay kuru
-const toplamTl = (s: { paraBirimi: string | null; kur: number; faturaKur?: number | null; tutarNet: number | null; teklif: { paraBirimi: string; kalemler: { adet: number; birimFiyat: number; iskontoYuzde: number }[] } }) => {
-  const net = siparisNetTutari(s);
-  return (s.paraBirimi ?? s.teklif.paraBirimi) === "TRY" ? net : net * (s.faturaKur ?? s.kur);
-};
+// Siparişin TL karşılığı: ortak ciro tanımı (lib/ciro.ts)
 
 export async function aylikOzet(donem: string): Promise<AylikOzet> {
   const { bas, son } = aySiniri(donem);
   const aralik = { gte: bas, lt: son };
 
-  const [siparisler, cari, tedarikci, satinalmalar, teklifler, cariBakiye, tedBakiye] = await Promise.all([
+  const [siparisler, cari, tedarikci, satinalmalar, teklifler, cariBakiye, tedBakiye, kurlar] = await Promise.all([
     // Onay tarihi (yoksa açılış tarihi) bu ayda olan, iptal / red olmayan siparişler
     prisma.siparis.findMany({
       where: {
@@ -106,6 +103,7 @@ export async function aylikOzet(donem: string): Promise<AylikOzet> {
     prisma.teklif.groupBy({ by: ["durum"], where: { arsivTarihi: null, tarih: aralik }, _count: { _all: true } }),
     prisma.cariHareket.groupBy({ by: ["tur"], where: { iptalTarihi: null, tarih: { lt: son } }, _sum: { tutar: true } }),
     prisma.tedarikciHareket.groupBy({ by: ["tur"], where: { iptalTarihi: null, tarih: { lt: son } }, _sum: { tutar: true } }),
+    getTcmbKurlari(),
   ]);
 
   let ciro = 0;
@@ -113,7 +111,7 @@ export async function aylikOzet(donem: string): Promise<AylikOzet> {
   let maliyet = 0;
   let maliyetliSiparisSayisi = 0;
   for (const s of siparisler) {
-    const tl = toplamTl(s);
+    const tl = siparisSatisTl(s, kurlar).tl;
     ciro += tl;
     const bagli = s.satinalmaSiparisleri.filter((x) => maliyeteSayilirMi(x.durum));
     if (bagli.length) {

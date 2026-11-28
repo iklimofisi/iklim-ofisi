@@ -203,7 +203,10 @@ export default async function SatisPaneli({ donem }: { donem: Donem }) {
       <div className="grid lg:grid-cols-5 gap-4">
         {/* Kişi bazında */}
         <div className="lg:col-span-3 bg-yuzey border border-hat rounded-lg p-5 overflow-x-auto">
-          <h3 className="font-display font-medium text-metin mb-3">Kişi Bazında</h3>
+          <h3 className="font-display font-medium text-metin mb-1">Kişi Bazında (teklif faaliyeti)</h3>
+          <p className="text-[11px] text-metin/45 mb-3">
+            Teklifi hazırlayana göre teklif / onay / görüşme sayıları. Ciro (firma sorumlusuna göre) Raporlar → Ciro &amp; personel sayfasındadır.
+          </p>
           {kisiListesi.length === 0 ? (
             <p className="text-sm text-metin/50">Bu dönemde kayıt yok.</p>
           ) : (

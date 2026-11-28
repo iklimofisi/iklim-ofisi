@@ -435,14 +435,14 @@ export function yonetimRaporuPdf(v: YonetimVerisi, sirket: { unvan?: string | nu
     y += 5;
   };
   siralama(`${v.buYil} en çok ciro yapan müşteriler`, v.enIyiMusteriler, SOGUK);
-  siralama(`${v.buYil} personel (teklifi hazırlayan)`, v.personel, SICAK);
+  siralama(`${v.buYil} personel cirosu (firma sorumlusu)`, v.personel, SICAK);
 
   // Not
   yerAc(14);
   yazi(6.5, false, M45);
   doc.text(
     doc.splitTextToSize(
-      "Ciro: admin onayı almış (iptal / red olmayan) siparişler, onay tarihine göre. Brüt kâr: satış - siparişe bağlı satınalmalar (montaj / işçilik dahil değil). Açık teklif hacmi bugünkü TCMB döviz satış kuruyla yaklaşıktır. Bu rapor maliyet ve kâr bilgisi içerir; şirket içi kullanım içindir.",
+      "Ciro: admin onayı almış (iptal / red olmayan) siparişler, onay tarihine göre. Personel cirosu müşterinin firma sorumlusuna yazılır. Brüt kâr: satış - siparişe bağlı satınalmalar (montaj / işçilik dahil değil). Açık teklif hacmi bugünkü TCMB döviz satış kuruyla yaklaşıktır. Bu rapor maliyet ve kâr bilgisi içerir; şirket içi kullanım içindir.",
       GEN
     ),
     SOL,

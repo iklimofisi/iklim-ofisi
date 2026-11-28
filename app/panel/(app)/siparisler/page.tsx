@@ -3,6 +3,8 @@ import Link from "next/link";
 import HizliAramaListesi from "@/components/HizliAramaListesi";
 import { sayfaYetkisi } from "@/lib/oturum";
 
+import type { SiparisDurum } from "@prisma/client";
+
 export const dynamic = "force-dynamic";
 
 const durumEtiket: Record<string, string> = {
@@ -29,16 +31,35 @@ const durumRenk: Record<string, string> = {
   REDDEDILDI: "bg-hat text-metin/40",
 };
 
-export default async function SiparislerSayfasi() {
+// Süzgeç sekmeleri (satınalma siparişleri listesiyle aynı mantık)
+const SUZGECLER: { kod: string; ad: string; durumlar?: SiparisDurum[] }[] = [
+  { kod: "acik", ad: "Açık", durumlar: ["ONAY_BEKLIYOR", "HAZIRLANIYOR", "KISMEN_SEVK_EDILDI", "SEVK_EDILDI", "KISMEN_TESLIM_EDILDI", "TESLIM_EDILDI"] },
+  { kod: "onay", ad: "Onay bekleyen", durumlar: ["ONAY_BEKLIYOR"] },
+  { kod: "hazir", ad: "Hazırlanıyor", durumlar: ["HAZIRLANIYOR"] },
+  { kod: "sevk", ad: "Sevk / teslim sürecinde", durumlar: ["KISMEN_SEVK_EDILDI", "SEVK_EDILDI", "KISMEN_TESLIM_EDILDI"] },
+  { kod: "faturasiz", ad: "Teslim edildi, faturasız", durumlar: ["TESLIM_EDILDI"] },
+  { kod: "fatura", ad: "Faturalanan", durumlar: ["FATURALANDI"] },
+  { kod: "iptal", ad: "İptal / red", durumlar: ["IPTAL", "REDDEDILDI"] },
+  { kod: "tum", ad: "Tümü" },
+];
+
+export default async function SiparislerSayfasi({ searchParams }: { searchParams?: { durum?: string } }) {
   await sayfaYetkisi("siparis");
-  const siparisler = await prisma.siparis.findMany({
-    include: {
-      musteri: true,
-      teklif: { include: { kalemler: true } },
-      sevkiyatlar: true,
-    },
-    orderBy: { olusturmaTarihi: "desc" },
-  });
+  const suzgec = SUZGECLER.find((s) => s.kod === searchParams?.durum) ?? SUZGECLER[0];
+  const [siparisler, sayilar] = await Promise.all([
+    prisma.siparis.findMany({
+      where: suzgec.durumlar ? { durum: { in: suzgec.durumlar } } : {},
+      include: {
+        musteri: true,
+        teklif: { include: { kalemler: true } },
+        sevkiyatlar: true,
+      },
+      orderBy: { olusturmaTarihi: "desc" },
+    }),
+    prisma.siparis.groupBy({ by: ["durum"], _count: { _all: true } }),
+  ]);
+  const say = (s: (typeof SUZGECLER)[number]) =>
+    sayilar.filter((x) => !s.durumlar || s.durumlar.includes(x.durum)).reduce((a, x) => a + x._count._all, 0);
 
   const onayBekleyenler = siparisler.filter((s) => s.durum === "ONAY_BEKLIYOR");
   const digerleri = siparisler.filter((s) => s.durum !== "ONAY_BEKLIYOR");
@@ -66,6 +87,19 @@ export default async function SiparislerSayfasi() {
         </a>
       </div>
 
+      {/* SÜZGEÇ */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {SUZGECLER.map((s) => (
+          <Link
+            key={s.kod}
+            href={`/panel/siparisler?durum=${s.kod}`}
+            className={`focus-ring text-xs px-3 py-1.5 rounded-full border ${s.kod === suzgec.kod ? "bg-soguk text-white border-soguk" : "border-hat text-metin/70 hover:bg-hat"}`}
+          >
+            {s.ad} <span className="opacity-60">({say(s)})</span>
+          </Link>
+        ))}
+      </div>
+
       {onayBekleyenler.length > 0 && (
         <p className="text-sm font-medium text-sicak-dim mb-3">
           {onayBekleyenler.length} sipariş onay bekliyor — listenin en üstünde turuncu olarak görünür.
@@ -76,7 +110,7 @@ export default async function SiparislerSayfasi() {
       <HizliAramaListesi
         yerTutucu="Hızlı ara: teklif / proje adı, müşteri, teklif no, fatura no, durum…"
         birim="sipariş"
-        bosMetin='Henüz sipariş yok. Onaylanan bir teklifin detayında "Siparişe Dönüştür" butonuyla buraya taşıyabilirsin.'
+        bosMetin={suzgec.kod === "acik" || suzgec.kod === "tum" ? 'Henüz sipariş yok. Onaylanan bir teklifin detayında "Siparişe Dönüştür" butonuyla buraya taşıyabilirsin.' : "Bu süzgeçte sipariş yok."}
         satirlar={[...onayBekleyenler, ...digerleri].map((s) => ({
           id: s.id,
           aramaMetni: [

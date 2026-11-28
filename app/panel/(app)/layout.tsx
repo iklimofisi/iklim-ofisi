@@ -73,8 +73,8 @@ const menuGruplari: MenuGrubu[] = [
     baslik: "Finans",
     ogeler: [
       { href: "/panel/cari", label: "Cari Hesap" },
-      { href: "/panel/genel-cari", label: "Finans & Çekler" },
-      { href: "/panel/rapor", label: "Yönetim Raporu" },
+      { href: "/panel/genel-cari", label: "Çek & Senet Takibi" },
+      { href: "/panel/rapor", label: "Raporlar", ek: ["/panel/siparisler/raporlar"] },
     ],
   },
 ];
@@ -116,10 +116,11 @@ export default async function PanelLayout({ children }: { children: React.ReactN
 
   const rozetler: Record<string, number> = {
     "/panel/talepler": okunmamisTalep,
-    "/panel/ziyaretler": bekleyenHatirlatma,
+
     "/panel/kesif": yeniKesifSayisi,
     "/panel/projeler": takiptekiProjeSayisi,
-    "/panel/notlar": gunuGelenNot,
+    // Notlar & Hatırlatmalar: günü gelen notlar + günü gelen görüşme hatırlatmaları (tek yerde)
+    "/panel/notlar": gunuGelenNot + (gorebilir(kullanici.rol, "crm") ? bekleyenHatirlatma : 0),
     "/panel/satinalma/siparisler": onayBekleyenSatinalma,
     "/panel/siparisler": onayBekleyenSiparis,
   };
