@@ -3,7 +3,7 @@ import { yonetimVerisi, ayEtiketi, AY_ADI } from "@/lib/yonetim-verisi";
 import { YAS_DILIMLERI } from "@/lib/finans";
 
 // -----------------------------------------------------------------------------
-// YÖNETİM PANELİ (Özet sayfasının üstü; yalnız Admin ve Yönetici)
+// YÖNETİM PANELİ (Özet sayfasının üstü; yalnız Satış müdürü ve Yönetici)
 // Rakamlar lib/yonetim-verisi.ts'ten gelir (PDF raporu da aynı veriyi kullanır).
 // Grafikler sunucuda SVG olarak çizilir (ek kütüphane yok).
 // -----------------------------------------------------------------------------

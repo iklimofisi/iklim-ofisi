@@ -126,7 +126,7 @@ export default async function RaporSayfasi({ searchParams }: { searchParams?: { 
               action={donemKapat}
               etiket={`${donemAdi(ay)} dönemini kapat`}
               onayBasligi="Ay kapanışı"
-              onayMesaji={`${donemAdi(ay)} kapatılsın mı? Bu aya tarihli finansal kayıtlar kilitlenir; rakamlar rapor için saklanır. Yeniden açmayı yalnız admin yapabilir.`}
+              onayMesaji={`${donemAdi(ay)} kapatılsın mı? Bu aya tarihli finansal kayıtlar kilitlenir; rakamlar rapor için saklanır. Yeniden açmayı yalnız satış müdürü yapabilir.`}
               className="focus-ring text-sm font-medium text-white bg-soguk hover:bg-soguk-dim rounded-md px-4 py-2 disabled:opacity-50"
             />
           )}

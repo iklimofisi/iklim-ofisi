@@ -4,7 +4,7 @@ import { yonetimVerisi, ayKodu } from "@/lib/yonetim-verisi";
 import { yonetimRaporuPdf } from "@/lib/yonetim-pdf";
 import { getSirketAyarlari } from "@/lib/sirket";
 
-// Yönetim raporu PDF'i (Özet → Yönetim Paneli). Maliyet ve kâr içerir: yalnız Admin ve Yönetici (izleme).
+// Yönetim raporu PDF'i (Özet → Yönetim Paneli). Maliyet ve kâr içerir: yalnız Satış müdürü ve Yönetici (izleme).
 // ?indir=1 → dosya olarak indirir; yoksa tarayıcıda açılır.
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;

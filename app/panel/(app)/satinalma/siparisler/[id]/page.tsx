@@ -126,8 +126,8 @@ export default async function SatinalmaSiparisDetay({ params }: { params: { id: 
 
       {s.durum === "ONAY_BEKLIYOR" && (
         <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-lg p-4 mb-6 text-sm">
-          Bu sipariş admin onayı bekliyor. Onaylanana kadar mal kabul yapılamaz ve fatura bağlanamaz.
-          {!yonetici && " Onayı yalnız bir admin verebilir."}
+          Bu sipariş satış müdürü onayı bekliyor. Onaylanana kadar mal kabul yapılamaz ve fatura bağlanamaz.
+          {!yonetici && " Onayı yalnız satış müdürü verebilir."}
         </div>
       )}
       {s.durum === "REDDEDILDI" && (
@@ -479,7 +479,7 @@ export default async function SatinalmaSiparisDetay({ params }: { params: { id: 
                   </span>
                 </div>
               ))}
-              <p className="text-xs text-metin/50 pt-1">Faturayı düzeltmek / iptal etmek için tedarikçi cari hesabını kullanın (yalnız admin).</p>
+              <p className="text-xs text-metin/50 pt-1">Faturayı düzeltmek / iptal etmek için tedarikçi cari hesabını kullanın (yalnız satış müdürü).</p>
             </div>
           )}
         </section>

@@ -2,7 +2,7 @@
 
 // -----------------------------------------------------------------------------
 // FİYAT LİSTESİ MÜŞTERİ LİNKİ: oluşturma ve iptal (panel)
-// Fiyat listelerini görebilen herkes (admin, satış, satınalma) link oluşturabilir;
+// Fiyat listelerini görebilen herkes (satış müdürü, satış, satınalma) link oluşturabilir;
 // "Yönetici (izleme)" oluşturamaz. İptal edilen link silinmez, yalnız kapanır.
 // -----------------------------------------------------------------------------
 import { revalidatePath } from "next/cache";

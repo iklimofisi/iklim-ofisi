@@ -1,6 +1,6 @@
 // -----------------------------------------------------------------------------
 // KULLANICI ROLLERİ
-// ADMIN      Admin: her şey (onaylar, iptaller, kullanıcılar, dönem açma)
+// ADMIN      Satış müdürü: her şey (onaylar, iptaller, kullanıcılar, dönem açma)
 // SATIS      Satış: görüşme, proje, keşif, teklif, müşteri, sipariş, hesaplar; maliyet / alış görmez
 // SATINALMA  Satınalma: tedarikçi teklifleri, satınalma siparişleri, mal kabul, stok, fiyat listeleri
 // MUHASEBE   Muhasebe: cari, tahsilat / ödeme, faturalar, raporlar, ay kapanışı
@@ -11,7 +11,7 @@ export const ROLLER = ["ADMIN", "SATIS", "SATINALMA", "MUHASEBE", "YATIRIMCI"] a
 export type Rol = (typeof ROLLER)[number];
 
 export const ROL_ETIKET: Record<string, string> = {
-  ADMIN: "Admin",
+  ADMIN: "Satış Müdürü",
   SATIS: "Satış",
   SATINALMA: "Satınalma",
   MUHASEBE: "Muhasebe",
@@ -23,13 +23,13 @@ export const gecerliRol = (v: unknown): Rol => (ROLLER as readonly string[]).inc
 // Yalnız görüntüleyebilen rol
 export const saltOkunurMu = (rol: string | null | undefined) => rol === "YATIRIMCI";
 
-// Finansal kayıt iptali ve ay kapanışı: admin ya da muhasebe
+// Finansal kayıt iptali ve ay kapanışı: satış müdürü ya da muhasebe
 export const finansYetkilisiMi = (rol: string | null | undefined) => rol === "ADMIN" || rol === "MUHASEBE";
 
 // -----------------------------------------------------------------------------
 // BÖLÜM YETKİLERİ — kim neyi görür (gor), kim neyi değiştirir (yaz)
 // Sayfalar (sayfaYetkisi), sol menü, sunucu işlemleri (islemZorunlu) ve indirme
-// adresleri bu tabloya bakar. Admin her şeyi yapar; "Yönetici (izleme)" yönetim
+// adresleri bu tabloya bakar. Satış müdürü her şeyi yapar; "Yönetici (izleme)" yönetim
 // sayfaları dışında her şeyi görür, hiçbir şeyi değiştiremez.
 // -----------------------------------------------------------------------------
 export type Bolum =
@@ -87,7 +87,7 @@ export const yazabilir = (rol: string | null | undefined, bolum: Bolum) => erisi
 // Satınalma maliyetleri, alış fiyatları, kâr: satış personeli görmez
 export const maliyetGorur = (rol: string | null | undefined) => rol === "ADMIN" || rol === "SATINALMA" || rol === "MUHASEBE" || rol === "YATIRIMCI";
 
-// Panel adresinin bölümü (uzun önekler önce). Tanınmayan adres: yalnız admin.
+// Panel adresinin bölümü (uzun önekler önce). Tanınmayan adres: yalnız satış müdürü.
 const YOL_BOLUMLERI: [string, Bolum][] = [
   ["/panel/siparisler/raporlar", "finans"],
   ["/panel/satinalma/cari", "tedarikci"],
@@ -121,7 +121,7 @@ export function yolBolumu(yol: string): Bolum {
 }
 
 // Sunucu işlemlerinin (lib/actions.ts, lib/satinalma-siparis-actions.ts) bölümü.
-// Listede olmayan işlem: yalnız admin yapabilir.
+// Listede olmayan işlem: yalnız satış müdürü yapabilir.
 export const ISLEM_BOLUMU: Record<string, Bolum> = {
   // crm
   webTalebiDonustur: "crm", webTalebiOkunduIsaretle: "crm", webTalebiSil: "crm",
@@ -164,7 +164,7 @@ export const ISLEM_BOLUMU: Record<string, Bolum> = {
   siparisFaturaGuncelle: "finans", alisFaturasiEkle: "finans",
   // genel
   profilGuncelle: "genel",
-  // yönetim (yalnız admin): kullaniciEkle, kullaniciSil, kullaniciRolGuncelle, kullaniciSifreSifirla,
+  // yönetim (yalnız satış müdürü): kullaniciEkle, kullaniciSil, kullaniciRolGuncelle, kullaniciSifreSifirla,
   // sirketAyarlariGuncelle, epostaTestiGonder, sablonEkle, sablonGuncelle, sablonSil
 };
 export const islemBolumu = (islem: string): Bolum => ISLEM_BOLUMU[islem] ?? "yonetim";

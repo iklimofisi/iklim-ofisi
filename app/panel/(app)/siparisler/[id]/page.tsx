@@ -199,7 +199,7 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
               kurNotu={onayKurNotu}
             />
           ) : (
-            <p className="text-sm text-metin/50">Bu talebi sadece bir Admin onaylayabilir.</p>
+            <p className="text-sm text-metin/50">Bu talebi yalnız satış müdürü onaylayabilir.</p>
           )}
         </div>
       )}
@@ -295,7 +295,7 @@ export default async function SiparisDetay({ params }: { params: { id: string } 
                   ))}
                 </ul>
                 <p className="mt-1">
-                  Yanlışlıkla açılan satınalmayı açıp önce mal kabulünü, sonra siparişi iptal edin (yalnız admin). İptal edilen satınalma maliyete sayılmaz.
+                  Yanlışlıkla açılan satınalmayı açıp önce mal kabulünü, sonra siparişi iptal edin (yalnız satış müdürü). İptal edilen satınalma maliyete sayılmaz.
                 </p>
               </div>
             )}

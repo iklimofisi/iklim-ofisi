@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { GERCEK_MUSTERI, MUSTERISIZ_ID, musterisizMi, musteriEtiketi } from "@/lib/musterisiz";
-import { teklifArsivle, teklifArsivdenCikar } from "@/lib/actions";
+import { teklifArsivle, teklifArsivdenCikar, teklifSil } from "@/lib/actions";
 import TeklifDurumSecici from "@/components/TeklifDurumSecici";
 import KayitIslemButonu from "@/components/KayitIslemButonu";
 import TeklifOnizleButon from "@/components/TeklifOnizleButon";
@@ -84,7 +84,8 @@ export default async function TekliflerSayfasi({
     basarili?: string;
   };
 }) {
-  await sayfaYetkisi("teklif");
+  const giren = await sayfaYetkisi("teklif");
+  const silebilir = giren.rol === "ADMIN" || giren.rol === "SATIS"; // teklif silme: satış personeli ve satış müdürü
   // Eski bağlantılar (projeden "yeni teklif", hızlı müşteri ekleme) artık yeni teklif sayfasına gider
   if (searchParams.seciliProjeId || searchParams.seciliMusteriId) {
     const q = new URLSearchParams(
@@ -543,6 +544,18 @@ export default async function TekliflerSayfasi({
                           onayMesaji="Teklif silinmez; arşive kaldırılır ve listeden düşer. Arşivden istediğiniz zaman geri alabilirsiniz."
                           className={`${ikonDugme} hover:!text-sicak-dim hover:!border-sicak/50 disabled:opacity-50`}
                           icerik={<Ikon d="M3 7h18M5 7v13h14V7M10 12h4M4 3h16v4H4z" />}
+                        />
+                      )}
+                      {silebilir && (!t.siparis || siparisKapaliMi(t.siparis.durum)) && (
+                        <KayitIslemButonu
+                          id={t.id}
+                          action={teklifSil}
+                          etiket="Sil"
+                          onayBasligi="Teklif silinsin mi?"
+                          onayMesaji="Teklif kalıcı silinir; kalemleri ve revizyonlarıyla tam kopyası İşlem Geçmişi'nde saklanır. Saklamak istiyorsanız silmek yerine arşivleyin."
+                          tehlikeli
+                          className={`${ikonDugme} hover:!text-red-700 hover:!border-red-300 disabled:opacity-50`}
+                          icerik={<Ikon d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6" />}
                         />
                       )}
                     </div>

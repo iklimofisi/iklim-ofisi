@@ -3,7 +3,7 @@
 // -----------------------------------------------------------------------------
 // NOTLAR & HATIRLATMALAR — kaydet / tamamla / sabitle / sil
 // Notu yalnız yazan kişi değiştirebilir ve silebilir. Gizli notların içeriği
-// İşlem Geçmişi'ne yazılmaz (admin de göremesin diye).
+// İşlem Geçmişi'ne yazılmaz (satış müdürü de göremesin diye).
 // -----------------------------------------------------------------------------
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";

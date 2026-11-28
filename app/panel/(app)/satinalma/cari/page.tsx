@@ -50,7 +50,7 @@ export default async function TedarikciCariSayfasi({
 
   // İptal edilen hareketler listede (üstü çizili) görünür ama bakiyeye girmez
   const bakiye = hareketler.reduce((a, h) => (h.iptalTarihi ? a : a + (h.tur === "BORC" ? h.tutar : -h.tutar)), 0);
-  const yonetici = finansYetkilisiMi(giren?.rol); // finansal kayıt iptali: admin ya da muhasebe
+  const yonetici = finansYetkilisiMi(giren?.rol); // finansal kayıt iptali: satış müdürü ya da muhasebe
 
   return (
     <div>

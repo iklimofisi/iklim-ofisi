@@ -258,8 +258,8 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-metin/50">
               {esik != null
-                ? `Onay eşiği: ${paraFormat(esik, "TRY")} (KDV hariç). Üstündeki siparişler admin onayı bekler.`
-                : "Onay eşiği tanımlı değil: admin'in açtıkları dışındaki siparişler admin onayı bekler."}
+                ? `Onay eşiği: ${paraFormat(esik, "TRY")} (KDV hariç). Üstündeki siparişler satış müdürü onayı bekler.`
+                : "Onay eşiği tanımlı değil: satış müdürünün açtıkları dışındaki siparişler satış müdürü onayı bekler."}
             </p>
             <div className="flex items-center gap-3">
               <label className="flex items-center gap-1.5 text-xs text-metin/60" title="Satılandan fazla adet ya da satış siparişinden farklı para birimi uyarısını bilerek geçmek için">
@@ -360,7 +360,7 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
         </table>
       </div>
 
-      {/* ONAY EŞİĞİ (admin) */}
+      {/* ONAY EŞİĞİ (satış müdürü) */}
       {yonetici && (
         <SonucluForm action={satinalmaOnayEsigiKaydet} className="mt-8 bg-yuzey border border-hat rounded-lg p-5 flex flex-wrap items-end gap-3">
           <div>
@@ -377,7 +377,7 @@ export default async function SatinalmaSiparisleriSayfasi({ searchParams }: { se
             Eşiği kaydet
           </button>
           <p className="text-xs text-metin/50 basis-full">
-            Personelin açtığı ve TL karşılığı bu tutarı aşmayan siparişler kendiliğinden onaylanır; aşanlar admin onayına düşer. Admin'in
+            Personelin açtığı ve TL karşılığı bu tutarı aşmayan siparişler kendiliğinden onaylanır; aşanlar satış müdürü onayına düşer. Satış müdürünün
             açtığı siparişler doğrudan onaylıdır.
           </p>
         </SonucluForm>

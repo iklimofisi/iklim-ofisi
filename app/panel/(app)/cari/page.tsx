@@ -106,7 +106,7 @@ export default async function CariSayfasi({
       {ad}
     </Link>
   );
-  const yonetici = finansYetkilisiMi(giren?.rol); // finansal kayıt iptali: admin ya da muhasebe
+  const yonetici = finansYetkilisiMi(giren?.rol); // finansal kayıt iptali: satış müdürü ya da muhasebe
 
   return (
     <div>

@@ -6,7 +6,7 @@ import SonucluForm from "@/components/SonucluForm";
 import { kurOku } from "@/lib/kur-oku";
 
 // -----------------------------------------------------------------------------
-// SİPARİŞ ONAY / RED (yalnız admin). Onayda sipariş tutarı müşterinin cari hesabına borç yazılır.
+// SİPARİŞ ONAY / RED (yalnız satış müdürü). Onayda sipariş tutarı müşterinin cari hesabına borç yazılır.
 // Dövizli siparişte kur kutusu gelir: talepte seçilen kaynağa göre önerilen kur (TCMB ya da elle)
 // dolu gelir, istenirse değiştirilir; altta cariye yazılacak TL tutarı görünür.
 // -----------------------------------------------------------------------------

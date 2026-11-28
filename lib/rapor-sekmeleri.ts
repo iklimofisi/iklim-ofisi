@@ -1,4 +1,4 @@
-// Raporlar bölümünün sekmeleri (Finans → Raporlar). Yönetim raporu PDF'i yalnız Admin ve Yönetici içindir.
+// Raporlar bölümünün sekmeleri (Finans → Raporlar). Yönetim raporu PDF'i yalnız Satış müdürü ve Yönetici içindir.
 export function raporSekmeleri(rol: string | null | undefined) {
   return [
     { anahtar: "aylik", href: "/panel/rapor", ad: "Aylık rapor & ay kapanışı" },

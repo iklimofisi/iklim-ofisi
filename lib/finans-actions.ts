@@ -2,8 +2,8 @@
 
 // -----------------------------------------------------------------------------
 // AY KAPANIŞI İŞLEMLERİ
-// Kapatma: admin ya da muhasebe (yalnız geçmiş ya da içinde bulunulan ay).
-// Yeniden açma: yalnız admin, neden zorunlu. Her ikisi de İşlem Geçmişi'ne yazılır.
+// Kapatma: satış müdürü ya da muhasebe (yalnız geçmiş ya da içinde bulunulan ay).
+// Yeniden açma: yalnız satış müdürü, neden zorunlu. Her ikisi de İşlem Geçmişi'ne yazılır.
 // -----------------------------------------------------------------------------
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
@@ -17,7 +17,7 @@ export type FinansSonuc = { hata?: string; tamam?: string };
 export async function donemKapat(donemGirdi: string): Promise<FinansSonuc> {
   const giren = await islemZorunlu("finans");
   await islemKaydet(giren, "donemKapat", { donem: donemGirdi });
-  if (!finansYetkilisiMi(giren.rol)) return { hata: "Ayı yalnız admin ya da muhasebe kapatabilir." };
+  if (!finansYetkilisiMi(giren.rol)) return { hata: "Ayı yalnız satış müdürü ya da muhasebe kapatabilir." };
   const donem = gecerliDonem(donemGirdi);
   if (!donem) return { hata: "Dönem anlaşılamadı." };
   if (donem > donemAnahtari(new Date())) return { hata: "Henüz başlamamış bir ay kapatılamaz." };
@@ -34,7 +34,7 @@ export async function donemKapat(donemGirdi: string): Promise<FinansSonuc> {
 export async function donemAc(donemGirdi: string, neden: string): Promise<FinansSonuc> {
   const giren = await islemZorunlu("finans");
   await islemKaydet(giren, "donemAc", { donem: donemGirdi, neden });
-  if (giren.rol !== "ADMIN") return { hata: "Kapalı dönemi yalnız admin yeniden açabilir." };
+  if (giren.rol !== "ADMIN") return { hata: "Kapalı dönemi yalnız satış müdürü yeniden açabilir." };
   const donem = gecerliDonem(donemGirdi);
   const nedenTemiz = String(neden ?? "").trim().slice(0, 500);
   if (!donem) return { hata: "Dönem anlaşılamadı." };

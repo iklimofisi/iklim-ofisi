@@ -56,7 +56,7 @@ export default async function SiparisTalebi({ params }: { params: { id: string }
 
       <p className="text-sm text-metin/60 mb-6 bg-soguk-light text-soguk-dim rounded-md px-4 py-3">
         Bu talep gönderildikten sonra sipariş "Onay Bekliyor" durumunda olacak.
-        Bir Admin onaylamadan sipariş aktif olmaz, cari hesaba borç
+        Satış müdürü onaylamadan sipariş aktif olmaz, cari hesaba borç
         yazılmaz ve sevkiyat başlatılamaz.
       </p>
 

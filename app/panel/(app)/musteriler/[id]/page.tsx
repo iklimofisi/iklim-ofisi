@@ -83,7 +83,7 @@ export default async function MusteriDetay({ params }: { params: { id: string } 
           <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Müşteri</p>
           <h1 className="font-display text-2xl font-semibold text-metin">{musteri.ad}</h1>
           <p className="text-xs text-metin/60 mt-1">
-            Firma sorumlusu: {sorumlu ? <b className="text-metin">{sorumlu.ad}</b> : <span className="text-sicak-dim">atanmamış (Admin, Müşteri Bilgilerini Düzenle’den seçer)</span>}
+            Firma sorumlusu: {sorumlu ? <b className="text-metin">{sorumlu.ad}</b> : <span className="text-sicak-dim">atanmamış (satış müdürü, Müşteri Bilgilerini Düzenle’den seçer)</span>}
           </p>
           {crmGor && (
           <a

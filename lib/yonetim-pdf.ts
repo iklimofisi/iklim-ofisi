@@ -7,7 +7,7 @@ import { AY_ADI, ayEtiketi, type YonetimVerisi } from "@/lib/yonetim-verisi";
 // YÖNETİM RAPORU PDF'İ (Özet → Yönetim Paneli → "PDF indir")
 // Panelle aynı veri: göstergeler, 12 aylık ciro / maliyet / kâr grafiği ve tablosu, iş hattı,
 // dikkat gerekenler, alacak yaşlandırma, sipariş kârlılığı, müşteri ve personel sıralaması.
-// İç rapordur (maliyet ve kâr içerir); yalnız Admin ve Yönetici alabilir.
+// İç rapordur (maliyet ve kâr içerir); yalnız Satış müdürü ve Yönetici alabilir.
 // -----------------------------------------------------------------------------
 
 const YT = "LiberationSans";
@@ -442,7 +442,7 @@ export function yonetimRaporuPdf(v: YonetimVerisi, sirket: { unvan?: string | nu
   yazi(6.5, false, M45);
   doc.text(
     doc.splitTextToSize(
-      "Ciro: admin onayı almış (iptal / red olmayan) siparişler, onay tarihine göre. Personel cirosu müşterinin firma sorumlusuna yazılır. Brüt kâr: satış - siparişe bağlı satınalmalar (montaj / işçilik dahil değil). Açık teklif hacmi bugünkü TCMB döviz satış kuruyla yaklaşıktır. Bu rapor maliyet ve kâr bilgisi içerir; şirket içi kullanım içindir.",
+      "Ciro: satış müdürü onayı almış (iptal / red olmayan) siparişler, onay tarihine göre. Personel cirosu müşterinin firma sorumlusuna yazılır. Brüt kâr: satış - siparişe bağlı satınalmalar (montaj / işçilik dahil değil). Açık teklif hacmi bugünkü TCMB döviz satış kuruyla yaklaşıktır. Bu rapor maliyet ve kâr bilgisi içerir; şirket içi kullanım içindir.",
       GEN
     ),
     SOL,

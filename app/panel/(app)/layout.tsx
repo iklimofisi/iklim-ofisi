@@ -105,7 +105,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       })
       .catch(() => 0),
   ]);
-  // Admin'e: onay bekleyen satış ve satınalma siparişleri (tablo henüz yoksa 0)
+  // Satış müdürüne: onay bekleyen satış ve satınalma siparişleri (tablo henüz yoksa 0)
   const [onayBekleyenSatinalma, onayBekleyenSiparis] =
     kullanici.rol === "ADMIN"
       ? await Promise.all([

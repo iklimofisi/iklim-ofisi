@@ -13,7 +13,7 @@ export default function PanelHata({ error, reset }: { error: Error & { digest?: 
       <p className="text-sm text-metin/70 mb-4">
         {yetki
           ? error.message
-          : "Bu işlem için yetkiniz olmayabilir ya da geçici bir hata oluştu. Kayıtlarınız değişmedi. Sayfayı yenileyip tekrar deneyin; sorun sürerse admin ile görüşün."}
+          : "Bu işlem için yetkiniz olmayabilir ya da geçici bir hata oluştu. Kayıtlarınız değişmedi. Sayfayı yenileyip tekrar deneyin; sorun sürerse satış müdürü ile görüşün."}
       </p>
       {error?.digest && <p className="text-[11px] text-metin/40 mb-4 font-mono">Hata kodu: {error.digest}</p>}
       <div className="flex flex-wrap gap-3">

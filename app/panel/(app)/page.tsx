@@ -29,7 +29,7 @@ export default async function PanelOzet({
     satinalma: gorebilir(giren.rol, "satinalma"),
     finans: gorebilir(giren.rol, "finans"),
   };
-  // Yönetim paneli (ciro, kâr, tahsilat, iş hattı, dikkat gerekenler): Admin ve Yönetici (izleme)
+  // Yönetim paneli (ciro, kâr, tahsilat, iş hattı, dikkat gerekenler): Satış müdürü ve Yönetici (izleme)
   const yonetimGor = giren.rol === "ADMIN" || giren.rol === "YATIRIMCI";
   const yetkiYok = searchParams?.yetki === "yok";
   const donemGirdi = searchParams?.donem;
@@ -131,7 +131,7 @@ export default async function PanelOzet({
 
       {yetkiYok && (
         <p className="bg-sicak-light border border-sicak/30 text-sicak-dim text-sm rounded-lg p-4 mb-4">
-          Açmak istediğiniz sayfa için yetkiniz yok. Gerekirse admin ile görüşün.
+          Açmak istediğiniz sayfa için yetkiniz yok. Gerekirse satış müdürü ile görüşün.
         </p>
       )}
 

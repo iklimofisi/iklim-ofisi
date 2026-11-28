@@ -22,7 +22,7 @@ export default async function KullanicilarSayfasi() {
       <h1 className="font-display text-2xl font-semibold text-metin mb-2">Kullanıcılar</h1>
       <p className="text-sm text-metin/60 mb-4">
         Buradan eklediğin herkes kendi e-posta/şifresiyle panele girer ve yalnız rolünün izin verdiği bölümleri görür.
-        Satış personeli satınalma maliyetlerini, alış fiyatlarını ve kârı görmez. Onaylar, iptaller ve silmeler yine yalnız admin&apos;dedir.
+        Satış personeli satınalma maliyetlerini, alış fiyatlarını ve kârı görmez. Onaylar, iptaller ve silmeler yine yalnız satış müdüründedir.
       </p>
 
       {/* ROL YETKİ TABLOSU (lib/roller.ts'ten üretilir; tablo ile sistem hep aynıdır) */}

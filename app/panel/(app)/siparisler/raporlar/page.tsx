@@ -115,7 +115,7 @@ export default async function CiroRaporlariPage({ searchParams }: { searchParams
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <p className="text-sm text-metin/60 max-w-3xl">
           Personel cirosu müşterinin <b>firma sorumlusuna</b> yazılır; siparişi kimin açtığı önemli değildir. Firma sorumlusu müşteri kartından
-          (Admin) atanır. Tutarlar KDV hariç, TL.
+          (satış müdürü) atanır. Tutarlar KDV hariç, TL.
         </p>
         <div className="flex gap-1">
           {DONEMLER.map((d) => (

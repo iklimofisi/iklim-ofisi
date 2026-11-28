@@ -17,7 +17,7 @@ import ZiyaretListesi from "@/components/ZiyaretListesi";
 import { PAYLASIM_TABANI } from "@/lib/teklif-paylasim";
 import { redNedeniAdi } from "@/lib/teklif-durum";
 import { GERCEK_MUSTERI, MUSTERISIZ_HITAP, musterisizMi, musterisizGoster } from "@/lib/musterisiz";
-import { teklifMusteriyeBagla, teklifArsivdenCikar } from "@/lib/actions";
+import { teklifMusteriyeBagla, teklifArsivdenCikar, teklifSil } from "@/lib/actions";
 import KayitIslemButonu from "@/components/KayitIslemButonu";
 import { satinalmaToplami, satinalmaNetToplami, iskontoGecerli, netAlis } from "@/lib/satinalma-hesap";
 import { satirNet } from "@/lib/siparis-tutari";
@@ -214,6 +214,18 @@ export default async function TeklifDetay({ params }: { params: { id: string } }
           >
             Kopyala
           </Link>
+          {(giren.rol === "ADMIN" || giren.rol === "SATIS") && !surenSiparis && (
+            <KayitIslemButonu
+              id={teklif.id}
+              action={teklifSil}
+              etiket="Teklifi sil"
+              onayBasligi="Teklif silinsin mi?"
+              onayMesaji="Teklif kalıcı silinir; kalemleri ve revizyonlarıyla tam kopyası İşlem Geçmişi'nde saklanır. Saklamak istiyorsanız silmek yerine arşivleyin."
+              tehlikeli
+              sonraGit="/panel/teklifler"
+              className="focus-ring text-sm font-medium text-sicak-dim border border-sicak/40 px-4 py-2 rounded-md hover:bg-sicak-light transition-colors disabled:opacity-50"
+            />
+          )}
           <YazdirButon />
         </div>
       </div>

@@ -281,7 +281,7 @@ export default async function IslemGecmisiSayfasi({
 
   return (
     <div>
-      <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Panel · Admin</p>
+      <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Panel · Satış Müdürü</p>
       <h1 className="font-display text-2xl font-semibold text-metin mb-2">İşlem Geçmişi</h1>
       <p className="text-sm text-metin/60 mb-6">
         Panelde kim, ne zaman, hangi işlemi yaptı. Silinen kayıtların silinmeden önceki hâli de burada saklanır —

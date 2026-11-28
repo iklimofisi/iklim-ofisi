@@ -1,6 +1,6 @@
 // -----------------------------------------------------------------------------
 // CİRO TANIMI (tüm raporlar bunu kullanır: Yönetim Paneli, Yönetim Raporu / ay kapanışı, Ciro & Personel)
-// - Ciro: admin onayı almış, iptal / red olmayan satış siparişlerinin siparişte sabitlenen KDV HARİÇ tutarı.
+// - Ciro: satış müdürü onayı almış, iptal / red olmayan satış siparişlerinin siparişte sabitlenen KDV HARİÇ tutarı.
 // - Tarih: onay tarihi (eski kayıtlarda onay tarihi yoksa açılış tarihi).
 // - TL: dövizli siparişte faturada kur yazıldıysa fatura kuru, yoksa onay kuru; kuru hiç olmayan eski
 //   dövizli kayıtta bugünkü TCMB döviz satış kuru (yaklaşık) kullanılır.

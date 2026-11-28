@@ -214,7 +214,7 @@ export default async function ProjelerPage({
                   {ihaleDurumEtiket[p.ihaleDurumu] || p.ihaleDurumu}
                 </span>
 
-                <KayitIslemButonu id={p.id} action={projeSil} etiket="Sil" onayBasligi="Silme onayı" onayMesaji="Yalnız teklifi olmayan proje silinebilir (yalnız admin). Teklifi olan proje korunur." tehlikeli />
+                <KayitIslemButonu id={p.id} action={projeSil} etiket="Sil" onayBasligi="Silme onayı" onayMesaji="Yalnız teklifi olmayan proje silinebilir (yalnız satış müdürü). Teklifi olan proje korunur." tehlikeli />
               </div>
             </div>
           ),

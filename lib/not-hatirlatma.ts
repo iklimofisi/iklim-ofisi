@@ -44,7 +44,7 @@ export async function notHatirlatmalariniGonder(opt: { id?: string } = {}): Prom
 
     const zaman = n.hatirlatmaGunu ? hatirlatmaYaz(n.hatirlatmaGunu, n.hatirlatmaSaati) : "";
     const baslik = n.baslik?.trim() || "Not";
-    // Gizli notun başlığı konu satırına yazılmaz (mail kayıtları İşlem Geçmişi'nde admin'e görünür)
+    // Gizli notun başlığı konu satırına yazılmaz (mail kayıtları İşlem Geçmişi'nde satış müdürüne görünür)
     const konu = n.gizli ? `🔔 Kişisel hatırlatmanız — ${zaman}` : `🔔 Hatırlatma: ${baslik.slice(0, 120)}`;
     const icerikHtml = `<div style="font-family:Arial,sans-serif;max-width:620px;margin:0 auto;padding:16px;color:#334155">
       <p style="margin:0 0 4px;font-size:12px;color:#0f766e;font-weight:bold;letter-spacing:.04em">HATIRLATMA · ${html(zaman)}</p>

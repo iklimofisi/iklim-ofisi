@@ -318,7 +318,7 @@ export default async function SatinalmaTekliflerPage() {
                           </td>
 
                           <td className="py-3 px-4 text-center">
-                            <KayitIslemButonu id={st.id} action={satinalmaTeklifiSil} etiket="Sil" onayBasligi="Silme onayı" onayMesaji="Yalnız admin silebilir; satış teklifine bağlanmış tedarikçi teklifi silinmez." tehlikeli />
+                            <KayitIslemButonu id={st.id} action={satinalmaTeklifiSil} etiket="Sil" onayBasligi="Silme onayı" onayMesaji="Yalnız satış müdürü silebilir; satış teklifine bağlanmış tedarikçi teklifi silinmez." tehlikeli />
                           </td>
                         </tr>
                       );

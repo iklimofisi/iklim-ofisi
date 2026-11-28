@@ -4,7 +4,7 @@
 // Tüm tutarlar KDV HARİÇ ve TL'dir. Dövizli siparişler kendi kuruyla (faturada farklı kur
 // kullanıldıysa fatura kuruyla), satınalmalar kendi kuruyla çevrilir. Kuru olmayan eski dövizli
 // kayıtlar ve açık teklifler bugünkü TCMB döviz satış kuruyla yaklaşık çevrilir (≈).
-// Ciro: admin onayı almış (iptal / red olmayan) siparişler, onay tarihine göre (lib/ciro.ts).
+// Ciro: satış müdürü onayı almış (iptal / red olmayan) siparişler, onay tarihine göre (lib/ciro.ts).
 // Personel cirosu: müşterinin firma sorumlusuna yazılır (siparişi kim açarsa açsın).
 // Brüt kâr: satış − siparişe bağlı (iptal / red olmayan) satınalmalar; montaj / işçilik dahil değildir.
 // -----------------------------------------------------------------------------
@@ -226,7 +226,7 @@ export async function yonetimVerisi() {
   const zararli = satirlar.filter((s) => s.maliyetVar && s.kar < 0);
   const fazlaAlimli = satirlar.filter((s) => s.fazlaAlim);
   const dikkat: DikkatSatiri[] = [];
-  if (sDurum("ONAY_BEKLIYOR")) dikkat.push({ metin: `${sDurum("ONAY_BEKLIYOR")} satış siparişi admin onayı bekliyor`, href: "/panel/siparisler", ciddi: true });
+  if (sDurum("ONAY_BEKLIYOR")) dikkat.push({ metin: `${sDurum("ONAY_BEKLIYOR")} satış siparişi satış müdürü onayı bekliyor`, href: "/panel/siparisler", ciddi: true });
   if (satinalma.onay) dikkat.push({ metin: `${satinalma.onay} satınalma siparişi onay bekliyor`, href: "/panel/satinalma/siparisler?durum=onay", ciddi: true });
   if (fazlaAlimli.length) dikkat.push({ metin: `${fazlaAlimli.length} işte satılandan fazla satınalma var (çift alım?)`, href: `/panel/siparisler/${fazlaAlimli[0].id}`, ciddi: true });
   if (zararli.length) dikkat.push({ metin: `${zararli.length} sipariş zararına görünüyor (maliyet > satış)`, href: `/panel/siparisler/${zararli[0].id}`, ciddi: true });
