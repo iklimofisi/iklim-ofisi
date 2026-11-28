@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { GERCEK_MUSTERI } from "@/lib/musterisiz";
-import { cariHareketIptal, tedarikciHareketIptal } from "@/lib/actions";
+import { cariHareketIptal, cariHareketSil, tedarikciHareketIptal, tedarikciHareketSil } from "@/lib/actions";
 import CariFiltre from "@/components/CariFiltre";
 import KayitIslemButonu from "@/components/KayitIslemButonu";
 import { suankiKullanici, sayfaYetkisi } from "@/lib/oturum";
@@ -135,6 +135,7 @@ export default async function CariSayfasi({
     </Link>
   );
   const yonetici = finansYetkilisiMi(giren?.rol); // finansal kayıt iptali: satış müdürü ya da muhasebe
+  const silebilir = giren?.rol === "ADMIN"; // hareket silme (deneme / hatalı kayıt): yalnız satış müdürü
 
   return (
     <div>
@@ -351,7 +352,19 @@ export default async function CariSayfasi({
                     </td>
                     <td className="px-4 py-3 text-right">
                       {t.iptalTarihi ? (
-                        <span className="text-[11px] text-metin/40">İptal edildi</span>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="text-[11px] text-metin/40">İptal edildi</span>
+                          {silebilir && (
+                            <KayitIslemButonu
+                              id={t.id}
+                              action={tedarikciHareketSil}
+                              etiket="Sil"
+                              nedenIste
+                              nedenEtiketi="Silme nedeni"
+                              onayMesaji="Kayıt tamamen silinir; kopyası İşlem Geçmişi'nde kalır."
+                            />
+                          )}
+                        </div>
                       ) : (
                         <div className="flex flex-col items-end gap-1">
                           {t.tur === "BORC" &&
@@ -376,6 +389,16 @@ export default async function CariSayfasi({
                               etiket="İptal et"
                               nedenIste
                               onayMesaji="Hareket silinmez; iptal edilir ve bakiyeden düşer. Kayıt üstü çizili olarak kalır."
+                            />
+                          )}
+                          {silebilir && (
+                            <KayitIslemButonu
+                              id={t.id}
+                              action={tedarikciHareketSil}
+                              etiket="Sil"
+                              nedenIste
+                              nedenEtiketi="Silme nedeni"
+                              onayMesaji="Kayıt tamamen silinir; kopyası İşlem Geçmişi'nde kalır."
                             />
                           )}
                         </div>
@@ -452,7 +475,19 @@ export default async function CariSayfasi({
 
                 <td className="px-4 py-3 text-right">
                   {c.iptalTarihi ? (
-                    <span className="text-[11px] text-metin/40">İptal edildi</span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-[11px] text-metin/40">İptal edildi</span>
+                      {silebilir && (
+                        <KayitIslemButonu
+                          id={c.id}
+                          action={cariHareketSil}
+                          etiket="Sil"
+                          nedenIste
+                          nedenEtiketi="Silme nedeni"
+                          onayMesaji="Kayıt tamamen silinir; kopyası İşlem Geçmişi'nde kalır."
+                        />
+                      )}
+                    </div>
                   ) : (
                     <div className="flex flex-col items-end gap-1">
                       {c.tur === "BORC" &&
@@ -477,6 +512,16 @@ export default async function CariSayfasi({
                           etiket="İptal et"
                           nedenIste
                           onayMesaji="Hareket silinmez; iptal edilir ve bakiyeden düşer. Kayıt üstü çizili olarak kalır."
+                        />
+                      )}
+                      {silebilir && (
+                        <KayitIslemButonu
+                          id={c.id}
+                          action={cariHareketSil}
+                          etiket="Sil"
+                          nedenIste
+                          nedenEtiketi="Silme nedeni"
+                          onayMesaji="Kayıt tamamen silinir; kopyası İşlem Geçmişi'nde kalır."
                         />
                       )}
                     </div>

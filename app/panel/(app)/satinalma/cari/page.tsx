@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { tedarikciHareketIptal } from "@/lib/actions";
+import { tedarikciHareketIptal, tedarikciHareketSil } from "@/lib/actions";
 import KayitIslemButonu from "@/components/KayitIslemButonu";
 import { suankiKullanici, sayfaYetkisi } from "@/lib/oturum";
 import { finansYetkilisiMi, yazabilir } from "@/lib/roller";
@@ -85,6 +85,7 @@ export default async function TedarikciCariSayfasi({
   const bakiye = hareketler.reduce((a, h) => (h.iptalTarihi ? a : a + (h.tur === "BORC" ? h.tutar : -h.tutar)), 0);
   const yonetici = finansYetkilisiMi(giren?.rol); // finansal kayıt iptali: satış müdürü ya da muhasebe
   const girebilir = yazabilir(giren?.rol, "finans"); // ödeme / fatura girişi
+  const silebilir = giren?.rol === "ADMIN"; // hareket silme (deneme / hatalı kayıt): yalnız satış müdürü
 
   // "Öde" bağlantısından gelindiyse form o faturanın kalanıyla dolu açılır
   const odenecek = odeId ? tumHareketler.find((h) => h.id === odeId && h.tur === "BORC") : undefined;
@@ -268,7 +269,19 @@ export default async function TedarikciCariSayfasi({
                   </td>
                   <td className="px-4 py-3 text-right text-xs">
                     {h.iptalTarihi ? (
-                      <span className="text-[11px] text-metin/40">İptal edildi</span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="text-[11px] text-metin/40">İptal edildi</span>
+                          {silebilir && (
+                            <KayitIslemButonu
+                              id={h.id}
+                              action={tedarikciHareketSil}
+                              etiket="Sil"
+                              nedenIste
+                              nedenEtiketi="Silme nedeni"
+                              onayMesaji="Kayıt tamamen silinir; kopyası İşlem Geçmişi'nde kalır."
+                            />
+                          )}
+                      </div>
                     ) : (
                       <div className="flex flex-col items-end gap-1">
                         {kalan !== null &&
@@ -295,6 +308,16 @@ export default async function TedarikciCariSayfasi({
                             onayMesaji="Hareket silinmez; iptal edilir ve bakiyeden düşer. Kayıt üstü çizili olarak kalır."
                           />
                         )}
+                          {silebilir && (
+                            <KayitIslemButonu
+                              id={h.id}
+                              action={tedarikciHareketSil}
+                              etiket="Sil"
+                              nedenIste
+                              nedenEtiketi="Silme nedeni"
+                              onayMesaji="Kayıt tamamen silinir; kopyası İşlem Geçmişi'nde kalır."
+                            />
+                          )}
                       </div>
                     )}
                   </td>

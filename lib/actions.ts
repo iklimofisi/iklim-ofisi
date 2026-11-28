@@ -768,9 +768,23 @@ export async function cariHareketIptal(hareketId: string, neden: string): Promis
   return { tamam: "Hareket iptal edildi; bakiyeden düşüldü." };
 }
 
-// Eski kalıcı silme: artık hiçbir ekranda düğmesi yok; finansal kayıt silinmez (iptal edilir)
-export async function cariHareketSil(hareketId: string) {
-  await yetki("cariHareketSil", { hareketId });
+// CARİ HAREKET SİLME (deneme / hatalı kayıt): yalnız satış müdürü. Silmeden önce kaydın tam
+// kopyası İşlem Geçmişi'ne yazılır ("Cari hareket sildi"). Kapalı aydaki kayıt silinmez.
+export async function cariHareketSil(hareketId: string, neden: string): Promise<IslemSonucu> {
+  const giren = await islemZorunlu(islemBolumu("cariHareketSil"));
+  if (giren.rol !== "ADMIN") return { hata: "Cari hareketi yalnız satış müdürü silebilir." };
+  const nedenTemiz = String(neden ?? "").trim().slice(0, 500);
+  if (!nedenTemiz) return { hata: "Silme nedenini yazın." };
+  const h = hareketId ? await prisma.cariHareket.findUnique({ where: { id: hareketId }, select: { musteriId: true, tarih: true } }) : null;
+  if (!h) return { hata: "Hareket bulunamadı (zaten silinmiş olabilir)." };
+  if (await donemKilitliMi(h.tarih)) return { hata: KILIT_MESAJI(h.tarih) };
+  await islemKaydet(giren, "cariHareketSil", { hareketId, neden: nedenTemiz });
+  await prisma.cariHareket.delete({ where: { id: hareketId } });
+  revalidatePath("/panel/cari");
+  revalidatePath("/panel/genel-cari");
+  revalidatePath(`/panel/musteriler/${h.musteriId}`);
+  revalidatePath("/panel");
+  return { tamam: "Hareket silindi; kopyası İşlem Geçmişi'nde." };
 }
 
 // --- Satınalma: Tedarikçi Cari ---
@@ -862,9 +876,24 @@ export async function tedarikciHareketIptal(id: string, neden: string): Promise<
   return { tamam: "Hareket iptal edildi; bakiyeden düşüldü." };
 }
 
-// Eski kalıcı silme: artık hiçbir ekranda düğmesi yok; finansal kayıt silinmez (iptal edilir)
-export async function tedarikciHareketSil(id: string) {
-  await yetki("tedarikciHareketSil", { id });
+// TEDARİKÇİ HAREKETİ SİLME (deneme / hatalı kayıt): yalnız satış müdürü. Silmeden önce kaydın tam
+// kopyası İşlem Geçmişi'ne yazılır ("Tedarikçi hareketi sildi"). Kapalı aydaki kayıt silinmez.
+export async function tedarikciHareketSil(id: string, neden: string): Promise<IslemSonucu> {
+  const giren = await islemZorunlu(islemBolumu("tedarikciHareketSil"));
+  if (giren.rol !== "ADMIN") return { hata: "Tedarikçi hareketini yalnız satış müdürü silebilir." };
+  const nedenTemiz = String(neden ?? "").trim().slice(0, 500);
+  if (!nedenTemiz) return { hata: "Silme nedenini yazın." };
+  const h = id ? await prisma.tedarikciHareket.findUnique({ where: { id }, select: { tarih: true, satinalmaSiparisiId: true } }) : null;
+  if (!h) return { hata: "Hareket bulunamadı (zaten silinmiş olabilir)." };
+  if (await donemKilitliMi(h.tarih)) return { hata: KILIT_MESAJI(h.tarih) };
+  await islemKaydet(giren, "tedarikciHareketSil", { id, neden: nedenTemiz });
+  await prisma.tedarikciHareket.delete({ where: { id } });
+  revalidatePath("/panel/satinalma/cari");
+  revalidatePath("/panel/cari");
+  revalidatePath("/panel/genel-cari");
+  if (h.satinalmaSiparisiId) revalidatePath(`/panel/satinalma/siparisler/${h.satinalmaSiparisiId}`);
+  revalidatePath("/panel");
+  return { tamam: "Hareket silindi; kopyası İşlem Geçmişi'nde." };
 }
 
 // --- AKILLI STOK VEYA KATALOG GİRİŞİ (WAC - AĞIRLIKLI ORTALAMA MALİYET HESAPLI) ---
