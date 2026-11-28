@@ -468,6 +468,11 @@ export default async function SatinalmaSiparisDetay({ params }: { params: { id: 
                       </a>
                     )}
                     {f.iptalTarihi && <span className="block text-xs no-underline">İptal: {f.iptalNedeni}</span>}
+                    {!f.iptalTarihi && (
+                      <Link href={`/panel/satinalma/cari?tedarikci=${s.tedarikciId}&ode=${f.id}#hareket-formu`} className="block text-xs text-soguk-dim hover:underline">
+                        Ödeme gir →
+                      </Link>
+                    )}
                   </p>
                   <span className="font-mono whitespace-nowrap">
                     {paraFormat(f.tutar, "TRY")}

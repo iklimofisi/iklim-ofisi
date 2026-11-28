@@ -15,7 +15,7 @@ const oku = (v: string) => {
   return Number.isFinite(n) && n > 0 ? n : null;
 };
 
-export default function HareketTutarAlani({ kurlar, kutu }: { kurlar: TcmbKurlari | null; kutu: string }) {
+export default function HareketTutarAlani({ kurlar, kutu, baslangicTutar }: { kurlar: TcmbKurlari | null; kutu: string; baslangicTutar?: string }) {
   const [pb, setPb] = useState("TRY");
   const [doviz, setDoviz] = useState("");
   return (
@@ -32,7 +32,7 @@ export default function HareketTutarAlani({ kurlar, kutu }: { kurlar: TcmbKurlar
       {pb === "TRY" ? (
         <div>
           <label className="block text-xs font-medium text-metin/60 mb-1">Tutar (TL) *</label>
-          <input name="tutar" inputMode="decimal" required placeholder="örn. 12.500,00" className={`${kutu} font-mono`} />
+          <input name="tutar" inputMode="decimal" required defaultValue={baslangicTutar ?? ""} placeholder="örn. 12.500,00" className={`${kutu} font-mono`} />
         </div>
       ) : (
         <div className="space-y-2">

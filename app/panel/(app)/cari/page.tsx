@@ -1,14 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { GERCEK_MUSTERI } from "@/lib/musterisiz";
-import { cariHareketEkle, cariHareketIptal } from "@/lib/actions";
+import { cariHareketIptal, tedarikciHareketIptal } from "@/lib/actions";
 import CariFiltre from "@/components/CariFiltre";
 import KayitIslemButonu from "@/components/KayitIslemButonu";
 import { suankiKullanici, sayfaYetkisi } from "@/lib/oturum";
-import { finansYetkilisiMi } from "@/lib/roller";
-import OdemeAlModal from "@/components/OdemeAlModal";
-import SonucluForm from "@/components/SonucluForm";
-import HareketTutarAlani from "@/components/HareketTutarAlani";
+import { finansYetkilisiMi, yazabilir } from "@/lib/roller";
+import CariHareketFormu, { type HareketVarsayilan } from "@/components/CariHareketFormu";
 import { getTcmbKurlari } from "@/lib/kur";
+import { acikHesap, tutarYazisi } from "@/lib/acik-hesap";
+import { odemeYontemiEtiket, VADELI_YONTEMLER, vadeliMi } from "@/lib/odeme-yontemi";
 import Link from "next/link";
 import { sasNo } from "@/lib/satinalma-siparis";
 
@@ -21,20 +21,22 @@ function paraFormat(n: number) {
 export default async function CariSayfasi({
   searchParams,
 }: {
-  searchParams: { musteri?: string; taraf?: string };
+  searchParams: { musteri?: string; taraf?: string; ode?: string; tahsil?: string; yeni?: string };
 }) {
   await sayfaYetkisi("finans");
   const seciliMusteri = searchParams?.musteri ?? "hepsi";
+  const odeId = searchParams?.ode ?? ""; // tedarikçi faturası ödemesi (form dolu açılır)
+  const tahsilId = searchParams?.tahsil ?? ""; // müşteri borcu tahsilatı (form dolu açılır)
   // GENEL CARİ: müşteri hareketleri + tedarikçi (satınalma) hareketleri tek listede.
   // Bir müşteri seçiliyse yalnız o müşteri; "taraf" ile yalnız müşteri ya da yalnız tedarikçi gösterilir.
   // Tedarikçi hareketleri burada yalnız görünür; ekleme / iptal Tedarikçi Cari sayfasından yapılır.
   const taraf = seciliMusteri !== "hepsi" ? "musteri" : searchParams?.taraf === "musteri" || searchParams?.taraf === "tedarikci" ? searchParams.taraf : "tum";
 
-  const bugun = new Date();
-  const onBesGunSonra = new Date();
-  onBesGunSonra.setDate(bugun.getDate() + 15);
+  const gun = (d: Date) => new Date(d.getTime() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+  const bugunBasi = new Date(`${gun(new Date())}T00:00:00+03:00`);
+  const onBesGunSonra = new Date(bugunBasi.getTime() + 16 * 24 * 3600 * 1000);
 
-  const [musteriler, hareketler, tedarikciHareketleri, tedarikciToplam, musteriToplam, yaklasanCekler, giren, kurlar] = await Promise.all([
+  const [musteriler, hareketler, tedarikciHareketleri, tedarikciToplam, musteriToplam, yaklasanCekler, giren, kurlar, tedarikciler, musteriAcik, tedarikciAcik, verilenCekler] = await Promise.all([
     prisma.musteri.findMany({ where: GERCEK_MUSTERI, orderBy: { ad: "asc" } }),
     // Gösterilmeyen taraf için sorgu hiçbir kayıt döndürmez (id hiçbir zaman boş değildir)
     prisma.cariHareket.findMany({
@@ -51,6 +53,7 @@ export default async function CariSayfasi({
             tutar: true,
             aciklama: true,
             faturaNo: true,
+            odemeYontemi: true,
             vadeTarihi: true,
             cekNo: true,
             banka: true,
@@ -68,20 +71,45 @@ export default async function CariSayfasi({
     }),
     prisma.tedarikciHareket.groupBy({ by: ["tur"], _sum: { tutar: true }, where: { iptalTarihi: null } }),
     prisma.cariHareket.groupBy({ by: ["tur"], _sum: { tutar: true }, where: { iptalTarihi: null } }),
-    // Vadesi önümüzdeki 15 gün içinde olan Çekler
+    // Müşteriden aldığımız çek / senetler: vadesi önümüzdeki 15 gün içinde olanlar
     prisma.cariHareket.findMany({
-      where: {
-        vadeTarihi: { gte: bugun, lte: onBesGunSonra },
-        iptalTarihi: null,
-      },
+      where: { tur: "ALACAK", iptalTarihi: null, odemeYontemi: { in: VADELI_YONTEMLER }, vadeTarihi: { gte: bugunBasi, lt: onBesGunSonra } },
       include: { musteri: true },
       orderBy: { vadeTarihi: "asc" },
     }),
     suankiKullanici(),
     getTcmbKurlari(),
+    prisma.tedarikci.findMany({ orderBy: { ad: "asc" }, select: { id: true, ad: true } }),
+    // Açık hesap (borç bazında kalan) için geçerli hareketler
+    prisma.cariHareket.findMany({ where: { iptalTarihi: null }, select: { id: true, musteriId: true, tur: true, tutar: true, tarih: true, vadeTarihi: true } }),
+    prisma.tedarikciHareket.findMany({ where: { iptalTarihi: null }, select: { id: true, tedarikciId: true, tur: true, tutar: true, tarih: true, vadeTarihi: true, faturaNo: true } }),
+    // Tedarikçiye verdiğimiz çek / senetler: vadesi önümüzdeki 15 gün içinde olanlar
+    prisma.tedarikciHareket.findMany({
+      where: { tur: "ODEME", iptalTarihi: null, odemeYontemi: { in: VADELI_YONTEMLER }, vadeTarihi: { gte: bugunBasi, lt: onBesGunSonra } },
+      select: { id: true, tutar: true, vadeTarihi: true, banka: true, cekNo: true, odemeYontemi: true, tedarikci: { select: { ad: true } } },
+      orderBy: { vadeTarihi: "asc" },
+    }),
   ]);
-  const kutu = "focus-ring w-full border border-hat rounded-md px-3 py-2 text-sm bg-white";
-  const bugunIso = new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+  const bugunIso = gun(new Date());
+  const girebilir = yazabilir(giren?.rol, "finans"); // tahsilat / ödeme / borç girişi
+
+  // Borç kayıtlarının kalanı: müşteri borcu tahsilatla, tedarikçi faturası ödemeyle kapanır
+  const musteriKalan = acikHesap(musteriAcik.map((h) => ({ id: h.id, cari: h.musteriId, borc: h.tur === "BORC", tutar: h.tutar, tarih: h.tarih, vadeTarihi: h.vadeTarihi })));
+  const tedarikciKalan = acikHesap(
+    tedarikciAcik.map((h) => ({ id: h.id, cari: h.tedarikciId, borc: h.tur === "BORC", tutar: h.tutar, tarih: h.tarih, vadeTarihi: h.vadeTarihi, belgeNo: h.faturaNo }))
+  );
+
+  // Form ön doldurma: "Öde" (tedarikçi faturası) / "Tahsil et" (müşteri borcu) bağlantıları ve üstteki düğmeler
+  const odenecek = odeId ? tedarikciAcik.find((h) => h.id === odeId && h.tur === "BORC") : undefined;
+  const tahsilEdilecek = tahsilId ? musteriAcik.find((h) => h.id === tahsilId && h.tur === "BORC") : undefined;
+  const varsayilan: HareketVarsayilan = odenecek
+    ? { taraf: "tedarikci", kisiId: odenecek.tedarikciId, islem: "odeme", tutar: tutarYazisi(tedarikciKalan.get(odenecek.id) ?? odenecek.tutar), faturaNo: odenecek.faturaNo ?? "" }
+    : tahsilEdilecek
+      ? { taraf: "musteri", kisiId: tahsilEdilecek.musteriId, islem: "odeme", tutar: tutarYazisi(musteriKalan.get(tahsilEdilecek.id) ?? tahsilEdilecek.tutar) }
+      : searchParams?.yeni === "odeme"
+        ? { taraf: "tedarikci", islem: "odeme" }
+        : { taraf: "musteri", islem: "odeme", kisiId: seciliMusteri !== "hepsi" ? seciliMusteri : "" };
+  const formAnahtari = `${odeId}|${tahsilId}|${searchParams?.yeni ?? ""}|${seciliMusteri}`;
 
   // İptal edilen hareketler listede (üstü çizili) görünür ama bakiyeye girmez
   const bakiye = hareketler.reduce((a, c) => (c.iptalTarihi ? a : a + (c.tur === "BORC" ? c.tutar : -c.tutar)), 0);
@@ -113,7 +141,8 @@ export default async function CariSayfasi({
       <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Panel</p>
       <h1 className="font-display text-2xl font-semibold text-metin mb-2">Cari Hesap</h1>
       <p className="text-sm text-metin/60 mb-4">
-        Genel cari: müşteri hareketleri ve tedarikçi (satınalma) hareketleri tek listede. Tedarikçi hareketlerini eklemek / iptal etmek için{" "}
+        Müşteri ve tedarikçi hareketleri tek listede. Müşteriden tahsilatı da tedarikçiye ödemeyi de buradan girebilirsiniz; ödenmemiş faturada{" "}
+        <b>Öde</b>, müşteri borcunda <b>Tahsil et</b> formu tutarıyla doldurur. Yalnız tedarikçiler için{" "}
         <Link href="/panel/satinalma/cari" className="text-soguk-dim hover:underline">
           Tedarikçi Cari
         </Link>
@@ -148,21 +177,37 @@ export default async function CariSayfasi({
         {sekme("tedarikci", "Yalnız tedarikçiler (satınalma)")}
       </div>
 
-      {/* 🔔 YAKLAŞAN ÇEK VE VADE UYARISI (Sadece Yaklaşan Çek Varsa Görünür) */}
-      {yaklasanCekler.length > 0 && (
+      {/* ÇEK / SENET VADE UYARISI: yalnız çek ya da senetle yapılan tahsilat / ödemeler */}
+      {(yaklasanCekler.length > 0 || verilenCekler.length > 0) && (
         <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 mb-6 shadow-sm space-y-2">
-          <h3 className="font-bold text-amber-900 text-xs flex items-center gap-2">
-            🚨 Akıllı Muhasebe Uyarısı: Önümüzdeki 15 Gün İçinde Vadesi Gelen Çekler ({yaklasanCekler.length} Adet)
-          </h3>
+          <h3 className="font-bold text-amber-900 text-xs">📅 15 gün içinde vadesi gelen çek / senetler</h3>
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
             {yaklasanCekler.map((c) => (
-              <div key={c.id} className="bg-white p-2.5 rounded border border-amber-200 text-xs space-y-1">
-                <div className="flex justify-between font-bold text-metin">
+              <div key={c.id} className="bg-white p-2.5 rounded border border-emerald-200 text-xs space-y-1">
+                <p className="text-[10px] font-bold text-emerald-700">📥 ALDIĞIMIZ {odemeYontemiEtiket(c.odemeYontemi).toLocaleUpperCase("tr-TR")}</p>
+                <div className="flex justify-between font-bold text-metin gap-2">
                   <span>{c.musteri.ad}</span>
-                  <span className="text-amber-800">{paraFormat(c.tutar)}</span>
+                  <span className="text-emerald-800 font-mono">{paraFormat(c.tutar)}</span>
                 </div>
-                <p className="text-metin/60">{c.banka || "Banka Belirtilmedi"} - Çek No: {c.cekNo || "—"}</p>
-                <p className="font-semibold text-rose-700">📅 Vade: {c.vadeTarihi?.toISOString().slice(0, 10)}</p>
+                <p className="text-metin/60">
+                  {c.banka || "Banka yazılmadı"}
+                  {c.cekNo ? ` · No ${c.cekNo}` : ""}
+                </p>
+                <p className="font-semibold text-amber-800">Vade {c.vadeTarihi ? gun(c.vadeTarihi) : "—"}</p>
+              </div>
+            ))}
+            {verilenCekler.map((c) => (
+              <div key={c.id} className="bg-white p-2.5 rounded border border-rose-200 text-xs space-y-1">
+                <p className="text-[10px] font-bold text-rose-700">📤 VERDİĞİMİZ {odemeYontemiEtiket(c.odemeYontemi).toLocaleUpperCase("tr-TR")}</p>
+                <div className="flex justify-between font-bold text-metin gap-2">
+                  <span>{c.tedarikci.ad}</span>
+                  <span className="text-rose-800 font-mono">{paraFormat(c.tutar)}</span>
+                </div>
+                <p className="text-metin/60">
+                  {c.banka || "Banka yazılmadı"}
+                  {c.cekNo ? ` · No ${c.cekNo}` : ""}
+                </p>
+                <p className="font-semibold text-amber-800">Vade {c.vadeTarihi ? gun(c.vadeTarihi) : "—"}</p>
               </div>
             ))}
           </div>
@@ -182,91 +227,42 @@ export default async function CariSayfasi({
               {paraFormat(musteriAlacagi)}
             </span>
           </div>
-          <OdemeAlModal
-            musteriler={musteriler.map((m) => ({ id: m.id, ad: m.ad }))}
-            seciliMusteriId={seciliMusteri !== "hepsi" ? seciliMusteri : undefined}
-          />
+          {girebilir && (
+            <>
+              <Link href={`/panel/cari?${seciliMusteri !== "hepsi" ? `musteri=${seciliMusteri}&` : ""}yeni=tahsilat#hareket-formu`} className="focus-ring bg-soguk text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim">
+                💰 Tahsilat gir
+              </Link>
+              <Link href="/panel/cari?yeni=odeme#hareket-formu" className="focus-ring bg-white border border-soguk text-soguk-dim px-4 py-2 rounded-md text-sm font-medium hover:bg-soguk-light/40">
+                💸 Tedarikçiye ödeme
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
-      {/* ELLE CARİ HAREKET: tahsilat, çek, sipariş dışı borç (TL ya da döviz) */}
-      <SonucluForm action={cariHareketEkle} temizle className="bg-yuzey border border-hat rounded-lg p-5 mb-8 space-y-4">
-        <div>
-          <h2 className="font-display font-medium text-metin">Elle hareket ekle</h2>
-          <p className="text-xs text-metin/50 mt-0.5">
-            Sipariş onayının borcu ve kur farkı otomatik yazılır; burada tahsilatları ve sipariş dışı borçları (montaj, servis, eski bakiye vb.) girin.
-            Aynı satışın borcunu ikinci kez girmeyin.
-          </p>
-        </div>
-        <div className="grid sm:grid-cols-4 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-metin/60 mb-1">Müşteri *</label>
-            <select name="musteriId" required defaultValue={seciliMusteri !== "hepsi" ? seciliMusteri : ""} className={kutu}>
-              <option value="" disabled>
-                Seçin…
-              </option>
-              {musteriler.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.ad}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-metin/60 mb-1">İşlem türü *</label>
-            <select name="tur" required className={kutu}>
-              <option value="ALACAK">Tahsilat (ödeme / çek alındı)</option>
-              <option value="BORC">Borç (sipariş dışı fatura vb.)</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-metin/60 mb-1">Ödeme yöntemi</label>
-            <select name="odemeYontemi" className={kutu}>
-              <option value="EFT/Havale">EFT / Havale</option>
-              <option value="Çek">Çek</option>
-              <option value="Senet">Senet</option>
-              <option value="Nakit">Nakit</option>
-              <option value="Kredi Kartı">Kredi Kartı</option>
-              <option value="">— (borç kaydı)</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-metin/60 mb-1">İşlem tarihi</label>
-            <input name="tarih" type="date" defaultValue={bugunIso} max={bugunIso} className={kutu} />
-          </div>
-          <HareketTutarAlani kurlar={kurlar} kutu={kutu} />
-        </div>
-
-        {/* ÇEK / SENET VE EVRAK */}
-        <div className="grid sm:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-md border border-hat">
-          <div>
-            <label className="block text-xs font-semibold text-rose-800 mb-1">Çek / senet vade tarihi</label>
-            <input name="vadeTarihi" type="date" className="focus-ring w-full border border-hat rounded-md px-2 py-1.5 text-xs bg-white" />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-metin/70 mb-1">Banka adı</label>
-            <input name="banka" placeholder="Örn: Garanti BBVA" className="focus-ring w-full border border-hat rounded-md px-2 py-1.5 text-xs bg-white" />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-metin/70 mb-1">Çek no / seri no</label>
-            <input name="cekNo" placeholder="Örn: 987456" className="focus-ring w-full border border-hat rounded-md px-2 py-1.5 text-xs bg-white" />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-blue-800 mb-1">📷 Fatura / dekont / çek görseli</label>
-            <input name="evrak" type="file" accept=".pdf,.jpg,.jpeg,.png" className="focus-ring w-full text-xs border border-hat rounded-md p-1 bg-white" />
-          </div>
-        </div>
-
-        <div className="flex gap-3 items-end">
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-metin/60 mb-1">Açıklama *</label>
-            <input name="aciklama" required maxLength={300} className={kutu} placeholder="Fatura no, çek detayları vb." />
-          </div>
-          <button type="submit" className="focus-ring bg-soguk text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-soguk-dim transition-colors shrink-0">
-            Ekle
-          </button>
-        </div>
-      </SonucluForm>
+      {/* TAHSİLAT / ÖDEME / BORÇ GİRİŞİ: müşteri ya da tedarikçi */}
+      <div id="hareket-formu" className="bg-yuzey border border-hat rounded-lg p-5 mb-8 scroll-mt-4">
+        <h2 className="font-display font-medium text-metin">
+          {odenecek ? `Tedarikçi faturası ${odenecek.faturaNo ?? ""} ödemesi` : tahsilEdilecek ? "Müşteri borcu tahsilatı" : "Tahsilat, ödeme ya da borç gir"}
+        </h2>
+        <p className="text-xs text-metin/50 mt-0.5 mb-4">
+          Önce müşteri mi tedarikçi mi olduğunu, sonra ne yapıldığını seçin. Ödeme şekli havale/EFT, nakit, kredi kartı, çek ya da senet olabilir; vade ve çek numarası
+          yalnız çek / senette sorulur. Sipariş onayının borcu ve satınalma siparişinden işlenen faturalar kendiliğinden yazılır; onları burada tekrar girmeyin.
+        </p>
+        {girebilir ? (
+          <CariHareketFormu
+            key={formAnahtari}
+            taraflar={["musteri", "tedarikci"]}
+            musteriler={musteriler.map((m) => ({ id: m.id, ad: m.ad }))}
+            tedarikciler={tedarikciler}
+            kurlar={kurlar}
+            bugunIso={bugunIso}
+            varsayilan={varsayilan}
+          />
+        ) : (
+          <p className="text-sm text-metin/50">Tahsilat, ödeme ve borç girişi muhasebe ile satış müdüründedir.</p>
+        )}
+      </div>
 
       {/* CARİ HAREKETLER TABLOSU */}
       <div className="bg-yuzey border border-hat rounded-lg overflow-hidden">
@@ -297,7 +293,9 @@ export default async function CariSayfasi({
                     </td>
                     <td className="px-4 py-3 text-metin/70 text-xs">
                       <span className={t.iptalTarihi ? "line-through" : ""}>{t.aciklama}</span>
-                      <span className="block text-[10px] font-bold text-rose-700">{t.tur === "BORC" ? "Alış faturası (borcumuz)" : "Tedarikçiye ödeme"}</span>
+                      <span className="block text-[10px] font-bold text-rose-700">
+                        {t.tur === "BORC" ? `Alış faturası (borcumuz)${t.faturaNo ? ` · ${t.faturaNo}` : ""}` : `Tedarikçiye ödeme${t.faturaNo ? ` · fatura ${t.faturaNo}` : ""}`}
+                      </span>
                       {t.satinalmaSiparisi && (
                         <Link href={`/panel/satinalma/siparisler/${t.satinalmaSiparisi.id}`} className="block text-[10px] text-soguk-dim hover:underline">
                           {sasNo(t.satinalmaSiparisi.no)}
@@ -310,15 +308,19 @@ export default async function CariSayfasi({
                       )}
                     </td>
                     <td className="px-4 py-3 text-xs">
-                      {t.vadeTarihi ? (
+                      {t.tur === "ODEME" ? (
                         <div>
-                          <span className="font-bold text-rose-700">Vade: {t.vadeTarihi.toISOString().slice(0, 10)}</span>
-                          {t.cekNo && (
-                            <div className="text-[10px] text-metin/50">
-                              {t.banka} - No: {t.cekNo}
-                            </div>
+                          <span className="font-semibold text-metin">{t.odemeYontemi ? odemeYontemiEtiket(t.odemeYontemi) : "—"}</span>
+                          {vadeliMi(t.odemeYontemi) && t.vadeTarihi && <span className="block font-bold text-amber-700">Vade {gun(t.vadeTarihi)}</span>}
+                          {(t.banka || t.cekNo) && (
+                            <span className="block text-[10px] text-metin/50">
+                              {t.banka ?? ""}
+                              {t.cekNo ? ` · No ${t.cekNo}` : ""}
+                            </span>
                           )}
                         </div>
+                      ) : t.vadeTarihi ? (
+                        <span className="text-metin/70">Son ödeme {gun(t.vadeTarihi)}</span>
                       ) : (
                         <span className="text-metin/30">—</span>
                       )}
@@ -351,9 +353,32 @@ export default async function CariSayfasi({
                       {t.iptalTarihi ? (
                         <span className="text-[11px] text-metin/40">İptal edildi</span>
                       ) : (
-                        <Link href={`/panel/satinalma/cari?tedarikci=${t.tedarikci.id}`} className="text-[11px] text-soguk-dim hover:underline">
-                          Tedarikçi carisi →
-                        </Link>
+                        <div className="flex flex-col items-end gap-1">
+                          {t.tur === "BORC" &&
+                            ((tedarikciKalan.get(t.id) ?? t.tutar) <= 0 ? (
+                              <span className="text-[11px] font-semibold text-emerald-700">✓ Ödendi</span>
+                            ) : (
+                              <>
+                                <span className="text-[11px] font-semibold text-rose-700">
+                                  {(tedarikciKalan.get(t.id) ?? t.tutar) < t.tutar ? `Kalan ${paraFormat(tedarikciKalan.get(t.id) ?? 0)}` : "Ödenmedi"}
+                                </span>
+                                {girebilir && (
+                                  <Link href={`/panel/cari?ode=${t.id}#hareket-formu`} className="text-[11px] font-semibold text-soguk-dim hover:underline">
+                                    Öde →
+                                  </Link>
+                                )}
+                              </>
+                            ))}
+                          {yonetici && (
+                            <KayitIslemButonu
+                              id={t.id}
+                              action={tedarikciHareketIptal}
+                              etiket="İptal et"
+                              nedenIste
+                              onayMesaji="Hareket silinmez; iptal edilir ve bakiyeden düşer. Kayıt üstü çizili olarak kalır."
+                            />
+                          )}
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -374,17 +399,25 @@ export default async function CariSayfasi({
                       İPTAL · {c.iptalTarihi.toISOString().slice(0, 10)} · {c.iptalEdenAdi} · {c.iptalNedeni}
                     </span>
                   )}
-                  {c.odemeYontemi && <span className="block text-[10px] font-bold text-soguk-dim">Yöntem: {c.odemeYontemi}</span>}
+                  {c.odemeYontemi && <span className="block text-[10px] font-bold text-soguk-dim">{odemeYontemiEtiket(c.odemeYontemi)}</span>}
                   {c.odemeDetay && <span className="block text-[10px] text-metin/50">{c.odemeDetay}</span>}
                 </td>
 
                 {/* ÇEK VADE BİLGİSİ */}
                 <td className="px-4 py-3 text-xs">
-                  {(c as any).vadeTarihi ? (
+                  {c.tur === "ALACAK" ? (
                     <div>
-                      <span className="font-bold text-rose-700">Vade: {(c as any).vadeTarihi.toISOString().slice(0, 10)}</span>
-                      {(c as any).cekNo && <div className="text-[10px] text-metin/50">{(c as any).banka} - No: {(c as any).cekNo}</div>}
+                      <span className="font-semibold text-metin">{c.odemeYontemi ? odemeYontemiEtiket(c.odemeYontemi) : "—"}</span>
+                      {vadeliMi(c.odemeYontemi) && c.vadeTarihi && <span className="block font-bold text-amber-700">Vade {gun(c.vadeTarihi)}</span>}
+                      {(c.banka || c.cekNo) && (
+                        <span className="block text-[10px] text-metin/50">
+                          {c.banka ?? ""}
+                          {c.cekNo ? ` · No ${c.cekNo}` : ""}
+                        </span>
+                      )}
                     </div>
+                  ) : c.vadeTarihi ? (
+                    <span className="text-metin/70">Son ödeme {gun(c.vadeTarihi)}</span>
                   ) : (
                     <span className="text-metin/30">—</span>
                   )}
@@ -420,15 +453,34 @@ export default async function CariSayfasi({
                 <td className="px-4 py-3 text-right">
                   {c.iptalTarihi ? (
                     <span className="text-[11px] text-metin/40">İptal edildi</span>
-                  ) : yonetici ? (
-                    <KayitIslemButonu
-                      id={c.id}
-                      action={cariHareketIptal}
-                      etiket="İptal et"
-                      nedenIste
-                      onayMesaji="Hareket silinmez; iptal edilir ve bakiyeden düşer. Kayıt üstü çizili olarak kalır."
-                    />
-                  ) : null}
+                  ) : (
+                    <div className="flex flex-col items-end gap-1">
+                      {c.tur === "BORC" &&
+                        ((musteriKalan.get(c.id) ?? c.tutar) <= 0 ? (
+                          <span className="text-[11px] font-semibold text-emerald-700">✓ Tahsil edildi</span>
+                        ) : (
+                          <>
+                            <span className="text-[11px] font-semibold text-sicak-dim">
+                              {(musteriKalan.get(c.id) ?? c.tutar) < c.tutar ? `Kalan ${paraFormat(musteriKalan.get(c.id) ?? 0)}` : "Tahsil edilmedi"}
+                            </span>
+                            {girebilir && (
+                              <Link href={`/panel/cari?tahsil=${c.id}#hareket-formu`} className="text-[11px] font-semibold text-soguk-dim hover:underline">
+                                Tahsil et →
+                              </Link>
+                            )}
+                          </>
+                        ))}
+                      {yonetici && (
+                        <KayitIslemButonu
+                          id={c.id}
+                          action={cariHareketIptal}
+                          etiket="İptal et"
+                          nedenIste
+                          onayMesaji="Hareket silinmez; iptal edilir ve bakiyeden düşer. Kayıt üstü çizili olarak kalır."
+                        />
+                      )}
+                    </div>
+                  )}
                 </td>
               </tr>
               );

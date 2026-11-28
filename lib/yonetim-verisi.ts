@@ -118,8 +118,8 @@ export async function yonetimVerisi() {
     prisma.cariHareket.groupBy({ by: ["tur"], _sum: { tutar: true }, where: { iptalTarihi: null } }),
     prisma.tedarikciHareket.groupBy({ by: ["tur"], _sum: { tutar: true }, where: { iptalTarihi: null } }),
     alacakYaslandirma(simdi),
-    prisma.cariHareket.aggregate({ _sum: { tutar: true }, _count: { _all: true }, where: { iptalTarihi: null, tur: "ALACAK", vadeTarihi: { gte: simdi, lte: onbesGunSonra } } }),
-    prisma.tedarikciHareket.aggregate({ _sum: { tutar: true }, _count: { _all: true }, where: { iptalTarihi: null, tur: "ODEME", vadeTarihi: { gte: simdi, lte: onbesGunSonra } } }),
+    prisma.cariHareket.aggregate({ _sum: { tutar: true }, _count: { _all: true }, where: { iptalTarihi: null, tur: "ALACAK", odemeYontemi: { in: ["CEK", "SENET"] }, vadeTarihi: { gte: simdi, lte: onbesGunSonra } } }),
+    prisma.tedarikciHareket.aggregate({ _sum: { tutar: true }, _count: { _all: true }, where: { iptalTarihi: null, tur: "ODEME", odemeYontemi: { in: ["CEK", "SENET"] }, vadeTarihi: { gte: simdi, lte: onbesGunSonra } } }),
   ]);
 
   const kullaniciAdi = new Map(kullanicilar.map((k) => [k.id, k.ad]));

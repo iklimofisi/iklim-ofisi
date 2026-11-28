@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { sayfaYetkisi } from "@/lib/oturum";
+import { odemeYontemiEtiket, vadeliMi } from "@/lib/odeme-yontemi";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +26,9 @@ export default async function GenelCariPage() {
   ]);
 
   // Alacak Çeklerimiz (Müşteriden Alınan)
-  const alacakCekleri = musteriHareketleri.filter((h) => h.vadeTarihi && h.tur === "ALACAK");
+  const alacakCekleri = musteriHareketleri.filter((h) => h.vadeTarihi && h.tur === "ALACAK" && vadeliMi(h.odemeYontemi));
   // Borç Çeklerimiz (Tedarikçiye Verilen)
-  const borcCekleri = tedarikciHareketleri.filter((h) => h.vadeTarihi && h.tur === "ODEME");
+  const borcCekleri = tedarikciHareketleri.filter((h) => h.vadeTarihi && h.tur === "ODEME" && vadeliMi(h.odemeYontemi));
 
 
   return (
@@ -89,7 +90,7 @@ export default async function GenelCariPage() {
                 <td className="py-3 px-4 font-bold text-metin">{c.musteri.ad}</td>
                 <td className="py-3 px-4">
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                    📥 MÜŞTERİ ÇEKİ (ALACAK)
+                    📥 MÜŞTERİ {odemeYontemiEtiket(c.odemeYontemi).toLocaleUpperCase("tr-TR")} (ALACAK)
                   </span>
                 </td>
                 <td className="py-3 px-4 font-mono text-metin/70">
@@ -115,7 +116,7 @@ export default async function GenelCariPage() {
                 <td className="py-3 px-4 font-bold text-metin">{b.tedarikci.ad}</td>
                 <td className="py-3 px-4">
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
-                    📤 VERİLEN ÇEKİMİZ (BORÇ)
+                    📤 VERDİĞİMİZ {odemeYontemiEtiket(b.odemeYontemi).toLocaleUpperCase("tr-TR")} (BORÇ)
                   </span>
                 </td>
                 <td className="py-3 px-4 font-mono text-metin/70">

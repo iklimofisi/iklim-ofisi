@@ -466,6 +466,7 @@ model TedarikciHareket {
   vadeTarihi    DateTime? // Çek / Senet Vade Tarihi
   cekNo         String?   // Çek No
   banka         String?   // Banka Adı
+  odemeYontemi  String?   // Ödemede: HAVALE / NAKIT / KART / CEK / SENET (yalnız çek ve senet vadelidir)
   evrakDosya    Bytes?    // Fatura / Dekont / Çek Görseli veya PDF
   evrakDosyaAdi String?
   evrakDosyaTipi String?

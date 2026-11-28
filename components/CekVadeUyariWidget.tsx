@@ -11,6 +11,8 @@ export default async function CekVadeUyariWidget() {
     where: {
       vadeTarihi: { gte: bugun, lte: yediGunSonra },
       iptalTarihi: null, // iptal edilen çek uyarı vermez
+      tur: "ALACAK",
+      odemeYontemi: { in: ["CEK", "SENET"] }, // yalnız çek / senet (fatura vadesi çek değildir)
     },
     include: { musteri: true },
     orderBy: { vadeTarihi: "asc" },
@@ -21,6 +23,8 @@ export default async function CekVadeUyariWidget() {
     where: {
       vadeTarihi: { gte: bugun, lte: yediGunSonra },
       iptalTarihi: null, // iptal edilen çek uyarı vermez
+      tur: "ODEME",
+      odemeYontemi: { in: ["CEK", "SENET"] }, // yalnız çek / senet (fatura vadesi çek değildir)
     },
     include: { tedarikci: true },
     orderBy: { vadeTarihi: "asc" },

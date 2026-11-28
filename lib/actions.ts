@@ -35,6 +35,7 @@ import { getTcmbKurlari, tcmbKuru, kurKaynagiOku } from "@/lib/kur";
 import { kurOku } from "@/lib/kur-oku";
 import { donemKilitliMi, KILIT_MESAJI } from "@/lib/finans";
 import { finansYetkilisiMi, gecerliRol, islemBolumu } from "@/lib/roller";
+import { odemeYontemiOku, odemeYontemiEtiket } from "@/lib/odeme-yontemi";
 
 // Kayıt güvencesi işlemlerinin sonucu: düğme bu mesajı bildirim olarak gösterir
 export type IslemSonucu = { hata?: string; tamam?: string };
@@ -638,21 +639,20 @@ export async function teklifSil(teklifId: string): Promise<IslemSonucu> {
 export async function cariHareketEkle(formData: FormData): Promise<IslemSonucu> {
   await yetki("cariHareketEkle", formData);
   const musteriId = String(formData.get("musteriId") ?? "");
-  const aciklama = String(formData.get("aciklama") ?? "").trim().slice(0, 300);
+  let aciklama = String(formData.get("aciklama") ?? "").trim().slice(0, 300);
   const tur = String(formData.get("tur") ?? "BORC") === "ALACAK" ? "ALACAK" : "BORC";
   const tutarVeri = await hareketTutariOku(formData);
   if ("hata" in tutarVeri) return { hata: tutarVeri.hata };
   const tarih = hareketTarihiOku(formData);
   if (!tarih) return { hata: "İşlem tarihi anlaşılamadı." };
-  const odemeYontemi = String(formData.get("odemeYontemi") ?? "").trim().slice(0, 50);
   const odemeDetay = String(formData.get("odemeDetay") ?? "").trim().slice(0, 300);
-  const vadeTarihiStr = String(formData.get("vadeTarihi") ?? "");
-  const cekNo = String(formData.get("cekNo") ?? "").trim().slice(0, 100);
-  const banka = String(formData.get("banka") ?? "").trim().slice(0, 100);
+  const odeme = odemeBilgisiOku(formData, tur === "ALACAK");
+  if ("hata" in odeme) return { hata: odeme.hata };
   const dosya = formData.get("evrak") as File | null;
 
   if (!musteriId) return { hata: "Müşteri seçin." };
-  if (!aciklama) return { hata: "Açıklama yazın." };
+  if (!aciklama) aciklama = tur === "ALACAK" ? `${odemeYontemiEtiket(odeme.odemeYontemi)} ile tahsilat` : "";
+  if (!aciklama) return { hata: "Borcun ne için olduğunu açıklamaya yazın." };
   if (await donemKilitliMi(tarih)) return { hata: KILIT_MESAJI(tarih) };
   if (dosya && dosya.size > 8 * 1024 * 1024) return { hata: "Evrak 8 MB'tan büyük olamaz." };
   const musteri = await prisma.musteri.findUnique({ where: { id: musteriId }, select: { id: true } });
@@ -673,11 +673,11 @@ export async function cariHareketEkle(formData: FormData): Promise<IslemSonucu> 
       paraBirimi: tutarVeri.paraBirimi,
       dovizTutar: tutarVeri.dovizTutar,
       kur: tutarVeri.kur,
-      odemeYontemi: odemeYontemi || null,
+      odemeYontemi: odeme.odemeYontemi,
       odemeDetay: odemeDetay || null,
-      vadeTarihi: vadeTarihiStr ? new Date(vadeTarihiStr) : null,
-      cekNo: cekNo || null,
-      banka: banka || null,
+      vadeTarihi: odeme.vadeTarihi,
+      cekNo: odeme.cekNo,
+      banka: odeme.banka,
       ...evrak,
     },
   });
@@ -686,7 +686,35 @@ export async function cariHareketEkle(formData: FormData): Promise<IslemSonucu> 
   revalidatePath("/panel/genel-cari");
   revalidatePath(`/panel/musteriler/${musteriId}`);
   revalidatePath("/panel");
-  return { tamam: tur === "ALACAK" ? "Tahsilat kaydedildi." : "Borç kaydedildi." };
+  return { tamam: tur === "ALACAK" ? `Tahsilat kaydedildi (${odemeYontemiEtiket(odeme.odemeYontemi)}).` : "Borç kaydedildi." };
+}
+
+// Ödeme şekli ve vade: ödemede (tahsilat / tedarikçi ödemesi) şekil zorunludur. Vade ve çek / senet no
+// yalnız çek ve senette saklanır (öteki ödemeler çek takibine girmez); banka nakitte saklanmaz.
+// Borç kaydında ödeme şekli yoktur; vade (son ödeme günü) isteğe bağlıdır.
+function odemeBilgisiOku(
+  fd: FormData,
+  odemeMi: boolean
+): { odemeYontemi: string | null; vadeTarihi: Date | null; cekNo: string | null; banka: string | null } | { hata: string } {
+  const vadeYazi = String(fd.get("vadeTarihi") ?? "").trim();
+  let vade: Date | null = null;
+  if (vadeYazi) {
+    vade = /^\d{4}-\d{2}-\d{2}$/.test(vadeYazi) ? new Date(`${vadeYazi}T12:00:00+03:00`) : null;
+    if (!vade || Number.isNaN(vade.getTime())) return { hata: "Vade tarihi anlaşılamadı." };
+  }
+  const cekNo = String(fd.get("cekNo") ?? "").trim().slice(0, 100) || null;
+  const banka = String(fd.get("banka") ?? "").trim().slice(0, 100) || null;
+  if (!odemeMi) return { odemeYontemi: null, vadeTarihi: vade, cekNo: null, banka: null };
+  const yontem = odemeYontemiOku(fd.get("odemeYontemi"));
+  if (!yontem) return { hata: "Ödeme şeklini seçin: havale/EFT, nakit, kredi kartı, çek ya da senet." };
+  const vadeli = yontem === "CEK" || yontem === "SENET";
+  if (vadeli && !vade) return { hata: `${odemeYontemiEtiket(yontem)} için vade tarihini girin.` };
+  return {
+    odemeYontemi: yontem,
+    vadeTarihi: vadeli ? vade : null,
+    cekNo: vadeli ? cekNo : null,
+    banka: yontem === "NAKIT" || yontem === "SENET" ? null : banka,
+  };
 }
 
 // Elle hareketin tutarı: TL ya da döviz (paraBirimi + dovizTutar + kur → TL). Binlik ayraçlı yazımlar doğru okunur.
@@ -752,20 +780,26 @@ export async function cariHareketSil(hareketId: string) {
 export async function tedarikciHareketEkle(formData: FormData): Promise<IslemSonucu> {
   await yetki("tedarikciHareketEkle", formData);
   const tedarikciId = String(formData.get("tedarikciId") ?? "");
-  const aciklama = String(formData.get("aciklama") ?? "").trim().slice(0, 300);
+  let aciklama = String(formData.get("aciklama") ?? "").trim().slice(0, 300);
   const tur = String(formData.get("tur") ?? "BORC") === "ODEME" ? "ODEME" : "BORC";
   const tutarVeri = await hareketTutariOku(formData);
   if ("hata" in tutarVeri) return { hata: tutarVeri.hata };
   const tarih = hareketTarihiOku(formData);
   if (!tarih) return { hata: "İşlem tarihi anlaşılamadı." };
-  const vadeTarihiStr = String(formData.get("vadeTarihi") ?? "");
-  const cekNo = String(formData.get("cekNo") ?? "").trim().slice(0, 100);
-  const banka = String(formData.get("banka") ?? "").trim().slice(0, 100);
+  const odeme = odemeBilgisiOku(formData, tur === "ODEME");
+  if ("hata" in odeme) return { hata: odeme.hata };
   const faturaNo = String(formData.get("faturaNo") ?? "").trim().slice(0, 100);
   const dosya = formData.get("evrak") as File | null;
 
   if (!tedarikciId) return { hata: "Tedarikçi seçin." };
-  if (!aciklama) return { hata: "Açıklama yazın." };
+  if (!aciklama)
+    aciklama =
+      tur === "ODEME"
+        ? `${odemeYontemiEtiket(odeme.odemeYontemi)} ile ödeme${faturaNo ? ` · fatura ${faturaNo}` : ""}`
+        : faturaNo
+          ? `Fatura ${faturaNo}`
+          : "";
+  if (!aciklama) return { hata: "Fatura no ya da açıklama yazın." };
   if (await donemKilitliMi(tarih)) return { hata: KILIT_MESAJI(tarih) };
   if (dosya && dosya.size > 8 * 1024 * 1024) return { hata: "Evrak 8 MB'tan büyük olamaz." };
   const ted = await prisma.tedarikci.findUnique({ where: { id: tedarikciId }, select: { id: true } });
@@ -794,9 +828,10 @@ export async function tedarikciHareketEkle(formData: FormData): Promise<IslemSon
       dovizTutar: tutarVeri.dovizTutar,
       kur: tutarVeri.kur,
       faturaNo: faturaNo || null,
-      vadeTarihi: vadeTarihiStr ? new Date(vadeTarihiStr) : null,
-      cekNo: cekNo || null,
-      banka: banka || null,
+      odemeYontemi: odeme.odemeYontemi,
+      vadeTarihi: odeme.vadeTarihi,
+      cekNo: odeme.cekNo,
+      banka: odeme.banka,
       ...evrak,
     },
   });
@@ -805,7 +840,7 @@ export async function tedarikciHareketEkle(formData: FormData): Promise<IslemSon
   revalidatePath("/panel/cari");
   revalidatePath("/panel/genel-cari");
   revalidatePath("/panel");
-  return { tamam: tur === "ODEME" ? "Ödeme kaydedildi." : "Borç (fatura) kaydedildi." };
+  return { tamam: tur === "ODEME" ? `Ödeme kaydedildi (${odemeYontemiEtiket(odeme.odemeYontemi)}).` : "Borç (fatura) kaydedildi." };
 }
 
 // FİNANSAL HAREKET İPTALİ (tedarikçi): silinmez, iptal edilir (bakiyeden düşer). Yalnız satış müdürü.
@@ -820,6 +855,7 @@ export async function tedarikciHareketIptal(id: string, neden: string): Promise<
   if (h.iptalTarihi) return { tamam: "Hareket zaten iptal edilmiş." };
   await prisma.tedarikciHareket.update({ where: { id }, data: { iptalTarihi: new Date(), iptalEdenAdi: giren.ad, iptalNedeni: nedenTemiz } });
   revalidatePath("/panel/satinalma/cari");
+  revalidatePath("/panel/cari");
   revalidatePath("/panel/satinalma");
   revalidatePath("/panel/genel-cari");
   revalidatePath("/panel");
