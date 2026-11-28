@@ -15,10 +15,10 @@ export default async function SatinalmaSayfasi() {
 
   return (
     <div>
-      <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Panel</p>
-      <h1 className="font-display text-2xl font-semibold text-metin mb-2">Satınalma</h1>
+      <p className="font-mono text-xs tracking-widest text-soguk-dim uppercase mb-2">Satınalma</p>
+      <h1 className="font-display text-2xl font-semibold text-metin mb-2">Tedarikçiler</h1>
       <p className="text-sm text-metin/60 mb-8">
-        Tedarikçilerini buradan yönet.{" "}
+        Tedarikçilerini buradan yönet. Satınalma bölümünün diğer sayfaları sol menüde:{" "}
         <Link href="/panel/satinalma/teklifler" className="text-soguk-dim hover:underline">Gelen Teklifler</Link>
         {" "}sayfasından tedarikçiden aldığın bir teklifi sisteme yükleyip kâr marjı ekleyerek
         kendi teklif formatına dönüştürebilirsin.{" "}

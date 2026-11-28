@@ -19,9 +19,11 @@ export const metadata: Metadata = {
 };
 
 // MENÜ GRUPLARI — sol menü açılır gruplar hâlinde gösterilir (bulunulan sayfanın grubu açık durur).
-// Sayfa adresleri değişmedi; yalnızca menüdeki yerleri gruplandı. Bir sayfanın alt sayfaları
-// (ör. Projeler → Takip Tablosu, Satınalma → Satınalma Siparişleri) menüde ayrı satır olmaz;
-// "ek" adreslerde de ana satır seçili görünür. Profil sayfası menünün en altındadır.
+// Sayfa adresleri değişmedi; yalnızca menüdeki yerleri gruplandı. İş akışına göre:
+// Satış: talep → müşteri → görüşme → proje → keşif → teklif → sipariş.
+// Satınalma: tedarikçiler → gelen (tedarikçi) teklifleri → satınalma siparişleri → tedarikçi cari.
+// Alt sayfası menüde ayrı satır olmayanlarda (ör. Projeler → Takip Tablosu) "ek" adreslerde de ana satır
+// seçili görünür. Profil sayfası menünün en altındadır.
 const menuGruplari: MenuGrubu[] = [
   {
     baslik: null,
@@ -39,6 +41,16 @@ const menuGruplari: MenuGrubu[] = [
       { href: "/panel/projeler", label: "Projeler", ek: ["/panel/proje-takip"] },
       { href: "/panel/kesif", label: "Keşif" },
       { href: "/panel/teklifler", label: "Teklifler" },
+      { href: "/panel/siparisler", label: "Siparişler" },
+    ],
+  },
+  {
+    baslik: "Satınalma",
+    ogeler: [
+      { href: "/panel/satinalma", label: "Tedarikçiler" },
+      { href: "/panel/satinalma/teklifler", label: "Gelen Teklifler" },
+      { href: "/panel/satinalma/siparisler", label: "Satınalma Siparişleri" },
+      { href: "/panel/satinalma/cari", label: "Tedarikçi Cari" },
     ],
   },
   {
@@ -47,13 +59,6 @@ const menuGruplari: MenuGrubu[] = [
       { href: "/panel/ayarlar/urunler", label: "Ürün Kataloğu" },
       { href: "/panel/fiyat-listeleri", label: "Fiyat Listeleri" },
       { href: "/panel/stok", label: "Stok" },
-    ],
-  },
-  {
-    baslik: "Sipariş & Satınalma",
-    ogeler: [
-      { href: "/panel/siparisler", label: "Siparişler" },
-      { href: "/panel/satinalma", label: "Satınalma" },
     ],
   },
   {
@@ -100,9 +105,14 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       })
       .catch(() => 0),
   ]);
-  // Admin'e: onay bekleyen satınalma siparişleri (tablo henüz yoksa 0)
-  const onayBekleyenSatinalma =
-    kullanici.rol === "ADMIN" ? await prisma.satinalmaSiparisi.count({ where: { durum: "ONAY_BEKLIYOR" } }).catch(() => 0) : 0;
+  // Admin'e: onay bekleyen satış ve satınalma siparişleri (tablo henüz yoksa 0)
+  const [onayBekleyenSatinalma, onayBekleyenSiparis] =
+    kullanici.rol === "ADMIN"
+      ? await Promise.all([
+          prisma.satinalmaSiparisi.count({ where: { durum: "ONAY_BEKLIYOR" } }).catch(() => 0),
+          prisma.siparis.count({ where: { durum: "ONAY_BEKLIYOR" } }).catch(() => 0),
+        ])
+      : [0, 0];
 
   const rozetler: Record<string, number> = {
     "/panel/talepler": okunmamisTalep,
@@ -110,7 +120,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     "/panel/kesif": yeniKesifSayisi,
     "/panel/projeler": takiptekiProjeSayisi,
     "/panel/notlar": gunuGelenNot,
-    "/panel/satinalma": onayBekleyenSatinalma,
+    "/panel/satinalma/siparisler": onayBekleyenSatinalma,
+    "/panel/siparisler": onayBekleyenSiparis,
   };
 
   // Menüde yalnız kullanıcının rolünün görebildiği sayfalar (lib/roller.ts); boş kalan grup gizlenir
